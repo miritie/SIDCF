@@ -583,21 +583,59 @@
   ],
   "BAILLEUR": [
     { "code": "TRESOR", "label": "Trésor Public (CI)", "typeFinancement": "ETAT" },
-    { "code": "BAD", "label": "Banque Africaine de Développement (BAD)" },
-    { "code": "BM", "label": "Banque Mondiale (BM)" },
-    { "code": "AFD", "label": "Agence Française de Développement (AFD)" },
-    { "code": "UE", "label": "Union Européenne (UE)" },
-    { "code": "USAID", "label": "United States Agency for International Development (USAID)" },
-    { "code": "BID", "label": "Banque Islamique de Développement (BID)" },
-    { "code": "BADEA", "label": "Banque Arabe pour le Développement Économique en Afrique (BADEA)" },
-    { "code": "JICA", "label": "Agence Japonaise de Coopération (JICA)" },
-    { "code": "KFW", "label": "Banque Allemande de Développement (KfW)" },
-    { "code": "BEI", "label": "Banque Européenne d'Investissement (BEI)" },
-    { "code": "BIDC", "label": "Banque d'Investissement et de Développement CEDEAO (BIDC)" },
-    { "code": "BOAD", "label": "Banque Ouest-Africaine de Développement (BOAD)" },
-    { "code": "FMI", "label": "Fonds Monétaire International (FMI)" },
-    { "code": "OPEP", "label": "Fonds de l'OPEP pour le développement international" }
+    { "code": "BAD", "label": "Banque Africaine de Développement (BAD)", "typeFinancement": "EXTERNE" },
+    { "code": "BM", "label": "Banque Mondiale (BM)", "typeFinancement": "EXTERNE" },
+    { "code": "AFD", "label": "Agence Française de Développement (AFD)", "typeFinancement": "EXTERNE" },
+    { "code": "UE", "label": "Union Européenne (UE)", "typeFinancement": "EXTERNE" },
+    { "code": "USAID", "label": "United States Agency for International Development (USAID)", "typeFinancement": "EXTERNE" },
+    { "code": "BID", "label": "Banque Islamique de Développement (BID)", "typeFinancement": "EXTERNE" },
+    { "code": "BADEA", "label": "Banque Arabe pour le Développement Économique en Afrique (BADEA)", "typeFinancement": "EXTERNE" },
+    { "code": "JICA", "label": "Agence Japonaise de Coopération (JICA)", "typeFinancement": "EXTERNE" },
+    { "code": "KFW", "label": "Banque Allemande de Développement (KfW)", "typeFinancement": "EXTERNE" },
+    { "code": "BEI", "label": "Banque Européenne d'Investissement (BEI)", "typeFinancement": "EXTERNE" },
+    { "code": "BIDC", "label": "Banque d'Investissement et de Développement CEDEAO (BIDC)", "typeFinancement": "EXTERNE" },
+    { "code": "BOAD", "label": "Banque Ouest-Africaine de Développement (BOAD)", "typeFinancement": "EXTERNE" },
+    { "code": "FMI", "label": "Fonds Monétaire International (FMI)", "typeFinancement": "EXTERNE" },
+    { "code": "OPEP", "label": "Fonds de l'OPEP pour le développement international", "typeFinancement": "EXTERNE" }
   ],
+  "CHAINE_BUDGETAIRE": {
+    "sections": [
+      {
+        "code": "31990001",
+        "label": "Direction de zone 780 102",
+        "programmes": [
+          {
+            "code": "780102",
+            "label": "Sous-préfecture 1300101",
+            "unites": [
+              { "code": "13001", "label": "Assemblée N 1 Personnel", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 1 Investissements", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 1 Transferts", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 2 Biens et services", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 2 Transferts", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 2 Biens et services", "zone": "ZONE_13001" }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "13030016",
+        "label": "Sénat",
+        "programmes": [
+          {
+            "code": "110101",
+            "label": "Sous-préfecture 1303001",
+            "unites": [
+              { "code": "13030", "label": "Assemblée N 3 Biens et services", "zone": "SENAT_13030" },
+              { "code": "13030", "label": "Assemblée N 3 Personnel", "zone": "SENAT_13030" },
+              { "code": "13030", "label": "Assemblée N 2 Biens et services", "zone": "SENAT_13030" },
+              { "code": "13030", "label": "Assemblée N 3 Transferts", "zone": "SENAT_13030" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "TYPE_FINANCEMENT": [
     { "code": "ETAT", "label": "Budget de l'État" },
     { "code": "EMPRUNT", "label": "Emprunt" },

@@ -23,7 +23,8 @@ let activeFilters = {
   bailleur: 'ALL',
   categoriePrestation: 'ALL',
   region: 'ALL',
-  exercice: 'ALL'
+  exercice: 'ALL',
+  unite: 'ALL'
 };
 
 // Opération sélectionnée pour modal détails
@@ -37,6 +38,7 @@ export async function renderPPMList() {
   // Extract unique values for filters
   const exercices = [...new Set(operations.map(op => op.exercice).filter(Boolean))].sort((a, b) => b - a);
   const regions = [...new Set(operations.map(op => op.localisation?.region).filter(Boolean))].sort();
+  const unites = [...new Set(operations.map(op => op.unite).filter(Boolean))].sort();
 
   // Apply filters
   const filteredOps = applyFilters(operations);
@@ -171,6 +173,15 @@ export async function renderPPMList() {
               el('option', { value: 'ALL' }, 'Toutes'),
               ...regions.map(r => el('option', { value: r }, r))
             ])
+          ]),
+
+          // Unité Administrative (UA)
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Unité Administrative'),
+            el('select', { className: 'form-input', id: 'filter-unite', value: activeFilters.unite }, [
+              el('option', { value: 'ALL' }, 'Toutes'),
+              ...unites.map(u => el('option', { value: u }, u))
+            ])
           ])
         ])
       ])
@@ -229,6 +240,7 @@ function renderSimpleTable(operations, registries) {
       el('thead', {}, [
         el('tr', {}, [
           el('th', { style: { minWidth: '80px' } }, 'Exercice'),
+          el('th', { style: { minWidth: '200px' } }, 'UA'),
           el('th', { style: { minWidth: '300px' } }, 'Objet'),
           el('th', { style: { minWidth: '120px' } }, 'Type'),
           el('th', { style: { minWidth: '100px' } }, 'Mode'),
@@ -261,6 +273,9 @@ function renderSimpleRow(op, registries) {
     onclick: () => router.navigate('/fiche-marche', { idOperation: op.id })
   }, [
     el('td', {}, String(op.exercice || '-')),
+    el('td', { className: 'text-small', title: op.unite },
+      op.unite?.length > 30 ? op.unite.substring(0, 30) + '...' : (op.unite || '-')
+    ),
     el('td', { style: { fontWeight: '500' }, title: op.objet },
       op.objet.length > 60 ? op.objet.substring(0, 60) + '...' : op.objet
     ),
@@ -574,6 +589,11 @@ function applyFilters(operations) {
       return false;
     }
 
+    // Unité Administrative (UA)
+    if (activeFilters.unite !== 'ALL' && op.unite !== activeFilters.unite) {
+      return false;
+    }
+
     return true;
   });
 }
@@ -588,7 +608,8 @@ function setupFilterListeners() {
     typeFinancement: document.getElementById('filter-typeFinancement'),
     bailleur: document.getElementById('filter-bailleur'),
     categoriePrestation: document.getElementById('filter-categoriePrestation'),
-    region: document.getElementById('filter-region')
+    region: document.getElementById('filter-region'),
+    unite: document.getElementById('filter-unite')
   };
 
   // Search with debounce
@@ -633,7 +654,8 @@ function resetFilters() {
     bailleur: 'ALL',
     categoriePrestation: 'ALL',
     region: 'ALL',
-    exercice: 'ALL'
+    exercice: 'ALL',
+    unite: 'ALL'
   };
   renderPPMList();
 }

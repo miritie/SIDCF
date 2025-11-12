@@ -60,16 +60,31 @@ export async function renderPPMCreateLine(params) {
               })
             ]),
 
-            // Unité opérationnelle
+            // Section (Ministère)
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Unité opérationnelle', el('span', { className: 'required' }, '*')]),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'unite',
-                placeholder: 'Ex: Centre de Promotion des logements sociaux',
-                required: true
-              })
+              el('label', { className: 'form-label' }, ['Section (Ministère)', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'section', required: true }, [
+                el('option', { value: '' }, '-- Sélectionner une section --'),
+                ...(registries.CHAINE_BUDGETAIRE?.sections || []).map(s =>
+                  el('option', { value: s.code, 'data-label': s.label }, s.label)
+                )
+              ])
+            ]),
+
+            // Programme
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, ['Programme', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'programme', disabled: true, required: true }, [
+                el('option', { value: '' }, '-- Sélectionner une section d\'abord --')
+              ])
+            ]),
+
+            // Unité Administrative (UA)
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, ['Unité Administrative (UA)', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'unite', disabled: true, required: true }, [
+                el('option', { value: '' }, '-- Sélectionner un programme d\'abord --')
+              ])
             ]),
 
             // Objet marché
@@ -173,15 +188,12 @@ export async function renderPPMCreateLine(params) {
               ])
             ]),
 
-            // Source financement
+            // Bailleur (Source financement)
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Source de financement'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'sourceFinancement',
-                placeholder: 'Ex: BADEA, BM, AFD...'
-              })
+              el('label', { className: 'form-label' }, ['Bailleur', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'sourceFinancement', disabled: true, required: true }, [
+                el('option', { value: '' }, '-- Sélectionner type financement d\'abord --')
+              ])
             ])
           ])
         ])
@@ -371,8 +383,115 @@ export async function renderPPMCreateLine(params) {
 
   mount('#app', page);
 
-  // Setup cascading dropdowns for localisation
+  // Setup cascading dropdowns
+  setupChaineBudgetaireCascades(registries);
   setupLocalisationCascades(registries);
+  setupBailleurLogic(registries);
+}
+
+/**
+ * Setup cascading budget chain dropdowns (Section → Programme → UA)
+ */
+function setupChaineBudgetaireCascades(registries) {
+  const sectionSelect = document.getElementById('section');
+  const programmeSelect = document.getElementById('programme');
+  const uniteSelect = document.getElementById('unite');
+
+  if (!sectionSelect || !programmeSelect || !uniteSelect) return;
+
+  // Section change → populate Programme
+  sectionSelect.addEventListener('change', (e) => {
+    const sectionCode = e.target.value;
+
+    // Reset downstream selects
+    programmeSelect.innerHTML = '<option value="">-- Sélectionner un programme --</option>';
+    programmeSelect.disabled = !sectionCode;
+    uniteSelect.innerHTML = '<option value="">-- Sélectionner un programme d\'abord --</option>';
+    uniteSelect.disabled = true;
+
+    if (!sectionCode) return;
+
+    // Find section and populate programmes
+    const section = registries.CHAINE_BUDGETAIRE?.sections?.find(s => s.code === sectionCode);
+    if (section?.programmes) {
+      section.programmes.forEach(prog => {
+        const option = document.createElement('option');
+        option.value = prog.code;
+        option.textContent = prog.label;
+        option.dataset.label = prog.label;
+        programmeSelect.appendChild(option);
+      });
+      programmeSelect.disabled = false;
+    }
+  });
+
+  // Programme change → populate UA
+  programmeSelect.addEventListener('change', (e) => {
+    const sectionCode = sectionSelect.value;
+    const progCode = e.target.value;
+
+    // Reset downstream select
+    uniteSelect.innerHTML = '<option value="">-- Sélectionner une unité administrative --</option>';
+    uniteSelect.disabled = !progCode;
+
+    if (!progCode) return;
+
+    // Find programme and populate UAs
+    const section = registries.CHAINE_BUDGETAIRE?.sections?.find(s => s.code === sectionCode);
+    const programme = section?.programmes?.find(p => p.code === progCode);
+    if (programme?.unites && Array.isArray(programme.unites)) {
+      programme.unites.forEach(ua => {
+        const option = document.createElement('option');
+        option.value = ua.code;
+        option.textContent = ua.label;
+        option.dataset.label = ua.label;
+        option.dataset.zone = ua.zone;
+        uniteSelect.appendChild(option);
+      });
+      uniteSelect.disabled = false;
+    }
+  });
+}
+
+/**
+ * Setup bailleur logic based on type de financement
+ */
+function setupBailleurLogic(registries) {
+  const typeFinancementSelect = document.getElementById('typeFinancement');
+  const sourceFinancementSelect = document.getElementById('sourceFinancement');
+
+  if (!typeFinancementSelect || !sourceFinancementSelect) return;
+
+  typeFinancementSelect.addEventListener('change', (e) => {
+    const typeFin = e.target.value;
+
+    // Clear current selection
+    sourceFinancementSelect.innerHTML = '<option value="">-- Sélectionner un bailleur --</option>';
+
+    if (!typeFin) return;
+
+    // Filter bailleurs based on type financement
+    let bailleurs = [];
+    if (typeFin === 'ETAT') {
+      // Only Trésor for Budget de l'État
+      bailleurs = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'ETAT');
+    } else {
+      // All external bailleurs for Emprunt/Don
+      bailleurs = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'EXTERNE');
+    }
+
+    bailleurs.forEach(b => {
+      const option = document.createElement('option');
+      option.value = b.code;
+      option.textContent = b.label;
+      sourceFinancementSelect.appendChild(option);
+    });
+
+    // Auto-select if only one option
+    if (bailleurs.length === 1) {
+      sourceFinancementSelect.value = bailleurs[0].code;
+    }
+  });
 }
 
 /**
@@ -475,7 +594,8 @@ async function handleSave(createAnother) {
   const formData = {
     // Identification
     exercice: Number(document.getElementById('exercice')?.value),
-    unite: document.getElementById('unite')?.value?.trim(),
+    unite: getSelectLabel('unite') || '', // UA label
+    uniteCode: document.getElementById('unite')?.value || '', // UA code
     objet: document.getElementById('objet')?.value?.trim(),
 
     // Classification
@@ -490,15 +610,17 @@ async function handleSave(createAnother) {
     typeFinancement: document.getElementById('typeFinancement')?.value,
     sourceFinancement: document.getElementById('sourceFinancement')?.value?.trim() || '',
 
-    // Chaîne budgétaire
+    // Chaîne budgétaire (avec cascades Section→Programme→UA)
     chaineBudgetaire: {
+      section: getSelectLabel('section') || '',
+      sectionCode: document.getElementById('section')?.value || '',
+      programme: getSelectLabel('programme') || '',
+      programmeCode: document.getElementById('programme')?.value || '',
       activite: document.getElementById('activite')?.value?.trim() || '',
       activiteCode: document.getElementById('activiteCode')?.value?.trim() || '',
       ligneBudgetaire: document.getElementById('ligneBudgetaire')?.value?.trim() || '',
-      section: '',
-      programme: '',
       nature: '',
-      bailleur: ''
+      bailleur: document.getElementById('sourceFinancement')?.value || ''
     },
 
     // Technique
