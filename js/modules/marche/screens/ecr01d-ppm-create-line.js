@@ -5,7 +5,7 @@
 import { el, mount } from '../../../lib/dom.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { generateId } from '../../../lib/uid.js';
+import { operationId } from '../../../lib/uid.js';
 import logger from '../../../lib/logger.js';
 
 function createButton(className, text, onClick) {
@@ -101,7 +101,7 @@ export async function renderPPMCreateLine(params) {
               el('select', { className: 'form-input', id: 'modePassation', required: true }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
                 ...(registries.MODE_PASSATION || []).map(m =>
-                  el('option', { value: m.code }, t.label)
+                  el('option', { value: m.code }, m.label)
                 )
               ])
             ]),
@@ -471,9 +471,9 @@ async function handleSave(createAnother) {
   }
 
   // Create operation
-  const operationId = generateId('OP');
+  const newOperationId = operationId();
   const operation = {
-    id: operationId,
+    id: newOperationId,
     planId: null, // Unitaire, pas lié à un plan importé
     budgetLineId: null,
     ...formData,
@@ -500,7 +500,7 @@ async function handleSave(createAnother) {
     document.getElementById('exercice').value = new Date().getFullYear();
   } else {
     alert('✅ Opération créée avec succès');
-    router.navigate('/fiche-marche', { idOperation: operationId });
+    router.navigate('/fiche-marche', { idOperation: newOperationId });
   }
 }
 
