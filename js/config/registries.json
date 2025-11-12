@@ -53,42 +53,73 @@
         "label": "Abidjan Autonome",
         "departements": [
           {
-            "code": "ABJ_PLATEAU",
-            "label": "Plateau",
-            "communes": [
-              {
-                "code": "PLATEAU",
-                "label": "Plateau",
-                "localites": ["Plateau Centre", "Zone 4", "Cité Administrative"]
-              }
+            "code": "ABJ_ABOBO",
+            "label": "Abobo",
+            "sousPrefectures": [
+              { "code": "ABOBO", "label": "Abobo", "localites": ["Abobo Gare", "Abobo PK-18", "Anonkoua Kouté"] }
+            ]
+          },
+          {
+            "code": "ABJ_ADJAME",
+            "label": "Adjamé",
+            "sousPrefectures": [
+              { "code": "ADJAME", "label": "Adjamé", "localites": ["Adjamé Centre", "Williamsville", "Liberté"] }
+            ]
+          },
+          {
+            "code": "ABJ_ATTÉCOUBÉ",
+            "label": "Attécoubé",
+            "sousPrefectures": [
+              { "code": "ATTECOUBE", "label": "Attécoubé", "localites": ["Attécoubé Centre", "Locodjro", "Santé"] }
             ]
           },
           {
             "code": "ABJ_COCODY",
             "label": "Cocody",
-            "communes": [
-              {
-                "code": "COCODY",
-                "label": "Cocody",
-                "localites": ["Deux Plateaux", "Riviera", "Angré", "II Plateaux"]
-              }
+            "sousPrefectures": [
+              { "code": "COCODY", "label": "Cocody", "localites": ["Deux Plateaux", "Riviera", "Angré", "II Plateaux"] }
             ]
-          }
-        ]
-      },
-      {
-        "code": "BAS_SASSANDRA",
-        "label": "Bas-Sassandra",
-        "departements": [
+          },
           {
-            "code": "SAN_PEDRO",
-            "label": "San-Pédro",
-            "communes": [
-              {
-                "code": "SAN_PEDRO",
-                "label": "San-Pédro",
-                "localites": ["Centre-ville", "Bardo", "Balmer"]
-              }
+            "code": "ABJ_KOUMASSI",
+            "label": "Koumassi",
+            "sousPrefectures": [
+              { "code": "KOUMASSI", "label": "Koumassi", "localites": ["Koumassi Centre", "Remblais", "Grand-Carrefour"] }
+            ]
+          },
+          {
+            "code": "ABJ_MARCORY",
+            "label": "Marcory",
+            "sousPrefectures": [
+              { "code": "MARCORY", "label": "Marcory", "localites": ["Marcory Zone 4", "Biétry", "Anoumabo"] }
+            ]
+          },
+          {
+            "code": "ABJ_PLATEAU",
+            "label": "Plateau",
+            "sousPrefectures": [
+              { "code": "PLATEAU", "label": "Plateau", "localites": ["Plateau Centre", "Zone 4", "Cité Administrative"] }
+            ]
+          },
+          {
+            "code": "ABJ_PORT_BOUET",
+            "label": "Port-Bouët",
+            "sousPrefectures": [
+              { "code": "PORT_BOUET", "label": "Port-Bouët", "localites": ["Vridi", "Aéroport", "Gonzagueville"] }
+            ]
+          },
+          {
+            "code": "ABJ_TREICHVILLE",
+            "label": "Treichville",
+            "sousPrefectures": [
+              { "code": "TREICHVILLE", "label": "Treichville", "localites": ["Treichville Centre", "Zone 3", "Biafra"] }
+            ]
+          },
+          {
+            "code": "ABJ_YOPOUGON",
+            "label": "Yopougon",
+            "sousPrefectures": [
+              { "code": "YOPOUGON", "label": "Yopougon", "localites": ["Yopougon Selmer", "Niangon", "Banco"] }
             ]
           }
         ]
@@ -100,12 +131,442 @@
           {
             "code": "YAM",
             "label": "Yamoussoukro",
-            "communes": [
-              {
-                "code": "YAM",
-                "label": "Yamoussoukro",
-                "localites": ["Centre-ville", "Habitat", "N'Zuessy"]
-              }
+            "sousPrefectures": [
+              { "code": "YAM_CENTRE", "label": "Yamoussoukro", "localites": ["Centre-ville", "Habitat", "N'Zuessy", "Kokrenou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "AGNEBY_TIASSA",
+        "label": "Agnéby-Tiassa",
+        "departements": [
+          {
+            "code": "AGBOVILLE",
+            "label": "Agboville",
+            "sousPrefectures": [
+              { "code": "AGBOVILLE", "label": "Agboville", "localites": ["Agboville Centre", "Azaguié", "Rubino"] }
+            ]
+          },
+          {
+            "code": "TIASSALE",
+            "label": "Tiassalé",
+            "sousPrefectures": [
+              { "code": "TIASSALE", "label": "Tiassalé", "localites": ["Tiassalé Centre", "Taabo"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAFING",
+        "label": "Bafing",
+        "departements": [
+          {
+            "code": "TOUBA",
+            "label": "Touba",
+            "sousPrefectures": [
+              { "code": "TOUBA", "label": "Touba", "localites": ["Touba Centre", "Booko", "Guintéguéla"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAGOUE",
+        "label": "Bagoué",
+        "departements": [
+          {
+            "code": "BOUNDIALI",
+            "label": "Boundiali",
+            "sousPrefectures": [
+              { "code": "BOUNDIALI", "label": "Boundiali", "localites": ["Boundiali Centre", "Ganaoni", "Kasséré"] }
+            ]
+          },
+          {
+            "code": "TENGRELA",
+            "label": "Tengréla",
+            "sousPrefectures": [
+              { "code": "TENGRELA", "label": "Tengréla", "localites": ["Tengréla Centre", "Kouto"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAS_SASSANDRA",
+        "label": "Bas-Sassandra",
+        "departements": [
+          {
+            "code": "SAN_PEDRO",
+            "label": "San-Pédro",
+            "sousPrefectures": [
+              { "code": "SAN_PEDRO", "label": "San-Pédro", "localites": ["Centre-ville", "Bardo", "Balmer"] },
+              { "code": "GRAND_BEREBY", "label": "Grand-Béréby", "localites": ["Grand-Béréby Centre", "Djamandioké"] }
+            ]
+          },
+          {
+            "code": "SASSANDRA",
+            "label": "Sassandra",
+            "sousPrefectures": [
+              { "code": "SASSANDRA", "label": "Sassandra", "localites": ["Sassandra Centre", "Dakpadou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BELIER",
+        "label": "Bélier",
+        "departements": [
+          {
+            "code": "TOUMODI",
+            "label": "Toumodi",
+            "sousPrefectures": [
+              { "code": "TOUMODI", "label": "Toumodi", "localites": ["Toumodi Centre", "Kouakro"] }
+            ]
+          },
+          {
+            "code": "TIEBISSOU",
+            "label": "Tiébissou",
+            "sousPrefectures": [
+              { "code": "TIEBISSOU", "label": "Tiébissou", "localites": ["Tiébissou Centre", "Tafiré"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BERE",
+        "label": "Béré",
+        "departements": [
+          {
+            "code": "MANKONO",
+            "label": "Mankono",
+            "sousPrefectures": [
+              { "code": "MANKONO", "label": "Mankono", "localites": ["Mankono Centre", "Tiéningboué", "Bouandougou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BOUNKANI",
+        "label": "Bounkani",
+        "departements": [
+          {
+            "code": "BOUNA",
+            "label": "Bouna",
+            "sousPrefectures": [
+              { "code": "BOUNA", "label": "Bouna", "localites": ["Bouna Centre", "Doropo", "Tehini"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CAVALLY",
+        "label": "Cavally",
+        "departements": [
+          {
+            "code": "GUIGLO",
+            "label": "Guiglo",
+            "sousPrefectures": [
+              { "code": "GUIGLO", "label": "Guiglo", "localites": ["Guiglo Centre", "Taï", "Bloléquin"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GBEKE",
+        "label": "Gbêkê",
+        "departements": [
+          {
+            "code": "BOUAKE",
+            "label": "Bouaké",
+            "sousPrefectures": [
+              { "code": "BOUAKE", "label": "Bouaké", "localites": ["Bouaké Centre", "Belleville", "Kennedy", "Koko"] },
+              { "code": "BROBO", "label": "Brobo", "localites": ["Brobo Centre"] }
+            ]
+          },
+          {
+            "code": "SAKASSOU",
+            "label": "Sakassou",
+            "sousPrefectures": [
+              { "code": "SAKASSOU", "label": "Sakassou", "localites": ["Sakassou Centre", "Bodokro"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GBOKLE",
+        "label": "Gbôklé",
+        "departements": [
+          {
+            "code": "SASSANDRA",
+            "label": "Sassandra",
+            "sousPrefectures": [
+              { "code": "SASSANDRA_GBOKLÉ", "label": "Sassandra", "localites": ["Fresco", "Méagui"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GOH",
+        "label": "Gôh",
+        "departements": [
+          {
+            "code": "GAGNOA",
+            "label": "Gagnoa",
+            "sousPrefectures": [
+              { "code": "GAGNOA", "label": "Gagnoa", "localites": ["Gagnoa Centre", "Bayota", "Oumé"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GONTOUGO",
+        "label": "Gontougo",
+        "departements": [
+          {
+            "code": "BONDOUKOU",
+            "label": "Bondoukou",
+            "sousPrefectures": [
+              { "code": "BONDOUKOU", "label": "Bondoukou", "localites": ["Bondoukou Centre", "Gouméré", "Tanda"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GRANDS_PONTS",
+        "label": "Grands-Ponts",
+        "departements": [
+          {
+            "code": "DABOU",
+            "label": "Dabou",
+            "sousPrefectures": [
+              { "code": "DABOU", "label": "Dabou", "localites": ["Dabou Centre", "Jacqueville", "Grand-Lahou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GUEMON",
+        "label": "Guémon",
+        "departements": [
+          {
+            "code": "DUEKOUE",
+            "label": "Duékoué",
+            "sousPrefectures": [
+              { "code": "DUEKOUE", "label": "Duékoué", "localites": ["Duékoué Centre", "Bangolo", "Facobly"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "HAMBOL",
+        "label": "Hambol",
+        "departements": [
+          {
+            "code": "KATIOLA",
+            "label": "Katiola",
+            "sousPrefectures": [
+              { "code": "KATIOLA", "label": "Katiola", "localites": ["Katiola Centre", "Niakara", "Dabakala"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "HAUT_SASSANDRA",
+        "label": "Haut-Sassandra",
+        "departements": [
+          {
+            "code": "DALOA",
+            "label": "Daloa",
+            "sousPrefectures": [
+              { "code": "DALOA", "label": "Daloa", "localites": ["Daloa Centre", "Vavoua", "Issia"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "IFFOU",
+        "label": "Iffou",
+        "departements": [
+          {
+            "code": "DAOUKRO",
+            "label": "Daoukro",
+            "sousPrefectures": [
+              { "code": "DAOUKRO", "label": "Daoukro", "localites": ["Daoukro Centre", "M'Bahiakro"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "INDENIE_DJUABLIN",
+        "label": "Indénié-Djuablin",
+        "departements": [
+          {
+            "code": "ABENGOUROU",
+            "label": "Abengourou",
+            "sousPrefectures": [
+              { "code": "ABENGOUROU", "label": "Abengourou", "localites": ["Abengourou Centre", "Agnibilékrou", "Bettié"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "KABADOUGOU",
+        "label": "Kabadougou",
+        "departements": [
+          {
+            "code": "ODIENNE",
+            "label": "Odienné",
+            "sousPrefectures": [
+              { "code": "ODIENNE", "label": "Odienné", "localites": ["Odienné Centre", "Marandallah", "Tienko"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "LACS",
+        "label": "Lacs",
+        "departements": [
+          {
+            "code": "DIMBOKRO",
+            "label": "Dimbokro",
+            "sousPrefectures": [
+              { "code": "DIMBOKRO", "label": "Dimbokro", "localites": ["Dimbokro Centre", "Bocanda"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "LAGUNES",
+        "label": "Lagunes",
+        "departements": [
+          {
+            "code": "GRAND_BASSAM",
+            "label": "Grand-Bassam",
+            "sousPrefectures": [
+              { "code": "GRAND_BASSAM", "label": "Grand-Bassam", "localites": ["Grand-Bassam Centre", "Bingerville", "Bonoua"] }
+            ]
+          },
+          {
+            "code": "ADZOPE",
+            "label": "Adzopé",
+            "sousPrefectures": [
+              { "code": "ADZOPE", "label": "Adzopé", "localites": ["Adzopé Centre", "Yakassé-Attobrou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "MARAHOUE",
+        "label": "Marahoué",
+        "departements": [
+          {
+            "code": "BOUAFLE",
+            "label": "Bouaflé",
+            "sousPrefectures": [
+              { "code": "BOUAFLE", "label": "Bouaflé", "localites": ["Bouaflé Centre", "Zuénoula", "Bonon"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "MORONOU",
+        "label": "Moronou",
+        "departements": [
+          {
+            "code": "BONGOUANOU",
+            "label": "Bongouanou",
+            "sousPrefectures": [
+              { "code": "BONGOUANOU", "label": "Bongouanou", "localites": ["Bongouanou Centre", "Arrah", "M'Batto"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "NAWA",
+        "label": "Nawa",
+        "departements": [
+          {
+            "code": "SOUBRE",
+            "label": "Soubré",
+            "sousPrefectures": [
+              { "code": "SOUBRE", "label": "Soubré", "localites": ["Soubré Centre", "Buyo", "Méadji"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "NZIE",
+        "label": "N'zi",
+        "departements": [
+          {
+            "code": "DIVO",
+            "label": "Divo",
+            "sousPrefectures": [
+              { "code": "DIVO", "label": "Divo", "localites": ["Divo Centre", "Hiré", "Lakota"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "PORO",
+        "label": "Poro",
+        "departements": [
+          {
+            "code": "KORHOGO",
+            "label": "Korhogo",
+            "sousPrefectures": [
+              { "code": "KORHOGO", "label": "Korhogo", "localites": ["Korhogo Centre", "Sinématiali", "Dikodougou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "SAN_PEDRO",
+        "label": "San-Pédro",
+        "departements": [
+          {
+            "code": "SAN_PEDRO_REGION",
+            "label": "San-Pédro",
+            "sousPrefectures": [
+              { "code": "SAN_PEDRO_SP", "label": "San-Pédro", "localites": ["San-Pédro Centre", "Tabou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "TCHOLOGO",
+        "label": "Tchologo",
+        "departements": [
+          {
+            "code": "FERKESSEDOUGOU",
+            "label": "Ferkessédougou",
+            "sousPrefectures": [
+              { "code": "FERKESSEDOUGOU", "label": "Ferkessédougou", "localites": ["Ferkessédougou Centre", "Ouangolodougou", "Kong"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "TONKPI",
+        "label": "Tonkpi",
+        "departements": [
+          {
+            "code": "MAN",
+            "label": "Man",
+            "sousPrefectures": [
+              { "code": "MAN", "label": "Man", "localites": ["Man Centre", "Danané", "Biankouma"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "WORODOUGOU",
+        "label": "Worodougou",
+        "departements": [
+          {
+            "code": "SEGUELA",
+            "label": "Séguéla",
+            "sousPrefectures": [
+              { "code": "SEGUELA", "label": "Séguéla", "localites": ["Séguéla Centre", "Kani", "Massala"] }
             ]
           }
         ]

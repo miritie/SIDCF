@@ -14,6 +14,16 @@ function createButton(className, text, onClick) {
   return btn;
 }
 
+/**
+ * Get selected option label from a select element
+ */
+function getSelectLabel(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return '';
+  const selectedOption = select.options[select.selectedIndex];
+  return selectedOption?.textContent || '';
+}
+
 export async function renderPPMCreateLine(params) {
   const registries = dataService.getAllRegistries();
   const currentYear = new Date().getFullYear();
@@ -275,88 +285,46 @@ export async function renderPPMCreateLine(params) {
         ])
       ]),
 
-      // Section: Localisation géographique
+      // Section: Localisation géographique (Cascading)
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '📍 Localisation géographique')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Région
+            // Région (cascading root)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Région'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'region',
-                placeholder: 'Ex: Kabadougou'
-              })
+              el('select', { className: 'form-input', id: 'region' }, [
+                el('option', { value: '' }, '-- Sélectionner une région --'),
+                ...(registries.LOCALITE_CI?.regions || []).map(r =>
+                  el('option', { value: r.code, 'data-label': r.label }, r.label)
+                )
+              ])
             ]),
 
-            // Code région
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Code région'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'regionCode',
-                placeholder: 'Ex: 23'
-              })
-            ]),
-
-            // Département
+            // Département (cascading level 2)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Département'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'departement',
-                placeholder: 'Ex: Département d\'Odiénné'
-              })
+              el('select', { className: 'form-input', id: 'departement', disabled: true }, [
+                el('option', { value: '' }, '-- Sélectionner une région d\'abord --')
+              ])
             ]),
 
-            // Code département
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Code département'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'departementCode',
-                placeholder: 'Ex: 2301'
-              })
-            ]),
-
-            // Sous-préfecture
+            // Sous-préfecture (cascading level 3)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Sous-préfecture'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'sousPrefecture',
-                placeholder: 'Ex: Sous-préfecture d\'Odiénné'
-              })
+              el('select', { className: 'form-input', id: 'sousPrefecture', disabled: true }, [
+                el('option', { value: '' }, '-- Sélectionner un département d\'abord --')
+              ])
             ]),
 
-            // Code sous-préfecture
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Code sous-préfecture'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'sousPrefectureCode',
-                placeholder: 'Ex: 230101'
-              })
-            ]),
-
-            // Localité
+            // Localité (cascading level 4)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Localité'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'localite',
-                placeholder: 'Ex: Tieme'
-              })
+              el('select', { className: 'form-input', id: 'localite', disabled: true }, [
+                el('option', { value: '' }, '-- Sélectionner une sous-préfecture d\'abord --')
+              ])
             ]),
 
             // Longitude
@@ -402,6 +370,104 @@ export async function renderPPMCreateLine(params) {
   ]);
 
   mount('#app', page);
+
+  // Setup cascading dropdowns for localisation
+  setupLocalisationCascades(registries);
+}
+
+/**
+ * Setup cascading location dropdowns
+ */
+function setupLocalisationCascades(registries) {
+  const regionSelect = document.getElementById('region');
+  const deptSelect = document.getElementById('departement');
+  const spSelect = document.getElementById('sousPrefecture');
+  const localiteSelect = document.getElementById('localite');
+
+  if (!regionSelect || !deptSelect || !spSelect || !localiteSelect) return;
+
+  // Région change → populate Département
+  regionSelect.addEventListener('change', (e) => {
+    const regionCode = e.target.value;
+
+    // Reset downstream selects
+    deptSelect.innerHTML = '<option value="">-- Sélectionner un département --</option>';
+    deptSelect.disabled = !regionCode;
+    spSelect.innerHTML = '<option value="">-- Sélectionner un département d\'abord --</option>';
+    spSelect.disabled = true;
+    localiteSelect.innerHTML = '<option value="">-- Sélectionner une sous-préfecture d\'abord --</option>';
+    localiteSelect.disabled = true;
+
+    if (!regionCode) return;
+
+    // Find region and populate départements
+    const region = registries.LOCALITE_CI?.regions?.find(r => r.code === regionCode);
+    if (region?.departements) {
+      region.departements.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept.code;
+        option.textContent = dept.label;
+        option.dataset.label = dept.label;
+        deptSelect.appendChild(option);
+      });
+      deptSelect.disabled = false;
+    }
+  });
+
+  // Département change → populate Sous-préfecture
+  deptSelect.addEventListener('change', (e) => {
+    const regionCode = regionSelect.value;
+    const deptCode = e.target.value;
+
+    // Reset downstream selects
+    spSelect.innerHTML = '<option value="">-- Sélectionner une sous-préfecture --</option>';
+    spSelect.disabled = !deptCode;
+    localiteSelect.innerHTML = '<option value="">-- Sélectionner une sous-préfecture d\'abord --</option>';
+    localiteSelect.disabled = true;
+
+    if (!deptCode) return;
+
+    // Find département and populate sous-préfectures
+    const region = registries.LOCALITE_CI?.regions?.find(r => r.code === regionCode);
+    const dept = region?.departements?.find(d => d.code === deptCode);
+    if (dept?.sousPrefectures) {
+      dept.sousPrefectures.forEach(sp => {
+        const option = document.createElement('option');
+        option.value = sp.code;
+        option.textContent = sp.label;
+        option.dataset.label = sp.label;
+        spSelect.appendChild(option);
+      });
+      spSelect.disabled = false;
+    }
+  });
+
+  // Sous-préfecture change → populate Localité
+  spSelect.addEventListener('change', (e) => {
+    const regionCode = regionSelect.value;
+    const deptCode = deptSelect.value;
+    const spCode = e.target.value;
+
+    // Reset downstream select
+    localiteSelect.innerHTML = '<option value="">-- Sélectionner une localité --</option>';
+    localiteSelect.disabled = !spCode;
+
+    if (!spCode) return;
+
+    // Find sous-préfecture and populate localités
+    const region = registries.LOCALITE_CI?.regions?.find(r => r.code === regionCode);
+    const dept = region?.departements?.find(d => d.code === deptCode);
+    const sp = dept?.sousPrefectures?.find(s => s.code === spCode);
+    if (sp?.localites && Array.isArray(sp.localites)) {
+      sp.localites.forEach(loc => {
+        const option = document.createElement('option');
+        option.value = loc;
+        option.textContent = loc;
+        localiteSelect.appendChild(option);
+      });
+      localiteSelect.disabled = false;
+    }
+  });
 }
 
 async function handleSave(createAnother) {
@@ -444,15 +510,15 @@ async function handleSave(createAnother) {
       ? [document.getElementById('livrable')?.value?.trim()]
       : [],
 
-    // Localisation
+    // Localisation (cascading selects)
     localisation: {
-      region: document.getElementById('region')?.value?.trim() || '',
-      regionCode: document.getElementById('regionCode')?.value?.trim() || '',
-      departement: document.getElementById('departement')?.value?.trim() || '',
-      departementCode: document.getElementById('departementCode')?.value?.trim() || '',
-      sousPrefecture: document.getElementById('sousPrefecture')?.value?.trim() || '',
-      sousPrefectureCode: document.getElementById('sousPrefectureCode')?.value?.trim() || '',
-      localite: document.getElementById('localite')?.value?.trim() || '',
+      region: getSelectLabel('region') || '',
+      regionCode: document.getElementById('region')?.value || '',
+      departement: getSelectLabel('departement') || '',
+      departementCode: document.getElementById('departement')?.value || '',
+      sousPrefecture: getSelectLabel('sousPrefecture') || '',
+      sousPrefectureCode: document.getElementById('sousPrefecture')?.value || '',
+      localite: document.getElementById('localite')?.value || '',
       longitude: document.getElementById('longitude')?.value ? Number(document.getElementById('longitude')?.value) : null,
       latitude: document.getElementById('latitude')?.value ? Number(document.getElementById('latitude')?.value) : null,
       coordsOK: !!(document.getElementById('longitude')?.value && document.getElementById('latitude')?.value)
