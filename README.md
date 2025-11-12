@@ -4,20 +4,26 @@
 
 SIDCF Portal est une application web vanilla (HTML + JavaScript ES modules + CSS) conçue pour la gestion des marchés publics, investissements et matières dans le cadre du contrôle financier en Côte d'Ivoire.
 
-**Version :** 1.0.0 MVP
+**Version :** 2.5.0
 **Stack :** 100% Vanilla JS (ES modules) - Pas de framework
 **Architecture :** Modulaire, extensible, paramétrée par JSON
 
 ## ✨ Fonctionnalités principales
 
-### Module Marché (Actif)
+### Module Marché (100% Complet)
 - ✅ Gestion PPM (Plan de Passation des Marchés)
 - ✅ Import Excel PPM
-- ✅ Fiche marché complète
-- ✅ Suivi des avenants avec alertes automatiques (seuils 25% / 30%)
+- ✅ Fiche marché complète avec timeline
 - ✅ Gestion des procédures et PV
-- ✅ Attribution et contrôle CF
-- ✅ Dashboard consolidé
+- ✅ Gestion des recours
+- ✅ Attribution avec ANO (Avis de Non-Objection)
+- ✅ Échéancier et clé de répartition multi-bailleurs
+- ✅ Visa CF (Contrôle Financier)
+- ✅ Exécution avec Ordres de Service
+- ✅ Suivi des avenants avec alertes automatiques (seuils 25% / 30%)
+- ✅ Gestion des garanties avec workflow mainlevée
+- ✅ Clôture (PV provisoire/définitif)
+- ✅ Dashboard CF avec KPIs et alertes
 
 ### Modules Investissement & Matière
 - 🚧 Coquilles vides prêtes pour développement futur
@@ -86,7 +92,7 @@ sidcf-portal/
 │   │   └── pieces-matrice.json # Pièces obligatoires par phase
 │   ├── datastore/
 │   │   ├── data-service.js   # 🔥 Façade unifiée
-│   │   ├── schema.js         # Entités (OPERATION, AVENANT, etc.)
+│   │   ├── schema.js         # Entités (16 entités complètes)
 │   │   ├── rules-engine.js   # Moteur de validation
 │   │   ├── seed.json         # Données de démo réalistes
 │   │   └── adapters/
@@ -98,13 +104,16 @@ sidcf-portal/
 │   │   └── widgets/
 │   │       ├── kpis.js
 │   │       ├── table.js
-│   │       └── form.js
+│   │       ├── form.js
+│   │       ├── steps.js
+│   │       ├── document-checklist.js
+│   │       └── budget-line-viewer.js
 │   ├── portal/
 │   │   └── portal-home.js    # Sélection de module
 │   ├── modules/
 │   │   ├── marche/
 │   │   │   ├── index.js      # Enregistrement routes + aliases
-│   │   │   └── screens/      # 12 écrans (PPM, procédure, etc.)
+│   │   │   └── screens/      # 14 écrans (cycle complet)
 │   │   ├── investissement/   # Placeholder
 │   │   └── matiere/          # Placeholder
 │   ├── admin/
@@ -114,7 +123,12 @@ sidcf-portal/
 │   │   └── matrice-pieces.js
 │   └── diagnostics/
 │       └── health.js
-└── README.md
+└── docs/
+    ├── RAPPORT_FINAL_COMPLETION.md  # Rapport 100% completion
+    ├── CHANGELOG.md
+    ├── DEVELOPER_GUIDE.md
+    ├── LIVRAISON_FINALE.md
+    └── flux-budget-marche.md
 ```
 
 ## 🔄 Routage et Rétro-compatibilité
@@ -127,7 +141,15 @@ sidcf-portal/
 | `#/ppm-list` | Liste PPM & opérations |
 | `#/ppm-import` | Import Excel PPM |
 | `#/fiche-marche?idOperation=...` | Détail marché |
+| `#/procedure?idOperation=...` | Procédure & PV |
+| `#/recours?idOperation=...` | Gestion des recours |
+| `#/attribution?idOperation=...` | Attribution |
+| `#/echeancier?idOperation=...` | Échéancier & clé bailleurs |
+| `#/visa-cf?idOperation=...` | Visa CF |
+| `#/execution?idOperation=...` | Exécution OS |
 | `#/avenants?idOperation=...` | Gestion avenants |
+| `#/garanties?idOperation=...` | Garanties & mainlevée |
+| `#/cloture?idOperation=...` | Clôture & réceptions |
 | `#/dashboard-cf` | Dashboard CF |
 | `#/admin/institution` | Config institution |
 | `#/diagnostics/health` | État système |
@@ -139,7 +161,17 @@ Les anciennes routes ne cassent **jamais** :
 ```javascript
 /ecr01a-import-ppm → /ppm-import
 /ecr01b-ppm-unitaire → /ppm-list
+/ecr01c-fiche-marche → /fiche-marche
+/ecr02a-procedure-pv → /procedure
+/ecr02b-recours → /recours
+/ecr03a-attribution → /attribution
+/ecr03b-echeancier-cle → /echeancier
+/ecr04a-visa-cf → /visa-cf
+/ecr04a-execution-os → /execution
 /ecr04b-avenants → /avenants
+/ecr04c-garanties-resiliation → /garanties
+/ecr05-cloture-receptions → /cloture
+/ecr06-dashboard-cf → /dashboard-cf
 ```
 
 ## 💾 Persistance des données
@@ -180,10 +212,26 @@ Si la connexion échoue, l'app bascule automatiquement sur localStorage avec un 
 
 ```json
 {
-  "SEUIL_CUMUL_AVENANTS": 30,        // % max (BLOCANT)
-  "SEUIL_ALERTE_AVENANTS": 25,       // % alerte (WARN)
-  "TAUX_MAX_AVANCE": 15,             // % avance (BLOCANT)
-  "DELAI_MAX_OS_APRES_VISA": 30      // jours (WARN)
+  "seuils": {
+    "SEUIL_CUMUL_AVENANTS": { "value": 30 },        // % max (BLOCANT)
+    "SEUIL_ALERTE_AVENANTS": { "value": 25 },       // % alerte (WARN)
+    "TAUX_MAX_AVANCE": { "value": 15 },             // % avance (BLOCANT)
+    "DELAI_MAX_OS_APRES_VISA": { "value": 30 }      // jours (WARN)
+  },
+  "ano": {
+    "modes_requierant_ano": ["AOO", "AON"],
+    "bailleurs_requierant_ano": ["BM", "BAD", "UE", "AFD", "BEI", "BADEA"],
+    "seuils_montant": {
+      "TRAVAUX": { "value": 100000000 },
+      "FOURNITURES": { "value": 50000000 },
+      "SERVICES": { "value": 30000000 }
+    }
+  },
+  "garanties": {
+    "garantie_avance": { "taux_min": 10, "taux_max": 15 },
+    "garantie_bonne_execution": { "taux_min": 5, "taux_max": 10 },
+    "retenue_garantie": { "taux": 10 }
+  }
 }
 ```
 
@@ -196,10 +244,10 @@ Par type d'institution (ADMIN_CENTRALE, SOCIETE_ETAT, PROJET) :
 
 ### Pièces obligatoires
 
-Matrice dynamique par :
-- Phase (PLANIF / PROC / ATTR / EXEC / CLOT)
-- Mode de passation
-- Type de marché
+Matrice dynamique dans `pieces-matrice.json` :
+- 7 phases (INVITATION, OUVERTURE, ANALYSE, JUGEMENT, APPROBATION, EXECUTION, CLOTURE)
+- 44 types de documents
+- Mapping par mode de passation
 
 ## 🎨 Design System
 
@@ -299,6 +347,10 @@ Créer dans Airtable :
 - **OPERATION** : id, planId, objet, typeMarche, montantPrevisionnel, etat, ...
 - **AVENANT** : id, operationId, numero, type, variationMontant, cumulPourcent, ...
 - **GARANTIE** : id, operationId, type, montant, taux, dateEmission, etat, ...
+- **ANO** : id, operationId, type, organisme, decision, workflow dates
+- **GROUPEMENT** : id, libelle, nature, mandataireId, membres[]
+- **RECOURS** : id, operationId, type, dateDepot, decision
+- **CLOTURE** : id, operationId, receptionProv, receptionDef, mainlevees
 
 ### Mapping
 
@@ -328,12 +380,12 @@ Pour objets imbriqués : flatten automatique par l'adapter (`chaineBudgetaire.se
 - Sidebar collapse sur mobile (<1024px)
 - Tables scrollables horizontalement
 
-## 📊 Parcours de démo (2 minutes)
+## 📊 Parcours de démo (5 minutes)
 
 1. **Portail** → Cliquer "Module Marché"
-2. **PPM List** → Voir 3 opérations seed
-3. **Fiche marché** → Cliquer sur "Construction centre de santé"
-4. **Avenants** → Voir alerte jaune 25.5% (proche seuil 30%)
+2. **PPM List** → Voir les opérations
+3. **Fiche marché** → Timeline complète
+4. **Dashboard CF** → KPIs et alertes
 5. **Diagnostics** → Health check (tout vert)
 
 ## 🛠️ Développement
@@ -386,3 +438,7 @@ Propriété de la Direction du Contrôle Financier - Côte d'Ivoire
 
 **Développé avec ❤️ en Vanilla JS**
 *Aucune dépendance externe - Performance optimale*
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
