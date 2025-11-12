@@ -6,6 +6,7 @@ import router from '../../router.js';
 import renderImportPPM from './screens/ecr01a-import-ppm.js';
 import renderPPMList from './screens/ecr01b-ppm-unitaire.js';
 import renderFicheMarche from './screens/ecr01c-fiche-marche.js';
+import renderPPMCreateLine from './screens/ecr01d-ppm-create-line.js';
 import renderProcedurePV from './screens/ecr02a-procedure-pv.js';
 import renderRecours from './screens/ecr02b-recours.js';
 import renderAttribution from './screens/ecr03a-attribution.js';
@@ -61,7 +62,7 @@ export function registerMarcheRoutes() {
   // PPM & Planning
   router.register('/ppm-list', renderPPMList);
   router.register('/ppm-import', renderImportPPM);
-  router.register('/ppm-create-line', stubScreen('Créer ligne PPM'));
+  router.register('/ppm-create-line', renderPPMCreateLine);
 
   // Fiche marché
   router.register('/fiche-marche', renderFicheMarche);

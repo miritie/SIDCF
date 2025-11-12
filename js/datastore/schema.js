@@ -44,32 +44,64 @@ export const SCHEMAS = {
     id: null,
     planId: null,
     budgetLineId: null, // (note Maxence) Liaison vers BUDGET_LINE
+
+    // Identification
     unite: '',
     exercice: null,
     objet: '',
+
+    // Classification marché
     typeMarche: null,
     modePassation: null,
     categorieProcedure: null,
     naturePrix: null,
     revue: null,
+
+    // Financier
     montantPrevisionnel: 0,
     montantActuel: 0,
     devise: 'XOF',
+    typeFinancement: '', // Trésor, Emprunt, Don, etc.
+    sourceFinancement: '', // BADEA, BM, AFD, etc.
+
+    // Technique
     dureePrevisionnelle: 0,
+    delaiExecution: 0, // en jours
     infrastructure: '',
     beneficiaire: '',
+    livrables: [],
+
+    // Chaîne budgétaire complète
     chaineBudgetaire: {
       section: '',
       programme: '',
       activite: '',
+      activiteCode: '',
       nature: '',
+      ligneBudgetaire: '',
       bailleur: ''
     },
-    livrables: [],
-    coordsOK: false,
+
+    // Localisation géographique
+    localisation: {
+      region: '',
+      regionCode: '',
+      departement: '',
+      departementCode: '',
+      sousPrefecture: '',
+      sousPrefectureCode: '',
+      localite: '',
+      longitude: null,
+      latitude: null,
+      coordsOK: false
+    },
+
+    // Workflow
     timeline: ['PLANIF'],
     etat: 'PLANIFIE',
     procDerogation: null, // { isDerogation: bool, docId, comment, validatedAt }
+
+    // Audit
     createdAt: null,
     updatedAt: null
   },
