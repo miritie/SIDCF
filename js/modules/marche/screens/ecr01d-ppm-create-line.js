@@ -239,13 +239,13 @@ export async function renderPPMCreateLine(params) {
               })
             ]),
 
-            // Infrastructure
+            // Catégorie prestation
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Type d\'infrastructure'),
-              el('select', { className: 'form-input', id: 'infrastructure' }, [
+              el('label', { className: 'form-label' }, 'Catégorie de prestation'),
+              el('select', { className: 'form-input', id: 'categoriePrestation' }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.TYPE_INFRASTRUCTURE || []).map(i =>
-                  el('option', { value: i.code }, i.label)
+                ...(registries.CATEGORIE_PRESTATION || []).map(c =>
+                  el('option', { value: c.code }, c.label)
                 )
               ])
             ]),
@@ -438,7 +438,7 @@ async function handleSave(createAnother) {
     // Technique
     delaiExecution: Number(document.getElementById('delaiExecution')?.value) || 0,
     dureePrevisionnelle: Number(document.getElementById('delaiExecution')?.value) || 0,
-    infrastructure: document.getElementById('infrastructure')?.value || '',
+    categoriePrestation: document.getElementById('categoriePrestation')?.value || '',
     beneficiaire: document.getElementById('beneficiaire')?.value?.trim() || '',
     livrables: document.getElementById('livrable')?.value?.trim()
       ? [document.getElementById('livrable')?.value?.trim()]

@@ -67,7 +67,7 @@ export const SCHEMAS = {
     // Technique
     dureePrevisionnelle: 0,
     delaiExecution: 0, // en jours
-    infrastructure: '',
+    categoriePrestation: '', // INFRASTRUCTURE, SERVICE, EQUIPEMENT, ETUDE, FORMATION, FOURNITURE
     beneficiaire: '',
     livrables: [],
 

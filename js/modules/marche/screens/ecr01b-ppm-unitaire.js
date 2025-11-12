@@ -1,5 +1,5 @@
 /* ============================================
-   ECR01B - PPM List & Operations (Enhanced v2)
+   ECR01B - PPM List & Operations (v3 - Optimized)
    ============================================ */
 
 import { el, mount } from '../../../lib/dom.js';
@@ -20,10 +20,14 @@ let activeFilters = {
   modePassation: 'ALL',
   etat: 'ALL',
   typeFinancement: 'ALL',
-  infrastructure: 'ALL',
+  bailleur: 'ALL',
+  categoriePrestation: 'ALL',
   region: 'ALL',
   exercice: 'ALL'
 };
+
+// Opération sélectionnée pour modal détails
+let selectedOperation = null;
 
 export async function renderPPMList() {
   // Load data
@@ -80,14 +84,15 @@ export async function renderPPMList() {
               type: 'text',
               className: 'form-input',
               id: 'filter-search',
-              placeholder: 'Objet, bénéficiaire, localité...'
+              placeholder: 'Objet, bénéficiaire, localité...',
+              value: activeFilters.search
             })
           ]),
 
           // Exercice
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Exercice'),
-            el('select', { className: 'form-input', id: 'filter-exercice' }, [
+            el('select', { className: 'form-input', id: 'filter-exercice', value: activeFilters.exercice }, [
               el('option', { value: 'ALL' }, 'Tous'),
               ...exercices.map(ex => el('option', { value: ex }, String(ex)))
             ])
@@ -96,7 +101,7 @@ export async function renderPPMList() {
           // Type marché
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Type de marché'),
-            el('select', { className: 'form-input', id: 'filter-typeMarche' }, [
+            el('select', { className: 'form-input', id: 'filter-typeMarche', value: activeFilters.typeMarche }, [
               el('option', { value: 'ALL' }, 'Tous'),
               ...(registries.TYPE_MARCHE || []).map(t =>
                 el('option', { value: t.code }, t.label)
@@ -107,7 +112,7 @@ export async function renderPPMList() {
           // Mode passation
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Mode de passation'),
-            el('select', { className: 'form-input', id: 'filter-modePassation' }, [
+            el('select', { className: 'form-input', id: 'filter-modePassation', value: activeFilters.modePassation }, [
               el('option', { value: 'ALL' }, 'Tous'),
               ...(registries.MODE_PASSATION || []).map(m =>
                 el('option', { value: m.code }, m.label)
@@ -118,7 +123,7 @@ export async function renderPPMList() {
           // État
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'État'),
-            el('select', { className: 'form-input', id: 'filter-etat' }, [
+            el('select', { className: 'form-input', id: 'filter-etat', value: activeFilters.etat }, [
               el('option', { value: 'ALL' }, 'Tous'),
               ...(registries.ETAT_MARCHE || []).map(e =>
                 el('option', { value: e.code }, e.label)
@@ -129,7 +134,7 @@ export async function renderPPMList() {
           // Type financement
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Type financement'),
-            el('select', { className: 'form-input', id: 'filter-typeFinancement' }, [
+            el('select', { className: 'form-input', id: 'filter-typeFinancement', value: activeFilters.typeFinancement }, [
               el('option', { value: 'ALL' }, 'Tous'),
               ...(registries.TYPE_FINANCEMENT || []).map(t =>
                 el('option', { value: t.code }, t.label)
@@ -137,13 +142,24 @@ export async function renderPPMList() {
             ])
           ]),
 
-          // Infrastructure
+          // Bailleur
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Infrastructure'),
-            el('select', { className: 'form-input', id: 'filter-infrastructure' }, [
+            el('label', { className: 'form-label' }, 'Bailleur'),
+            el('select', { className: 'form-input', id: 'filter-bailleur', value: activeFilters.bailleur }, [
+              el('option', { value: 'ALL' }, 'Tous'),
+              ...(registries.BAILLEUR || []).map(b =>
+                el('option', { value: b.code }, b.label)
+              )
+            ])
+          ]),
+
+          // Catégorie prestation
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Catégorie prestation'),
+            el('select', { className: 'form-input', id: 'filter-categoriePrestation', value: activeFilters.categoriePrestation }, [
               el('option', { value: 'ALL' }, 'Toutes'),
-              ...(registries.TYPE_INFRASTRUCTURE || []).map(i =>
-                el('option', { value: i.code }, i.label)
+              ...(registries.CATEGORIE_PRESTATION || []).map(c =>
+                el('option', { value: c.code }, c.label)
               )
             ])
           ]),
@@ -151,7 +167,7 @@ export async function renderPPMList() {
           // Région
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Région'),
-            el('select', { className: 'form-input', id: 'filter-region' }, [
+            el('select', { className: 'form-input', id: 'filter-region', value: activeFilters.region }, [
               el('option', { value: 'ALL' }, 'Toutes'),
               ...regions.map(r => el('option', { value: r }, r))
             ])
@@ -160,7 +176,7 @@ export async function renderPPMList() {
       ])
     ]),
 
-    // Results table
+    // Results table (SIMPLIFIED)
     el('div', { className: 'card' }, [
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, `Résultats (${filteredOps.length})`),
@@ -168,7 +184,7 @@ export async function renderPPMList() {
       ]),
       el('div', { className: 'card-body' }, [
         filteredOps.length > 0
-          ? renderTable(filteredOps, registries)
+          ? renderSimpleTable(filteredOps, registries)
           : el('div', { className: 'alert alert-info' }, [
               el('div', { className: 'alert-icon' }, '📭'),
               el('div', { className: 'alert-content' }, [
@@ -177,7 +193,10 @@ export async function renderPPMList() {
               ])
             ])
       ])
-    ])
+    ]),
+
+    // Modal container
+    el('div', { id: 'modal-detail-container' })
   ]);
 
   mount('#app', page);
@@ -203,37 +222,26 @@ function renderKPI(label, value, color, icon) {
   ]);
 }
 
-function renderTable(operations, registries) {
+// NOUVEAU: Tableau simplifié (colonnes essentielles uniquement)
+function renderSimpleTable(operations, registries) {
   const table = el('div', { style: { overflowX: 'auto' } }, [
-    el('table', { className: 'data-table', style: { minWidth: '2000px' } }, [
+    el('table', { className: 'data-table' }, [
       el('thead', {}, [
         el('tr', {}, [
           el('th', { style: { minWidth: '80px' } }, 'Exercice'),
-          el('th', { style: { minWidth: '100px' } }, 'Unité Op.'),
-          el('th', { style: { minWidth: '250px' } }, 'Objet'),
-          el('th', { style: { minWidth: '120px' } }, 'Type Marché'),
-          el('th', { style: { minWidth: '100px' } }, 'Mode Pass.'),
-          el('th', { style: { minWidth: '100px' } }, 'Revue'),
-          el('th', { style: { minWidth: '100px' } }, 'Nature Prix'),
-          el('th', { style: { minWidth: '120px' } }, 'Montant (M)'),
-          el('th', { style: { minWidth: '100px' } }, 'Type Fin.'),
-          el('th', { style: { minWidth: '100px' } }, 'Source Fin.'),
-          el('th', { style: { minWidth: '120px' } }, 'Activité'),
-          el('th', { style: { minWidth: '150px' } }, 'Ligne Budgétaire'),
-          el('th', { style: { minWidth: '80px' } }, 'Délai (j)'),
-          el('th', { style: { minWidth: '120px' } }, 'Infrastructure'),
-          el('th', { style: { minWidth: '150px' } }, 'Bénéficiaire'),
+          el('th', { style: { minWidth: '300px' } }, 'Objet'),
+          el('th', { style: { minWidth: '120px' } }, 'Type'),
+          el('th', { style: { minWidth: '100px' } }, 'Mode'),
+          el('th', { style: { minWidth: '120px', textAlign: 'right' } }, 'Montant (M)'),
+          el('th', { style: { minWidth: '120px' } }, 'Bailleur'),
+          el('th', { style: { minWidth: '120px' } }, 'Catégorie'),
           el('th', { style: { minWidth: '120px' } }, 'Région'),
-          el('th', { style: { minWidth: '150px' } }, 'Département'),
-          el('th', { style: { minWidth: '150px' } }, 'Sous-Préfecture'),
-          el('th', { style: { minWidth: '120px' } }, 'Localité'),
-          el('th', { style: { minWidth: '100px' } }, 'Coords'),
           el('th', { style: { minWidth: '100px' } }, 'État'),
-          el('th', { style: { minWidth: '120px', position: 'sticky', right: 0, background: 'var(--color-bg)' } }, 'Actions')
+          el('th', { style: { minWidth: '180px' } }, 'Actions')
         ])
       ]),
       el('tbody', {},
-        operations.map(op => renderRow(op, registries))
+        operations.map(op => renderSimpleRow(op, registries))
       )
     ])
   ]);
@@ -241,54 +249,278 @@ function renderTable(operations, registries) {
   return table;
 }
 
-function renderRow(op, registries) {
+function renderSimpleRow(op, registries) {
   const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === op.typeMarche);
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === op.modePassation);
   const etat = registries.ETAT_MARCHE?.find(e => e.code === op.etat);
-  const naturePrix = registries.NATURE_PRIX?.find(n => n.code === op.naturePrix);
-  const infrastructure = registries.TYPE_INFRASTRUCTURE?.find(i => i.code === op.infrastructure);
+  const categorie = registries.CATEGORIE_PRESTATION?.find(c => c.code === op.categoriePrestation);
+  const bailleur = registries.BAILLEUR?.find(b => b.code === op.sourceFinancement);
 
   return el('tr', {
     style: { cursor: 'pointer' },
     onclick: () => router.navigate('/fiche-marche', { idOperation: op.id })
   }, [
     el('td', {}, String(op.exercice || '-')),
-    el('td', { className: 'text-small' }, op.unite || '-'),
-    el('td', { style: { fontWeight: '500' } }, op.objet),
-    el('td', {}, typeMarche?.label || op.typeMarche || '-'),
-    el('td', {}, modePassation?.label || op.modePassation || '-'),
-    el('td', {}, op.revue || '-'),
-    el('td', {}, naturePrix?.label || op.naturePrix || '-'),
-    el('td', { style: { fontWeight: '600', textAlign: 'right' } }, (op.montantPrevisionnel / 1000000).toFixed(2)),
-    el('td', {}, op.typeFinancement || '-'),
-    el('td', {}, op.sourceFinancement || '-'),
-    el('td', { className: 'text-small' }, op.chaineBudgetaire?.activite || '-'),
-    el('td', { className: 'text-small' }, op.chaineBudgetaire?.ligneBudgetaire || '-'),
-    el('td', { style: { textAlign: 'right' } }, String(op.delaiExecution || op.dureePrevisionnelle || '-')),
-    el('td', {}, infrastructure?.label || op.infrastructure || '-'),
-    el('td', {}, op.beneficiaire || '-'),
-    el('td', {}, op.localisation?.region || '-'),
-    el('td', {}, op.localisation?.departement || '-'),
-    el('td', {}, op.localisation?.sousPrefecture || '-'),
-    el('td', {}, op.localisation?.localite || '-'),
-    el('td', { style: { textAlign: 'center' } },
-      op.localisation?.coordsOK
-        ? el('span', { style: { color: 'var(--color-success)' } }, '✓')
-        : el('span', { style: { color: 'var(--color-gray-400)' } }, '—')
+    el('td', { style: { fontWeight: '500' }, title: op.objet },
+      op.objet.length > 60 ? op.objet.substring(0, 60) + '...' : op.objet
     ),
+    el('td', {}, typeMarche?.label || op.typeMarche || '-'),
+    el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
+    el('td', { style: { fontWeight: '600', textAlign: 'right' } }, (op.montantPrevisionnel / 1000000).toFixed(2)),
+    el('td', { className: 'text-small', title: bailleur?.label },
+      bailleur?.code || op.sourceFinancement || '-'
+    ),
+    el('td', {}, categorie?.label || op.categoriePrestation || '-'),
+    el('td', {}, op.localisation?.region || '-'),
     el('td', {},
       el('span', {
         className: `badge badge-${etat?.color || 'gray'}`,
         style: { fontSize: '11px' }
       }, etat?.label || op.etat)
     ),
-    el('td', { style: { position: 'sticky', right: 0, background: 'var(--color-bg)' } }, [
+    el('td', {}, [
       createButton('btn btn-sm btn-secondary', '👁️ Voir', (e) => {
         e.stopPropagation();
         router.navigate('/fiche-marche', { idOperation: op.id });
+      }),
+      createButton('btn btn-sm btn-primary', '📋 Détails', (e) => {
+        e.stopPropagation();
+        showDetailModal(op, registries);
       })
     ])
   ]);
+}
+
+// NOUVEAU: Modal de détails complets
+function showDetailModal(operation, registries) {
+  selectedOperation = operation;
+
+  const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === operation.typeMarche);
+  const modePassation = registries.MODE_PASSATION?.find(m => m.code === operation.modePassation);
+  const naturePrix = registries.NATURE_PRIX?.find(n => n.code === operation.naturePrix);
+  const etat = registries.ETAT_MARCHE?.find(e => e.code === operation.etat);
+  const categorie = registries.CATEGORIE_PRESTATION?.find(c => c.code === operation.categoriePrestation);
+  const bailleur = registries.BAILLEUR?.find(b => b.code === operation.sourceFinancement);
+  const typeFinancement = registries.TYPE_FINANCEMENT?.find(t => t.code === operation.typeFinancement);
+
+  const modal = el('div', {
+    className: 'modal-overlay',
+    id: 'detail-modal',
+    onclick: (e) => {
+      if (e.target.id === 'detail-modal') closeDetailModal();
+    }
+  }, [
+    el('div', { className: 'modal-content', style: { maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' } }, [
+      // Header
+      el('div', { className: 'modal-header' }, [
+        el('h2', { className: 'modal-title' }, '📋 Détails de l\'opération'),
+        createButton('btn-close', '×', closeDetailModal)
+      ]),
+
+      // Body
+      el('div', { className: 'modal-body' }, [
+        // Section: Identification
+        renderDetailSection('Identification', [
+          { label: 'Exercice', value: operation.exercice },
+          { label: 'Unité opérationnelle', value: operation.unite },
+          { label: 'Objet', value: operation.objet, fullWidth: true }
+        ]),
+
+        // Section: Classification
+        renderDetailSection('Classification', [
+          { label: 'Type de marché', value: typeMarche?.label || operation.typeMarche },
+          { label: 'Mode de passation', value: modePassation?.label || operation.modePassation },
+          { label: 'Revue', value: operation.revue },
+          { label: 'Nature des prix', value: naturePrix?.label || operation.naturePrix },
+          { label: 'État', value: etat?.label || operation.etat }
+        ]),
+
+        // Section: Financier
+        renderDetailSection('Financier', [
+          { label: 'Montant prévisionnel', value: money(operation.montantPrevisionnel) },
+          { label: 'Montant actuel', value: money(operation.montantActuel) },
+          { label: 'Type de financement', value: typeFinancement?.label || operation.typeFinancement },
+          { label: 'Bailleur / Source', value: bailleur?.label || operation.sourceFinancement }
+        ]),
+
+        // Section: Chaîne budgétaire
+        renderDetailSection('Chaîne budgétaire', [
+          { label: 'Activité', value: operation.chaineBudgetaire?.activite },
+          { label: 'Code activité', value: operation.chaineBudgetaire?.activiteCode },
+          { label: 'Ligne budgétaire', value: operation.chaineBudgetaire?.ligneBudgetaire },
+          { label: 'Bailleur', value: operation.chaineBudgetaire?.bailleur }
+        ]),
+
+        // Section: Technique
+        renderDetailSection('Technique', [
+          { label: 'Délai d\'exécution', value: operation.delaiExecution ? `${operation.delaiExecution} jours` : '-' },
+          { label: 'Catégorie prestation', value: categorie?.label || operation.categoriePrestation },
+          { label: 'Bénéficiaire', value: operation.beneficiaire },
+          { label: 'Livrables', value: operation.livrables?.join(', ') || '-', fullWidth: true }
+        ]),
+
+        // Section: Localisation
+        renderDetailSection('Localisation géographique', [
+          { label: 'Région', value: `${operation.localisation?.region || '-'} (${operation.localisation?.regionCode || ''})` },
+          { label: 'Département', value: `${operation.localisation?.departement || '-'} (${operation.localisation?.departementCode || ''})` },
+          { label: 'Sous-préfecture', value: `${operation.localisation?.sousPrefecture || '-'} (${operation.localisation?.sousPrefectureCode || ''})` },
+          { label: 'Localité', value: operation.localisation?.localite },
+          { label: 'Longitude', value: operation.localisation?.longitude },
+          { label: 'Latitude', value: operation.localisation?.latitude },
+          {
+            label: 'Coordonnées GPS',
+            value: operation.localisation?.coordsOK
+              ? '✅ Validées'
+              : '❌ Non renseignées'
+          }
+        ])
+      ]),
+
+      // Footer
+      el('div', { className: 'modal-footer' }, [
+        createButton('btn btn-secondary', 'Fermer', closeDetailModal),
+        createButton('btn btn-primary', '🔍 Voir fiche complète', () => {
+          closeDetailModal();
+          router.navigate('/fiche-marche', { idOperation: operation.id });
+        })
+      ])
+    ])
+  ]);
+
+  const container = document.getElementById('modal-detail-container');
+  container.innerHTML = '';
+  container.appendChild(modal);
+
+  // Add CSS for modal if not exists
+  if (!document.getElementById('modal-styles')) {
+    const style = document.createElement('style');
+    style.id = 'modal-styles';
+    style.textContent = `
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+      }
+      .modal-content {
+        background: var(--color-bg);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 100%;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px;
+        border-bottom: 1px solid var(--color-gray-200);
+      }
+      .modal-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .btn-close {
+        background: none;
+        border: none;
+        font-size: 32px;
+        cursor: pointer;
+        color: var(--color-gray-500);
+        padding: 0;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+      }
+      .btn-close:hover {
+        background: var(--color-gray-100);
+        color: var(--color-gray-700);
+      }
+      .modal-body {
+        padding: 24px;
+      }
+      .modal-footer {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        padding: 24px;
+        border-top: 1px solid var(--color-gray-200);
+      }
+      .detail-section {
+        margin-bottom: 32px;
+      }
+      .detail-section:last-child {
+        margin-bottom: 0;
+      }
+      .detail-section-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: var(--color-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+      }
+      .detail-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .detail-field.full-width {
+        grid-column: 1 / -1;
+      }
+      .detail-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--color-gray-500);
+        letter-spacing: 0.5px;
+      }
+      .detail-value {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--color-text);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+function renderDetailSection(title, fields) {
+  return el('div', { className: 'detail-section' }, [
+    el('div', { className: 'detail-section-title' }, title),
+    el('div', { className: 'detail-grid' },
+      fields.map(field =>
+        el('div', { className: field.fullWidth ? 'detail-field full-width' : 'detail-field' }, [
+          el('div', { className: 'detail-label' }, field.label),
+          el('div', { className: 'detail-value' }, field.value || '-')
+        ])
+      )
+    )
+  ]);
+}
+
+function closeDetailModal() {
+  const container = document.getElementById('modal-detail-container');
+  if (container) {
+    container.innerHTML = '';
+  }
+  selectedOperation = null;
 }
 
 function applyFilters(operations) {
@@ -327,8 +559,13 @@ function applyFilters(operations) {
       return false;
     }
 
-    // Infrastructure
-    if (activeFilters.infrastructure !== 'ALL' && op.infrastructure !== activeFilters.infrastructure) {
+    // Bailleur
+    if (activeFilters.bailleur !== 'ALL' && op.sourceFinancement !== activeFilters.bailleur) {
+      return false;
+    }
+
+    // Catégorie prestation
+    if (activeFilters.categoriePrestation !== 'ALL' && op.categoriePrestation !== activeFilters.categoriePrestation) {
       return false;
     }
 
@@ -349,7 +586,8 @@ function setupFilterListeners() {
     modePassation: document.getElementById('filter-modePassation'),
     etat: document.getElementById('filter-etat'),
     typeFinancement: document.getElementById('filter-typeFinancement'),
-    infrastructure: document.getElementById('filter-infrastructure'),
+    bailleur: document.getElementById('filter-bailleur'),
+    categoriePrestation: document.getElementById('filter-categoriePrestation'),
     region: document.getElementById('filter-region')
   };
 
@@ -368,6 +606,17 @@ function setupFilterListeners() {
     if (key !== 'search' && input) {
       input.addEventListener('change', (e) => {
         activeFilters[key] = e.target.value;
+
+        // Logique automatique: Type financement → Bailleur
+        if (key === 'typeFinancement') {
+          const typeFin = e.target.value;
+          if (typeFin === 'ETAT') {
+            activeFilters.bailleur = 'TRESOR';
+            const bailSelect = document.getElementById('filter-bailleur');
+            if (bailSelect) bailSelect.value = 'TRESOR';
+          }
+        }
+
         renderPPMList();
       });
     }
@@ -381,7 +630,8 @@ function resetFilters() {
     modePassation: 'ALL',
     etat: 'ALL',
     typeFinancement: 'ALL',
-    infrastructure: 'ALL',
+    bailleur: 'ALL',
+    categoriePrestation: 'ALL',
     region: 'ALL',
     exercice: 'ALL'
   };
@@ -391,8 +641,8 @@ function resetFilters() {
 function exportToCSV(operations) {
   const headers = [
     'Exercice', 'Unité Opérationnelle', 'Objet', 'Type Marché', 'Mode Passation',
-    'Revue', 'Nature Prix', 'Montant Prévisionnel', 'Type Financement', 'Source Financement',
-    'Activité', 'Activité Code', 'Ligne Budgétaire', 'Délai Execution', 'Infrastructure',
+    'Revue', 'Nature Prix', 'Montant Prévisionnel', 'Type Financement', 'Bailleur',
+    'Activité', 'Activité Code', 'Ligne Budgétaire', 'Délai Execution', 'Catégorie Prestation',
     'Bénéficiaire', 'Région', 'Département', 'Sous-Préfecture', 'Localité',
     'Longitude', 'Latitude', 'État'
   ];
@@ -412,7 +662,7 @@ function exportToCSV(operations) {
     op.chaineBudgetaire?.activiteCode || '',
     op.chaineBudgetaire?.ligneBudgetaire || '',
     op.delaiExecution || op.dureePrevisionnelle || '',
-    op.infrastructure || '',
+    op.categoriePrestation || '',
     op.beneficiaire || '',
     op.localisation?.region || '',
     op.localisation?.departement || '',

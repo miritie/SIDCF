@@ -112,16 +112,30 @@
       }
     ]
   },
+  "CATEGORIE_PRESTATION": [
+    { "code": "INFRASTRUCTURE", "label": "Infrastructure" },
+    { "code": "SERVICE", "label": "Service" },
+    { "code": "EQUIPEMENT", "label": "Équipement" },
+    { "code": "ETUDE", "label": "Étude / Conseil" },
+    { "code": "FORMATION", "label": "Formation" },
+    { "code": "FOURNITURE", "label": "Fourniture" }
+  ],
   "BAILLEUR": [
-    { "code": "ETAT_CI", "label": "État de Côte d'Ivoire" },
+    { "code": "TRESOR", "label": "Trésor Public (CI)", "typeFinancement": "ETAT" },
     { "code": "BAD", "label": "Banque Africaine de Développement (BAD)" },
     { "code": "BM", "label": "Banque Mondiale (BM)" },
     { "code": "AFD", "label": "Agence Française de Développement (AFD)" },
     { "code": "UE", "label": "Union Européenne (UE)" },
+    { "code": "USAID", "label": "United States Agency for International Development (USAID)" },
     { "code": "BID", "label": "Banque Islamique de Développement (BID)" },
+    { "code": "BADEA", "label": "Banque Arabe pour le Développement Économique en Afrique (BADEA)" },
     { "code": "JICA", "label": "Agence Japonaise de Coopération (JICA)" },
     { "code": "KFW", "label": "Banque Allemande de Développement (KfW)" },
-    { "code": "BIDC", "label": "Banque d'Investissement et de Développement CEDEAO (BIDC)" }
+    { "code": "BEI", "label": "Banque Européenne d'Investissement (BEI)" },
+    { "code": "BIDC", "label": "Banque d'Investissement et de Développement CEDEAO (BIDC)" },
+    { "code": "BOAD", "label": "Banque Ouest-Africaine de Développement (BOAD)" },
+    { "code": "FMI", "label": "Fonds Monétaire International (FMI)" },
+    { "code": "OPEP", "label": "Fonds de l'OPEP pour le développement international" }
   ],
   "TYPE_FINANCEMENT": [
     { "code": "ETAT", "label": "Budget de l'État" },
