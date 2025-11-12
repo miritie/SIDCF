@@ -1,0 +1,301 @@
+{
+  "version": "1.0",
+  "description": "Règles réglementaires paramétrables pour le contrôle financier",
+  "seuils": {
+    "SEUIL_CUMUL_AVENANTS": {
+      "value": 30,
+      "unit": "%",
+      "severity": "BLOCK",
+      "description": "Cumul maximum d'avenants autorisé (% du montant initial)"
+    },
+    "SEUIL_ALERTE_AVENANTS": {
+      "value": 25,
+      "unit": "%",
+      "severity": "WARN",
+      "description": "Seuil d'alerte pour les avenants"
+    },
+    "TAUX_MAX_AVANCE": {
+      "value": 15,
+      "unit": "%",
+      "severity": "BLOCK",
+      "description": "Taux maximum d'avance de démarrage"
+    },
+    "DELAI_MAX_OS_APRES_VISA": {
+      "value": 30,
+      "unit": "jours",
+      "severity": "WARN",
+      "description": "Délai maximum pour émettre l'OS après visa"
+    },
+    "DELAI_MAINLEVEE_GARANTIE": {
+      "value": 365,
+      "unit": "jours",
+      "severity": "WARN",
+      "description": "Délai après réception définitive pour mainlevée"
+    }
+  },
+  "matrices_procedures": {
+    "ADMIN_CENTRALE": {
+      "description": "Seuils pour administrations centrales",
+      "seuils_montants": [
+        {
+          "mode": "PSC",
+          "min": 0,
+          "max": 5000000,
+          "natureEco": ["221", "222", "223"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS"]
+        },
+        {
+          "mode": "PSD",
+          "min": 5000001,
+          "max": 50000000,
+          "natureEco": ["221", "222", "223", "232"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX"]
+        },
+        {
+          "mode": "AOO",
+          "min": 50000001,
+          "max": null,
+          "natureEco": ["231", "232", "233"],
+          "typeMarche": ["TRAVAUX", "FOURNITURES", "SERVICES_COURANTS", "SERVICES_INTELLECTUELS"]
+        },
+        {
+          "mode": "PSO",
+          "min": 50000001,
+          "max": null,
+          "natureEco": ["233"],
+          "typeMarche": ["SERVICES_INTELLECTUELS"]
+        }
+      ]
+    },
+    "SOCIETE_ETAT": {
+      "description": "Seuils pour sociétés d'État",
+      "seuils_montants": [
+        {
+          "mode": "PSC",
+          "min": 0,
+          "max": 10000000,
+          "natureEco": ["221", "222", "223"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS"]
+        },
+        {
+          "mode": "PSD",
+          "min": 10000001,
+          "max": 75000000,
+          "natureEco": ["221", "222", "223", "232"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX"]
+        },
+        {
+          "mode": "AOO",
+          "min": 75000001,
+          "max": null,
+          "natureEco": ["231", "232", "233"],
+          "typeMarche": ["TRAVAUX", "FOURNITURES", "SERVICES_INTELLECTUELS"]
+        }
+      ]
+    },
+    "PROJET": {
+      "description": "Seuils pour projets (selon règles bailleurs)",
+      "seuils_montants": [
+        {
+          "mode": "PSD",
+          "min": 0,
+          "max": 100000000,
+          "natureEco": ["all"],
+          "typeMarche": ["all"]
+        },
+        {
+          "mode": "AOO",
+          "min": 100000001,
+          "max": null,
+          "natureEco": ["all"],
+          "typeMarche": ["all"]
+        }
+      ]
+    }
+  },
+  "validations": {
+    "PPM_OBLIGATOIRE": {
+      "enabled": true,
+      "severity": "BLOCK",
+      "description": "Toute opération doit être inscrite au PPM"
+    },
+    "LOCALISATION_OBLIGATOIRE": {
+      "enabled": true,
+      "severity": "WARN",
+      "description": "Les livrables doivent avoir une localisation géographique"
+    },
+    "ECHEANCIER_COMPLET": {
+      "enabled": true,
+      "severity": "BLOCK",
+      "description": "L'échéancier doit totaliser 100% du montant du marché"
+    },
+    "CLE_REPARTITION_COMPLETE": {
+      "enabled": true,
+      "severity": "BLOCK",
+      "description": "La clé de répartition doit totaliser 100%"
+    },
+    "GARANTIES_OBLIGATOIRES": {
+      "enabled": true,
+      "severity": "BLOCK",
+      "description": "Garanties d'avance et de bonne exécution obligatoires"
+    },
+    "CONTROLE_ATTRIBUTAIRE": {
+      "enabled": true,
+      "severity": "WARN",
+      "description": "Vérification des informations de l'attributaire (RCCM, IFU, etc.)"
+    }
+  },
+  "delais_types": {
+    "DELAI_TRAITEMENT_CF": {
+      "value": 15,
+      "unit": "jours",
+      "description": "Délai de traitement au Contrôle Financier"
+    },
+    "DELAI_GARANTIE_DECENNALE": {
+      "value": 3650,
+      "unit": "jours",
+      "description": "Durée de garantie décennale (10 ans)"
+    },
+    "DELAI_RECEPTION_PROV_DEF": {
+      "value": 365,
+      "unit": "jours",
+      "description": "Délai entre réception provisoire et définitive"
+    }
+  },
+  "ano": {
+    "description": "Règles pour Avis de Non-Objection (ANO) DGMP et Bailleurs",
+    "modes_requierant_ano": ["AOO", "AON"],
+    "bailleurs_requierant_ano": ["BM", "BAD", "UE", "AFD", "BEI", "BADEA"],
+    "seuils_montant": {
+      "TRAVAUX": {
+        "value": 100000000,
+        "description": "Seuil ANO pour travaux (100M XOF)"
+      },
+      "FOURNITURES": {
+        "value": 50000000,
+        "description": "Seuil ANO pour fournitures (50M XOF)"
+      },
+      "SERVICES": {
+        "value": 30000000,
+        "description": "Seuil ANO pour services (30M XOF)"
+      }
+    },
+    "delai_reponse_max": {
+      "value": 30,
+      "unit": "jours",
+      "severity": "WARN",
+      "description": "Délai maximum de réponse pour un ANO"
+    },
+    "ano_avenant": {
+      "enabled": true,
+      "seuil_pourcent": 15,
+      "description": "ANO requis pour avenants dépassant 15% du montant initial (bailleurs)"
+    }
+  },
+  "garanties": {
+    "description": "Taux et règles de garanties bancaires",
+    "garantie_avance": {
+      "taux_min": 10,
+      "taux_max": 15,
+      "unit": "%",
+      "description": "Garantie de restitution d'avance"
+    },
+    "garantie_bonne_execution": {
+      "taux_min": 5,
+      "taux_max": 10,
+      "unit": "%",
+      "description": "Garantie de bonne exécution"
+    },
+    "retenue_garantie": {
+      "taux": 10,
+      "unit": "%",
+      "description": "Retenue de garantie sur décomptes"
+    },
+    "durees": {
+      "garantie_avance": {
+        "value": 365,
+        "unit": "jours",
+        "description": "Durée garantie d'avance"
+      },
+      "garantie_bonne_exec": {
+        "value": 730,
+        "unit": "jours",
+        "description": "Durée garantie de bonne exécution (2 ans après réception prov)"
+      }
+    }
+  },
+  "referentiels": {
+    "description": "Listes de référence pour les formulaires",
+    "types_marche": ["TRAVAUX", "FOURNITURES", "SERVICES_COURANTS", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+    "modes_passation": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD", "DGD", "CASU"],
+    "categories_procedure": ["NATIONALE", "INTERNATIONALE", "RESTREINTE", "OUVERTE"],
+    "natures_prix": ["FORFAIT", "UNITAIRES", "MIXTE"],
+    "revues": ["A_PRIORI", "A_POSTERIORI", "AUCUNE"],
+    "types_institution": ["ADMIN_CENTRALE", "SOCIETE_ETAT", "PROJET", "COLLECTIVITE", "EPA"],
+    "decisions_cf": [
+      {"code": "VISA", "label": "Visa accordé"},
+      {"code": "RESERVE", "label": "Visa avec réserves"},
+      {"code": "REFUS", "label": "Visa refusé"}
+    ],
+    "motifs_refus_cf": [
+      {"code": "NON_CONFORME_REGLEMENTATION", "label": "Non conforme à la réglementation"},
+      {"code": "PROCEDURE_IRREGULIERE", "label": "Procédure irrégulière"},
+      {"code": "MONTANT_NON_JUSTIFIE", "label": "Montant non justifié"},
+      {"code": "ATTRIBUTION_NON_CONFORME", "label": "Attribution non conforme"},
+      {"code": "ABSENCE_CREDIT_BUDGETAIRE", "label": "Absence de crédit budgétaire"},
+      {"code": "PIECES_MANQUANTES", "label": "Pièces justificatives manquantes"},
+      {"code": "AUTRE", "label": "Autre motif"}
+    ],
+    "types_avenant": [
+      {"code": "FINAN", "label": "Avenant financier (montant)"},
+      {"code": "DUREE", "label": "Avenant de délai (durée)"},
+      {"code": "MIXTE", "label": "Avenant mixte (montant + durée)"},
+      {"code": "TECH", "label": "Avenant technique (sans impact financier)"}
+    ],
+    "motifs_avenant": [
+      {"code": "AJOUT_TRAVAUX", "label": "Ajout de travaux supplémentaires"},
+      {"code": "MODIFICATION_SPECIFICATIONS", "label": "Modification des spécifications"},
+      {"code": "FORCE_MAJEURE", "label": "Force majeure"},
+      {"code": "INTEMPERIES", "label": "Intempéries / conditions climatiques"},
+      {"code": "RETARD_PAIEMENT", "label": "Retard de paiement"},
+      {"code": "RETARD_APPROVISIONNEMENT", "label": "Retard d'approvisionnement"},
+      {"code": "AUTRE", "label": "Autre motif"}
+    ],
+    "types_garantie": [
+      {"code": "AVANCE", "label": "Garantie de restitution d'avance"},
+      {"code": "BONNE_EXEC", "label": "Garantie de bonne exécution"},
+      {"code": "RETENUE", "label": "Retenue de garantie"},
+      {"code": "DECENNALE", "label": "Garantie décennale"}
+    ],
+    "types_recours": [
+      {"code": "CONTESTATION_ATTRIBUTION", "label": "Contestation de l'attribution"},
+      {"code": "IRREGULARITE_PROCEDURE", "label": "Irrégularité de procédure"},
+      {"code": "DISCRIMINATION", "label": "Discrimination / traitement inéquitable"},
+      {"code": "CRITERES_NON_RESPECTES", "label": "Critères d'évaluation non respectés"},
+      {"code": "AUTRE", "label": "Autre motif"}
+    ],
+    "decisions_recours": [
+      {"code": "ACCEPTE", "label": "Recours accepté"},
+      {"code": "REJETE", "label": "Recours rejeté"},
+      {"code": "PARTIELLEMENT_ACCEPTE", "label": "Partiellement accepté"},
+      {"code": "EN_COURS", "label": "En cours d'instruction"}
+    ],
+    "types_os": [
+      {"code": "DEMARRAGE", "label": "OS de démarrage"},
+      {"code": "ARRET", "label": "OS d'arrêt"},
+      {"code": "REPRISE", "label": "OS de reprise"},
+      {"code": "COMPLEMENTAIRE", "label": "OS complémentaire"}
+    ],
+    "types_financement": ["ETAT", "BAILLEUR", "PPP", "MIXTE"],
+    "sources_financement": [
+      {"code": "BN", "label": "Budget National"},
+      {"code": "BM", "label": "Banque Mondiale"},
+      {"code": "BAD", "label": "Banque Africaine de Développement"},
+      {"code": "AFD", "label": "Agence Française de Développement"},
+      {"code": "UE", "label": "Union Européenne"},
+      {"code": "BEI", "label": "Banque Européenne d'Investissement"},
+      {"code": "BADEA", "label": "Banque Arabe pour le Développement Économique en Afrique"},
+      {"code": "AUTRE", "label": "Autre source"}
+    ]
+  }
+}

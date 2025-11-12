@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "appName": "SIDCF Portal",
+  "defaultLanguage": "fr",
+  "dataProvider": "localStorage",
+  "features": {
+    "moduleMarche": true,
+    "moduleInvestissement": false,
+    "moduleMatiere": false,
+    "adminAccess": true,
+    "diagnostics": true
+  },
+  "institution": {
+    "name": "Direction du Contrôle Financier",
+    "type": "ADMIN_CENTRALE",
+    "logo": "assets/logo.svg",
+    "country": "CI"
+  },
+  "theme": {
+    "mode": "light",
+    "primaryColor": "#0f5132",
+    "accentColor": "#f59e0b"
+  },
+  "airtable": {
+    "enabled": false,
+    "apiKey": "",
+    "baseId": "",
+    "tables": {
+      "PPM_PLAN": "",
+      "OPERATION": "",
+      "PROCEDURE": "",
+      "ATTRIBUTION": "",
+      "AVENANT": "",
+      "GARANTIE": "",
+      "RECOURS": "",
+      "ECHEANCIER": "",
+      "CLE_REPARTITION": "",
+      "CLOTURE": "",
+      "ENTREPRISE": ""
+    }
+  },
+  "storage": {
+    "key": "sidcf:db:v1",
+    "autoSave": true,
+    "compression": false
+  },
+  "ui": {
+    "itemsPerPage": 25,
+    "dateFormat": "short",
+    "currency": "XOF"
+  }
+}

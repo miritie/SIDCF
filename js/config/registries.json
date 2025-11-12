@@ -1,0 +1,226 @@
+{
+  "TYPE_INSTITUTION": [
+    { "code": "ADMIN_CENTRALE", "label": "Administration Centrale" },
+    { "code": "SOCIETE_ETAT", "label": "Société d'État" },
+    { "code": "PROJET", "label": "Projet" },
+    { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" }
+  ],
+  "TYPE_MARCHE": [
+    { "code": "TRAVAUX", "label": "Travaux" },
+    { "code": "FOURNITURES", "label": "Fournitures" },
+    { "code": "SERVICES_COURANTS", "label": "Services Courants" },
+    { "code": "SERVICES_INTELLECTUELS", "label": "Services Intellectuels" },
+    { "code": "DELEGATION_SERVICE_PUBLIC", "label": "Délégation de Service Public" }
+  ],
+  "MODE_PASSATION": [
+    { "code": "PSC", "label": "Procédure Simplifiée sur Consultation (PSC)", "seuil": true },
+    { "code": "PSD", "label": "Procédure Simplifiée sur Demande de prix (PSD)", "seuil": true },
+    { "code": "AOO", "label": "Appel d'Offres Ouvert (AOO)", "seuil": true },
+    { "code": "PSO", "label": "Procédure Spécialisée sur Offres (PSO)", "seuil": true },
+    { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false },
+    { "code": "CI", "label": "Concours d'Ingénierie (CI)", "seuil": false },
+    { "code": "DEM", "label": "Demande d'Expression de Manifestation (DEM)", "seuil": false },
+    { "code": "ENTENTE_DIRECTE", "label": "Entente Directe", "seuil": false }
+  ],
+  "CATEGORIE_PROCEDURE": [
+    { "code": "NATIONALE", "label": "Nationale" },
+    { "code": "INTERNATIONALE", "label": "Internationale" }
+  ],
+  "NATURE_PRIX": [
+    { "code": "UNITAIRE", "label": "Prix Unitaire" },
+    { "code": "FORFAITAIRE", "label": "Prix Forfaitaire" },
+    { "code": "MIXTE", "label": "Prix Mixte" }
+  ],
+  "TYPE_COMMISSION": [
+    { "code": "COJO", "label": "Commission de Jugement des Offres (COJO)" },
+    { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" },
+    { "code": "TECH", "label": "Commission Technique" }
+  ],
+  "TYPE_LIVRABLE": [
+    { "code": "INFRASTRUCTURE", "label": "Infrastructure" },
+    { "code": "BATIMENT", "label": "Bâtiment" },
+    { "code": "EQUIPEMENT", "label": "Équipement" },
+    { "code": "FOURNITURE", "label": "Fourniture" },
+    { "code": "SERVICE", "label": "Service" },
+    { "code": "ETUDE", "label": "Étude" },
+    { "code": "FORMATION", "label": "Formation" },
+    { "code": "LOGICIEL", "label": "Logiciel" }
+  ],
+  "LOCALITE_CI": {
+    "regions": [
+      {
+        "code": "ABJ",
+        "label": "Abidjan Autonome",
+        "departements": [
+          {
+            "code": "ABJ_PLATEAU",
+            "label": "Plateau",
+            "communes": [
+              {
+                "code": "PLATEAU",
+                "label": "Plateau",
+                "localites": ["Plateau Centre", "Zone 4", "Cité Administrative"]
+              }
+            ]
+          },
+          {
+            "code": "ABJ_COCODY",
+            "label": "Cocody",
+            "communes": [
+              {
+                "code": "COCODY",
+                "label": "Cocody",
+                "localites": ["Deux Plateaux", "Riviera", "Angré", "II Plateaux"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAS_SASSANDRA",
+        "label": "Bas-Sassandra",
+        "departements": [
+          {
+            "code": "SAN_PEDRO",
+            "label": "San-Pédro",
+            "communes": [
+              {
+                "code": "SAN_PEDRO",
+                "label": "San-Pédro",
+                "localites": ["Centre-ville", "Bardo", "Balmer"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "YAMOUSSOUKRO",
+        "label": "Yamoussoukro Autonome",
+        "departements": [
+          {
+            "code": "YAM",
+            "label": "Yamoussoukro",
+            "communes": [
+              {
+                "code": "YAM",
+                "label": "Yamoussoukro",
+                "localites": ["Centre-ville", "Habitat", "N'Zuessy"]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "BAILLEUR": [
+    { "code": "ETAT_CI", "label": "État de Côte d'Ivoire" },
+    { "code": "BAD", "label": "Banque Africaine de Développement (BAD)" },
+    { "code": "BM", "label": "Banque Mondiale (BM)" },
+    { "code": "AFD", "label": "Agence Française de Développement (AFD)" },
+    { "code": "UE", "label": "Union Européenne (UE)" },
+    { "code": "BID", "label": "Banque Islamique de Développement (BID)" },
+    { "code": "JICA", "label": "Agence Japonaise de Coopération (JICA)" },
+    { "code": "KFW", "label": "Banque Allemande de Développement (KfW)" },
+    { "code": "BIDC", "label": "Banque d'Investissement et de Développement CEDEAO (BIDC)" }
+  ],
+  "TYPE_FINANCEMENT": [
+    { "code": "ETAT", "label": "Budget de l'État" },
+    { "code": "EMPRUNT", "label": "Emprunt" },
+    { "code": "DON", "label": "Don" }
+  ],
+  "NATURE_ECO": [
+    { "code": "221", "label": "221 - Fonctionnement courant" },
+    { "code": "222", "label": "222 - Dépenses de maintenance" },
+    { "code": "223", "label": "223 - Achats de biens et services" },
+    { "code": "231", "label": "231 - Constructions" },
+    { "code": "232", "label": "232 - Équipements et matériels" },
+    { "code": "233", "label": "233 - Études et prestations intellectuelles" }
+  ],
+  "TYPE_ECHEANCE": [
+    { "code": "AVANCE", "label": "Avance de démarrage" },
+    { "code": "ACOMPTE", "label": "Acompte sur travaux" },
+    { "code": "SOLDE", "label": "Solde" },
+    { "code": "MENSUEL", "label": "Paiement mensuel" },
+    { "code": "TRIMESTRIEL", "label": "Paiement trimestriel" }
+  ],
+  "TYPE_AVENANT": [
+    { "code": "FINAN", "label": "Financier (augmentation montant)" },
+    { "code": "DELAI", "label": "Délai (prolongation)" },
+    { "code": "TECH", "label": "Technique (modification prestation)" }
+  ],
+  "TYPE_GARANTIE": [
+    { "code": "AVANCE", "label": "Garantie d'avance" },
+    { "code": "BONNE_EXEC", "label": "Garantie de bonne exécution" },
+    { "code": "RETENUE", "label": "Retenue de garantie" }
+  ],
+  "ETAT_GARANTIE": [
+    { "code": "ACTIVE", "label": "Active" },
+    { "code": "MAINLEVEE", "label": "Mainlevée accordée" },
+    { "code": "EXPIREE", "label": "Expirée" }
+  ],
+  "TYPE_RECOURS": [
+    { "code": "GRACIEUX", "label": "Recours gracieux" },
+    { "code": "HIERARCHIQUE", "label": "Recours hiérarchique" },
+    { "code": "CONTENTIEUX", "label": "Recours contentieux" }
+  ],
+  "ETAT_MARCHE": [
+    { "code": "PLANIFIE", "label": "Planifié", "color": "gray" },
+    { "code": "EN_PROC", "label": "En procédure", "color": "info" },
+    { "code": "ATTRIBUE", "label": "Attribué", "color": "warning" },
+    { "code": "VISE", "label": "Visé", "color": "primary" },
+    { "code": "EXECUTION", "label": "En exécution", "color": "primary" },
+    { "code": "RESILIE", "label": "Résilié", "color": "error" },
+    { "code": "CLOS", "label": "Clôturé", "color": "success" }
+  ],
+  "DECISION_CF": [
+    { "code": "VISA", "label": "Visa accordé", "color": "success" },
+    { "code": "RESERVE", "label": "Visa avec réserves", "color": "warning" },
+    { "code": "REFUS", "label": "Visa refusé", "color": "error" }
+  ],
+  "TYPE_PIECE": [
+    { "code": "PPM_APPROUVE", "label": "PPM approuvé" },
+    { "code": "TDR", "label": "Termes de Référence (TdR)" },
+    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)" },
+    { "code": "PV_OUVERTURE", "label": "PV d'ouverture des plis" },
+    { "code": "PV_ANALYSE", "label": "PV d'analyse des offres" },
+    { "code": "PV_JUGEMENT", "label": "PV de jugement" },
+    { "code": "RAPPORT_ANALYSE", "label": "Rapport d'analyse technique et financière" },
+    { "code": "DECISION_ATTRIBUTION", "label": "Décision d'attribution" },
+    { "code": "CONTRAT", "label": "Contrat signé" },
+    { "code": "CAUTION_AVANCE", "label": "Caution d'avance" },
+    { "code": "CAUTION_BONNE_EXEC", "label": "Caution de bonne exécution" },
+    { "code": "OS", "label": "Ordre de Service (OS)" },
+    { "code": "DECOMPTE", "label": "Décompte" },
+    { "code": "AVENANT", "label": "Avenant" },
+    { "code": "PV_RECEPTION_PROV", "label": "PV de réception provisoire" },
+    { "code": "PV_RECEPTION_DEF", "label": "PV de réception définitive" }
+  ],
+  "MOTIF_RESERVE": [
+    { "code": "SEUIL_AVENANT", "label": "Seuil d'avenant proche ou dépassé" },
+    { "code": "DELAI_EXECUTION", "label": "Délai d'exécution excessif" },
+    { "code": "PIECE_MANQUANTE", "label": "Pièce justificative manquante" },
+    { "code": "MONTANT_ELEVE", "label": "Montant jugé élevé" },
+    { "code": "JUSTIFICATION_INSUFFISANTE", "label": "Justification insuffisante" }
+  ],
+  "MOTIF_REFUS": [
+    { "code": "SEUIL_DEPASSE", "label": "Seuil d'avenant dépassé sans autorisation" },
+    { "code": "NON_CONFORME", "label": "Non-conformité réglementaire" },
+    { "code": "BUDGET_INSUFFISANT", "label": "Budget insuffisant" },
+    { "code": "PIECE_INVALIDE", "label": "Pièce justificative invalide" },
+    { "code": "PROCEDURE_IRREGULIERE", "label": "Irrégularité de procédure" }
+  ],
+  "MOTIF_AVENANT": [
+    { "code": "TRAVAUX_SUPP", "label": "Travaux supplémentaires non prévus" },
+    { "code": "MODIFICATION_TECH", "label": "Modification technique" },
+    { "code": "RIGUEUR_CLIMATIQUE", "label": "Rigueur climatique / Intempéries" },
+    { "code": "ARRET_CHANTIER", "label": "Arrêt de chantier imposé" },
+    { "code": "REVISION_PRIX", "label": "Révision des prix" }
+  ],
+  "MOTIF_RESILIATION": [
+    { "code": "DEFAILLANCE_TITULAIRE", "label": "Défaillance du titulaire" },
+    { "code": "NON_RESPECT_DELAI", "label": "Non-respect des délais" },
+    { "code": "MALFACON", "label": "Malfaçons graves" },
+    { "code": "FORCE_MAJEURE", "label": "Force majeure" },
+    { "code": "INTERET_PUBLIC", "label": "Intérêt public" }
+  ]
+}

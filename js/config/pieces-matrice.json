@@ -1,0 +1,162 @@
+{
+  "version": "1.0",
+  "description": "Matrice des pièces obligatoires par phase, mode de passation et type de marché",
+  "matrice": [
+    {
+      "phase": "PLANIF",
+      "label": "Planification",
+      "pieces": [
+        {
+          "code": "PPM_APPROUVE",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "PROC",
+      "label": "Procédure",
+      "pieces": [
+        {
+          "code": "TDR",
+          "obligatoire": true,
+          "modePassation": ["PSO", "CI"],
+          "typeMarche": ["SERVICES_INTELLECTUELS"]
+        },
+        {
+          "code": "DAO",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSD"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "PV_OUVERTURE",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSD", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "PV_ANALYSE",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSD", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "PV_JUGEMENT",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSD", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "RAPPORT_ANALYSE",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "ATTR",
+      "label": "Attribution",
+      "pieces": [
+        {
+          "code": "DECISION_ATTRIBUTION",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "CONTRAT",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "CAUTION_AVANCE",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"],
+          "condition": "Si avance demandée"
+        },
+        {
+          "code": "CAUTION_BONNE_EXEC",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSD", "PSO"],
+          "typeMarche": ["TRAVAUX", "FOURNITURES"]
+        }
+      ]
+    },
+    {
+      "phase": "VISE",
+      "label": "Visa CF",
+      "pieces": []
+    },
+    {
+      "phase": "EXEC",
+      "label": "Exécution",
+      "pieces": [
+        {
+          "code": "OS",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"],
+          "delaiMax": 30
+        },
+        {
+          "code": "DECOMPTE",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"],
+          "multiple": true
+        },
+        {
+          "code": "AVENANT",
+          "obligatoire": false,
+          "modePassation": ["*"],
+          "typeMarche": ["*"],
+          "multiple": true,
+          "condition": "Si modification du marché"
+        }
+      ]
+    },
+    {
+      "phase": "CLOT",
+      "label": "Clôture",
+      "pieces": [
+        {
+          "code": "PV_RECEPTION_PROV",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"]
+        },
+        {
+          "code": "PV_RECEPTION_DEF",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"]
+        }
+      ]
+    }
+  ],
+  "regles_conditionnelles": [
+    {
+      "id": "AVANCE_CAUTION",
+      "description": "Si avance > 0, caution d'avance obligatoire",
+      "condition": "avance > 0",
+      "piece_requise": "CAUTION_AVANCE"
+    },
+    {
+      "id": "AVENANT_VISA",
+      "description": "Tout avenant > 10% nécessite visa CF préalable",
+      "condition": "avenant.pourcentage > 10",
+      "action": "VISA_CF_REQUIS"
+    },
+    {
+      "id": "GARANTIE_MAINLEVEE",
+      "description": "Mainlevée des garanties après réception définitive",
+      "condition": "reception_definitive = true",
+      "action": "MAINLEVEE_POSSIBLE"
+    }
+  ]
+}

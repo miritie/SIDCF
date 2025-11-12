@@ -1,0 +1,379 @@
+{
+  "phases": {
+    "INVITATION": {
+      "label": "Invitation / Lancement",
+      "ordre": 1,
+      "pieces": [
+        {
+          "code": "INV_COURRIER",
+          "libelle": "Courrier d'invitation",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "Lettre d'invitation aux soumissionnaires"
+        },
+        {
+          "code": "INV_DAO",
+          "libelle": "Dossier d'appel à la concurrence",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "DAO complet (cahier des charges, bordereau, plans)"
+        },
+        {
+          "code": "INV_MANDAT_CF",
+          "libelle": "Mandat CF",
+          "obligatoire": false,
+          "modes": ["AOO", "AON"],
+          "description": "Mandat du Contrôle Financier si requis"
+        },
+        {
+          "code": "INV_AVIS_PUBLICATION",
+          "libelle": "Avis de publicité / publication",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Preuve de publication de l'appel d'offres"
+        },
+        {
+          "code": "INV_AUTRES",
+          "libelle": "Autres documents d'invitation",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": "Tous autres documents pertinents"
+        }
+      ]
+    },
+
+    "OUVERTURE": {
+      "label": "Ouverture des plis",
+      "ordre": 2,
+      "pieces": [
+        {
+          "code": "OUV_LISTE_PRESENCE_COMMISSION",
+          "libelle": "Liste de présence COJO/COPE avec mandats",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Feuille d'émargement des membres de la commission avec mandats valides"
+        },
+        {
+          "code": "OUV_LISTE_DEPOT_PLIS",
+          "libelle": "Liste de dépôt des plis",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Registre chronologique de dépôt des offres"
+        },
+        {
+          "code": "OUV_LISTE_PRESENCE_SOUM",
+          "libelle": "Liste de présence des soumissionnaires",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Feuille d'émargement des soumissionnaires présents à la séance"
+        },
+        {
+          "code": "OUV_PV_OUVERTURE",
+          "libelle": "PV d'ouverture des plis",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Procès-verbal officiel d'ouverture signé par tous les membres"
+        },
+        {
+          "code": "OUV_COPIES_OFFRES",
+          "libelle": "Copies des offres reçues",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Copies numériques ou papier des offres techniques et financières"
+        },
+        {
+          "code": "OUV_GRILLE_VIERGE",
+          "libelle": "Grille d'analyse vierge",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Matrice de notation/critères d'évaluation à renseigner"
+        },
+        {
+          "code": "OUV_DESIGNATION_COMITE_EVAL",
+          "libelle": "Désignation du comité d'évaluation",
+          "obligatoire": false,
+          "modes": ["AOO", "AON"],
+          "description": "Arrêté/décision nommant les évaluateurs (si distinct de la commission)"
+        },
+        {
+          "code": "OUV_RAPPORT_CF",
+          "libelle": "Rapport d'ouverture vers CF",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Rapport transmis au CF après ouverture"
+        },
+        {
+          "code": "OUV_AUTRES",
+          "libelle": "Autres documents d'ouverture",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": ""
+        }
+      ]
+    },
+
+    "ANALYSE": {
+      "label": "Analyse des offres",
+      "ordre": 3,
+      "pieces": [
+        {
+          "code": "ANA_LISTE_PRESENCE",
+          "libelle": "Liste de présence (si séance séparée) + mandats",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Si l'analyse se fait en séance distincte"
+        },
+        {
+          "code": "ANA_GRILLE_RENSEIGNEE",
+          "libelle": "Grille d'analyse renseignée",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Matrice de notation complétée avec scores et justifications"
+        },
+        {
+          "code": "ANA_PROJET_RAPPORT_AGENT",
+          "libelle": "Projet de rapport d'analyse (agent → CF)",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Rapport préliminaire de l'agent transmis au CF"
+        },
+        {
+          "code": "ANA_COURRIERS_ECLAIRCISSEMENTS",
+          "libelle": "Courriers d'éclaircissements et réponses",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Échanges avec soumissionnaires pour précisions"
+        },
+        {
+          "code": "ANA_RAPPORT_CONSOLIDE",
+          "libelle": "Rapport d'analyse consolidé (commission → CF)",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Rapport final de la commission d'analyse adressé au CF"
+        },
+        {
+          "code": "ANA_AUTRES",
+          "libelle": "Autres documents d'analyse",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": ""
+        }
+      ]
+    },
+
+    "JUGEMENT": {
+      "label": "Jugement / Sélection",
+      "ordre": 4,
+      "pieces": [
+        {
+          "code": "JUG_DEMANDES_ANO",
+          "libelle": "Demandes/réponses ANO (DGMP/Bailleur)",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "ano_requis": true,
+          "description": "Avis de Non-Objection des bailleurs ou DGMP si procédure soumise"
+        },
+        {
+          "code": "JUG_RECOURS_DOSSIERS",
+          "libelle": "Dossiers de recours (le cas échéant)",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Réclamations des candidats non retenus et réponses"
+        },
+        {
+          "code": "JUG_PV_JUGEMENT",
+          "libelle": "PV de jugement (réserves consignées)",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Procès-verbal de la séance de jugement avec toutes réserves éventuelles"
+        },
+        {
+          "code": "JUG_DECISION_ATTRIBUTION",
+          "libelle": "Décision d'attribution",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "Arrêté ou décision d'attribution du marché"
+        },
+        {
+          "code": "JUG_AUTRES",
+          "libelle": "Autres documents de jugement",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": ""
+        }
+      ]
+    },
+
+    "APPROBATION": {
+      "label": "Approbation & Contrat",
+      "ordre": 5,
+      "pieces": [
+        {
+          "code": "APP_MARCHE_NUMEROTE",
+          "libelle": "Marché/contrat numéroté, approuvé et enregistré",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD", "DGD"],
+          "description": "Contrat signé par toutes les parties et enregistré"
+        },
+        {
+          "code": "APP_LETTRE_MARCHE",
+          "libelle": "Lettre de marché (ou lettre valant marché)",
+          "obligatoire": true,
+          "modes": ["PSC", "PSD", "PSO"],
+          "description": "Pour procédures simplifiées"
+        },
+        {
+          "code": "APP_FORMULAIRE_SELECTION",
+          "libelle": "Formulaire de sélection",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI"],
+          "description": "Fiche récapitulative de sélection"
+        },
+        {
+          "code": "APP_OS_DEMARRAGE",
+          "libelle": "Ordre de Service (OS) de démarrage",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "OS n°1 signifiant le commencement des travaux/prestations"
+        },
+        {
+          "code": "APP_GARANTIES_DOCUMENTS",
+          "libelle": "Documents de garantie (avance, bonne exécution)",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Cautions bancaires ou garanties exigées"
+        },
+        {
+          "code": "APP_AUTRES",
+          "libelle": "Autres documents d'approbation",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": ""
+        }
+      ]
+    },
+
+    "EXECUTION": {
+      "label": "Exécution",
+      "ordre": 6,
+      "pieces": [
+        {
+          "code": "EXEC_OS_SUPPLEMENTAIRES",
+          "libelle": "Ordres de Service complémentaires (arrêt/reprise)",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "OS n°2, 3... pour modifications de planning"
+        },
+        {
+          "code": "EXEC_ATTACHEMENTS",
+          "libelle": "Attachements / États d'acompte",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Documents justifiant les décomptes périodiques"
+        },
+        {
+          "code": "EXEC_RAPPORTS_AVANCEMENT",
+          "libelle": "Rapports d'avancement",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Rapports mensuels ou trimestriels de suivi"
+        },
+        {
+          "code": "EXEC_AVENANTS",
+          "libelle": "Avenants (avec pièces justificatives)",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "Tous avenants au contrat avec leurs justifications et visas"
+        },
+        {
+          "code": "EXEC_FACTURES_DECOMPTES",
+          "libelle": "Factures et décomptes",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "Factures périodiques et décomptes intermédiaires"
+        },
+        {
+          "code": "EXEC_AUTRES",
+          "libelle": "Autres documents d'exécution",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": ""
+        }
+      ]
+    },
+
+    "CLOTURE": {
+      "label": "Clôture & Réception",
+      "ordre": 7,
+      "pieces": [
+        {
+          "code": "CLO_PV_RECEPTION_PROV",
+          "libelle": "PV de réception provisoire",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Procès-verbal de réception provisoire avec réserves éventuelles"
+        },
+        {
+          "code": "CLO_PV_RECEPTION_DEF",
+          "libelle": "PV de réception définitive",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Procès-verbal de réception définitive après levée des réserves"
+        },
+        {
+          "code": "CLO_MAINLEVEES_GARANTIES",
+          "libelle": "Mainlevées de garanties",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Libération des cautions bancaires"
+        },
+        {
+          "code": "CLO_DECOMPTE_FINAL",
+          "libelle": "Décompte général et définitif",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD"],
+          "description": "Décompte final arrêtant les montants payés"
+        },
+        {
+          "code": "CLO_QUITUS",
+          "libelle": "Quitus / Certificat de solde",
+          "obligatoire": true,
+          "modes": ["AOO", "AON", "AOI", "AOD"],
+          "description": "Attestation de soldage du marché"
+        },
+        {
+          "code": "CLO_RAPPORT_FINAL",
+          "libelle": "Rapport final de synthèse",
+          "obligatoire": false,
+          "modes": ["AOO", "AON", "AOI", "AOD", "PSO"],
+          "description": "Bilan technique et financier du marché"
+        },
+        {
+          "code": "CLO_AUTRES",
+          "libelle": "Autres documents de clôture",
+          "obligatoire": false,
+          "modes": ["ALL"],
+          "description": ""
+        }
+      ]
+    }
+  },
+
+  "regles_ano": {
+    "description": "Règles déterminant si un ANO est requis pour une opération",
+    "modes_requierant_ano": ["AOO", "AON"],
+    "bailleurs_requierant_ano": ["BM", "BAD", "UE", "AFD"],
+    "seuils_montant": {
+      "TRAVAUX": 100000000,
+      "FOURNITURES": 50000000,
+      "SERVICES": 30000000
+    }
+  },
+
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-11-12",
+    "auteur": "SIDCF - Module Marchés",
+    "description": "Matrice complète des pièces documentaires par phase, conforme Code des Marchés CI et pratiques DCF/DGMP"
+  }
+}
