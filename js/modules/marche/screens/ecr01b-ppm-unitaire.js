@@ -430,7 +430,7 @@ function showDetailModal(operation, registries) {
         padding: 20px;
       }
       .modal-content {
-        background: var(--color-bg);
+        background: #ffffff;
         border-radius: var(--radius-lg);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         width: 100%;
