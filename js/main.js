@@ -16,6 +16,7 @@ import { registerMatiereRoutes } from './modules/matiere/index.js';
 
 // Admin imports
 import renderParamInstitution from './admin/param-institution.js';
+import renderReferentiels from './admin/referentiels.js';
 import { mount } from './lib/dom.js';
 
 // Diagnostics
@@ -60,7 +61,7 @@ async function boot() {
 
     // Admin
     router.register('/admin/institution', renderParamInstitution);
-    router.register('/admin/referentiels', stubAdmin('Gestion des référentiels'));
+    router.register('/admin/referentiels', renderReferentiels);
     router.register('/admin/regles', stubAdmin('Règles & Procédures'));
     router.register('/admin/pieces', stubAdmin('Matrice des pièces'));
 
