@@ -91,9 +91,11 @@ export async function renderFicheMarche(params) {
           el('button', { className: 'btn btn-sm btn-secondary' }, '📋 Identité'),
           createButton('btn btn-sm btn-secondary', '⚖️ Procédure', () => router.navigate('/procedure', { idOperation })),
           createButton('btn btn-sm btn-secondary', '👥 Attribution', () => router.navigate('/attribution', { idOperation })),
+          createButton('btn btn-sm btn-secondary', '✅ Visa CF', () => router.navigate('/visa-cf', { idOperation })),
+          createButton('btn btn-sm btn-secondary', '🔧 Exécution', () => router.navigate('/execution', { idOperation })),
           createButton('btn btn-sm btn-secondary', '📝 Avenants', () => router.navigate('/avenants', { idOperation })),
           createButton('btn btn-sm btn-secondary', '🔒 Garanties', () => router.navigate('/garanties', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '✅ Clôture', () => router.navigate('/cloture', { idOperation }))
+          createButton('btn btn-sm btn-secondary', '🏁 Clôture', () => router.navigate('/cloture', { idOperation }))
         ])
       ])
     ]),

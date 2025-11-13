@@ -42,10 +42,6 @@ export function renderSidebar() {
           el('a', { href: '#/dashboard', className: 'nav-item' }, [
             el('span', { className: 'nav-item-icon' }, '📊'),
             el('span', {}, 'Dashboard Principal')
-          ]),
-          el('a', { href: '#/dashboard-cf', className: 'nav-item' }, [
-            el('span', { className: 'nav-item-icon' }, '📈'),
-            el('span', {}, 'Tableau de bord CF')
           ])
         ])
       ])

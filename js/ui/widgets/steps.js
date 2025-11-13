@@ -34,7 +34,7 @@ export const LIFECYCLE_STEPS = [
     code: 'VISE',
     label: 'Visa CF',
     icon: '✅',
-    route: '/fiche-marche',
+    route: '/visa-cf',
     description: 'Contrôle financier'
   },
   {
@@ -59,43 +59,105 @@ export const LIFECYCLE_STEPS = [
  * @returns {Array} Status de chaque étape
  */
 export function calculateStepStatuses(fullData) {
-  const { operation, procedure, attribution, avenants, cloture } = fullData;
-  const timeline = operation?.timeline || ['PLANIF'];
+  const { operation, procedure, attribution, visasCF, ordresService, avenants, cloture } = fullData;
+  const etat = operation?.etat || 'PLANIFIE';
 
   return LIFECYCLE_STEPS.map((step) => {
     const code = step.code;
 
-    // done : étape complétée
-    if (timeline.includes(code)) {
-      return 'done';
-    }
+    // Détection basée sur l'état du marché et les données présentes
+    switch (code) {
+      case 'PLANIF':
+        // Toujours done si on a une opération
+        return operation ? 'done' : 'current';
 
-    // current : étape en cours (détection via présence de données partielles)
-    if (code === 'PROC' && procedure && !procedure.decisionAttributionRef) {
-      return 'current';
-    }
-    if (code === 'ATTR' && attribution && !attribution.dates?.decisionCF) {
-      return 'current';
-    }
-    if (code === 'VISE' && attribution?.dates?.decisionCF && !avenants?.length) {
-      return 'current';
-    }
-    if (code === 'EXEC' && avenants?.length > 0 && !cloture) {
-      return 'current';
-    }
-    if (code === 'CLOT' && cloture && !cloture.closAt) {
-      return 'current';
-    }
+      case 'PROC':
+        // Done si procédure complète (décision d'attribution)
+        if (procedure && procedure.decisionAttributionRef) {
+          return 'done';
+        }
+        // Current si procédure commencée ou état EN_PROCEDURE
+        if (procedure || etat === 'EN_PROCEDURE') {
+          return 'current';
+        }
+        // Current si étape précédente done et celle-ci pas encore
+        if (operation) {
+          return 'current';
+        }
+        return 'todo';
 
-    // Vérifier si c'est la prochaine étape logique
-    const currentIndex = LIFECYCLE_STEPS.findIndex(s => timeline.includes(s.code));
-    const stepIndex = LIFECYCLE_STEPS.findIndex(s => s.code === code);
-    if (stepIndex === currentIndex + 1) {
-      return 'current';
-    }
+      case 'ATTR':
+        // Done si attribution complète avec montants et titulaire
+        if (attribution && attribution.titulaire && attribution.montantAttribue > 0) {
+          return 'done';
+        }
+        // Current si attribution commencée ou état EN_ATTRIBUTION
+        if (attribution || etat === 'EN_ATTRIBUTION') {
+          return 'current';
+        }
+        // Current si procédure complète
+        if (procedure && procedure.decisionAttributionRef) {
+          return 'current';
+        }
+        return 'todo';
 
-    // todo : étape à venir
-    return 'todo';
+      case 'VISE':
+        // Done si visa CF obtenu
+        if (visasCF && visasCF.length > 0 && visasCF.some(v => v.decision === 'FAVORABLE')) {
+          return 'done';
+        }
+        // Current si en attente de visa ou état VISE
+        if (visasCF && visasCF.length > 0) {
+          return 'current';
+        }
+        if (etat === 'VISE' || etat === 'EN_VISA') {
+          return 'current';
+        }
+        // Current si attribution complète
+        if (attribution && attribution.titulaire && attribution.montantAttribue > 0) {
+          return 'current';
+        }
+        return 'todo';
+
+      case 'EXEC':
+        // Done si marché clôturé
+        if (etat === 'CLOS' || cloture) {
+          return 'done';
+        }
+        // Current si ordre de service émis ou avenants ou état EN_EXEC
+        if (ordresService && ordresService.length > 0) {
+          return 'done'; // OS émis = exécution commencée
+        }
+        if (avenants && avenants.length > 0) {
+          return 'done'; // Si avenants, forcément en exécution avancée
+        }
+        if (etat === 'EN_EXEC') {
+          return 'current';
+        }
+        // Current si visa obtenu
+        if (visasCF && visasCF.some(v => v.decision === 'FAVORABLE')) {
+          return 'current';
+        }
+        return 'todo';
+
+      case 'CLOT':
+        // Done si clôture complète
+        if (cloture && cloture.datePVD) {
+          return 'done';
+        }
+        // Current si clôture commencée ou état CLOS
+        if (cloture || etat === 'CLOS') {
+          return 'current';
+        }
+        // Current si en exécution avancée
+        if (ordresService && ordresService.length > 0) {
+          return 'todo'; // Seulement todo, pas current automatiquement
+        }
+        return 'todo';
+
+      default:
+        return 'todo';
+    }
   });
 }
 

@@ -200,6 +200,8 @@ class DataService {
       attribution,
       echeancier,
       cleRepartition,
+      visasCF,
+      ordresService,
       avenants,
       garanties,
       cloture
@@ -209,6 +211,8 @@ class DataService {
       this.query(ENTITIES.ATTRIBUTION, { operationId }).then(r => r[0] || null),
       this.query(ENTITIES.ECHEANCIER, { operationId }).then(r => r[0] || null),
       this.query(ENTITIES.CLE_REPARTITION, { operationId }).then(r => r[0] || null),
+      this.query(ENTITIES.VISA_CF, { operationId }),
+      this.query(ENTITIES.ORDRE_SERVICE, { operationId }),
       this.query(ENTITIES.AVENANT, { operationId }),
       this.query(ENTITIES.GARANTIE, { operationId }),
       this.query(ENTITIES.CLOTURE, { operationId }).then(r => r[0] || null)
@@ -221,6 +225,8 @@ class DataService {
       attribution,
       echeancier,
       cleRepartition,
+      visasCF,
+      ordresService,
       avenants,
       garanties,
       cloture
