@@ -7,6 +7,7 @@ import router from '../../router.js';
 
 /**
  * Définition des étapes du cycle de vie d'un marché
+ * Note: Les garanties font partie de l'attribution (pas une étape séparée)
  */
 export const LIFECYCLE_STEPS = [
   {
@@ -28,7 +29,7 @@ export const LIFECYCLE_STEPS = [
     label: 'Attribution',
     icon: '👥',
     route: '/attribution',
-    description: 'Attributaire & montants'
+    description: 'Attributaire & garanties'
   },
   {
     code: 'VISE',
@@ -50,13 +51,6 @@ export const LIFECYCLE_STEPS = [
     icon: '📝',
     route: '/avenants',
     description: 'Modifications contractuelles'
-  },
-  {
-    code: 'GAR',
-    label: 'Garanties',
-    icon: '🔒',
-    route: '/garanties',
-    description: 'Cautions & garanties'
   },
   {
     code: 'CLOT',
@@ -134,14 +128,12 @@ export function calculateStepStatuses(fullData) {
         return 'todo';
 
       case 'EXEC':
-        // Done si avenants ou garanties ou clôture (exécution passée)
-        if (avenants && avenants.length > 0) {
-          return 'done';
-        }
-        if (fullData.garanties && fullData.garanties.length > 0) {
-          return 'done';
-        }
+        // Done si clôture complète (exécution terminée)
         if (etat === 'CLOS' || (cloture && cloture.datePVD)) {
+          return 'done';
+        }
+        // Done si avenants (exécution avancée)
+        if (avenants && avenants.length > 0) {
           return 'done';
         }
         // Done si ordre de service émis (exécution démarrée)
@@ -164,20 +156,6 @@ export function calculateStepStatuses(fullData) {
           return 'done';
         }
         // Current si en exécution (avenants possibles)
-        if (ordresService && ordresService.length > 0) {
-          return 'current';
-        }
-        if (etat === 'EN_EXEC') {
-          return 'current';
-        }
-        return 'todo';
-
-      case 'GAR':
-        // Done si garanties enregistrées
-        if (fullData.garanties && fullData.garanties.length > 0) {
-          return 'done';
-        }
-        // Current si en exécution (garanties possibles)
         if (ordresService && ordresService.length > 0) {
           return 'current';
         }
