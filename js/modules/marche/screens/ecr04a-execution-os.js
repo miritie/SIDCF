@@ -373,7 +373,8 @@ function renderOSTable(ordresService) {
           el('th', {}, 'Type'),
           el('th', {}, 'Numéro'),
           el('th', {}, 'Date'),
-          el('th', {}, 'Montant'),
+          el('th', {}, 'Bureau Contrôle'),
+          el('th', {}, 'Bureau Études'),
           el('th', {}, 'Objet'),
           el('th', {}, 'Actions')
         ])
@@ -386,11 +387,23 @@ function renderOSTable(ordresService) {
 }
 
 function renderOSRow(os) {
+  // Format bureau display
+  const formatBureau = (bureau) => {
+    if (!bureau || !bureau.type) return '-';
+    if (bureau.type === 'UA') {
+      return `🏛️ ${bureau.nom || 'UA'}`;
+    } else if (bureau.type === 'ENTREPRISE') {
+      return `🏢 ${bureau.nom || 'Entreprise'}`;
+    }
+    return '-';
+  };
+
   return el('tr', {}, [
     el('td', {}, renderOSTypeBadge(os.type)),
     el('td', { style: { fontWeight: '500' } }, os.numero),
     el('td', {}, new Date(os.dateEmission).toLocaleDateString()),
-    el('td', {}, os.montant ? `${(os.montant / 1000000).toFixed(2)}M` : '-'),
+    el('td', { className: 'text-small' }, formatBureau(os.bureauControle)),
+    el('td', { className: 'text-small' }, formatBureau(os.bureauEtudes)),
     el('td', {}, os.objet || '-'),
     el('td', {}, [
       os.documentId

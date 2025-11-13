@@ -84,8 +84,8 @@ export function calculateStepStatuses(fullData) {
         if (procedure && procedure.decisionAttributionRef) {
           return 'done';
         }
-        // Current si procédure commencée ou état EN_PROCEDURE
-        if (procedure || etat === 'EN_PROCEDURE') {
+        // Current si procédure commencée ou état EN_PROC
+        if (procedure || etat === 'EN_PROC') {
           return 'current';
         }
         // Current si étape précédente done et celle-ci pas encore
@@ -99,8 +99,8 @@ export function calculateStepStatuses(fullData) {
         if (attribution && attribution.titulaire && attribution.montantAttribue > 0) {
           return 'done';
         }
-        // Current si attribution commencée ou état EN_ATTRIBUTION
-        if (attribution || etat === 'EN_ATTRIBUTION') {
+        // Current si attribution commencée ou état ATTRIBUE
+        if (attribution || etat === 'ATTRIBUE') {
           return 'current';
         }
         // Current si procédure complète
@@ -118,7 +118,7 @@ export function calculateStepStatuses(fullData) {
         if (visasCF && visasCF.length > 0) {
           return 'current';
         }
-        if (etat === 'VISE' || etat === 'EN_VISA') {
+        if (etat === 'VISE') {
           return 'current';
         }
         // Current si attribution complète
@@ -140,8 +140,8 @@ export function calculateStepStatuses(fullData) {
         if (ordresService && ordresService.length > 0) {
           return 'done';
         }
-        // Current si état EN_EXEC
-        if (etat === 'EN_EXEC') {
+        // Current si état EXECUTION
+        if (etat === 'EXECUTION') {
           return 'current';
         }
         // Current si visa CF obtenu (prêt à démarrer exécution)

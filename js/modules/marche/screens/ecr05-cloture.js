@@ -34,7 +34,27 @@ export async function renderCloture(params) {
 
   const { operation } = fullData;
 
+  // Check if market is terminated (resiliée)
+  const isResilie = operation.etat === 'RESILIE';
+
   // Check prerequisites
+  if (isResilie) {
+    mount('#app', el('div', { className: 'page' }, [
+      renderSteps(fullData, idOperation),
+      el('div', { className: 'alert alert-error' }, [
+        el('div', { className: 'alert-icon' }, '🚫'),
+        el('div', { className: 'alert-content' }, [
+          el('div', { className: 'alert-title' }, 'Marché résilié'),
+          el('div', { className: 'alert-message' }, 'Un marché résilié ne peut pas être clôturé normalement. Consultez la section Avenants pour les détails de la résiliation.')
+        ])
+      ]),
+      el('div', { style: { marginTop: '16px' } }, [
+        createButton('btn btn-primary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
+      ])
+    ]));
+    return;
+  }
+
   if (!operation.timeline.includes('EXEC')) {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),

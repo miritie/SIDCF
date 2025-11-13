@@ -73,7 +73,10 @@ export async function renderAvenants(params) {
     // Table avenants
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, `📑 Liste des avenants (${avenants.length})`)
+        el('h3', { className: 'card-title' }, `📑 Liste des avenants (${avenants.length})`),
+        !isResilie ? createButton('btn btn-sm btn-primary', '➕ Nouvel avenant', () => {
+          router.navigate('/avenant-create', { idOperation });
+        }) : null
       ]),
       el('div', { className: 'card-body' }, [
         avenants.length > 0
@@ -131,12 +134,9 @@ export async function renderAvenants(params) {
             ]),
             el('select', { className: 'form-input', id: 'resiliation-motif' }, [
               el('option', { value: '' }, '-- Sélectionnez --'),
-              el('option', { value: 'NON_EXECUTION' }, 'Non-exécution des travaux'),
-              el('option', { value: 'MALFACON' }, 'Malfaçons graves'),
-              el('option', { value: 'RETARD' }, 'Retards importants'),
-              el('option', { value: 'ABANDON' }, 'Abandon du chantier'),
-              el('option', { value: 'FORCE_MAJEURE' }, 'Force majeure'),
-              el('option', { value: 'INTERET_PUBLIC' }, 'Intérêt public'),
+              ...(registries.MOTIF_RESILIATION || []).map(motif =>
+                el('option', { value: motif.code }, motif.label)
+              ),
               el('option', { value: 'AUTRE' }, 'Autre motif')
             ])
           ])

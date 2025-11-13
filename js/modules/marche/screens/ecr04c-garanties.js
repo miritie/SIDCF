@@ -36,7 +36,27 @@ export async function renderGaranties(params) {
   const { operation, attribution } = fullData;
   const rulesConfig = dataService.getRulesConfig();
 
+  // Check if market is terminated (resiliée)
+  const isResilie = operation.etat === 'RESILIE';
+
   // Check prerequisites
+  if (isResilie) {
+    mount('#app', el('div', { className: 'page' }, [
+      renderSteps(fullData, idOperation),
+      el('div', { className: 'alert alert-error' }, [
+        el('div', { className: 'alert-icon' }, '🚫'),
+        el('div', { className: 'alert-content' }, [
+          el('div', { className: 'alert-title' }, 'Marché résilié'),
+          el('div', { className: 'alert-message' }, 'Aucune action n\'est possible sur un marché résilié.')
+        ])
+      ]),
+      el('div', { style: { marginTop: '16px' } }, [
+        createButton('btn btn-primary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
+      ])
+    ]));
+    return;
+  }
+
   if (!operation.timeline.includes('VISE')) {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),
