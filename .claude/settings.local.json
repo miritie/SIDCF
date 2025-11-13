@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - SIDCF Portal Module Marchés v2.5 - 100% Complete\n\n✅ 14 écrans opérationnels (PLANIF → PROC → ATTR → VISE → EXEC → CLOT)\n✅ 16 entités complètes avec schémas validés\n✅ Configuration JSON centralisée (rules-config.json, pieces-matrice.json)\n✅ 7 widgets réutilisables (steps, document-checklist, filters, etc.)\n✅ Documentation complète (4,500+ lignes)\n✅ ~10,700 lignes de code production\n\nConformité : Code des Marchés Publics CI + Pratiques DCF/DGMP\n\nÉcrans livrés :\n- ECR01a : Import PPM (CSV/Excel)\n- ECR01b : Liste PPM unitaire avec filtres avancés\n- ECR01c : Fiche marché détaillée\n- ECR02a : Procédure PV (dépôt, ouverture, analyse, jugement)\n- ECR02b : Gestion des recours\n- ECR03a : Attribution (titulaire, montant, ANO)\n- ECR03b : Échéancier & Clé de répartition multi-bailleurs\n- ECR04a : Visa CF\n- ECR04a : Exécution OS (ordre de service)\n- ECR04b : Avenants avec calcul cumul %\n- ECR04c : Garanties avec workflow mainlevée\n- ECR05 : Clôture (PV provisoire/définitif)\n- ECR06 : Dashboard CF avec KPIs et alertes\n\nArchitecture :\n- Adapter Pattern (localStorage / Airtable)\n- ES6 Modules natifs\n- Hash Router client-side\n- DOM utilities vanilla JS\n- Rules Engine JSON-driven\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git remote:*)",
+      "Bash(git pull:*)",
+      "Bash(git config:*)",
+      "Bash(git commit:*)",
+      "Bash(open index.html)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
