@@ -17,7 +17,7 @@ import renderAvenants from './screens/ecr04b-avenants.js';
 import renderGaranties from './screens/ecr04c-garanties.js';
 import renderCloture from './screens/ecr05-cloture.js';
 import renderDashboardCF from './screens/ecr06-dashboard-cf.js';
-import renderDashboard from './screens/ecr07-dashboard.js';
+import renderDashboard from './screens/ecr07-dashboard-v2.js';
 import logger from '../../lib/logger.js';
 import { mount } from '../../lib/dom.js';
 
