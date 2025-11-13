@@ -69,10 +69,40 @@ export async function renderReferentiels() {
  */
 function renderRegistrySection(key, title, items) {
   const isArrayOfObjects = items.length > 0 && typeof items[0] === 'object';
+  const bodyId = `section-body-${key}`;
+  const isCollapsed = false; // Par défaut ouvert
+
+  const toggleBtn = el('button', {
+    className: 'btn btn-sm',
+    style: 'padding: 4px 8px; margin-right: 12px; background: transparent; border: none; cursor: pointer; font-size: 18px;',
+    onclick: function() {
+      const bodyDiv = document.getElementById(bodyId);
+      if (bodyDiv) {
+        const isHidden = bodyDiv.style.display === 'none';
+        bodyDiv.style.display = isHidden ? 'block' : 'none';
+        this.textContent = isHidden ? '▼' : '▶';
+      }
+    }
+  }, isCollapsed ? '▶' : '▼');
+
+  const bodyDiv = el('div', {
+    id: bodyId,
+    className: 'card-body',
+    style: isCollapsed ? 'display: none;' : ''
+  }, [
+    items.length === 0
+      ? el('p', { style: { color: '#6B7280', textAlign: 'center' } }, 'Aucun élément')
+      : isArrayOfObjects
+        ? renderObjectList(key, items)
+        : renderSimpleList(key, items)
+  ]);
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
-      el('h3', { className: 'card-title' }, title),
+      el('div', { style: { display: 'flex', alignItems: 'center' } }, [
+        toggleBtn,
+        el('h3', { className: 'card-title', style: { margin: 0 } }, title)
+      ]),
       el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [
         el('span', { className: 'badge badge-secondary' }, `${items.length} élément(s)`),
         el('button', {
@@ -81,13 +111,7 @@ function renderRegistrySection(key, title, items) {
         }, '+ Ajouter')
       ])
     ]),
-    el('div', { className: 'card-body' }, [
-      items.length === 0
-        ? el('p', { style: { color: '#6B7280', textAlign: 'center' } }, 'Aucun élément')
-        : isArrayOfObjects
-          ? renderObjectList(key, items)
-          : renderSimpleList(key, items)
-    ])
+    bodyDiv
   ]);
 }
 
@@ -270,11 +294,13 @@ function createEditModal(key, title, item, index, isObject) {
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9999;
+      animation: fadeIn 0.2s ease;
     `,
     onclick: (e) => {
       if (e.target === modalOverlay) {
@@ -286,36 +312,95 @@ function createEditModal(key, title, item, index, isObject) {
       className: 'modal-content',
       style: `
         background: white;
-        border-radius: 12px;
-        padding: 24px;
-        max-width: 500px;
+        border-radius: 16px;
+        padding: 0;
+        max-width: 540px;
         width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
+        max-height: 85vh;
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        animation: slideUp 0.3s ease;
       `
     }, [
-      el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' } }, [
-        el('h2', { style: { fontSize: '20px', fontWeight: '700', margin: 0 } }, modalTitle),
+      // Header avec gradient
+      el('div', {
+        style: `
+          background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+          padding: 24px 28px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        `
+      }, [
+        el('h2', {
+          style: {
+            fontSize: '22px',
+            fontWeight: '700',
+            margin: 0,
+            color: 'white'
+          }
+        }, modalTitle),
         el('button', {
-          className: 'btn btn-sm',
-          style: { padding: '4px 8px' },
+          style: `
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+          `,
+          onmouseenter: function() {
+            this.style.background = 'rgba(255, 255, 255, 0.3)';
+          },
+          onmouseleave: function() {
+            this.style.background = 'rgba(255, 255, 255, 0.2)';
+          },
           onclick: () => closeModal(modalOverlay)
         }, '✕')
       ]),
 
-      formFields,
+      // Body avec scroll
+      el('div', {
+        style: `
+          padding: 28px;
+          max-height: calc(85vh - 180px);
+          overflow-y: auto;
+        `
+      }, [formFields]),
 
-      el('div', { style: { display: 'flex', gap: '12px', marginTop: '24px' } }, [
-        el('button', {
-          className: 'btn btn-primary',
-          style: { flex: 1 },
-          onclick: () => saveRegistryItem(key, index, isObject, modalOverlay)
-        }, isEdit ? 'Enregistrer' : 'Ajouter'),
+      // Footer fixe
+      el('div', {
+        style: `
+          padding: 20px 28px;
+          border-top: 1px solid #E5E7EB;
+          background: #F9FAFB;
+          display: flex;
+          gap: 12px;
+        `
+      }, [
         el('button', {
           className: 'btn btn-secondary',
-          style: { flex: 1 },
+          style: { flex: 1, padding: '12px 24px', fontSize: '15px', fontWeight: '600' },
           onclick: () => closeModal(modalOverlay)
-        }, 'Annuler')
+        }, 'Annuler'),
+        el('button', {
+          className: 'btn btn-primary',
+          style: {
+            flex: 1,
+            padding: '12px 24px',
+            fontSize: '15px',
+            fontWeight: '600',
+            background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+            border: 'none'
+          },
+          onclick: () => saveRegistryItem(key, index, isObject, modalOverlay)
+        }, isEdit ? '💾 Enregistrer' : '➕ Ajouter')
       ])
     ])
   ]);
