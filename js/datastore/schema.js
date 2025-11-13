@@ -24,7 +24,9 @@ export const ENTITIES = {
   ENTREPRISE: 'ENTREPRISE',
   GROUPEMENT: 'GROUPEMENT',
   ANO: 'ANO',
-  DOCUMENT: 'DOCUMENT'
+  DOCUMENT: 'DOCUMENT',
+  DECOMPTE: 'DECOMPTE',
+  DIFFICULTE: 'DIFFICULTE'
 };
 
 /**
@@ -522,6 +524,59 @@ export const SCHEMAS = {
     validatedBy: null,
     validatedAt: null,
     commentaire: '',
+    createdAt: null,
+    updatedAt: null
+  },
+
+  DECOMPTE: {
+    id: null,
+    operationId: null,
+    numero: '',
+    typeOP: 'CUMULS', // CUMULS | %CUMULS
+    numeroOP: '',
+    dateDecompte: null,
+
+    // Montants
+    acompteHTVA: 0,
+    avance: 0,
+    garantie: 0,
+    penalite: 0,
+    netHTVA: 0,
+    netTTC: 0,
+
+    // État et validation
+    etat: 'DRAFT', // DRAFT | SOUMIS | VISE | REJETE | PAYE
+    bailleur: '',
+    decision: null, // APPROUVE | REJETE | EN_ATTENTE
+    tauxExecution: 0, // % d'exécution cumulé
+
+    // Liens
+    ordreServiceId: null,
+    documentRef: null,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  DIFFICULTE: {
+    id: null,
+    operationId: null,
+
+    // Classification
+    statutTraitement: 'EN_COURS', // EN_COURS | RESOLU | ABANDONNE
+    decision: null, // Type de décision prise
+    probleme: '', // Description du problème
+
+    // Traçabilité
+    dateDecision: null,
+    nomDecideur: '',
+    fichier: null, // Document de résolution
+
+    // Détails
+    impact: 'FAIBLE', // FAIBLE | MOYEN | ELEVE | CRITIQUE
+    categorieProbleme: '', // TECHNIQUE | FINANCIER | JURIDIQUE | AUTRE
+    actionsCorrectives: '', // Mesures prises
+
     createdAt: null,
     updatedAt: null
   }

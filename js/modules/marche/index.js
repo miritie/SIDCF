@@ -17,6 +17,7 @@ import renderAvenants from './screens/ecr04b-avenants.js';
 import renderGaranties from './screens/ecr04c-garanties.js';
 import renderCloture from './screens/ecr05-cloture.js';
 import renderDashboardCF from './screens/ecr06-dashboard-cf.js';
+import renderDashboard from './screens/ecr07-dashboard.js';
 import logger from '../../lib/logger.js';
 import { mount } from '../../lib/dom.js';
 
@@ -86,6 +87,7 @@ export function registerMarcheRoutes() {
 
   // Dashboard
   router.register('/dashboard-cf', renderDashboardCF);
+  router.register('/dashboard', renderDashboard);
 
   // === ALIASES (Retro-compatibility) ===
   router.alias('/ecr01a-import-ppm', '/ppm-import');
@@ -101,6 +103,7 @@ export function registerMarcheRoutes() {
   router.alias('/ecr04c-garanties-resiliation', '/garanties');
   router.alias('/ecr05-cloture-receptions', '/cloture');
   router.alias('/ecr06-dashboard-cf', '/dashboard-cf');
+  router.alias('/ecr07-dashboard', '/dashboard');
 
   logger.info('[Marché] Routes registered with aliases');
 }
