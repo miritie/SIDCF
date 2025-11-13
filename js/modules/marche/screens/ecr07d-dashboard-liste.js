@@ -9,7 +9,7 @@ import { advancedFilters } from '../../../ui/widgets/advanced-filters.js';
 import { marcheCardGrid } from '../../../ui/widgets/marche-card.js';
 
 export async function renderDashboardListe(container, filters = {}) {
-  const operations = await dataService.getAll(ENTITIES.OPERATION);
+  const operations = await dataService.query(ENTITIES.OPERATION);
   const registries = dataService.getAllRegistries();
 
   let filteredOperations = [...operations];

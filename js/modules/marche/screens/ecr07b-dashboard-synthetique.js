@@ -13,8 +13,8 @@ import { dataTable } from '../../../ui/widgets/table.js';
 import { money, percent } from '../../../lib/format.js';
 
 export async function renderDashboardSynthetique(container, filters = {}) {
-  const operations = await dataService.getAll(ENTITIES.OPERATION);
-  const avenants = await dataService.getAll(ENTITIES.AVENANT);
+  const operations = await dataService.query(ENTITIES.OPERATION);
+  const avenants = await dataService.query(ENTITIES.AVENANT);
   const rulesConfig = dataService.getRulesConfig();
 
   const kpis = DashboardCalculations.calculateGlobalKPIs(operations, avenants, [], rulesConfig);

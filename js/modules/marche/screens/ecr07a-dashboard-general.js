@@ -21,12 +21,12 @@ import { money, date as formatDate } from '../../../lib/format.js';
  */
 export async function renderDashboardGeneral(container, filters = {}) {
   // 1. CHARGER LES DONNÉES
-  const operations = await dataService.getAll(ENTITIES.OPERATION);
-  const avenants = await dataService.getAll(ENTITIES.AVENANT);
-  const decomptes = await dataService.getAll(ENTITIES.DECOMPTE);
-  const ordresService = await dataService.getAll(ENTITIES.ORDRE_SERVICE);
-  const visasCF = await dataService.getAll(ENTITIES.VISA_CF);
-  const anos = await dataService.getAll(ENTITIES.ANO);
+  const operations = await dataService.query(ENTITIES.OPERATION);
+  const avenants = await dataService.query(ENTITIES.AVENANT);
+  const decomptes = await dataService.query(ENTITIES.DECOMPTE);
+  const ordresService = await dataService.query(ENTITIES.ORDRE_SERVICE);
+  const visasCF = await dataService.query(ENTITIES.VISA_CF);
+  const anos = await dataService.query(ENTITIES.ANO);
   const rulesConfig = dataService.getRulesConfig();
 
   // 2. CALCULER LES KPIs

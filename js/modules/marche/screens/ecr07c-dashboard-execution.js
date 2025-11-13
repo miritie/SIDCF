@@ -11,7 +11,7 @@ import { simpleDonut } from '../../../ui/widgets/pie-chart.js';
 import { money } from '../../../lib/format.js';
 
 export async function renderDashboardExecution(container, filters = {}) {
-  const operations = await dataService.getAll(ENTITIES.OPERATION);
+  const operations = await dataService.query(ENTITIES.OPERATION);
 
   // Sélectionner le premier marché EN_EXEC comme exemple
   const selectedOp = operations.find(o => o.etat === 'EN_EXEC') || operations[0];
@@ -21,9 +21,9 @@ export async function renderDashboardExecution(container, filters = {}) {
     return;
   }
 
-  const avenants = (await dataService.getAll(ENTITIES.AVENANT))
+  const avenants = (await dataService.query(ENTITIES.AVENANT))
     .filter(a => a.operationId === selectedOp.id);
-  const decomptes = (await dataService.getAll(ENTITIES.DECOMPTE))
+  const decomptes = (await dataService.query(ENTITIES.DECOMPTE))
     .filter(d => d.operationId === selectedOp.id);
 
   const kpis = DashboardCalculations.calculateMarcheKPIs(selectedOp, avenants, decomptes);
