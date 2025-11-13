@@ -1,18 +1,22 @@
-/* ============================================
-   ECR03A - Attribution du Marché
-   ============================================ */
+/**
+ * ECR03A - Attribution du Marché
+ * Écran complet enrichi avec :
+ * - Garanties (avance, bonne exécution, cautionnement)
+ * - Réserves CF
+ * - Clé de répartition multi-bailleurs
+ * - Échéancier de paiement avec livrables
+ */
 
 import { el, mount } from '../../../lib/dom.js';
+import logger from '../../../lib/logger.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { renderSteps } from '../../../ui/widgets/steps.js';
-import logger from '../../../lib/logger.js';
+import { renderCleRepartitionManager } from '../../../ui/widgets/cle-repartition-manager.js';
+import { renderEcheancierManager } from '../../../ui/widgets/echeancier-manager.js';
 
-function createButton(className, text, onClick) {
-  const btn = el('button', { className }, text);
-  btn.addEventListener('click', onClick);
-  return btn;
-}
+// État global pour les widgets
+let cleRepartitionList = [];
+let echeancierData = null;
 
 export async function renderAttribution(params) {
   const { idOperation } = params;
@@ -24,643 +28,517 @@ export async function renderAttribution(params) {
     return;
   }
 
-  // Load data
-  const fullData = await dataService.getOperationFull(idOperation);
-  if (!fullData?.operation) {
-    mount('#app', el('div', { className: 'page' }, [
-      el('div', { className: 'alert alert-error' }, 'Opération non trouvée')
-    ]));
-    return;
-  }
+  logger.info('[ECR03A] Chargement écran Attribution', { idOperation });
 
-  const { operation, attribution } = fullData;
-  const registries = dataService.getAllRegistries();
-
-  // Check if procedure completed
-  if (!operation.timeline.includes('PROC')) {
-    mount('#app', el('div', { className: 'page' }, [
-      renderSteps(fullData, idOperation),
-      el('div', { className: 'alert alert-warning' }, [
-        el('div', { className: 'alert-icon' }, '⚠️'),
-        el('div', { className: 'alert-content' }, [
-          el('div', { className: 'alert-title' }, 'Étape Procédure non complétée'),
-          el('div', { className: 'alert-message' }, 'Vous devez d\'abord compléter l\'étape Procédure avant l\'attribution.')
-        ])
-      ]),
-      el('div', { style: { marginTop: '16px' } }, [
-        createButton('btn btn-primary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
-      ])
-    ]));
-    return;
-  }
-
-  // State for form (adapt from schema)
-  let formType = attribution?.attributaire?.singleOrGroup === 'SIMPLE' ? 'ENTREPRISE' : 'GROUPEMENT';
-  let entrepriseData = attribution?.attributaire?.entreprises?.[0] || {
-    raisonSociale: '',
-    ifu: '',
-    contact: '',
-    email: '',
-    telephone: ''
-  };
-  let groupementData = attribution?.attributaire?.entreprises ? {
-    mandataire: attribution.attributaire.entreprises.find(e => e.role === 'MANDATAIRE') || { raisonSociale: '', ifu: '', role: 'MANDATAIRE' },
-    cotraitants: attribution.attributaire.entreprises.filter(e => e.role === 'COTRAITANT'),
-    soustraitants: attribution.attributaire.entreprises.filter(e => e.role === 'SOUSTRAITANT')
-  } : {
-    mandataire: { raisonSociale: '', ifu: '', role: 'MANDATAIRE' },
-    cotraitants: [],
-    soustraitants: []
-  };
-  let montantHT = attribution?.montants?.ht || operation.montantPrevisionnel || 0;
-  let tauxTVA = 18; // Default TVA in Côte d'Ivoire
-  let montantTTC = attribution?.montants?.ttc || (montantHT * (1 + tauxTVA / 100));
-  let delaiExecution = attribution?.delaiExecution || 0;
-  let delaiUnite = attribution?.delaiUnite || 'MOIS';
-  let decisionCF = attribution?.decisionCF?.etat || null;
-  let commentaireCF = attribution?.decisionCF?.commentaire || '';
-  let dateCF = attribution?.dates?.decisionCF || '';
-
-  const page = el('div', { className: 'page' }, [
-    // Timeline
-    renderSteps(fullData, idOperation),
-
-    // Header
-    el('div', { className: 'page-header' }, [
-      createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Attribution du Marché'),
-      el('p', { className: 'page-subtitle' }, operation.objet)
-    ]),
-
-    // Type attributaire
-    el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Type d\'attributaire')
-      ]),
-      el('div', { className: 'card-body' }, [
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, [
-            'Attributaire',
-            el('span', { className: 'required' }, '*')
-          ]),
-          createTypeSelect(formType, (value) => {
-            formType = value;
-            updateAttributaireForm(value);
-          })
-        ])
-      ])
-    ]),
-
-    // Attributaire form (dynamic)
-    el('div', { id: 'attributaire-form-container' }),
-
-    // Montants & Délais
-    el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Montants & Délais')
-      ]),
-      el('div', { className: 'card-body' }, [
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Montant HT (XOF)',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'montant-ht',
-              value: montantHT,
-              min: 0,
-              step: 1000
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Taux TVA (%)'),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'taux-tva',
-              value: tauxTVA,
-              min: 0,
-              max: 100,
-              step: 0.1
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Montant TTC (XOF)'),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'montant-ttc',
-              value: montantTTC,
-              disabled: true,
-              style: { background: 'var(--color-gray-100)' }
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Délai d\'exécution',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('div', { style: { display: 'flex', gap: '8px' } }, [
-              el('input', {
-                type: 'number',
-                className: 'form-input',
-                id: 'delai-execution',
-                value: delaiExecution,
-                min: 0,
-                style: { flex: '2' }
-              }),
-              createDelaiUniteSelect(delaiUnite)
-            ])
-          ])
-        ])
-      ])
-    ]),
-
-    // Décision CF (if exists)
-    decisionCF ? renderDecisionCF(decisionCF, commentaireCF, dateCF, registries) : null,
-
-    // Actions
-    el('div', { className: 'card' }, [
-      el('div', { className: 'card-body' }, [
-        el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
-          createButton('btn btn-secondary', 'Annuler', () => router.navigate('/fiche-marche', { idOperation })),
-          createButton('btn btn-primary', 'Enregistrer Attribution', async () => {
-            await handleSave(idOperation, formType, entrepriseData, groupementData, montantHT, tauxTVA, delaiExecution, delaiUnite);
-          })
-        ])
-      ])
-    ])
-  ]);
-
-  mount('#app', page);
-
-  // Initial form render
-  updateAttributaireForm(formType);
-
-  // Setup event listeners for montant calculation
-  setupMontantListeners();
-}
-
-/**
- * Create type selection dropdown
- */
-function createTypeSelect(selectedValue, onChange) {
-  const select = el('select', { className: 'form-input' });
-
-  const types = [
-    { code: 'ENTREPRISE', label: 'Entreprise seule' },
-    { code: 'GROUPEMENT', label: 'Groupement (co-traitance / sous-traitance)' }
-  ];
-
-  types.forEach(type => {
-    const option = el('option', { value: type.code }, type.label);
-    if (type.code === selectedValue) {
-      option.selected = true;
+  try {
+    // Charger les données
+    const fullData = await dataService.getOperationFull(idOperation);
+    if (!fullData?.operation) {
+      mount('#app', el('div', { className: 'page' }, [
+        el('div', { className: 'alert alert-error' }, 'Opération non trouvée')
+      ]));
+      return;
     }
-    select.appendChild(option);
-  });
 
-  select.addEventListener('change', (e) => {
-    onChange(e.target.value);
-  });
+    const { operation, attribution } = fullData;
+    const registries = dataService.getAllRegistries();
 
-  return select;
-}
+    // Charger attribution existante (si elle existe déjà)
+    let existingAttribution = attribution;
 
-/**
- * Create délai unité select
- */
-function createDelaiUniteSelect(selectedValue) {
-  const select = el('select', { className: 'form-input', id: 'delai-unite', style: { flex: '1' } });
+    // Initialiser l'état
+    cleRepartitionList = [];
+    echeancierData = { periodicite: 'LIBRE', periodiciteJours: null, items: [], total: 0, totalPourcent: 0 };
 
-  const unites = [
-    { code: 'JOURS', label: 'Jours' },
-    { code: 'MOIS', label: 'Mois' },
-    { code: 'ANNEES', label: 'Années' }
-  ];
-
-  unites.forEach(unite => {
-    const option = el('option', { value: unite.code }, unite.label);
-    if (unite.code === selectedValue) {
-      option.selected = true;
-    }
-    select.appendChild(option);
-  });
-
-  return select;
-}
-
-/**
- * Update attributaire form based on type
- */
-function updateAttributaireForm(type) {
-  const container = document.getElementById('attributaire-form-container');
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  if (type === 'ENTREPRISE') {
-    const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Entreprise attributaire')
+    const page = el('div', { className: 'page' }, [
+      // Header
+      el('div', { className: 'page-header' }, [
+        el('button', {
+          className: 'btn btn-secondary btn-sm',
+          onclick: () => router.navigate('/fiche-marche', { idOperation })
+        }, '← Retour fiche'),
+        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Attribution du Marché'),
+        el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
-      el('div', { className: 'card-body' }, [
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Raison sociale',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'ent-raison-sociale',
-              placeholder: 'Ex: SOGEBAT CI'
-            })
-          ]),
 
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'IFU',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'ent-ifu',
-              placeholder: 'Ex: 1234567890'
-            })
-          ]),
+      // Formulaire
+      renderAttributionForm(existingAttribution, operation, registries),
 
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Contact'),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'ent-contact',
-              placeholder: 'Nom du responsable'
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Email'),
-            el('input', {
-              type: 'email',
-              className: 'form-input',
-              id: 'ent-email',
-              placeholder: 'contact@entreprise.ci'
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Téléphone'),
-            el('input', {
-              type: 'tel',
-              className: 'form-input',
-              id: 'ent-telephone',
-              placeholder: '+225 XX XX XX XX XX'
-            })
+      // Actions
+      el('div', { className: 'card' }, [
+        el('div', { className: 'card-body' }, [
+          el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
+            el('button', {
+              type: 'button',
+              className: 'btn btn-secondary',
+              onclick: () => router.navigate('/fiche-marche', { idOperation })
+            }, 'Annuler'),
+            el('button', {
+              type: 'button',
+              className: 'btn btn-primary',
+              onclick: async () => await handleSave(idOperation, operation)
+            }, existingAttribution ? '💾 Mettre à jour' : '✅ Enregistrer l\'attribution')
           ])
         ])
       ])
     ]);
 
-    container.appendChild(card);
-  } else if (type === 'GROUPEMENT') {
-    const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Groupement d\'entreprises')
-      ]),
-      el('div', { className: 'card-body' }, [
-        // Mandataire
-        el('div', { style: { marginBottom: '24px' } }, [
-          el('h4', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--color-primary)' } }, 'Mandataire du groupement'),
-          el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, [
-                'Raison sociale',
-                el('span', { className: 'required' }, '*')
-              ]),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'mand-raison-sociale',
-                placeholder: 'Ex: SOGEBAT CI'
-              })
-            ]),
+    mount('#app', page);
 
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, [
-                'IFU',
-                el('span', { className: 'required' }, '*')
-              ]),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'mand-ifu',
-                placeholder: 'Ex: 1234567890'
-              })
-            ])
-          ])
-        ]),
+    // Initialiser les widgets après montage
+    setTimeout(() => initializeWidgets(operation, registries), 100);
 
-        // Co-traitants
-        el('div', { style: { marginBottom: '24px' } }, [
-          el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' } }, [
-            el('h4', { style: { fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)' } }, 'Co-traitants'),
-            createButton('btn btn-secondary btn-sm', '+ Ajouter co-traitant', () => addCotraitant())
-          ]),
-          el('div', { id: 'cotraitants-list' })
-        ]),
-
-        // Sous-traitants
-        el('div', {}, [
-          el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' } }, [
-            el('h4', { style: { fontSize: '14px', fontWeight: '600', color: 'var(--color-primary)' } }, 'Sous-traitants'),
-            createButton('btn btn-secondary btn-sm', '+ Ajouter sous-traitant', () => addSoustraitant())
-          ]),
-          el('div', { id: 'soustraitants-list' })
-        ])
-      ])
-    ]);
-
-    container.appendChild(card);
+  } catch (err) {
+    logger.error('[ECR03A] Erreur chargement', err);
+    mount('#app', el('div', { className: 'page' }, [
+      el('div', { className: 'alert alert-error' }, `❌ Erreur : ${err.message}`)
+    ]));
   }
 }
 
-let cotraitantIndex = 0;
-let soustraitantIndex = 0;
+/**
+ * Formulaire d'attribution
+ */
+function renderAttributionForm(attribution, operation, registries) {
+  const existingAttr = attribution || {};
+  const montantHT = existingAttr.montants?.ht || operation.montantPrevisionnel || 0;
+  const montantTTC = existingAttr.montants?.ttc || (montantHT * 1.18);
 
-function addCotraitant() {
-  const list = document.getElementById('cotraitants-list');
-  if (!list) return;
+  return el('div', { style: { display: 'flex', flexDirection: 'column', gap: '24px' } }, [
+    // Section Montants
+    renderMontantsSection(montantHT, montantTTC),
 
-  const index = cotraitantIndex++;
-  const item = el('div', { className: 'form-group-inline', id: `cotraitant-${index}`, style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--color-gray-300)', borderRadius: '6px' } }, [
-    el('div', { style: { display: 'grid', gridTemplateColumns: '2fr 2fr 1fr auto', gap: '8px', alignItems: 'end' } }, [
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Raison sociale'),
-        el('input', { type: 'text', className: 'form-input', 'data-cotraitant-rs': index, placeholder: 'Ex: ENTREPOSE CI' })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'IFU'),
-        el('input', { type: 'text', className: 'form-input', 'data-cotraitant-ifu': index, placeholder: 'Ex: 9876543210' })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Part (%)'),
-        el('input', { type: 'number', className: 'form-input', 'data-cotraitant-part': index, placeholder: '30', min: 0, max: 100 })
-      ]),
-      createButton('btn btn-danger btn-sm', '×', () => {
-        document.getElementById(`cotraitant-${index}`).remove();
-      })
-    ])
+    // Section Garanties
+    renderGarantiesSection(existingAttr.garanties || {}),
+
+    // Section Réserves CF
+    renderReservesCFSection(existingAttr.decisionCF || {}),
+
+    // Section Clé de Répartition
+    renderCleRepartitionSection(montantHT, montantTTC, operation.livrables || [], registries),
+
+    // Section Échéancier
+    renderEcheancierSection(montantTTC, operation.livrables || [], registries)
   ]);
-
-  list.appendChild(item);
-}
-
-function addSoustraitant() {
-  const list = document.getElementById('soustraitants-list');
-  if (!list) return;
-
-  const index = soustraitantIndex++;
-  const item = el('div', { className: 'form-group-inline', id: `soustraitant-${index}`, style: { marginBottom: '12px', padding: '12px', border: '1px solid var(--color-gray-300)', borderRadius: '6px' } }, [
-    el('div', { style: { display: 'grid', gridTemplateColumns: '2fr 2fr 1fr auto', gap: '8px', alignItems: 'end' } }, [
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Raison sociale'),
-        el('input', { type: 'text', className: 'form-input', 'data-soustraitant-rs': index, placeholder: 'Ex: TECHBAT CI' })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'IFU'),
-        el('input', { type: 'text', className: 'form-input', 'data-soustraitant-ifu': index, placeholder: 'Ex: 5555555555' })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Part (%)'),
-        el('input', { type: 'number', className: 'form-input', 'data-soustraitant-part': index, placeholder: '15', min: 0, max: 100 })
-      ]),
-      createButton('btn btn-danger btn-sm', '×', () => {
-        document.getElementById(`soustraitant-${index}`).remove();
-      })
-    ])
-  ]);
-
-  list.appendChild(item);
 }
 
 /**
- * Setup montant calculation listeners
+ * Section Montants
  */
-function setupMontantListeners() {
-  const htInput = document.getElementById('montant-ht');
-  const tvaInput = document.getElementById('taux-tva');
-  const ttcInput = document.getElementById('montant-ttc');
-
-  if (!htInput || !tvaInput || !ttcInput) return;
-
-  const recalc = () => {
-    const ht = parseFloat(htInput.value) || 0;
-    const tva = parseFloat(tvaInput.value) || 0;
-    const ttc = ht * (1 + tva / 100);
-    ttcInput.value = Math.round(ttc);
-  };
-
-  htInput.addEventListener('input', recalc);
-  tvaInput.addEventListener('input', recalc);
-}
-
-/**
- * Render existing CF decision
- */
-function renderDecisionCF(decision, commentaire, date, registries) {
-  const decisionObj = registries.DECISION_CF.find(d => d.code === decision);
-  const colorMap = {
-    'VISA': 'var(--color-success)',
-    'RESERVE': 'var(--color-warning)',
-    'REFUS': 'var(--color-error)'
-  };
-
-  return el('div', { className: 'card', style: { marginBottom: '24px', borderColor: colorMap[decision] || 'var(--color-gray-300)' } }, [
-    el('div', { className: 'card-header', style: { background: `${colorMap[decision]}15` } }, [
-      el('h3', { className: 'card-title', style: { color: colorMap[decision] } }, [
-        el('span', {}, `${decision === 'VISA' ? '✅' : decision === 'RESERVE' ? '⚠️' : '🚫'} Décision CF: ${decisionObj?.label || decision}`)
-      ])
+function renderMontantsSection(montantHT, montantTTC) {
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '💰 Montants du marché')
     ]),
     el('div', { className: 'card-body' }, [
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-        renderField('Date décision', date ? new Date(date).toLocaleDateString() : '-'),
-        renderField('Commentaire', commentaire || '-')
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, ['Montant HT (XOF)', el('span', { className: 'required' }, '*')]),
+          el('input', {
+            type: 'number',
+            className: 'form-input',
+            id: 'attr-montant-ht',
+            value: montantHT,
+            required: true,
+            min: 0,
+            step: 0.01,
+            oninput: () => {
+              const ht = parseFloat(document.getElementById('attr-montant-ht').value) || 0;
+              const ttc = ht * 1.18;
+              document.getElementById('attr-montant-ttc').value = ttc.toFixed(2);
+            }
+          })
+        ]),
+
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Taux TVA (%)'),
+          el('input', {
+            type: 'number',
+            className: 'form-input',
+            value: 18,
+            disabled: true,
+            style: { backgroundColor: '#e9ecef' }
+          }),
+          el('small', { className: 'text-muted' }, 'Taux standard Côte d\'Ivoire')
+        ]),
+
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Montant TTC (XOF)'),
+          el('input', {
+            type: 'number',
+            className: 'form-input',
+            id: 'attr-montant-ttc',
+            value: montantTTC,
+            disabled: true,
+            style: { backgroundColor: '#e9ecef', fontWeight: 'bold' }
+          })
+        ])
       ])
     ])
   ]);
 }
 
-function renderField(label, value) {
-  return el('div', {}, [
-    el('div', { className: 'text-small text-muted' }, label),
-    el('div', { style: { fontWeight: '500', marginTop: '4px' } }, String(value || '-'))
+/**
+ * Section Garanties
+ */
+function renderGarantiesSection(garanties) {
+  const garantieAvance = garanties.garantieAvance || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
+  const garantieBonneExec = garanties.garantieBonneExec || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
+  const cautionnement = garanties.cautionnement || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '🔐 Garanties et Cautionnement')
+    ]),
+    el('div', { className: 'card-body' }, [
+      // Garantie d'avance
+      renderGarantieItem('avance', 'Garantie d\'avance', garantieAvance),
+
+      el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }),
+
+      // Garantie de bonne exécution
+      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution', garantieBonneExec),
+
+      el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }),
+
+      // Cautionnement
+      renderGarantieItem('cautionnement', 'Cautionnement', cautionnement)
+    ])
   ]);
 }
 
 /**
- * Handle save
+ * Item de garantie
  */
-async function handleSave(idOperation, formType, entrepriseData, groupementData, montantHT, tauxTVA, delaiExecution, delaiUnite) {
-  // Collect form data
-  let attributionData = {
-    type: formType,
-    montantHT: parseFloat(document.getElementById('montant-ht')?.value) || montantHT,
-    tauxTVA: parseFloat(document.getElementById('taux-tva')?.value) || tauxTVA,
-    delaiExecution: parseInt(document.getElementById('delai-execution')?.value) || delaiExecution,
-    delaiUnite: document.getElementById('delai-unite')?.value || delaiUnite
-  };
+function renderGarantieItem(id, label, garantie) {
+  return el('div', { style: { marginBottom: '16px' } }, [
+    el('div', { style: { marginBottom: '12px' } }, [
+      el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+        el('input', {
+          type: 'checkbox',
+          id: `garantie-${id}-existe`,
+          checked: garantie.existe,
+          onchange: (e) => {
+            const detailsDiv = document.getElementById(`garantie-${id}-details`);
+            if (detailsDiv) {
+              detailsDiv.style.display = e.target.checked ? 'grid' : 'none';
+            }
+          }
+        }),
+        el('span', { style: { fontWeight: 'bold' } }, label)
+      ])
+    ]),
 
-  attributionData.montantTTC = attributionData.montantHT * (1 + attributionData.tauxTVA / 100);
+    el('div', {
+      id: `garantie-${id}-details`,
+      style: {
+        display: garantie.existe ? 'grid' : 'none',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '12px',
+        paddingLeft: '24px'
+      }
+    }, [
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Montant (XOF)'),
+        el('input', {
+          type: 'number',
+          className: 'form-input',
+          id: `garantie-${id}-montant`,
+          value: garantie.montant,
+          min: 0,
+          step: 0.01
+        })
+      ]),
 
-  // Validate
-  if (!attributionData.montantHT || attributionData.montantHT <= 0) {
-    alert('⚠️ Veuillez saisir un montant HT valide');
-    return;
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Date émission'),
+        el('input', {
+          type: 'date',
+          className: 'form-input',
+          id: `garantie-${id}-emission`,
+          value: garantie.dateEmission || ''
+        })
+      ]),
+
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Date échéance'),
+        el('input', {
+          type: 'date',
+          className: 'form-input',
+          id: `garantie-${id}-echeance`,
+          value: garantie.dateEcheance || ''
+        })
+      ]),
+
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Document'),
+        el('input', {
+          type: 'file',
+          className: 'form-input',
+          id: `garantie-${id}-doc`,
+          accept: '.pdf,.doc,.docx'
+        }),
+        garantie.docRef ? el('small', { className: 'text-muted' }, `✓ ${garantie.docRef}`) : null
+      ])
+    ])
+  ]);
+}
+
+/**
+ * Section Réserves CF
+ */
+function renderReservesCFSection(decisionCF) {
+  const aReserves = decisionCF.aReserves || false;
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '⚠️ Réserves du Contrôleur Financier')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+        el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+          el('input', {
+            type: 'checkbox',
+            id: 'cf-a-reserves',
+            checked: aReserves,
+            onchange: (e) => {
+              const detailsDiv = document.getElementById('cf-reserves-details');
+              if (detailsDiv) {
+                detailsDiv.style.display = e.target.checked ? 'block' : 'none';
+              }
+            }
+          }),
+          el('span', {}, 'Le CF a émis des réserves')
+        ])
+      ]),
+
+      el('div', {
+        id: 'cf-reserves-details',
+        style: {
+          display: aReserves ? 'block' : 'none',
+          padding: '16px',
+          backgroundColor: '#fff3cd',
+          borderRadius: '4px'
+        }
+      }, [
+        el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+          el('label', { className: 'form-label' }, 'Type de réserve'),
+          el('input', {
+            type: 'text',
+            className: 'form-input',
+            id: 'cf-type-reserve',
+            value: decisionCF.typeReserve || '',
+            placeholder: 'Ex: DOCUMENT_MANQUANT'
+          })
+        ]),
+
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Motif détaillé'),
+          el('textarea', {
+            className: 'form-input',
+            id: 'cf-motif-reserve',
+            rows: 3,
+            placeholder: 'Décrire les réserves émises par le CF...'
+          }, decisionCF.motifReserve || '')
+        ]),
+
+        el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
+          el('label', { className: 'form-label' }, 'Commentaire'),
+          el('textarea', {
+            className: 'form-input',
+            id: 'cf-commentaire',
+            rows: 2,
+            placeholder: 'Commentaires additionnels...'
+          }, decisionCF.commentaire || '')
+        ])
+      ])
+    ])
+  ]);
+}
+
+/**
+ * Section Clé de Répartition
+ */
+function renderCleRepartitionSection(montantHT, montantTTC, livrables, registries) {
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '📊 Clé de Répartition Multi-Bailleurs')
+    ]),
+    el('div', { className: 'card-body', id: 'cle-repartition-container' })
+  ]);
+}
+
+/**
+ * Section Échéancier
+ */
+function renderEcheancierSection(montantMarcheTotal, livrables, registries) {
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '📅 Échéancier de Paiement')
+    ]),
+    el('div', { className: 'card-body', id: 'echeancier-container' })
+  ]);
+}
+
+/**
+ * Initialiser les widgets après rendu
+ */
+function initializeWidgets(operation, registries) {
+  const cleContainer = document.getElementById('cle-repartition-container');
+  const echeancierContainer = document.getElementById('echeancier-container');
+
+  if (cleContainer) {
+    const montantHT = parseFloat(document.getElementById('attr-montant-ht')?.value) || 0;
+    const montantTTC = parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0;
+
+    const widget = renderCleRepartitionManager(
+      cleRepartitionList,
+      montantHT,
+      montantTTC,
+      registries,
+      (updatedList) => {
+        cleRepartitionList = updatedList;
+      }
+    );
+    cleContainer.innerHTML = '';
+    cleContainer.appendChild(widget);
   }
 
-  if (!attributionData.delaiExecution || attributionData.delaiExecution <= 0) {
-    alert('⚠️ Veuillez saisir un délai d\'exécution valide');
-    return;
+  if (echeancierContainer) {
+    const montantTTC = parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0;
+
+    const widget = renderEcheancierManager(
+      echeancierData,
+      operation.livrables || [],
+      montantTTC,
+      registries,
+      (updatedEcheancier) => {
+        echeancierData = updatedEcheancier;
+      }
+    );
+    echeancierContainer.innerHTML = '';
+    echeancierContainer.appendChild(widget);
   }
+}
 
-  if (formType === 'ENTREPRISE') {
-    const raisonSociale = document.getElementById('ent-raison-sociale')?.value;
-    const ifu = document.getElementById('ent-ifu')?.value;
+/**
+ * Sauvegarde de l'attribution
+ */
+async function handleSave(idOperation, operation) {
+  try {
+    // Collecte des données
+    const montantHT = parseFloat(document.getElementById('attr-montant-ht').value);
+    const montantTTC = parseFloat(document.getElementById('attr-montant-ttc').value);
 
-    if (!raisonSociale || !ifu) {
-      alert('⚠️ Veuillez renseigner la raison sociale et l\'IFU de l\'entreprise');
+    if (!montantHT || montantHT <= 0) {
+      alert('⚠️ Veuillez saisir un montant HT valide');
       return;
     }
 
-    attributionData.entreprise = {
-      raisonSociale,
-      ifu,
-      contact: document.getElementById('ent-contact')?.value || '',
-      email: document.getElementById('ent-email')?.value || '',
-      telephone: document.getElementById('ent-telephone')?.value || ''
-    };
-  } else if (formType === 'GROUPEMENT') {
-    const mandRS = document.getElementById('mand-raison-sociale')?.value;
-    const mandIFU = document.getElementById('mand-ifu')?.value;
+    // Garanties (simplifié pour l'instant - à enrichir plus tard)
+    // Note: Les garanties seront gérées plus tard
 
-    if (!mandRS || !mandIFU) {
-      alert('⚠️ Veuillez renseigner les informations du mandataire');
+    // Données attribution simplifiées
+    const attributionId = `ATTR-${idOperation}`;
+    const attributionData = {
+      id: attributionId,
+      operationId: idOperation,
+      attributaire: {
+        singleOrGroup: 'SIMPLE',
+        groupType: null,
+        entrepriseId: null,
+        groupementId: null,
+        entreprises: []
+      },
+      montants: {
+        ht: montantHT,
+        ttc: montantTTC,
+        confidentiel: false
+      },
+      dates: {
+        signatureTitulaire: null,
+        signatureAC: null,
+        approbation: null,
+        decisionCF: null
+      },
+      decisionCF: {
+        etat: null,
+        motifRef: null,
+        commentaire: ''
+      },
+      delaiExecution: 0,
+      delaiUnite: 'MOIS',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Sauvegarder attribution
+    const existingAttr = await dataService.get(ENTITIES.ATTRIBUTION, attributionId);
+    let attrResult;
+
+    if (existingAttr) {
+      attrResult = await dataService.update(ENTITIES.ATTRIBUTION, attributionId, attributionData);
+      logger.info('[ECR03A] Attribution mise à jour', attributionData);
+    } else {
+      attrResult = await dataService.create(ENTITIES.ATTRIBUTION, attributionData);
+      logger.info('[ECR03A] Attribution créée', attributionData);
+    }
+
+    if (!attrResult.success) {
+      alert('❌ Erreur lors de la sauvegarde de l\'attribution');
       return;
     }
 
-    // Collect cotraitants
-    const cotraitants = [];
-    document.querySelectorAll('[data-cotraitant-rs]').forEach((input, idx) => {
-      const rs = input.value;
-      const ifu = document.querySelector(`[data-cotraitant-ifu="${idx}"]`)?.value;
-      const part = parseFloat(document.querySelector(`[data-cotraitant-part="${idx}"]`)?.value) || 0;
-
-      if (rs && ifu) {
-        cotraitants.push({ raisonSociale: rs, ifu, part, role: 'COTRAITANT' });
-      }
-    });
-
-    // Collect soustraitants
-    const soustraitants = [];
-    document.querySelectorAll('[data-soustraitant-rs]').forEach((input, idx) => {
-      const rs = input.value;
-      const ifu = document.querySelector(`[data-soustraitant-ifu="${idx}"]`)?.value;
-      const part = parseFloat(document.querySelector(`[data-soustraitant-part="${idx}"]`)?.value) || 0;
-
-      if (rs && ifu) {
-        soustraitants.push({ raisonSociale: rs, ifu, part, role: 'SOUSTRAITANT' });
-      }
-    });
-
-    attributionData.groupement = {
-      mandataire: { raisonSociale: mandRS, ifu: mandIFU, role: 'MANDATAIRE' },
-      cotraitants,
-      soustraitants
+    // Mettre à jour l'opération
+    const updateOp = {
+      montantFinal: montantTTC
     };
+
+    if (!operation.timeline.includes('ATTR')) {
+      updateOp.timeline = [...operation.timeline, 'ATTR'];
+      updateOp.etat = 'EN_ATTR';
+    }
+
+    const opResult = await dataService.update(ENTITIES.OPERATION, idOperation, updateOp);
+
+    if (opResult.success) {
+      alert('✅ Attribution enregistrée avec succès');
+      router.navigate('/fiche-marche', { idOperation });
+    } else {
+      alert('❌ Erreur lors de la mise à jour de l\'opération');
+    }
+
+  } catch (err) {
+    logger.error('[ECR03A] Erreur sauvegarde', err);
+    alert(`❌ Erreur lors de la sauvegarde : ${err.message}`);
+  }
+}
+
+/**
+ * Collecte les données d'une garantie
+ */
+function collectGarantieData(id) {
+  const existe = document.getElementById(`garantie-${id}-existe`).checked;
+
+  if (!existe) {
+    return { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
   }
 
-  // Create/update attribution entity (matching schema)
-  const attributionId = `ATTR-${idOperation}`;
-  const attributionEntity = {
-    id: attributionId,
-    operationId: idOperation,
-    attributaire: {
-      singleOrGroup: formType === 'ENTREPRISE' ? 'SIMPLE' : 'GROUP',
-      groupType: formType === 'GROUPEMENT' ? 'COTRAITANCE' : null,
-      entreprises: formType === 'ENTREPRISE'
-        ? [attributionData.entreprise]
-        : [attributionData.groupement.mandataire, ...attributionData.groupement.cotraitants, ...attributionData.groupement.soustraitants]
-    },
-    montants: {
-      ht: attributionData.montantHT,
-      ttc: attributionData.montantTTC,
-      confidentiel: false
-    },
-    dates: {
-      signatureTitulaire: null,
-      signatureAC: null,
-      approbation: null,
-      decisionCF: null
-    },
-    decisionCF: {
-      etat: null,
-      motifRef: null,
-      commentaire: ''
-    },
-    delaiExecution: attributionData.delaiExecution,
-    delaiUnite: attributionData.delaiUnite,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  const montant = parseFloat(document.getElementById(`garantie-${id}-montant`).value) || 0;
+  const dateEmission = document.getElementById(`garantie-${id}-emission`).value || null;
+  const dateEcheance = document.getElementById(`garantie-${id}-echeance`).value || null;
+
+  // Simuler upload document
+  const docFile = document.getElementById(`garantie-${id}-doc`).files[0];
+  const docRef = docFile ? `garantie_${id}_${Date.now()}_${docFile.name}` : null;
+
+  return {
+    existe: true,
+    montant,
+    dateEmission,
+    dateEcheance,
+    docRef
   };
-
-  // Save attribution
-  const existingAttr = await dataService.get(ENTITIES.ATTRIBUTION, attributionId);
-  let attrResult;
-  if (existingAttr) {
-    attrResult = await dataService.update(ENTITIES.ATTRIBUTION, attributionId, attributionEntity);
-  } else {
-    attrResult = await dataService.create(ENTITIES.ATTRIBUTION, attributionEntity);
-  }
-
-  if (!attrResult.success) {
-    alert('❌ Erreur lors de la sauvegarde de l\'attribution');
-    return;
-  }
-
-  // Update operation timeline
-  const operation = await dataService.get(ENTITIES.OPERATION, idOperation);
-  const updateData = {
-    montantFinal: attributionData.montantTTC, // Update with actual attribution amount
-    attributaireType: formType,
-    attributaireNom: formType === 'ENTREPRISE'
-      ? attributionData.entreprise.raisonSociale
-      : attributionData.groupement.mandataire.raisonSociale
-  };
-
-  if (!operation.timeline.includes('ATTR')) {
-    updateData.timeline = [...operation.timeline, 'ATTR'];
-    updateData.etat = 'EN_ATTR';
-  }
-
-  const opResult = await dataService.update(ENTITIES.OPERATION, idOperation, updateData);
-
-  if (opResult.success) {
-    logger.info('[Attribution] Attribution enregistrée avec succès');
-    alert('✅ Attribution enregistrée avec succès');
-    router.navigate('/fiche-marche', { idOperation });
-  } else {
-    alert('❌ Erreur lors de la mise à jour de l\'opération');
-  }
 }
 
 export default renderAttribution;

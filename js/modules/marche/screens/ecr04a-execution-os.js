@@ -137,18 +137,41 @@ export async function renderExecutionOS(params) {
               id: 'os-date',
               value: new Date().toISOString().split('T')[0]
             })
+          ])
+        ]),
+
+        // Bureau de contrôle & Bureau d'études
+        el('div', { style: { marginTop: '16px' } }, [
+          el('h4', { style: { fontSize: '16px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau de contrôle / Bureau d\'études')
+        ]),
+
+        el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' } }, [
+          // Bureau de contrôle
+          el('div', { style: { border: '1px solid var(--color-gray-300)', borderRadius: '8px', padding: '16px' } }, [
+            el('h5', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau de Contrôle'),
+            el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+              el('label', { className: 'form-label' }, 'Type'),
+              el('select', { className: 'form-input', id: 'bc-type' }, [
+                el('option', { value: '' }, 'Non défini'),
+                el('option', { value: 'UA' }, 'Unité Administrative (UA)'),
+                el('option', { value: 'ENTREPRISE' }, 'Entreprise externe')
+              ])
+            ]),
+            el('div', { className: 'form-field', id: 'bc-field-container' })
           ]),
 
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Montant (XOF)'),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'os-montant',
-              min: 0,
-              step: 1000,
-              placeholder: 'Optionnel'
-            })
+          // Bureau d'études
+          el('div', { style: { border: '1px solid var(--color-gray-300)', borderRadius: '8px', padding: '16px' } }, [
+            el('h5', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau d\'Études'),
+            el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+              el('label', { className: 'form-label' }, 'Type'),
+              el('select', { className: 'form-input', id: 'be-type' }, [
+                el('option', { value: '' }, 'Non défini'),
+                el('option', { value: 'UA' }, 'Unité Administrative (UA)'),
+                el('option', { value: 'ENTREPRISE' }, 'Entreprise externe')
+              ])
+            ]),
+            el('div', { className: 'form-field', id: 'be-field-container' })
           ])
         ]),
 
@@ -192,6 +215,65 @@ export async function renderExecutionOS(params) {
   ]);
 
   mount('#app', page);
+
+  // Setup bureau listeners
+  setupBureauListeners();
+}
+
+/**
+ * Setup bureau type listeners
+ */
+function setupBureauListeners() {
+  const bcTypeSelect = document.getElementById('bc-type');
+  const beTypeSelect = document.getElementById('be-type');
+
+  if (bcTypeSelect) {
+    bcTypeSelect.addEventListener('change', (e) => {
+      renderBureauField('bc', e.target.value);
+    });
+  }
+
+  if (beTypeSelect) {
+    beTypeSelect.addEventListener('change', (e) => {
+      renderBureauField('be', e.target.value);
+    });
+  }
+}
+
+/**
+ * Render bureau field based on type
+ */
+function renderBureauField(prefix, type) {
+  const container = document.getElementById(`${prefix}-field-container`);
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!type) return;
+
+  if (type === 'UA') {
+    const field = el('div', {}, [
+      el('label', { className: 'form-label' }, 'Sélectionner l\'UA'),
+      el('input', {
+        type: 'text',
+        className: 'form-input',
+        id: `${prefix}-ua-nom`,
+        placeholder: 'Nom de l\'UA'
+      })
+    ]);
+    container.appendChild(field);
+  } else if (type === 'ENTREPRISE') {
+    const field = el('div', {}, [
+      el('label', { className: 'form-label' }, 'Nom de l\'entreprise'),
+      el('input', {
+        type: 'text',
+        className: 'form-input',
+        id: `${prefix}-entreprise-nom`,
+        placeholder: 'Raison sociale'
+      })
+    ]);
+    container.appendChild(field);
+  }
 }
 
 /**
@@ -329,9 +411,18 @@ async function handleAddOS(idOperation) {
   const type = document.getElementById('os-type')?.value;
   const numero = document.getElementById('os-numero')?.value;
   const date = document.getElementById('os-date')?.value;
-  const montant = parseFloat(document.getElementById('os-montant')?.value) || null;
   const objet = document.getElementById('os-objet')?.value;
   const docInput = document.getElementById('os-document');
+
+  // Bureau de contrôle
+  const bcType = document.getElementById('bc-type')?.value;
+  const bcUaNom = document.getElementById('bc-ua-nom')?.value;
+  const bcEntrepriseNom = document.getElementById('bc-entreprise-nom')?.value;
+
+  // Bureau d'études
+  const beType = document.getElementById('be-type')?.value;
+  const beUaNom = document.getElementById('be-ua-nom')?.value;
+  const beEntrepriseNom = document.getElementById('be-entreprise-nom')?.value;
 
   // Validation
   if (!type) {
@@ -350,23 +441,38 @@ async function handleAddOS(idOperation) {
   }
 
   // Handle document upload (simulate)
-  let documentId = null;
+  let docRef = null;
   if (docInput?.files?.[0]) {
-    documentId = 'DOC_OS_' + Date.now() + '.pdf';
-    logger.info('[Execution] Document OS uploadé:', documentId);
+    docRef = 'DOC_OS_' + Date.now() + '.pdf';
+    logger.info('[Execution] Document OS uploadé:', docRef);
   }
+
+  // Prepare bureau data
+  const bureauControle = bcType ? {
+    type: bcType,
+    uaId: null,
+    entrepriseId: null,
+    nom: bcType === 'UA' ? bcUaNom : bcEntrepriseNom
+  } : { type: null, uaId: null, entrepriseId: null, nom: '' };
+
+  const bureauEtudes = beType ? {
+    type: beType,
+    uaId: null,
+    entrepriseId: null,
+    nom: beType === 'UA' ? beUaNom : beEntrepriseNom
+  } : { type: null, uaId: null, entrepriseId: null, nom: '' };
 
   // Create OS entity
   const osId = `OS-${idOperation}-${Date.now()}`;
   const osEntity = {
     id: osId,
-    idOperation,
-    type,
+    operationId: idOperation,
     numero,
     dateEmission: date,
-    montant,
     objet: objet || '',
-    documentId,
+    docRef,
+    bureauControle,
+    bureauEtudes,
     createdAt: new Date().toISOString()
   };
 

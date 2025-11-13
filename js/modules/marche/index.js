@@ -11,7 +11,7 @@ import renderProcedurePV from './screens/ecr02a-procedure-pv.js';
 import renderRecours from './screens/ecr02b-recours.js';
 import renderAttribution from './screens/ecr03a-attribution.js';
 import renderEcheancierCle from './screens/ecr03b-echeancier-cle.js';
-import renderVisaCF from './screens/ecr04a-visa-cf.js';
+import renderVisaCF from './screens/ecr03c-visa-cf.js';
 import renderExecutionOS from './screens/ecr04a-execution-os.js';
 import renderAvenants from './screens/ecr04b-avenants.js';
 import renderGaranties from './screens/ecr04c-garanties.js';

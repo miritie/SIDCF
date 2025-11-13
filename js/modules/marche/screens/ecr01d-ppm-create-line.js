@@ -7,6 +7,7 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { operationId } from '../../../lib/uid.js';
 import logger from '../../../lib/logger.js';
+import { renderLivrableManager } from '../../../ui/widgets/livrable-manager.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -27,6 +28,18 @@ function getSelectLabel(selectId) {
 export async function renderPPMCreateLine(params) {
   const registries = dataService.getAllRegistries();
   const currentYear = new Date().getFullYear();
+
+  // Load UA → Activités config
+  let uaActivitesConfig = {};
+  try {
+    const response = await fetch('/js/config/ua-activites.json');
+    uaActivitesConfig = await response.json();
+  } catch (err) {
+    logger.warn('[PPM Create] Could not load UA-Activités config', err);
+  }
+
+  // State for livrables
+  let livrablesList = [];
 
   const page = el('div', { className: 'page' }, [
     // Header
@@ -206,26 +219,12 @@ export async function renderPPMCreateLine(params) {
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Activité
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Activité'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'activite',
-                placeholder: 'Libellé activité'
-              })
-            ]),
-
-            // Code activité
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Code activité'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'activiteCode',
-                placeholder: 'Ex: 11011100015'
-              })
+            // Activité (sélection basée sur UA)
+            el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
+              el('label', { className: 'form-label' }, ['Activité', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'activite', disabled: true, required: true }, [
+                el('option', { value: '' }, '-- Sélectionner une UA d\'abord --')
+              ])
             ]),
 
             // Ligne budgétaire
@@ -281,20 +280,17 @@ export async function renderPPMCreateLine(params) {
                 id: 'beneficiaire',
                 placeholder: 'Nom du bénéficiaire'
               })
-            ]),
-
-            // Livrable
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Livrable'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'livrable',
-                placeholder: 'Description du livrable'
-              })
             ])
           ])
         ])
+      ]),
+
+      // Section: Livrables
+      el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+        el('div', { className: 'card-header' }, [
+          el('h3', { className: 'card-title' }, '📦 Livrables')
+        ]),
+        el('div', { className: 'card-body', id: 'livrables-container' })
       ]),
 
       // Section: Localisation géographique (Cascading)
@@ -387,6 +383,54 @@ export async function renderPPMCreateLine(params) {
   setupChaineBudgetaireCascades(registries);
   setupLocalisationCascades(registries);
   setupBailleurLogic(registries);
+
+  // Setup UA → Activités cascade
+  setupActiviteCascade(uaActivitesConfig);
+
+  // Render livrable manager
+  const livrablesContainer = document.getElementById('livrables-container');
+  if (livrablesContainer) {
+    const livrableWidget = renderLivrableManager(livrablesList, registries, (updatedList) => {
+      livrablesList = updatedList;
+    });
+    livrablesContainer.appendChild(livrableWidget);
+  }
+}
+
+/**
+ * Setup UA → Activités cascade
+ */
+function setupActiviteCascade(uaActivitesConfig) {
+  const uniteSelect = document.getElementById('unite');
+  const activiteSelect = document.getElementById('activite');
+
+  if (!uniteSelect || !activiteSelect) return;
+
+  // Listen to UA selection changes
+  uniteSelect.addEventListener('change', (e) => {
+    const uaCode = e.target.value;
+
+    // Reset activité select
+    activiteSelect.innerHTML = '<option value="">-- Sélectionner une activité --</option>';
+    activiteSelect.disabled = !uaCode;
+
+    if (!uaCode) return;
+
+    // Get activités for this UA (or use _DEFAULT if not found)
+    const activites = uaActivitesConfig[uaCode] || uaActivitesConfig['_DEFAULT'] || [];
+
+    activites.forEach(act => {
+      const option = document.createElement('option');
+      option.value = act.code;
+      option.textContent = `${act.libelle} (${act.categorie})`;
+      option.dataset.libelle = act.libelle;
+      option.dataset.code = act.code;
+      option.dataset.categorie = act.categorie;
+      activiteSelect.appendChild(option);
+    });
+
+    activiteSelect.disabled = false;
+  });
 }
 
 /**
@@ -616,8 +660,8 @@ async function handleSave(createAnother) {
       sectionCode: document.getElementById('section')?.value || '',
       programme: getSelectLabel('programme') || '',
       programmeCode: document.getElementById('programme')?.value || '',
-      activite: document.getElementById('activite')?.value?.trim() || '',
-      activiteCode: document.getElementById('activiteCode')?.value?.trim() || '',
+      activite: getSelectLabel('activite') || '',
+      activiteCode: document.getElementById('activite')?.value || '',
       ligneBudgetaire: document.getElementById('ligneBudgetaire')?.value?.trim() || '',
       nature: '',
       bailleur: document.getElementById('sourceFinancement')?.value || ''
@@ -628,9 +672,7 @@ async function handleSave(createAnother) {
     dureePrevisionnelle: Number(document.getElementById('delaiExecution')?.value) || 0,
     categoriePrestation: document.getElementById('categoriePrestation')?.value || '',
     beneficiaire: document.getElementById('beneficiaire')?.value?.trim() || '',
-    livrables: document.getElementById('livrable')?.value?.trim()
-      ? [document.getElementById('livrable')?.value?.trim()]
-      : [],
+    livrables: livrablesList, // utilisation de la liste gérée par le widget
 
     // Localisation (cascading selects)
     localisation: {

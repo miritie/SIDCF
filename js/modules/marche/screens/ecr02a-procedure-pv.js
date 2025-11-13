@@ -114,8 +114,8 @@ export async function renderProcedurePV(params) {
     // Derogation alert (shown dynamically)
     el('div', { id: 'derogation-alert-container' }),
 
-    // Procedure details (if exists)
-    procedure ? renderProcedureDetails(procedure, registries) : null,
+    // Procedure details form
+    renderProcedureDetailsForm(procedure, operation, registries),
 
     // Actions
     el('div', { className: 'card' }, [
@@ -226,22 +226,173 @@ function updateDerogationAlert(selectedMode, suggestedCodes) {
 }
 
 /**
- * Render existing procedure details
+ * Render procedure details form (editable)
  */
-function renderProcedureDetails(procedure, registries) {
+function renderProcedureDetailsForm(procedure, operation, registries) {
+  const existingProc = procedure || {};
+
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, 'Détails de la procédure')
+      el('h3', { className: 'card-title' }, '📋 Détails de la procédure')
     ]),
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-        renderField('Commission', procedure.commission),
-        renderField('Catégorie', procedure.categorie),
-        renderField('Offres reçues', procedure.nbOffresRecues),
-        renderField('Offres classées', procedure.nbOffresClassees),
-        renderField('Date ouverture', procedure.dates?.ouverture ? new Date(procedure.dates.ouverture).toLocaleDateString() : '-'),
-        renderField('Date analyse', procedure.dates?.analyse ? new Date(procedure.dates.analyse).toLocaleDateString() : '-'),
-        renderField('Date jugement', procedure.dates?.jugement ? new Date(procedure.dates.jugement).toLocaleDateString() : '-')
+
+        // Type de commission
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, ['Type de commission', el('span', { className: 'required' }, '*')]),
+          el('select', { className: 'form-input', id: 'proc-commission', required: true }, [
+            el('option', { value: '' }, '-- Sélectionner --'),
+            ...(registries.TYPE_COMMISSION || []).map(c =>
+              el('option', { value: c.code, selected: c.code === existingProc.commission }, c.label)
+            )
+          ]),
+          el('small', { className: 'text-muted' }, 'COJO pour Admin Centrale, COPE pour projets/collectivités')
+        ]),
+
+        // Catégorie procédure
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, ['Catégorie', el('span', { className: 'required' }, '*')]),
+          el('select', { className: 'form-input', id: 'proc-categorie', required: true }, [
+            el('option', { value: '' }, '-- Sélectionner --'),
+            ...(registries.CATEGORIE_PROCEDURE || []).map(cat =>
+              el('option', { value: cat.code, selected: cat.code === existingProc.categorie }, cat.label)
+            )
+          ])
+        ]),
+
+        // Type dossier d'appel
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Type de dossier d\'appel'),
+          el('select', { className: 'form-input', id: 'proc-type-dossier' }, [
+            el('option', { value: '' }, '-- Sélectionner --'),
+            ...(registries.TYPE_DOSSIER_APPEL || []).map(d =>
+              el('option', { value: d.code, selected: d.code === existingProc.typeDossierAppel }, d.label)
+            )
+          ]),
+          el('small', { className: 'text-muted' }, 'DAO, AMI, DPI, etc.')
+        ]),
+
+        // Upload dossier d'appel
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Document dossier d\'appel'),
+          el('input', {
+            type: 'file',
+            className: 'form-input',
+            id: 'proc-dossier-doc',
+            accept: '.pdf,.doc,.docx,.zip'
+          }),
+          existingProc.dossierAppelDoc ? el('small', { className: 'text-success' }, `✓ ${existingProc.dossierAppelDoc}`) : null
+        ]),
+
+        // Nombre d'offres reçues
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Nombre d\'offres reçues'),
+          el('input', {
+            type: 'number',
+            className: 'form-input',
+            id: 'proc-nb-offres-recues',
+            min: 0,
+            value: existingProc.nbOffresRecues || 0
+          })
+        ]),
+
+        // Nombre d'offres classées
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Nombre d\'offres classées'),
+          el('input', {
+            type: 'number',
+            className: 'form-input',
+            id: 'proc-nb-offres-classees',
+            min: 0,
+            value: existingProc.nbOffresClassees || 0
+          })
+        ])
+      ]),
+
+      // Dates section (avec validation chronologique)
+      el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
+        el('strong', {}, '📅 Dates chronologiques de la procédure')
+      ]),
+
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
+        // Date ouverture
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Date ouverture'),
+          el('input', {
+            type: 'date',
+            className: 'form-input',
+            id: 'proc-date-ouverture',
+            value: existingProc.dates?.ouverture ? existingProc.dates.ouverture.split('T')[0] : ''
+          })
+        ]),
+
+        // Date analyse
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Date analyse'),
+          el('input', {
+            type: 'date',
+            className: 'form-input',
+            id: 'proc-date-analyse',
+            value: existingProc.dates?.analyse ? existingProc.dates.analyse.split('T')[0] : ''
+          }),
+          el('small', { className: 'text-muted' }, '≥ Date ouverture')
+        ]),
+
+        // Date jugement
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Date jugement'),
+          el('input', {
+            type: 'date',
+            className: 'form-input',
+            id: 'proc-date-jugement',
+            value: existingProc.dates?.jugement ? existingProc.dates.jugement.split('T')[0] : ''
+          }),
+          el('small', { className: 'text-muted' }, '≥ Date analyse')
+        ])
+      ]),
+
+      // PV section
+      el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
+        el('strong', {}, '📄 Procès-verbaux (PV)')
+      ]),
+
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
+        // PV Ouverture
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'PV Ouverture'),
+          el('input', {
+            type: 'file',
+            className: 'form-input',
+            id: 'proc-pv-ouverture',
+            accept: '.pdf,.doc,.docx'
+          }),
+          existingProc.pv?.ouverture ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.ouverture}`) : null
+        ]),
+
+        // PV Analyse
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'PV Analyse'),
+          el('input', {
+            type: 'file',
+            className: 'form-input',
+            id: 'proc-pv-analyse',
+            accept: '.pdf,.doc,.docx'
+          }),
+          existingProc.pv?.analyse ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyse}`) : null
+        ]),
+
+        // PV Jugement
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'PV Jugement'),
+          el('input', {
+            type: 'file',
+            className: 'form-input',
+            id: 'proc-pv-jugement',
+            accept: '.pdf,.doc,.docx'
+          }),
+          existingProc.pv?.jugement ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.jugement}`) : null
+        ])
       ])
     ])
   ]);
@@ -284,6 +435,60 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     derogationComment = commentInput?.value || '';
   }
 
+  // Collect procedure details
+  const commission = document.getElementById('proc-commission')?.value;
+  const categorie = document.getElementById('proc-categorie')?.value;
+  const typeDossierAppel = document.getElementById('proc-type-dossier')?.value || null;
+  const nbOffresRecues = Number(document.getElementById('proc-nb-offres-recues')?.value) || 0;
+  const nbOffresClassees = Number(document.getElementById('proc-nb-offres-classees')?.value) || 0;
+
+  // Dates (with chronological validation)
+  const dateOuverture = document.getElementById('proc-date-ouverture')?.value || null;
+  const dateAnalyse = document.getElementById('proc-date-analyse')?.value || null;
+  const dateJugement = document.getElementById('proc-date-jugement')?.value || null;
+
+  // Validation chronologique
+  if (dateOuverture && dateAnalyse && new Date(dateAnalyse) < new Date(dateOuverture)) {
+    alert('⚠️ La date d\'analyse ne peut pas être antérieure à la date d\'ouverture');
+    return;
+  }
+
+  if (dateAnalyse && dateJugement && new Date(dateJugement) < new Date(dateAnalyse)) {
+    alert('⚠️ La date de jugement ne peut pas être antérieure à la date d\'analyse');
+    return;
+  }
+
+  // Documents (simulate upload)
+  let dossierAppelDoc = null;
+  let pvOuverture = null;
+  let pvAnalyse = null;
+  let pvJugement = null;
+
+  const dossierInput = document.getElementById('proc-dossier-doc');
+  const pvOuvertureInput = document.getElementById('proc-pv-ouverture');
+  const pvAnalyseInput = document.getElementById('proc-pv-analyse');
+  const pvJugementInput = document.getElementById('proc-pv-jugement');
+
+  if (dossierInput?.files?.[0]) {
+    dossierAppelDoc = 'DOSSIER_' + Date.now() + '.pdf';
+    logger.info('[Procedure] Dossier d\'appel uploadé:', dossierAppelDoc);
+  }
+
+  if (pvOuvertureInput?.files?.[0]) {
+    pvOuverture = 'PV_OUVERTURE_' + Date.now() + '.pdf';
+    logger.info('[Procedure] PV ouverture uploadé:', pvOuverture);
+  }
+
+  if (pvAnalyseInput?.files?.[0]) {
+    pvAnalyse = 'PV_ANALYSE_' + Date.now() + '.pdf';
+    logger.info('[Procedure] PV analyse uploadé:', pvAnalyse);
+  }
+
+  if (pvJugementInput?.files?.[0]) {
+    pvJugement = 'PV_JUGEMENT_' + Date.now() + '.pdf';
+    logger.info('[Procedure] PV jugement uploadé:', pvJugement);
+  }
+
   // Update operation
   const updateData = {
     modePassation: selectedMode,
@@ -302,14 +507,50 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     updateData.etat = 'EN_PROC';
   }
 
-  const result = await dataService.update(ENTITIES.OPERATION, idOperation, updateData);
+  const operationResult = await dataService.update(ENTITIES.OPERATION, idOperation, updateData);
 
-  if (result.success) {
-    logger.info('[Procedure] Opération mise à jour avec succès');
-    alert('✅ Mode de passation enregistré' + (isDerogation ? ' (avec dérogation)' : ''));
+  if (!operationResult.success) {
+    alert('❌ Erreur lors de la mise à jour de l\'opération');
+    return;
+  }
+
+  // Create or update procedure
+  const existingProcedure = await dataService.getByField(ENTITIES.PROCEDURE, 'operationId', idOperation);
+
+  const procedureData = {
+    operationId: idOperation,
+    commission: commission || 'COJO',
+    modePassation: selectedMode,
+    categorie: categorie || 'NATIONALE',
+    typeDossierAppel,
+    dossierAppelDoc: dossierAppelDoc || existingProcedure?.dossierAppelDoc || null,
+    dates: {
+      ouverture: dateOuverture || null,
+      analyse: dateAnalyse || null,
+      jugement: dateJugement || null
+    },
+    nbOffresRecues,
+    nbOffresClassees,
+    pv: {
+      ouverture: pvOuverture || existingProcedure?.pv?.ouverture || null,
+      analyse: pvAnalyse || existingProcedure?.pv?.analyse || null,
+      jugement: pvJugement || existingProcedure?.pv?.jugement || null
+    }
+  };
+
+  let procedureResult;
+  if (existingProcedure) {
+    procedureResult = await dataService.update(ENTITIES.PROCEDURE, existingProcedure.id, procedureData);
+  } else {
+    procedureResult = await dataService.create(ENTITIES.PROCEDURE, procedureData);
+  }
+
+  if (procedureResult.success) {
+    logger.info('[Procedure] Procédure enregistrée avec succès');
+    alert('✅ Procédure enregistrée' + (isDerogation ? ' (avec dérogation)' : ''));
     router.navigate('/fiche-marche', { idOperation });
   } else {
-    alert('❌ Erreur lors de la sauvegarde');
+    alert('❌ Erreur lors de la sauvegarde de la procédure');
   }
 }
 

@@ -36,6 +36,15 @@
     { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" },
     { "code": "TECH", "label": "Commission Technique" }
   ],
+  "TYPE_DOSSIER_APPEL": [
+    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOR"] },
+    { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["DEM", "CI"] },
+    { "code": "AONO", "label": "Avis d'Offres Négociées (AONO)", "modes": ["ENTENTE_DIRECTE"] },
+    { "code": "DPI", "label": "Demande de Prix (DPI)", "modes": ["PSD"] },
+    { "code": "DC", "label": "Demande de Cotation (DC)", "modes": ["PSC"] },
+    { "code": "DPS", "label": "Dossier de Procédure Spécialisée (DPS)", "modes": ["PSO"] },
+    { "code": "AUTRE", "label": "Autre dossier", "modes": [] }
+  ],
   "TYPE_LIVRABLE": [
     { "code": "INFRASTRUCTURE", "label": "Infrastructure" },
     { "code": "BATIMENT", "label": "Bâtiment" },
@@ -687,8 +696,32 @@
   ],
   "DECISION_CF": [
     { "code": "VISA", "label": "Visa accordé", "color": "success" },
-    { "code": "RESERVE", "label": "Visa avec réserves", "color": "warning" },
-    { "code": "REFUS", "label": "Visa refusé", "color": "error" }
+    { "code": "VISA_RESERVE", "label": "Visa avec réserves", "color": "warning" },
+    { "code": "REFUS", "label": "Visa refusé", "color": "error" },
+    { "code": "EN_ATTENTE", "label": "En attente d'examen", "color": "info" }
+  ],
+  "STATUT_LIVRABLE": [
+    { "code": "NON_DEMARRE", "label": "Non démarré" },
+    { "code": "DEMARRE", "label": "Démarré" },
+    { "code": "EN_COURS", "label": "En cours", "withPourcentage": true },
+    { "code": "TERMINE", "label": "Terminé" }
+  ],
+  "TYPE_BUREAU": [
+    { "code": "UA", "label": "Unité Administrative" },
+    { "code": "ENTREPRISE", "label": "Entreprise externe" }
+  ],
+  "PERIODICITE_ECHEANCE": [
+    { "code": "LIBRE", "label": "Périodicité libre" },
+    { "code": "MENSUEL", "label": "Mensuel (30 jours)" },
+    { "code": "BIMESTRIEL", "label": "Bimestriel (60 jours)" },
+    { "code": "TRIMESTRIEL", "label": "Trimestriel (90 jours)" },
+    { "code": "SEMESTRIEL", "label": "Semestriel (180 jours)" },
+    { "code": "ANNUEL", "label": "Annuel (365 jours)" }
+  ],
+  "BASE_CALCUL_CLE": [
+    { "code": "HT", "label": "Hors Taxe (HT)" },
+    { "code": "TTC", "label": "Toutes Taxes Comprises (TTC)" },
+    { "code": "HT_TTC", "label": "HT et TTC" }
   ],
   "TYPE_PIECE": [
     { "code": "PPM_APPROUVE", "label": "PPM approuvé" },

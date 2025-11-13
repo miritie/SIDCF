@@ -9,15 +9,18 @@ export const ENTITIES = {
   PPM_PLAN: 'PPM_PLAN',
   OPERATION: 'OPERATION',
   BUDGET_LINE: 'BUDGET_LINE',
+  LIVRABLE: 'LIVRABLE',
   PROCEDURE: 'PROCEDURE',
   RECOURS: 'RECOURS',
   ATTRIBUTION: 'ATTRIBUTION',
   ECHEANCIER: 'ECHEANCIER',
   CLE_REPARTITION: 'CLE_REPARTITION',
+  VISA_CF: 'VISA_CF',
+  ORDRE_SERVICE: 'ORDRE_SERVICE',
   AVENANT: 'AVENANT',
+  RESILIATION: 'RESILIATION',
   GARANTIE: 'GARANTIE',
   CLOTURE: 'CLOTURE',
-  ORDRE_SERVICE: 'ORDRE_SERVICE',
   ENTREPRISE: 'ENTREPRISE',
   GROUPEMENT: 'GROUPEMENT',
   ANO: 'ANO',
@@ -133,36 +136,56 @@ export const SCHEMAS = {
 
   LIVRABLE: {
     id: null,
-    type: '',
-    objet: '',
-    localite: {
+    operationId: null, // lien avec l'opération parente
+    type: '', // code from TYPE_LIVRABLE registry
+    libelle: '', // description du livrable
+    localisation: {
       region: '',
-      departement: '',
+      regionCode: '',
+      district: '', // nouveau niveau (si applicable)
+      districtCode: '',
       commune: '',
+      communeCode: '',
+      sousPrefecture: '',
+      sousPrefectureCode: '',
       localite: '',
-      lat: null,
-      long: null
-    }
+      latitude: null,
+      longitude: null,
+      coordsOK: false
+    },
+    createdAt: null,
+    updatedAt: null
   },
 
   PROCEDURE: {
     id: null,
     operationId: null,
-    commission: 'COJO',
+    commission: 'COJO', // COJO | COPE (lié au type d'UA)
     modePassation: null,
-    categorie: 'NATIONALE',
+    categorie: 'NATIONALE', // NATIONALE | INTERNATIONALE
+
+    // Dossier d'appel à candidature
+    typeDossierAppel: null, // DAO | AMI | AONO | DPI | etc. (selon mode passation)
+    dossierAppelDoc: null, // document uploadé
+
+    // Dates chronologiques
     dates: {
       ouverture: null,
       analyse: null,
       jugement: null
     },
+
+    // Nombre d'offres
     nbOffresRecues: 0,
     nbOffresClassees: 0,
+
+    // PV pour chaque étape
     pv: {
-      ouverture: null,
-      analyse: null,
-      jugement: null
+      ouverture: null, // document PV ouverture
+      analyse: null, // document PV analyse
+      jugement: null // document PV jugement
     },
+
     rapportAnalyseDoc: null,
     decisionAttributionRef: null,
     createdAt: null,
@@ -185,27 +208,46 @@ export const SCHEMAS = {
   ATTRIBUTION: {
     id: null,
     operationId: null,
+
+    // Attributaire (entreprise simple ou groupement)
     attributaire: {
-      singleOrGroup: 'SIMPLE',
-      groupType: null,
-      entreprises: []
+      singleOrGroup: 'SIMPLE', // SIMPLE | GROUPEMENT
+      groupType: null, // COTRAITANCE | SOUSTRAITANCE (si groupement)
+      entrepriseId: null, // ID entreprise si SIMPLE
+      groupementId: null, // ID groupement si GROUPEMENT
+      entreprises: [] // Liste des IDs des entreprises (pour affichage)
     },
+
+    // Montants
     montants: {
       ht: 0,
       ttc: 0,
       confidentiel: false
     },
+
+    // Garanties et cautionnement
+    garanties: {
+      garantieAvance: { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null },
+      garantieBonneExec: { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null },
+      cautionnement: { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null }
+    },
+
+    // Dates
     dates: {
       signatureTitulaire: null,
       signatureAC: null,
       approbation: null,
       decisionCF: null
     },
+
+    // Décision du Contrôleur Financier (CF)
     decisionCF: {
-      etat: null,
-      motifRef: null,
+      aReserves: false, // true si le CF émet des réserves
+      typeReserve: null, // code from MOTIF_RESERVE registry
+      motifReserve: '', // Texte libre
       commentaire: ''
     },
+
     createdAt: null,
     updatedAt: null
   },
@@ -278,19 +320,23 @@ export const SCHEMAS = {
   ECHEANCIER: {
     id: null,
     operationId: null,
-    periodicite: 'LIBRE',
-    items: [],
-    total: 0,
+    periodicite: 'LIBRE', // LIBRE | MENSUEL | TRIMESTRIEL | SEMESTRIEL | ANNUEL
+    periodiciteJours: null, // Nombre de jours entre deux échéances (si LIBRE)
+    items: [], // Liste des ECHEANCE_ITEM
+    total: 0, // Somme des montants
+    totalPourcent: 0, // Doit atteindre 100%
     createdAt: null,
     updatedAt: null
   },
 
   ECHEANCE_ITEM: {
     num: 1,
-    date: null,
+    datePrevisionnelle: null,
     montant: 0,
-    typeEcheance: 'ACOMPTE',
-    livrablesCibles: []
+    pourcentage: 0, // % par rapport au montant total du marché
+    typeEcheance: 'ACOMPTE', // AVANCE | ACOMPTE | SOLDE
+    livrablesCibles: [], // IDs des livrables concernés
+    statutsLivrables: {} // { livrableId: { statut: 'DEMARRE|EN_COURS|TERMINE', pourcentage: 0-100 } }
   },
 
   CLE_REPARTITION: {
@@ -305,27 +351,53 @@ export const SCHEMAS = {
 
   CLE_LIGNE: {
     annee: null,
-    bailleur: '',
-    typeFinancement: 'ETAT',
-    natureEco: '',
-    baseCalc: 'HT',
+    bailleur: '', // code from BAILLEUR registry
+    typeFinancement: 'ETAT', // ETAT | EMPRUNT | DON
+    natureEco: '', // code from NATURE_ECO registry
+    baseCalc: 'HT', // HT | TTC | HT_TTC
+    etatSupporteTVA: false, // true si l'État supporte la TVA (18%)
     montant: 0,
-    pourcentage: 0
+    montantTVAEtat: 0, // Si etatSupporteTVA=true, 18% du TTC
+    pourcentage: 0 // % par rapport au montant total du marché
   },
 
   AVENANT: {
     id: null,
     operationId: null,
     numero: 1,
-    type: 'FINAN',
+    type: 'FINAN', // FINAN | DELAI | TECH
+    aIncidenceFinanciere: true, // true si impact sur le montant
+
+    // Variations
     variationMontant: 0,
-    variationDuree: 0,
+    variationDuree: 0, // en jours
+    nouveauMontantTotal: 0,
+    nouveauDelaiTotal: 0,
+
+    // Calcul d'incidence
+    incidencePourcent: 0, // % de variation par rapport au montant initial
+    cumulPourcent: 0, // Cumul des avenants (ne doit pas dépasser seuils réglementaires)
+
+    // Documents et validation
     dateSignature: null,
-    motifRef: '',
+    motifRef: '', // code from MOTIF_AVENANT registry
+    motifAutre: '', // Texte libre si AUTRE
+    documentRef: null, // Document de l'avenant
+    visaCFRef: null, // Référence décision CF
+    anoRequired: false, // true si ANO DGMP/Bailleur requis
+    anoDoc: null,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  RESILIATION: {
+    id: null,
+    operationId: null,
+    dateResiliation: null,
+    motifRef: '', // code from MOTIF_RESILIATION registry
     motifAutre: '',
-    cumulPourcent: 0,
-    visaCFRef: null,
-    autorisation: null,
+    documentRef: null,
     createdAt: null,
     updatedAt: null
   },
@@ -349,19 +421,34 @@ export const SCHEMAS = {
   CLOTURE: {
     id: null,
     operationId: null,
+
+    // Réception provisoire
     receptionProv: {
       date: null,
-      pv: null,
-      reserves: null
+      pv: null, // document PV
+      reserves: null // Texte libre
     },
+
+    // Réception définitive
     receptionDef: {
       date: null,
-      pv: null
+      pv: null // document PV
     },
-    mainlevees: [],
-    syntheseFinale: '',
-    closAt: null,
-    createdAt: null
+
+    // Décomptes payés (lien avec module paiement)
+    decomptes: [], // Liste des IDs de décomptes payés
+    montantTotalPaye: 0, // Somme des paiements effectifs
+    montantMarcheTotal: 0, // Montant total du marché (pour comparaison)
+    ecartMontant: 0, // Différence entre payé et total marché
+
+    // Mainlevées des garanties
+    mainlevees: [], // IDs des garanties avec mainlevée
+
+    // Synthèse
+    syntheseFinale: '', // Texte libre
+    closAt: null, // Date de clôture effective
+    createdAt: null,
+    updatedAt: null
   },
 
   ORDRE_SERVICE: {
@@ -371,6 +458,48 @@ export const SCHEMAS = {
     dateEmission: null,
     objet: '',
     docRef: null,
+
+    // Bureau de contrôle / Bureau d'études
+    bureauControle: {
+      type: 'UA', // UA | ENTREPRISE
+      uaId: null, // si type=UA
+      entrepriseId: null, // si type=ENTREPRISE
+      nom: '' // Nom du bureau (renseigné automatiquement)
+    },
+
+    bureauEtudes: {
+      type: 'UA', // UA | ENTREPRISE
+      uaId: null,
+      entrepriseId: null,
+      nom: ''
+    },
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  VISA_CF: {
+    id: null,
+    operationId: null,
+    attributionId: null, // Lien avec l'attribution
+
+    // Décision du CF
+    decision: null, // VISA | VISA_RESERVE | REFUS (code from DECISION_CF registry)
+    dateDecision: null,
+
+    // Documents
+    contratDoc: null, // Contrat numéroté, approuvé, enregistré
+    lettreMarche: null,
+    formulaireSelection: null,
+
+    // Réserves (si VISA_RESERVE)
+    typeReserve: null, // code from MOTIF_RESERVE
+    motifReserve: '', // Texte libre
+
+    // Refus (si REFUS)
+    motifRefus: null, // code from MOTIF_REFUS
+    commentaireRefus: '',
+
     createdAt: null,
     updatedAt: null
   },

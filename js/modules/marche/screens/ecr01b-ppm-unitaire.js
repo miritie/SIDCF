@@ -246,8 +246,6 @@ function renderSimpleTable(operations, registries) {
           el('th', { style: { minWidth: '100px' } }, 'Mode'),
           el('th', { style: { minWidth: '120px', textAlign: 'right' } }, 'Montant (M)'),
           el('th', { style: { minWidth: '120px' } }, 'Bailleur'),
-          el('th', { style: { minWidth: '120px' } }, 'Catégorie'),
-          el('th', { style: { minWidth: '120px' } }, 'Région'),
           el('th', { style: { minWidth: '100px' } }, 'État'),
           el('th', { style: { minWidth: '180px' } }, 'Actions')
         ])
@@ -285,8 +283,6 @@ function renderSimpleRow(op, registries) {
     el('td', { className: 'text-small', title: bailleur?.label },
       bailleur?.code || op.sourceFinancement || '-'
     ),
-    el('td', {}, categorie?.label || op.categoriePrestation || '-'),
-    el('td', {}, op.localisation?.region || '-'),
     el('td', {},
       el('span', {
         className: `badge badge-${etat?.color || 'gray'}`,
@@ -321,11 +317,13 @@ function showDetailModal(operation, registries) {
   const modal = el('div', {
     className: 'modal-overlay',
     id: 'detail-modal',
-    onclick: (e) => {
-      if (e.target.id === 'detail-modal') closeDetailModal();
-    }
+    style: { display: 'flex' }
   }, [
-    el('div', { className: 'modal-content', style: { maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' } }, [
+    el('div', {
+      className: 'modal-content',
+      style: { maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' },
+      onclick: (e) => e.stopPropagation()
+    }, [
       // Header
       el('div', { className: 'modal-header' }, [
         el('h2', { className: 'modal-title' }, '📋 Détails de l\'opération'),
@@ -405,6 +403,13 @@ function showDetailModal(operation, registries) {
   const container = document.getElementById('modal-detail-container');
   container.innerHTML = '';
   container.appendChild(modal);
+
+  // Add click handler to overlay for closing
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeDetailModal();
+    }
+  });
 
   // Add CSS for modal if not exists
   if (!document.getElementById('modal-styles')) {

@@ -136,18 +136,40 @@ export async function renderFicheMarche(params) {
     // Livrables
     el('div', { className: 'card' }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, `Livrables (${operation.livrables?.length || 0})`)
+        el('h3', { className: 'card-title' }, `📦 Livrables (${operation.livrables?.length || 0})`)
       ]),
       el('div', { className: 'card-body' }, [
         operation.livrables && operation.livrables.length > 0
-          ? el('ul', { style: { paddingLeft: '20px' } }, operation.livrables.map(liv =>
-              el('li', { style: { marginBottom: '12px' } }, [
-                el('strong', {}, registries.TYPE_LIVRABLE.find(t => t.code === liv.type)?.label || liv.type),
-                el('span', {}, `: ${liv.objet}`),
-                el('br'),
-                el('span', { className: 'text-small text-muted' }, `📍 ${liv.localite?.commune || 'Non localisé'}`)
-              ])
-            ))
+          ? el('table', { className: 'table', style: { width: '100%' } }, [
+              el('thead', {}, [
+                el('tr', {}, [
+                  el('th', {}, 'Type'),
+                  el('th', {}, 'Libellé'),
+                  el('th', {}, 'Localisation'),
+                  el('th', {}, 'Coordonnées')
+                ])
+              ]),
+              el('tbody', {}, operation.livrables.map(liv => {
+                const typeLabel = registries.TYPE_LIVRABLE?.find(t => t.code === liv.type)?.label || liv.type;
+                const locParts = [
+                  liv.localisation?.region,
+                  liv.localisation?.commune,
+                  liv.localisation?.sousPrefecture,
+                  liv.localisation?.localite
+                ].filter(Boolean);
+                const locText = locParts.length > 0 ? locParts.join(' > ') : 'Non localisé';
+                const coords = liv.localisation?.coordsOK
+                  ? `${liv.localisation.latitude}, ${liv.localisation.longitude}`
+                  : '-';
+
+                return el('tr', {}, [
+                  el('td', {}, el('span', { className: 'badge badge-info' }, typeLabel)),
+                  el('td', {}, liv.libelle || '-'),
+                  el('td', {}, el('span', { className: 'text-small text-muted' }, `📍 ${locText}`)),
+                  el('td', {}, el('span', { className: 'text-small text-muted' }, coords))
+                ]);
+              }))
+            ])
           : el('p', { className: 'text-muted' }, 'Aucun livrable défini')
       ])
     ])
