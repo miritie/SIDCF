@@ -248,6 +248,14 @@ class DataService {
   }
 
   /**
+   * Get rules configuration
+   */
+  getRulesConfig() {
+    if (!this.rulesEngine) return {};
+    return this.rulesEngine.config || {};
+  }
+
+  /**
    * Import PPM from Excel (mock)
    */
   async importPPM(file, mapping) {
