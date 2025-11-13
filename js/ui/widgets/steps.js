@@ -42,7 +42,21 @@ export const LIFECYCLE_STEPS = [
     label: 'Exécution',
     icon: '🔧',
     route: '/execution',
-    description: 'OS & avenants'
+    description: 'OS & suivi'
+  },
+  {
+    code: 'AVEN',
+    label: 'Avenants',
+    icon: '📝',
+    route: '/avenants',
+    description: 'Modifications contractuelles'
+  },
+  {
+    code: 'GAR',
+    label: 'Garanties',
+    icon: '🔒',
+    route: '/garanties',
+    description: 'Cautions & garanties'
   },
   {
     code: 'CLOT',
@@ -120,16 +134,18 @@ export function calculateStepStatuses(fullData) {
         return 'todo';
 
       case 'EXEC':
-        // Done si marché clôturé
+        // Done si avenants ou garanties ou clôture (exécution passée)
+        if (avenants && avenants.length > 0) {
+          return 'done';
+        }
+        if (fullData.garanties && fullData.garanties.length > 0) {
+          return 'done';
+        }
         if (etat === 'CLOS' || (cloture && cloture.datePVD)) {
           return 'done';
         }
         // Done si ordre de service émis (exécution démarrée)
         if (ordresService && ordresService.length > 0) {
-          return 'done';
-        }
-        // Done si avenants (forcément en exécution avancée)
-        if (avenants && avenants.length > 0) {
           return 'done';
         }
         // Current si état EN_EXEC
@@ -138,6 +154,34 @@ export function calculateStepStatuses(fullData) {
         }
         // Current si visa CF obtenu (prêt à démarrer exécution)
         if (visasCF && visasCF.length > 0 && visasCF.some(v => v.decision === 'FAVORABLE')) {
+          return 'current';
+        }
+        return 'todo';
+
+      case 'AVEN':
+        // Done si avenants enregistrés
+        if (avenants && avenants.length > 0) {
+          return 'done';
+        }
+        // Current si en exécution (avenants possibles)
+        if (ordresService && ordresService.length > 0) {
+          return 'current';
+        }
+        if (etat === 'EN_EXEC') {
+          return 'current';
+        }
+        return 'todo';
+
+      case 'GAR':
+        // Done si garanties enregistrées
+        if (fullData.garanties && fullData.garanties.length > 0) {
+          return 'done';
+        }
+        // Current si en exécution (garanties possibles)
+        if (ordresService && ordresService.length > 0) {
+          return 'current';
+        }
+        if (etat === 'EN_EXEC') {
           return 'current';
         }
         return 'todo';
