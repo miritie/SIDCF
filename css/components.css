@@ -897,18 +897,30 @@
 
 /* === Form Improvements === */
 .form-control {
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.form-control:hover {
+  border-color: #D1D5DB;
 }
 
 .form-control:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
   outline: none;
+  transform: translateY(-1px);
+}
+
+.form-control::placeholder {
+  color: #9CA3AF;
+  opacity: 1;
 }
 
 textarea.form-control {
   resize: vertical;
   min-height: 80px;
+  font-family: inherit;
 }
 
 input[type="color"].form-control {
@@ -917,10 +929,21 @@ input[type="color"].form-control {
 }
 
 input[type="color"].form-control::-webkit-color-swatch {
-  border-radius: 4px;
-  border: 2px solid #E5E7EB;
+  border-radius: 6px;
+  border: none;
 }
 
 input[type="color"].form-control::-webkit-color-swatch-wrapper {
-  padding: 0;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+input[type="color"].form-control::-moz-color-swatch {
+  border-radius: 6px;
+  border: none;
+}
+
+/* === Form Labels === */
+.form-label {
+  user-select: none;
 }

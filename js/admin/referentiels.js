@@ -227,60 +227,211 @@ function createEditModal(key, title, item, index, isObject) {
     const currentColor = item?.color || '#3B82F6';
     const currentDescription = item?.description || '';
 
-    formFields = el('div', { style: { display: 'grid', gap: '16px' } }, [
+    formFields = el('div', { style: { display: 'grid', gap: '20px' } }, [
+      // Code field
       el('div', {}, [
-        el('label', { style: { display: 'block', fontWeight: '600', marginBottom: '6px' } }, 'Code *'),
+        el('label', {
+          className: 'form-label',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '8px'
+          }
+        }, [
+          el('span', {}, '🏷️'),
+          el('span', {}, 'Code'),
+          el('span', { style: { color: '#EF4444', fontSize: '16px' } }, '*')
+        ]),
         el('input', {
           type: 'text',
           id: 'modal-code',
           className: 'form-control',
           value: currentCode,
-          placeholder: 'Ex: TRAV_SERV'
+          placeholder: 'Ex: TRAV_SERV',
+          style: {
+            fontSize: '15px',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            border: '2px solid #E5E7EB',
+            transition: 'all 0.2s ease'
+          }
         })
       ]),
+
+      // Label field
       el('div', {}, [
-        el('label', { style: { display: 'block', fontWeight: '600', marginBottom: '6px' } }, 'Libellé *'),
+        el('label', {
+          className: 'form-label',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '8px'
+          }
+        }, [
+          el('span', {}, '📝'),
+          el('span', {}, 'Libellé'),
+          el('span', { style: { color: '#EF4444', fontSize: '16px' } }, '*')
+        ]),
         el('input', {
           type: 'text',
           id: 'modal-label',
           className: 'form-control',
           value: currentLabel,
-          placeholder: 'Ex: Travaux et Services'
+          placeholder: 'Ex: Travaux et Services',
+          style: {
+            fontSize: '15px',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            border: '2px solid #E5E7EB',
+            transition: 'all 0.2s ease'
+          }
         })
       ]),
+
+      // Color picker with preview
       el('div', {}, [
-        el('label', { style: { display: 'block', fontWeight: '600', marginBottom: '6px' } }, 'Couleur'),
-        el('input', {
-          type: 'color',
-          id: 'modal-color',
-          className: 'form-control',
-          value: currentColor,
-          style: { height: '40px' }
-        })
+        el('label', {
+          className: 'form-label',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '8px'
+          }
+        }, [
+          el('span', {}, '🎨'),
+          el('span', {}, 'Couleur')
+        ]),
+        el('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } }, [
+          el('input', {
+            type: 'color',
+            id: 'modal-color',
+            className: 'form-control',
+            value: currentColor,
+            style: {
+              width: '80px',
+              height: '44px',
+              padding: '4px',
+              borderRadius: '8px',
+              border: '2px solid #E5E7EB',
+              cursor: 'pointer'
+            }
+          }),
+          el('div', {
+            id: 'color-preview',
+            style: `
+              flex: 1;
+              height: 44px;
+              background: ${currentColor};
+              border-radius: 8px;
+              border: 2px solid #E5E7EB;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 13px;
+              font-weight: 600;
+              text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            `
+          }, currentColor)
+        ])
       ]),
+
+      // Description field
       el('div', {}, [
-        el('label', { style: { display: 'block', fontWeight: '600', marginBottom: '6px' } }, 'Description'),
+        el('label', {
+          className: 'form-label',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '8px'
+          }
+        }, [
+          el('span', {}, '📄'),
+          el('span', {}, 'Description'),
+          el('span', { style: { color: '#9CA3AF', fontSize: '12px', fontWeight: '400' } }, '(optionnelle)')
+        ]),
         el('textarea', {
           id: 'modal-description',
           className: 'form-control',
           value: currentDescription,
           rows: 3,
-          placeholder: 'Description optionnelle...'
+          placeholder: 'Ajoutez une description pour clarifier l\'usage de cet élément...',
+          style: {
+            fontSize: '14px',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            border: '2px solid #E5E7EB',
+            resize: 'vertical',
+            minHeight: '90px',
+            lineHeight: '1.5'
+          }
         })
       ])
     ]);
+
+    // Add color picker live update
+    setTimeout(() => {
+      const colorInput = document.getElementById('modal-color');
+      const colorPreview = document.getElementById('color-preview');
+      if (colorInput && colorPreview) {
+        colorInput.addEventListener('input', (e) => {
+          const newColor = e.target.value;
+          colorPreview.style.background = newColor;
+          colorPreview.textContent = newColor;
+        });
+      }
+    }, 0);
+
   } else {
     // Simple string form
     const currentValue = item || '';
 
     formFields = el('div', {}, [
-      el('label', { style: { display: 'block', fontWeight: '600', marginBottom: '6px' } }, 'Valeur *'),
+      el('label', {
+        className: 'form-label',
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+          color: '#374151',
+          marginBottom: '8px'
+        }
+      }, [
+        el('span', {}, '✏️'),
+        el('span', {}, 'Valeur'),
+        el('span', { style: { color: '#EF4444', fontSize: '16px' } }, '*')
+      ]),
       el('input', {
         type: 'text',
         id: 'modal-value',
         className: 'form-control',
         value: currentValue,
-        placeholder: 'Entrer la valeur...'
+        placeholder: 'Entrer la valeur...',
+        style: {
+          fontSize: '15px',
+          padding: '12px 14px',
+          borderRadius: '8px',
+          border: '2px solid #E5E7EB',
+          transition: 'all 0.2s ease'
+        }
       })
     ]);
   }
@@ -294,13 +445,14 @@ function createEditModal(key, title, item, index, isObject) {
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(4px);
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      animation: fadeIn 0.2s ease;
+      animation: fadeIn 0.25s ease;
+      padding: 20px;
     `,
     onclick: (e) => {
       if (e.target === modalOverlay) {
@@ -312,54 +464,67 @@ function createEditModal(key, title, item, index, isObject) {
       className: 'modal-content',
       style: `
         background: white;
-        border-radius: 16px;
+        border-radius: 20px;
         padding: 0;
-        max-width: 540px;
-        width: 90%;
-        max-height: 85vh;
+        max-width: 560px;
+        width: 100%;
+        max-height: 90vh;
         overflow: hidden;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        animation: slideUp 0.3s ease;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       `
     }, [
-      // Header avec gradient
+      // Header minimaliste et élégant
       el('div', {
         style: `
-          background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-          padding: 24px 28px;
+          padding: 32px 32px 24px 32px;
+          border-bottom: 1px solid #F3F4F6;
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
         `
       }, [
-        el('h2', {
-          style: {
-            fontSize: '22px',
-            fontWeight: '700',
-            margin: 0,
-            color: 'white'
-          }
-        }, modalTitle),
+        el('div', {}, [
+          el('h2', {
+            style: {
+              fontSize: '24px',
+              fontWeight: '700',
+              margin: '0 0 6px 0',
+              color: '#111827',
+              letterSpacing: '-0.02em'
+            }
+          }, modalTitle),
+          el('p', {
+            style: {
+              fontSize: '14px',
+              color: '#6B7280',
+              margin: 0
+            }
+          }, isEdit ? 'Modifier les informations ci-dessous' : 'Complétez le formulaire pour ajouter un nouvel élément')
+        ]),
         el('button', {
           style: `
-            background: rgba(255, 255, 255, 0.2);
+            background: #F3F4F6;
             border: none;
-            color: white;
-            width: 32px;
-            height: 32px;
+            color: #6B7280;
+            width: 36px;
+            height: 36px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 20px;
+            font-size: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
+            flex-shrink: 0;
           `,
           onmouseenter: function() {
-            this.style.background = 'rgba(255, 255, 255, 0.3)';
+            this.style.background = '#E5E7EB';
+            this.style.color = '#374151';
           },
           onmouseleave: function() {
-            this.style.background = 'rgba(255, 255, 255, 0.2)';
+            this.style.background = '#F3F4F6';
+            this.style.color = '#6B7280';
           },
           onclick: () => closeModal(modalOverlay)
         }, '✕')
@@ -374,33 +539,66 @@ function createEditModal(key, title, item, index, isObject) {
         `
       }, [formFields]),
 
-      // Footer fixe
+      // Footer moderne
       el('div', {
         style: `
-          padding: 20px 28px;
-          border-top: 1px solid #E5E7EB;
-          background: #F9FAFB;
+          padding: 24px 32px;
+          border-top: 1px solid #F3F4F6;
+          background: white;
           display: flex;
           gap: 12px;
+          justify-content: flex-end;
         `
       }, [
         el('button', {
-          className: 'btn btn-secondary',
-          style: { flex: 1, padding: '12px 24px', fontSize: '15px', fontWeight: '600' },
+          style: `
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: 2px solid #E5E7EB;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 120px;
+          `,
+          onmouseenter: function() {
+            this.style.background = '#F9FAFB';
+            this.style.borderColor = '#D1D5DB';
+          },
+          onmouseleave: function() {
+            this.style.background = 'white';
+            this.style.borderColor = '#E5E7EB';
+          },
           onclick: () => closeModal(modalOverlay)
         }, 'Annuler'),
         el('button', {
-          className: 'btn btn-primary',
-          style: {
-            flex: 1,
-            padding: '12px 24px',
-            fontSize: '15px',
-            fontWeight: '600',
-            background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-            border: 'none'
+          style: `
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            background: #3B82F6;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 140px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          `,
+          onmouseenter: function() {
+            this.style.background = '#2563EB';
+            this.style.transform = 'translateY(-1px)';
+            this.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+          },
+          onmouseleave: function() {
+            this.style.background = '#3B82F6';
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
           },
           onclick: () => saveRegistryItem(key, index, isObject, modalOverlay)
-        }, isEdit ? '💾 Enregistrer' : '➕ Ajouter')
+        }, isEdit ? '✓ Enregistrer' : '+ Ajouter')
       ])
     ])
   ]);
