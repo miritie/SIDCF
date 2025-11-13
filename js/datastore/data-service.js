@@ -26,7 +26,22 @@ class DataService {
 
       // Load configurations
       this.config = await this.loadJSON('/js/config/app-config.json');
-      this.registries = await this.loadJSON('/js/config/registries.json');
+
+      // Load registries from localStorage if available, otherwise from JSON
+      const storageKey = 'sidcf_registries';
+      const storedRegistries = localStorage.getItem(storageKey);
+      if (storedRegistries) {
+        try {
+          this.registries = JSON.parse(storedRegistries);
+          logger.info('[DataService] Loaded registries from localStorage');
+        } catch (error) {
+          logger.warn('[DataService] Failed to parse stored registries, loading from JSON');
+          this.registries = await this.loadJSON('/js/config/registries.json');
+        }
+      } else {
+        this.registries = await this.loadJSON('/js/config/registries.json');
+      }
+
       const rulesConfig = await this.loadJSON('/js/config/rules-config.json');
       const piecesMatrice = await this.loadJSON('/js/config/pieces-matrice.json');
 
@@ -132,6 +147,29 @@ class DataService {
    */
   getAllRegistries() {
     return this.registries;
+  }
+
+  /**
+   * Update a registry
+   */
+  updateRegistry(name, values) {
+    if (!this.registries) {
+      logger.error('[DataService] Registries not initialized');
+      return false;
+    }
+
+    this.registries[name] = values;
+
+    // Persist to localStorage for next session
+    try {
+      const storageKey = 'sidcf_registries';
+      localStorage.setItem(storageKey, JSON.stringify(this.registries));
+      logger.info(`[DataService] Registry ${name} updated and persisted`);
+      return true;
+    } catch (error) {
+      logger.error('[DataService] Failed to persist registry:', error);
+      return false;
+    }
   }
 
   /**

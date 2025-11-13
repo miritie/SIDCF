@@ -858,3 +858,19 @@
   align-items: center;
   gap: var(--spacing-1);
 }
+
+/* === Registry Items (Admin) === */
+.registry-item:hover {
+  background: var(--color-gray-50) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.registry-item .btn-danger {
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.registry-item:hover .btn-danger {
+  opacity: 1;
+}
