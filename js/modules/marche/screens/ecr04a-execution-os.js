@@ -33,22 +33,42 @@ export async function renderExecutionOS(params) {
     return;
   }
 
-  const { operation, attribution, ordresService } = fullData;
+  const { operation, attribution, ordresService, visasCF } = fullData;
   const registries = dataService.getAllRegistries();
 
+  // Check if attribution is complete
+  if (!attribution || !attribution.titulaire || !attribution.montantAttribue) {
+    mount('#app', el('div', { className: 'page' }, [
+      renderSteps(fullData, idOperation),
+      el('div', { className: 'alert alert-warning' }, [
+        el('div', { className: 'alert-icon' }, '⚠️'),
+        el('div', { className: 'alert-content' }, [
+          el('div', { className: 'alert-title' }, 'Attribution incomplète'),
+          el('div', { className: 'alert-message' }, 'L\'attribution doit être complétée (titulaire et montant) avant de pouvoir démarrer l\'exécution.')
+        ])
+      ]),
+      el('div', { style: { marginTop: '16px' } }, [
+        createButton('btn btn-primary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
+      ])
+    ]));
+    return;
+  }
+
   // Check if visa CF granted
-  if (!operation.timeline.includes('VISE')) {
+  const visaFavorable = visasCF && visasCF.length > 0 && visasCF.some(v => v.decision === 'FAVORABLE');
+  if (!visaFavorable && operation.etat !== 'EN_EXEC') {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),
       el('div', { className: 'alert alert-warning' }, [
         el('div', { className: 'alert-icon' }, '⚠️'),
         el('div', { className: 'alert-content' }, [
           el('div', { className: 'alert-title' }, 'Visa CF non accordé'),
-          el('div', { className: 'alert-message' }, 'L\'exécution ne peut commencer que si le Contrôle Financier a accordé son visa.')
+          el('div', { className: 'alert-message' }, 'L\'exécution ne peut commencer que si le Contrôle Financier a accordé son visa favorable.')
         ])
       ]),
       el('div', { style: { marginTop: '16px' } }, [
-        createButton('btn btn-primary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
+        createButton('btn btn-primary', '← Vers Visa CF', () => router.navigate('/visa-cf', { idOperation })),
+        createButton('btn btn-secondary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
       ])
     ]));
     return;

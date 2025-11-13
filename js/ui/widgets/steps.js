@@ -121,21 +121,23 @@ export function calculateStepStatuses(fullData) {
 
       case 'EXEC':
         // Done si marché clôturé
-        if (etat === 'CLOS' || cloture) {
+        if (etat === 'CLOS' || (cloture && cloture.datePVD)) {
           return 'done';
         }
-        // Current si ordre de service émis ou avenants ou état EN_EXEC
+        // Done si ordre de service émis (exécution démarrée)
         if (ordresService && ordresService.length > 0) {
-          return 'done'; // OS émis = exécution commencée
+          return 'done';
         }
+        // Done si avenants (forcément en exécution avancée)
         if (avenants && avenants.length > 0) {
-          return 'done'; // Si avenants, forcément en exécution avancée
+          return 'done';
         }
+        // Current si état EN_EXEC
         if (etat === 'EN_EXEC') {
           return 'current';
         }
-        // Current si visa obtenu
-        if (visasCF && visasCF.some(v => v.decision === 'FAVORABLE')) {
+        // Current si visa CF obtenu (prêt à démarrer exécution)
+        if (visasCF && visasCF.length > 0 && visasCF.some(v => v.decision === 'FAVORABLE')) {
           return 'current';
         }
         return 'todo';
