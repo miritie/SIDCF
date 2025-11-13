@@ -12,7 +12,27 @@ let rulesConfig = null;
 export async function renderRegles() {
   rulesConfig = dataService.getRulesConfig();
 
-  const page = el('div', { className: 'page' }, [
+  // Vérifier que rulesConfig est valide
+  if (!rulesConfig || typeof rulesConfig !== 'object') {
+    logger.error('[Regles] rulesConfig non disponible');
+    mount('#app', el('div', { className: 'page' }, [
+      el('div', { className: 'alert alert-error' }, [
+        el('div', { className: 'alert-icon' }, '⚠️'),
+        el('div', { className: 'alert-content' }, [
+          el('div', { className: 'alert-title' }, 'Erreur de chargement'),
+          el('div', { className: 'alert-message' }, 'La configuration des règles n\'a pas pu être chargée.')
+        ])
+      ]),
+      el('button', {
+        className: 'btn btn-primary',
+        onclick: () => router.navigate('/portal')
+      }, '← Retour au portail')
+    ]));
+    return;
+  }
+
+  // Construire les sections dynamiquement
+  const sections = [
     el('div', { className: 'page-header' }, [
       el('h1', { className: 'page-title' }, 'Règles & Procédures'),
       el('p', { className: 'page-subtitle' }, 'Configuration des règles réglementaires et seuils paramétrables')
@@ -24,24 +44,36 @@ export async function renderRegles() {
         el('div', { className: 'alert-title' }, 'Règles métier paramétrables'),
         el('div', { className: 'alert-message' }, 'Ces règles sont appliquées automatiquement lors de la saisie et de la validation des marchés. Modifiez-les avec précaution.')
       ])
-    ]),
+    ])
+  ];
 
-    // Seuils
-    renderSection('Seuils et Limites', rulesConfig.seuils, 'seuils'),
+  // Seuils
+  if (rulesConfig.seuils) {
+    sections.push(renderSection('Seuils et Limites', rulesConfig.seuils, 'seuils'));
+  }
 
-    // Validations
-    renderSection('Validations Obligatoires', rulesConfig.validations, 'validations'),
+  // Validations
+  if (rulesConfig.validations) {
+    sections.push(renderSection('Validations Obligatoires', rulesConfig.validations, 'validations'));
+  }
 
-    // Délais types
-    renderSection('Délais Réglementaires', rulesConfig.delais_types, 'delais'),
+  // Délais types
+  if (rulesConfig.delais_types) {
+    sections.push(renderSection('Délais Réglementaires', rulesConfig.delais_types, 'delais'));
+  }
 
-    // ANO
-    renderSectionANO(),
+  // ANO
+  if (rulesConfig.ano) {
+    sections.push(renderSectionANO());
+  }
 
-    // Garanties
-    renderSectionGaranties(),
+  // Garanties
+  if (rulesConfig.garanties) {
+    sections.push(renderSectionGaranties());
+  }
 
-    // Actions
+  // Actions
+  sections.push(
     el('div', { className: 'card' }, [
       el('div', { className: 'card-body' }, [
         el('button', {
@@ -50,7 +82,9 @@ export async function renderRegles() {
         }, '← Retour au portail')
       ])
     ])
-  ]);
+  );
+
+  const page = el('div', { className: 'page' }, sections);
 
   mount('#app', page);
 }
@@ -281,7 +315,7 @@ function renderSectionGaranties() {
       el('div', {
         style: 'padding: 14px; background: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB;'
       }, [
-        el('strong', { style: { display: 'block', marginBottom: '8px', color: #374151' } }, 'Retenue de Garantie'),
+        el('strong', { style: { display: 'block', marginBottom: '8px', color: '#374151' } }, 'Retenue de Garantie'),
         el('p', { style: { margin: 0, color: '#6B7280', fontSize: '14px' } },
           `${garanties.retenue_garantie.description} : ${garanties.retenue_garantie.taux}${garanties.retenue_garantie.unit}`
         )

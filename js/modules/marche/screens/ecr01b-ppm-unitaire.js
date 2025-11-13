@@ -59,7 +59,7 @@ export async function renderPPMList() {
       el('div', { className: 'page-actions', style: { display: 'flex', gap: '12px' } }, [
         createButton('btn btn-secondary', '📤 Importer PPM', () => router.navigate('/ppm-import')),
         createButton('btn btn-primary', '➕ Créer ligne PPM', () => router.navigate('/ppm-create-line')),
-        createButton('btn btn-accent', '📊 Dashboard CF', () => router.navigate('/dashboard-cf'))
+        createButton('btn btn-accent', '📊 Tableau de bord', () => router.navigate('/dashboard'))
       ])
     ]),
 
