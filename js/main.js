@@ -66,6 +66,10 @@ async function boot() {
     router.register('/admin/regles', renderRegles);
     router.register('/admin/pieces', stubAdmin('Matrice des pièces'));
 
+    // Seed import - Désactivé temporairement, utiliser import-seed-simple.html
+    // const { default: renderSeedImport } = await import('./admin/seed-import.js');
+    // router.register('/admin/seed-import', renderSeedImport);
+
     // Diagnostics
     router.register('/diagnostics/health', renderHealthCheck);
 
