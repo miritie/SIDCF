@@ -1,0 +1,32 @@
+# Cloudflare Worker Configuration for SIDCF Portal API
+
+name = "sidcf-portal-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Variables d'environnement
+[vars]
+DATABASE_URL = "postgresql://neondb_owner:npg_mSJIP0W2lLfw@ep-icy-wildflower-ah7opo0w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
+R2_BUCKET_NAME = "sidcf"
+
+# Secrets (à définir via `wrangler secret put`)
+# R2_ACCESS_KEY_ID
+# R2_SECRET_ACCESS_KEY
+
+# Liaison R2 Bucket
+[[r2_buckets]]
+binding = "SIDCF_BUCKET"
+bucket_name = "sidcf"
+
+# Routes
+[routes]
+pattern = "api.sidcf.com/*"
+zone_name = "sidcf.com"
+
+# Build configuration
+[build]
+command = ""
+
+# Dev mode
+[dev]
+port = 8787
