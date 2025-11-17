@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test PostgreSQL + R2 - SIDCF Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem 0;
+    }
+    .test-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-section {
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      background: #f8f9fa;
+    }
+    .test-section h3 {
+      color: #495057;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .status-pending {
+      background: #ffc107;
+      color: #000;
+    }
+    .status-success {
+      background: #28a745;
+      color: white;
+    }
+    .status-error {
+      background: #dc3545;
+      color: white;
+    }
+    .log-area {
+      background: #212529;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      padding: 1rem;
+      border-radius: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+    .btn-test {
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1 class="text-center mb-4">🧪 Test PostgreSQL + Cloudflare R2</h1>
+    <p class="text-center text-muted mb-4">
+      Page de test pour valider la migration vers PostgreSQL et R2
+    </p>
+
+    <!-- Test 1: Connexion API -->
+    <div class="test-section">
+      <h3>1️⃣ Connexion API</h3>
+      <p class="text-muted">Teste la connexion au Cloudflare Worker</p>
+      <button class="btn btn-primary btn-test" onclick="testAPIConnection()">
+        Tester la connexion
+      </button>
+      <span id="status-api" class="status-badge status-pending">En attente</span>
+      <div id="log-api" class="log-area" style="display: none;"></div>
+    </div>
+
+    <!-- Test 2: Connexion PostgreSQL -->
+    <div class="test-section">
+      <h3>2️⃣ Connexion PostgreSQL</h3>
+      <p class="text-muted">Teste la connexion à la base de données Neon</p>
+      <button class="btn btn-primary btn-test" onclick="testPostgresConnection()">
+        Tester PostgreSQL
+      </button>
+      <span id="status-postgres" class="status-badge status-pending">En attente</span>
+      <div id="log-postgres" class="log-area" style="display: none;"></div>
+    </div>
+
+    <!-- Test 3: CRUD Opérations -->
+    <div class="test-section">
+      <h3>3️⃣ CRUD Opérations</h3>
+      <p class="text-muted">Teste les opérations Create, Read, Update, Delete</p>
+      <button class="btn btn-success btn-test" onclick="testCRUD()">
+        Lancer test CRUD
+      </button>
+      <span id="status-crud" class="status-badge status-pending">En attente</span>
+      <div id="log-crud" class="log-area" style="display: none;"></div>
+    </div>
+
+    <!-- Test 4: Statistiques -->
+    <div class="test-section">
+      <h3>4️⃣ Statistiques</h3>
+      <p class="text-muted">Récupère les statistiques globales</p>
+      <button class="btn btn-info btn-test" onclick="testStatistics()">
+        Récupérer les stats
+      </button>
+      <span id="status-stats" class="status-badge status-pending">En attente</span>
+      <div id="log-stats" class="log-area" style="display: none;"></div>
+    </div>
+
+    <!-- Test 5: Upload fichier R2 -->
+    <div class="test-section">
+      <h3>5️⃣ Upload fichier vers R2</h3>
+      <p class="text-muted">Teste l'upload d'un fichier vers Cloudflare R2</p>
+      <input type="file" id="file-input" class="form-control mb-2" style="max-width: 400px;">
+      <button class="btn btn-warning btn-test" onclick="testFileUpload()">
+        Upload fichier
+      </button>
+      <span id="status-upload" class="status-badge status-pending">En attente</span>
+      <div id="log-upload" class="log-area" style="display: none;"></div>
+    </div>
+
+    <!-- Test 6: DataService Integration -->
+    <div class="test-section">
+      <h3>6️⃣ DataService Integration</h3>
+      <p class="text-muted">Teste l'intégration avec le DataService du frontend</p>
+      <button class="btn btn-secondary btn-test" onclick="testDataService()">
+        Tester DataService
+      </button>
+      <span id="status-dataservice" class="status-badge status-pending">En attente</span>
+      <div id="log-dataservice" class="log-area" style="display: none;"></div>
+    </div>
+
+    <!-- Test Global -->
+    <div class="text-center mt-4">
+      <button class="btn btn-lg btn-dark" onclick="runAllTests()">
+        ▶️ Lancer tous les tests
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import dataService from './js/datastore/data-service.js';
+
+    // Configuration API
+    const API_URL = 'http://localhost:8787';
+
+    // Helpers
+    function log(testId, message, isError = false) {
+      const logArea = document.getElementById(`log-${testId}`);
+      logArea.style.display = 'block';
+      const color = isError ? '#ff4444' : '#00ff00';
+      logArea.innerHTML += `<div style="color: ${color}">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function setStatus(testId, status) {
+      const badge = document.getElementById(`status-${testId}`);
+      badge.className = `status-badge status-${status}`;
+      badge.textContent = status === 'success' ? '✅ Succès' : status === 'error' ? '❌ Erreur' : '⏳ En cours...';
+    }
+
+    // Test 1: Connexion API
+    window.testAPIConnection = async function() {
+      setStatus('api', 'pending');
+      log('api', 'Connexion au Worker...');
+
+      try {
+        const response = await fetch(`${API_URL}/health`);
+        const data = await response.json();
+
+        log('api', `✅ Connecté au Worker: ${data.service} v${data.version}`);
+        log('api', `Timestamp serveur: ${data.timestamp}`);
+        setStatus('api', 'success');
+      } catch (error) {
+        log('api', `❌ Erreur: ${error.message}`, true);
+        setStatus('api', 'error');
+      }
+    };
+
+    // Test 2: Connexion PostgreSQL
+    window.testPostgresConnection = async function() {
+      setStatus('postgres', 'pending');
+      log('postgres', 'Test de connexion PostgreSQL...');
+
+      try {
+        const response = await fetch(`${API_URL}/api/stats`);
+        const stats = await response.json();
+
+        log('postgres', '✅ PostgreSQL connecté !');
+        log('postgres', `Total marchés: ${stats.total_marches || 0}`);
+        log('postgres', `Marchés en cours: ${stats.marches_en_cours || 0}`);
+        log('postgres', `Entreprises actives: ${stats.entreprises_actives || 0}`);
+        setStatus('postgres', 'success');
+      } catch (error) {
+        log('postgres', `❌ Erreur: ${error.message}`, true);
+        setStatus('postgres', 'error');
+      }
+    };
+
+    // Test 3: CRUD Opérations
+    window.testCRUD = async function() {
+      setStatus('crud', 'pending');
+      log('crud', 'Début du test CRUD...');
+
+      try {
+        // CREATE
+        log('crud', '📝 CREATE: Création d\'une opération test...');
+        const newOperation = {
+          unite: 'DCF',
+          exercice: 2024,
+          objet: 'Test CRUD - Marché de test automatique',
+          typeMarche: 'TRAVAUX',
+          modePassation: 'AON',
+          montantPrevisionnel: 5000000,
+          montantActuel: 5000000,
+          devise: 'XOF',
+          etat: 'PLANIFIE',
+          timeline: ['PLANIF'],
+          chaineBudgetaire: {},
+          localisation: {}
+        };
+
+        const createResponse = await fetch(`${API_URL}/api/entities/OPERATION`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOperation)
+        });
+
+        const created = await createResponse.json();
+        log('crud', `✅ Opération créée avec ID: ${created.id}`);
+
+        // READ
+        log('crud', '📖 READ: Récupération de l\'opération...');
+        const readResponse = await fetch(`${API_URL}/api/entities/OPERATION/${created.id}`);
+        const read = await readResponse.json();
+        log('crud', `✅ Opération récupérée: ${read.objet}`);
+
+        // UPDATE
+        log('crud', '✏️ UPDATE: Modification du montant...');
+        const updateResponse = await fetch(`${API_URL}/api/entities/OPERATION/${created.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ montantPrevisionnel: 6000000 })
+        });
+
+        const updated = await updateResponse.json();
+        log('crud', `✅ Montant mis à jour: ${updated.montantPrevisionnel} XOF`);
+
+        // DELETE
+        log('crud', '🗑️ DELETE: Suppression de l\'opération...');
+        const deleteResponse = await fetch(`${API_URL}/api/entities/OPERATION/${created.id}`, {
+          method: 'DELETE'
+        });
+
+        await deleteResponse.json();
+        log('crud', '✅ Opération supprimée avec succès');
+
+        log('crud', '🎉 Test CRUD terminé avec succès !');
+        setStatus('crud', 'success');
+      } catch (error) {
+        log('crud', `❌ Erreur: ${error.message}`, true);
+        setStatus('crud', 'error');
+      }
+    };
+
+    // Test 4: Statistiques
+    window.testStatistics = async function() {
+      setStatus('stats', 'pending');
+      log('stats', 'Récupération des statistiques...');
+
+      try {
+        const response = await fetch(`${API_URL}/api/stats`);
+        const stats = await response.json();
+
+        log('stats', '📊 Statistiques globales:');
+        log('stats', `- Total marchés: ${stats.total_marches || 0}`);
+        log('stats', `- Marchés en cours: ${stats.marches_en_cours || 0}`);
+        log('stats', `- Marchés clos: ${stats.marches_clos || 0}`);
+        log('stats', `- Montant total: ${(stats.montant_total || 0).toLocaleString()} XOF`);
+        log('stats', `- Entreprises actives: ${stats.entreprises_actives || 0}`);
+        log('stats', `- Total avenants: ${stats.total_avenants || 0}`);
+        log('stats', `- Total documents: ${stats.total_documents || 0}`);
+
+        setStatus('stats', 'success');
+      } catch (error) {
+        log('stats', `❌ Erreur: ${error.message}`, true);
+        setStatus('stats', 'error');
+      }
+    };
+
+    // Test 5: Upload fichier
+    window.testFileUpload = async function() {
+      const fileInput = document.getElementById('file-input');
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Veuillez sélectionner un fichier');
+        return;
+      }
+
+      setStatus('upload', 'pending');
+      log('upload', 'Upload du fichier vers R2...');
+
+      try {
+        const file = fileInput.files[0];
+        log('upload', `Fichier sélectionné: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('fileName', `test_${Date.now()}_${file.name}`);
+
+        const response = await fetch(`${API_URL}/api/files/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        log('upload', `✅ Fichier uploadé avec succès !`);
+        log('upload', `URL: ${result.url}`);
+        log('upload', `Taille: ${(result.size / 1024).toFixed(2)} KB`);
+        log('upload', `Type: ${result.contentType}`);
+
+        setStatus('upload', 'success');
+      } catch (error) {
+        log('upload', `❌ Erreur: ${error.message}`, true);
+        setStatus('upload', 'error');
+      }
+    };
+
+    // Test 6: DataService Integration
+    window.testDataService = async function() {
+      setStatus('dataservice', 'pending');
+      log('dataservice', 'Initialisation du DataService...');
+
+      try {
+        // Initialiser le DataService
+        log('dataservice', 'Chargement de la configuration...');
+        await dataService.init();
+
+        log('dataservice', `✅ DataService initialisé`);
+        log('dataservice', `Adapter: ${dataService.adapter.constructor.name}`);
+
+        // Tester une requête
+        log('dataservice', 'Test query: récupération des opérations...');
+        const operations = await dataService.query('OPERATION');
+
+        log('dataservice', `✅ ${operations.length} opération(s) récupérée(s)`);
+
+        if (operations.length > 0) {
+          const op = operations[0];
+          log('dataservice', `Première opération: ${op.objet}`);
+        }
+
+        setStatus('dataservice', 'success');
+      } catch (error) {
+        log('dataservice', `❌ Erreur: ${error.message}`, true);
+        console.error(error);
+        setStatus('dataservice', 'error');
+      }
+    };
+
+    // Lancer tous les tests
+    window.runAllTests = async function() {
+      await testAPIConnection();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await testPostgresConnection();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await testCRUD();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await testStatistics();
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await testDataService();
+
+      alert('✅ Tous les tests sont terminés !');
+    };
+  </script>
+</body>
+</html>

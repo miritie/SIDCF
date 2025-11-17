@@ -6,6 +6,7 @@ import logger from '../lib/logger.js';
 import { ENTITIES, createEntity, validateEntity } from './schema.js';
 import LocalStorageAdapter from './adapters/local-storage.js';
 import AirtableAdapter from './adapters/airtable.js';
+import PostgresAdapter from './adapters/postgres-adapter.js';
 import RulesEngine from './rules-engine.js';
 
 class DataService {
@@ -46,7 +47,20 @@ class DataService {
       const piecesMatrice = await this.loadJSON('/js/config/pieces-matrice.json');
 
       // Initialize adapter
-      if (this.config.dataProvider === 'airtable' && this.config.airtable.enabled) {
+      if (this.config.dataProvider === 'postgres' && this.config.postgres?.enabled) {
+        logger.info('[DataService] Attempting PostgreSQL adapter...');
+        try {
+          this.adapter = new PostgresAdapter(this.config.postgres);
+          const testResult = await this.adapter.testConnection();
+          if (!testResult.success) {
+            throw new Error('PostgreSQL connection test failed: ' + testResult.message);
+          }
+          logger.info('[DataService] Using PostgreSQL adapter (Neon + Cloudflare R2)');
+        } catch (error) {
+          logger.warn('[DataService] PostgreSQL failed, falling back to localStorage:', error.message);
+          this.adapter = new LocalStorageAdapter(this.config.storage.key);
+        }
+      } else if (this.config.dataProvider === 'airtable' && this.config.airtable.enabled) {
         logger.info('[DataService] Attempting Airtable adapter...');
         try {
           this.adapter = new AirtableAdapter(this.config.airtable);

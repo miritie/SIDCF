@@ -1,8 +1,8 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "appName": "SIDCF Portal",
   "defaultLanguage": "fr",
-  "dataProvider": "localStorage",
+  "dataProvider": "postgres",
   "features": {
     "moduleMarche": true,
     "moduleInvestissement": false,
@@ -20,6 +20,19 @@
     "mode": "light",
     "primaryColor": "#0f5132",
     "accentColor": "#f59e0b"
+  },
+  "postgres": {
+    "enabled": true,
+    "apiUrl": "http://localhost:8787",
+    "connectionString": "postgresql://neondb_owner:npg_mSJIP0W2lLfw@ep-icy-wildflower-ah7opo0w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
+  },
+  "r2": {
+    "enabled": true,
+    "bucketName": "sidcf",
+    "endpoint": "https://a406a344d14de27baff112ae126d7144.r2.cloudflarestorage.com",
+    "accessKeyId": "d508cf1caa97484a4dca02b300d3f891",
+    "secretAccessKey": "dadd484fb1d960ac8b66543be18eda446755df83f4d36223b9d7249b50bad317",
+    "publicUrl": "https://a406a344d14de27baff112ae126d7144.r2.cloudflarestorage.com/sidcf"
   },
   "airtable": {
     "enabled": false,
