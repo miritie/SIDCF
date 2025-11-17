@@ -13,7 +13,14 @@
       "Bash(git pull:*)",
       "Bash(git config:*)",
       "Bash(git commit:*)",
-      "Bash(open index.html)"
+      "Bash(open index.html)",
+      "Bash(find:*)",
+      "Bash(git fetch:*)",
+      "Bash(open:*)",
+      "Bash(lsof:*)",
+      "Bash(npm install)",
+      "Bash(npm run migrate:*)",
+      "Bash(npm run seed:*)"
     ],
     "deny": [],
     "ask": []
