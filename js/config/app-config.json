@@ -24,7 +24,7 @@
   "postgres": {
     "enabled": true,
     "apiUrl": "http://localhost:8787",
-    "connectionString": "postgresql://neondb_owner:npg_mSJIP0W2lLfw@ep-icy-wildflower-ah7opo0w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
+    "connectionString": "postgresql://neondb_owner:npg_mSJIP0W2lLfw@ep-icy-wildflower-ah7opo0w-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
   },
   "r2": {
     "enabled": true,
