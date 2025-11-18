@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Rendu</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <div id="app"></div>
+  <div id="log" style="margin: 20px; padding: 20px; background: #f0f0f0; font-family: monospace; font-size: 12px;"></div>
+
+  <script type="module">
+    const logEl = document.getElementById('log');
+
+    function log(msg, isError = false) {
+      const p = document.createElement('p');
+      p.textContent = new Date().toISOString() + ' - ' + msg;
+      p.style.color = isError ? 'red' : 'green';
+      logEl.appendChild(p);
+      console.log(msg);
+    }
+
+    try {
+      log('Starting test...');
+
+      // Import dataService first
+      log('Importing dataService...');
+      const { default: dataService } = await import('./js/datastore/data-service.js');
+      log('✓ dataService imported');
+
+      // Initialize dataService
+      log('Initializing dataService...');
+      await dataService.init();
+      log('✓ dataService initialized');
+
+      // Try to load widgets
+      log('Importing widgets...');
+      const { renderCleRepartitionManager } = await import('./js/ui/widgets/cle-repartition-manager.js');
+      const { renderEcheancierManager } = await import('./js/ui/widgets/echeancier-manager.js');
+      log('✓ Widgets imported');
+
+      // Try to render a simple widget
+      log('Testing renderCleRepartitionManager...');
+      const testWidget = renderCleRepartitionManager([], 0, 0, {}, null);
+      log('✓ Widget created: ' + testWidget.tagName);
+
+      // Import screen modules
+      log('Importing screen modules...');
+      const { default: renderAttribution } = await import('./js/modules/marche/screens/ecr03a-attribution.js');
+      log('✓ renderAttribution imported: ' + (typeof renderAttribution));
+
+      const { default: renderVisaCF } = await import('./js/modules/marche/screens/ecr04a-visa-cf.js');
+      log('✓ renderVisaCF imported: ' + (typeof renderVisaCF));
+
+      log('ALL TESTS PASSED!', false);
+
+    } catch (error) {
+      log('❌ ERROR: ' + error.message, true);
+      log('Stack: ' + error.stack, true);
+    }
+  </script>
+</body>
+</html>

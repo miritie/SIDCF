@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test des imports</title>
+</head>
+<body>
+  <h1>Test des imports de modules</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    const results = document.getElementById('results');
+
+    function log(message, isError = false) {
+      const p = document.createElement('p');
+      p.textContent = message;
+      p.style.color = isError ? 'red' : 'green';
+      results.appendChild(p);
+      console.log(message);
+    }
+
+    async function testImports() {
+      try {
+        log('Testing widget imports...');
+
+        // Test widget imports
+        const { renderCleRepartitionManager } = await import('./js/ui/widgets/cle-repartition-manager.js');
+        log('✓ cle-repartition-manager.js loaded');
+
+        const { renderEcheancierManager } = await import('./js/ui/widgets/echeancier-manager.js');
+        log('✓ echeancier-manager.js loaded');
+
+        // Test screen imports
+        log('Testing screen imports...');
+
+        const attrModule = await import('./js/modules/marche/screens/ecr03a-attribution.js');
+        log('✓ ecr03a-attribution.js loaded');
+        log('  - Has renderAttribution: ' + (typeof attrModule.renderAttribution === 'function'));
+        log('  - Has default export: ' + (typeof attrModule.default === 'function'));
+
+        const visaModule = await import('./js/modules/marche/screens/ecr04a-visa-cf.js');
+        log('✓ ecr04a-visa-cf.js loaded');
+        log('  - Has renderVisaCF: ' + (typeof visaModule.renderVisaCF === 'function'));
+        log('  - Has default export: ' + (typeof visaModule.default === 'function'));
+
+        log('All imports successful!', false);
+
+      } catch (error) {
+        log('❌ Import failed: ' + error.message, true);
+        log('Stack: ' + error.stack, true);
+      }
+    }
+
+    testImports();
+  </script>
+</body>
+</html>
