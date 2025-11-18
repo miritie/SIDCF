@@ -1,7 +1,7 @@
 /**
- * ECR03C - Visa du Contrôleur Financier
- * Permet au CF de donner son visa (ou refus/réserves) après la contractualisation
- * Utilise l'entité VISA_CF dédiée
+ * ECR03C - Engagement (avec Visa CF optionnel)
+ * Permet l'engagement budgétaire et le visa CF si requis selon le type de procédure
+ * Le visa CF n'est pas obligatoire pour toutes les procédures
  */
 
 import { el, mount } from '../../../lib/dom.js';
@@ -39,11 +39,15 @@ export async function renderVisaCF(params) {
       mount('#app', el('div', { className: 'page' }, [
         el('div', { className: 'alert alert-warning' }, [
           el('p', {}, '⚠️ Cette opération n\'a pas encore d\'attribution.'),
-          el('p', {}, 'Le visa CF ne peut être donné qu\'après la contractualisation.')
+          el('p', {}, 'L\'engagement ne peut être fait qu\'après la contractualisation.')
         ])
       ]));
       return;
     }
+
+    // Déterminer si le visa CF est requis selon le mode de passation
+    const modePassation = operation.modePassation || 'PSD';
+    const visaRequired = ['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation);
 
     // Le visa CF sera stocké dans l'attribution pour l'instant
     let visaCF = attribution?.decisionCF || null;
@@ -55,15 +59,32 @@ export async function renderVisaCF(params) {
           className: 'btn btn-secondary btn-sm',
           onclick: () => router.navigate('/fiche-marche', { idOperation })
         }, '← Retour fiche'),
-        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Visa Contrôle Financier'),
+        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '📝 Engagement'),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
+
+      // Alerte sur le visa CF
+      visaRequired
+        ? el('div', { className: 'alert alert-info', style: { marginBottom: '24px' } }, [
+            el('div', { className: 'alert-icon' }, 'ℹ️'),
+            el('div', { className: 'alert-content' }, [
+              el('div', { className: 'alert-title' }, 'Visa du Contrôleur Financier requis'),
+              el('div', { className: 'alert-message' }, `Pour les procédures ${modePassation}, le visa CF est obligatoire avant l'engagement.`)
+            ])
+          ])
+        : el('div', { className: 'alert alert-success', style: { marginBottom: '24px' } }, [
+            el('div', { className: 'alert-icon' }, '✅'),
+            el('div', { className: 'alert-content' }, [
+              el('div', { className: 'alert-title' }, 'Visa CF non requis'),
+              el('div', { className: 'alert-message' }, `Pour les procédures ${modePassation}, le visa CF n'est pas obligatoire. Vous pouvez procéder directement à l'engagement.`)
+            ])
+          ]),
 
       // Section Informations Attribution
       renderAttributionInfo(attribution, operation, registries),
 
-      // Formulaire Visa CF
-      renderVisaForm(visaCF, registries),
+      // Formulaire Visa CF (seulement si requis ou si on veut quand même le renseigner)
+      renderVisaForm(visaCF, registries, visaRequired),
 
       // Actions
       el('div', { className: 'card' }, [
@@ -96,11 +117,22 @@ export async function renderVisaCF(params) {
 
 /**
  * Rendu des informations d'attribution
+ * Compatible avec la structure JSONB (attributaire.nom, montants.attribue)
  */
 function renderAttributionInfo(attribution, operation, registries) {
-  const entrepriseInfo = attribution.attributaire.singleOrGroup === 'SIMPLE'
-    ? `Entreprise : ${attribution.attributaire.entrepriseId || 'Non renseignée'}`
-    : `Groupement : ${attribution.attributaire.groupementId || 'Non renseigné'} (${attribution.attributaire.groupType})`;
+  // Support pour les deux structures (ancienne et nouvelle JSONB)
+  const attributaire = attribution.attributaire || {};
+  const montants = attribution.montants || {};
+  const dates = attribution.dates || {};
+
+  // Nom de l'attributaire (nouvelle structure: nom, ancienne: entrepriseId)
+  const entrepriseInfo = attributaire.nom || attributaire.entrepriseId || 'Non renseigné';
+
+  // Montant (nouvelle structure: attribue, ancienne: ht/ttc)
+  const montantPrincipal = montants.attribue || montants.ttc || montants.ht || 0;
+  const montantFormatted = typeof montantPrincipal === 'number'
+    ? montantPrincipal.toLocaleString('fr-FR')
+    : String(montantPrincipal);
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
@@ -113,35 +145,37 @@ function renderAttributionInfo(attribution, operation, registries) {
           el('div', { style: { fontWeight: 'bold' } }, entrepriseInfo)
         ]),
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Montant HT'),
-          el('div', { style: { fontWeight: 'bold' } }, `${attribution.montants.ht.toLocaleString('fr-FR')} XOF`)
+          el('div', { className: 'text-small text-muted' }, 'NIF'),
+          el('div', { style: { fontWeight: 'bold' } }, attributaire.nif || '-')
         ]),
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Montant TTC'),
-          el('div', { style: { fontWeight: 'bold', color: '#0066cc' } }, `${attribution.montants.ttc.toLocaleString('fr-FR')} XOF`)
+          el('div', { className: 'text-small text-muted' }, 'Montant attribué'),
+          el('div', { style: { fontWeight: 'bold', color: '#0066cc' } }, `${montantFormatted} ${montants.devise || 'XOF'}`)
         ])
       ]),
 
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' } }, [
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Date signature titulaire'),
-          el('div', {}, attribution.dates.signatureTitulaire
-            ? new Date(attribution.dates.signatureTitulaire).toLocaleDateString('fr-FR')
+          el('div', { className: 'text-small text-muted' }, 'Référence contrat'),
+          el('div', {}, montants.referenceContrat || el('span', { className: 'text-muted' }, 'Non renseignée'))
+        ]),
+        el('div', {}, [
+          el('div', { className: 'text-small text-muted' }, 'Date attribution'),
+          el('div', {}, dates.attribution
+            ? new Date(dates.attribution).toLocaleDateString('fr-FR')
             : el('span', { className: 'text-muted' }, 'Non renseignée'))
         ]),
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Date signature AC'),
-          el('div', {}, attribution.dates.signatureAC
-            ? new Date(attribution.dates.signatureAC).toLocaleDateString('fr-FR')
-            : el('span', { className: 'text-muted' }, 'Non renseignée'))
-        ]),
-        el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Date approbation'),
-          el('div', {}, attribution.dates.approbation
-            ? new Date(attribution.dates.approbation).toLocaleDateString('fr-FR')
-            : el('span', { className: 'text-muted' }, 'Non renseignée'))
+          el('div', { className: 'text-small text-muted' }, 'Délai exécution'),
+          el('div', {}, dates.delaiExecution ? `${dates.delaiExecution} jours` : el('span', { className: 'text-muted' }, 'Non renseigné'))
         ])
       ]),
+
+      // Adresse et contact
+      (attributaire.adresse || attributaire.contact) ? el('div', { style: { marginTop: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' } }, [
+        attributaire.adresse ? el('div', { className: 'text-small' }, `📍 ${attributaire.adresse}`) : null,
+        attributaire.contact ? el('div', { className: 'text-small', style: { marginTop: '4px' } }, `📞 ${attributaire.contact}`) : null
+      ]) : null,
 
       // Réserves CF (si attribution contient déjà des réserves)
       attribution.decisionCF?.aReserves
@@ -157,12 +191,12 @@ function renderAttributionInfo(attribution, operation, registries) {
 /**
  * Rendu du formulaire de visa
  */
-function renderVisaForm(visaCF, registries) {
+function renderVisaForm(visaCF, registries, visaRequired = true) {
   const existingVisa = visaCF || {};
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, '✅ Décision du Contrôleur Financier')
+      el('h3', { className: 'card-title' }, visaRequired ? '✅ Décision du Contrôleur Financier' : '📋 Visa CF (optionnel)')
     ]),
     el('div', { className: 'card-body' }, [
       // Décision
@@ -355,18 +389,13 @@ async function handleSave(idOperation, attributionId) {
       return;
     }
 
-    // Pour l'instant, on stocke la décision CF dans l'attribution
-    const attribution = await dataService.get(ENTITIES.ATTRIBUTION, attributionId);
-    if (!attribution) {
-      alert('❌ Attribution non trouvée');
-      return;
-    }
-
-    // Données de la décision CF
-    const decisionCFData = {
-      etat: decision,
-      motifRef: null,
-      commentaire: ''
+    // Créer un enregistrement dans la table visa_cf
+    const visaCFData = {
+      operationId: idOperation,
+      attributionId: attributionId,
+      decision: decision === 'VISA_RESERVE' ? 'VISE_RESERVE' : decision === 'VISA' ? 'VISE' : decision,
+      dateDecision: dateDecision,
+      createdAt: new Date().toISOString()
     };
 
     // Réserves si VISA_RESERVE
@@ -376,7 +405,8 @@ async function handleSave(idOperation, attributionId) {
         alert('⚠️ Veuillez préciser le motif des réserves');
         return;
       }
-      decisionCFData.commentaire = motifReserve;
+      visaCFData.typeReserve = 'AUTRE';
+      visaCFData.motifReserve = motifReserve;
     }
 
     // Refus si REFUS
@@ -386,48 +416,35 @@ async function handleSave(idOperation, attributionId) {
         alert('⚠️ Veuillez sélectionner un motif de refus');
         return;
       }
-      decisionCFData.motifRef = motifRefus;
-      decisionCFData.commentaire = document.getElementById('visa-commentaire-refus').value || '';
+      visaCFData.motifRefus = motifRefus;
+      visaCFData.commentaireRefus = document.getElementById('visa-commentaire-refus').value || '';
     }
 
-    // Mettre à jour l'attribution
-    const updateAttr = {
-      decisionCF: decisionCFData,
-      dates: {
-        ...attribution.dates,
-        decisionCF: dateDecision
-      },
-      updatedAt: new Date().toISOString()
-    };
+    // Créer le visa CF
+    const visaResult = await dataService.add(ENTITIES.VISA_CF, visaCFData);
 
-    const attrResult = await dataService.update(ENTITIES.ATTRIBUTION, attributionId, updateAttr);
-
-    if (!attrResult.success) {
-      alert('❌ Erreur lors de la sauvegarde de la décision CF');
+    if (!visaResult.success) {
+      alert('❌ Erreur lors de la sauvegarde du visa CF');
       return;
     }
 
-    // Mettre à jour l'opération
+    // Mettre à jour l'état de l'opération
     const operation = await dataService.get(ENTITIES.OPERATION, idOperation);
     const updateOp = {
-      decisionCF: decision,
-      dateCF: dateDecision
+      updatedAt: new Date().toISOString()
     };
 
-    if (decision === 'VISA' && !operation.timeline.includes('VISE')) {
-      updateOp.timeline = [...operation.timeline, 'VISE'];
+    if (decision === 'VISA' || decision === 'VISA_RESERVE') {
       updateOp.etat = 'VISE';
     } else if (decision === 'REFUS') {
       updateOp.etat = 'REFUSE';
-    } else if (decision === 'RESERVE' || decision === 'VISA_RESERVE') {
-      updateOp.etat = 'EN_RESERVE';
     }
 
     const opResult = await dataService.update(ENTITIES.OPERATION, idOperation, updateOp);
 
     if (opResult.success) {
       const icon = decision === 'VISA' ? '✅' : decision.includes('RESERVE') ? '⚠️' : '🚫';
-      alert(`${icon} Décision CF enregistrée: ${decision}`);
+      alert(`${icon} Visa CF enregistré: ${decision}`);
       router.navigate('/fiche-marche', { idOperation });
     } else {
       alert('❌ Erreur lors de la mise à jour de l\'opération');

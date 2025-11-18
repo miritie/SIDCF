@@ -650,6 +650,11 @@
     { "code": "EMPRUNT", "label": "Emprunt" },
     { "code": "DON", "label": "Don" }
   ],
+  "TYPE_REVUE": [
+    { "code": "A_PRIORI", "label": "A priori (Visa CF obligatoire avant signature)", "description": "Le marché nécessite un visa du Contrôle Financier AVANT la signature du contrat" },
+    { "code": "A_POSTERIORI", "label": "A posteriori (Contrôle après signature)", "description": "Le marché est signé puis transmis au Contrôle Financier pour vérification" },
+    { "code": "AUCUNE", "label": "Aucune (Pas de contrôle CF)", "description": "Le marché n'est pas soumis au contrôle du Contrôle Financier" }
+  ],
   "NATURE_ECO": [
     { "code": "221", "label": "221 - Fonctionnement courant" },
     { "code": "222", "label": "222 - Dépenses de maintenance" },

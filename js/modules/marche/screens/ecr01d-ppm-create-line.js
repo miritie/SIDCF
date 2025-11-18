@@ -41,6 +41,108 @@ export async function renderPPMCreateLine(params) {
   // State for livrables
   let livrablesList = [];
 
+  // Define handleSave function BEFORE creating the page
+  async function handleSave(createAnother) {
+    // Collect form data
+    const formData = {
+      // Identification
+      exercice: Number(document.getElementById('exercice')?.value),
+      unite: getSelectLabel('unite') || '', // UA label
+      uniteCode: document.getElementById('unite')?.value || '', // UA code
+      objet: document.getElementById('objet')?.value?.trim(),
+
+      // Classification
+      typeMarche: document.getElementById('typeMarche')?.value,
+      modePassation: document.getElementById('modePassation')?.value,
+      revue: document.getElementById('revue')?.value || null,
+      naturePrix: document.getElementById('naturePrix')?.value,
+
+      // Financier
+      montantPrevisionnel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
+      montantActuel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
+      typeFinancement: document.getElementById('typeFinancement')?.value,
+      sourceFinancement: document.getElementById('sourceFinancement')?.value?.trim() || '',
+
+      // Chaîne budgétaire (avec cascades Section→Programme→UA)
+      chaineBudgetaire: {
+        section: getSelectLabel('section') || '',
+        sectionCode: document.getElementById('section')?.value || '',
+        programme: getSelectLabel('programme') || '',
+        programmeCode: document.getElementById('programme')?.value || '',
+        activite: getSelectLabel('activite') || '',
+        activiteCode: document.getElementById('activite')?.value || '',
+        ligneBudgetaire: document.getElementById('ligneBudgetaire')?.value?.trim() || '',
+        nature: '',
+        bailleur: document.getElementById('sourceFinancement')?.value || ''
+      },
+
+      // Technique
+      delaiExecution: Number(document.getElementById('delaiExecution')?.value) || 0,
+      dureePrevisionnelle: Number(document.getElementById('delaiExecution')?.value) || 0,
+      categoriePrestation: document.getElementById('categoriePrestation')?.value || '',
+      beneficiaire: document.getElementById('beneficiaire')?.value?.trim() || '',
+      livrables: livrablesList, // utilisation de la liste gérée par le widget
+
+      // Localisation (cascading selects)
+      localisation: {
+        region: getSelectLabel('region') || '',
+        regionCode: document.getElementById('region')?.value || '',
+        departement: getSelectLabel('departement') || '',
+        departementCode: document.getElementById('departement')?.value || '',
+        sousPrefecture: getSelectLabel('sousPrefecture') || '',
+        sousPrefectureCode: document.getElementById('sousPrefecture')?.value || '',
+        localite: document.getElementById('localite')?.value || '',
+        longitude: document.getElementById('longitude')?.value ? Number(document.getElementById('longitude')?.value) : null,
+        latitude: document.getElementById('latitude')?.value ? Number(document.getElementById('latitude')?.value) : null,
+        coordsOK: !!(document.getElementById('longitude')?.value && document.getElementById('latitude')?.value)
+      }
+    };
+
+    // Validation
+    if (!formData.objet || !formData.unite || !formData.typeMarche || !formData.modePassation) {
+      alert('⚠️ Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    if (formData.montantPrevisionnel <= 0) {
+      alert('⚠️ Le montant prévisionnel doit être supérieur à 0');
+      return;
+    }
+
+    // Create operation
+    const newOperationId = operationId();
+    const operation = {
+      id: newOperationId,
+      planId: null, // Unitaire, pas lié à un plan importé
+      budgetLineId: null,
+      ...formData,
+      devise: 'XOF',
+      timeline: ['PLANIF'],
+      etat: 'PLANIFIE',
+      procDerogation: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const result = await dataService.add(ENTITIES.OPERATION, operation);
+
+    if (!result.success) {
+      alert('❌ Erreur lors de la création de l\'opération');
+      logger.error('[PPM Create Line] Failed to create operation', result.error);
+      return;
+    }
+
+    if (createAnother) {
+      alert('✅ Opération créée avec succès');
+      // Reset form
+      document.getElementById('form-ppm-line')?.reset();
+      document.getElementById('exercice').value = new Date().getFullYear();
+    } else {
+      alert('✅ Opération créée avec succès');
+      router.navigate('/fiche-marche', { idOperation: newOperationId });
+    }
+  }
+
   const page = el('div', { className: 'page' }, [
     // Header
     el('div', { className: 'page-header' }, [
@@ -631,107 +733,6 @@ function setupLocalisationCascades(registries) {
       localiteSelect.disabled = false;
     }
   });
-}
-
-async function handleSave(createAnother) {
-  // Collect form data
-  const formData = {
-    // Identification
-    exercice: Number(document.getElementById('exercice')?.value),
-    unite: getSelectLabel('unite') || '', // UA label
-    uniteCode: document.getElementById('unite')?.value || '', // UA code
-    objet: document.getElementById('objet')?.value?.trim(),
-
-    // Classification
-    typeMarche: document.getElementById('typeMarche')?.value,
-    modePassation: document.getElementById('modePassation')?.value,
-    revue: document.getElementById('revue')?.value || null,
-    naturePrix: document.getElementById('naturePrix')?.value,
-
-    // Financier
-    montantPrevisionnel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
-    montantActuel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
-    typeFinancement: document.getElementById('typeFinancement')?.value,
-    sourceFinancement: document.getElementById('sourceFinancement')?.value?.trim() || '',
-
-    // Chaîne budgétaire (avec cascades Section→Programme→UA)
-    chaineBudgetaire: {
-      section: getSelectLabel('section') || '',
-      sectionCode: document.getElementById('section')?.value || '',
-      programme: getSelectLabel('programme') || '',
-      programmeCode: document.getElementById('programme')?.value || '',
-      activite: getSelectLabel('activite') || '',
-      activiteCode: document.getElementById('activite')?.value || '',
-      ligneBudgetaire: document.getElementById('ligneBudgetaire')?.value?.trim() || '',
-      nature: '',
-      bailleur: document.getElementById('sourceFinancement')?.value || ''
-    },
-
-    // Technique
-    delaiExecution: Number(document.getElementById('delaiExecution')?.value) || 0,
-    dureePrevisionnelle: Number(document.getElementById('delaiExecution')?.value) || 0,
-    categoriePrestation: document.getElementById('categoriePrestation')?.value || '',
-    beneficiaire: document.getElementById('beneficiaire')?.value?.trim() || '',
-    livrables: livrablesList, // utilisation de la liste gérée par le widget
-
-    // Localisation (cascading selects)
-    localisation: {
-      region: getSelectLabel('region') || '',
-      regionCode: document.getElementById('region')?.value || '',
-      departement: getSelectLabel('departement') || '',
-      departementCode: document.getElementById('departement')?.value || '',
-      sousPrefecture: getSelectLabel('sousPrefecture') || '',
-      sousPrefectureCode: document.getElementById('sousPrefecture')?.value || '',
-      localite: document.getElementById('localite')?.value || '',
-      longitude: document.getElementById('longitude')?.value ? Number(document.getElementById('longitude')?.value) : null,
-      latitude: document.getElementById('latitude')?.value ? Number(document.getElementById('latitude')?.value) : null,
-      coordsOK: !!(document.getElementById('longitude')?.value && document.getElementById('latitude')?.value)
-    }
-  };
-
-  // Validation
-  if (!formData.objet || !formData.unite || !formData.typeMarche || !formData.modePassation) {
-    alert('⚠️ Veuillez remplir tous les champs obligatoires');
-    return;
-  }
-
-  if (formData.montantPrevisionnel <= 0) {
-    alert('⚠️ Le montant prévisionnel doit être supérieur à 0');
-    return;
-  }
-
-  // Create operation
-  const newOperationId = operationId();
-  const operation = {
-    id: newOperationId,
-    planId: null, // Unitaire, pas lié à un plan importé
-    budgetLineId: null,
-    ...formData,
-    devise: 'XOF',
-    timeline: ['PLANIF'],
-    etat: 'PLANIFIE',
-    procDerogation: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  const result = await dataService.create(ENTITIES.OPERATION, operation);
-
-  if (!result.success) {
-    alert('❌ Erreur lors de la création de l\'opération');
-    logger.error('[PPM Create Line] Failed to create operation', result.error);
-    return;
-  }
-
-  if (createAnother) {
-    alert('✅ Opération créée avec succès');
-    // Reset form
-    document.getElementById('form-ppm-line')?.reset();
-    document.getElementById('exercice').value = new Date().getFullYear();
-  } else {
-    alert('✅ Opération créée avec succès');
-    router.navigate('/fiche-marche', { idOperation: newOperationId });
-  }
 }
 
 export default renderPPMCreateLine;

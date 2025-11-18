@@ -1,16 +1,17 @@
 /* ============================================
    Document Helper - Fonctions utilitaires pour upload de documents
+   Migration vers Cloudflare R2 Storage
    ============================================ */
 
-import documentStorage from './document-storage.js';
+import r2Storage from './r2-storage.js';
 
 /**
  * Gère l'upload d'un document depuis un input file
  * @param {HTMLInputElement} fileInput - Element input[type=file]
- * @param {string} category - Catégorie du document
+ * @param {Object} metadata - Métadonnées du document (operationId, entityType, phase, etc.)
  * @returns {Promise<Object|null>} Métadonnées du document sauvegardé ou null
  */
-export async function handleFileUpload(fileInput, category = 'GENERAL') {
+export async function handleFileUpload(fileInput, metadata = {}) {
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
     return null;
   }
@@ -18,17 +19,20 @@ export async function handleFileUpload(fileInput, category = 'GENERAL') {
   const file = fileInput.files[0];
 
   try {
-    // Convertir en Base64
-    const documentData = await documentStorage.fileToBase64(file);
+    // Upload vers Cloudflare R2
+    const uploadResult = await r2Storage.uploadDocument(file, metadata);
 
-    // Sauvegarder dans localStorage
-    const savedDocument = documentStorage.saveDocument(documentData, category);
+    console.log(`[DocumentHelper] Document uploadé vers R2: ${file.name} (ID: ${uploadResult.documentId})`);
 
-    console.log(`[DocumentHelper] Document uploadé: ${savedDocument.nom} (ID: ${savedDocument.id})`);
-
-    return savedDocument;
+    return {
+      id: uploadResult.documentId,
+      nom: file.name,
+      url: uploadResult.url,
+      taille: uploadResult.size,
+      dateUpload: new Date().toISOString()
+    };
   } catch (error) {
-    console.error('[DocumentHelper] Erreur upload:', error);
+    console.error('[DocumentHelper] Erreur upload R2:', error);
     alert(`❌ ${error.message}`);
     return null;
   }
@@ -42,77 +46,37 @@ export async function handleFileUpload(fileInput, category = 'GENERAL') {
  * @returns {HTMLElement} Élément bouton
  */
 export function createDownloadButton(documentId, buttonText = '📄 Télécharger', buttonClass = 'btn btn-sm btn-secondary') {
-  const button = document.createElement('button');
-  button.className = buttonClass;
-  button.textContent = buttonText;
-  button.style.fontSize = '12px';
-
-  button.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    documentStorage.downloadDocument(documentId);
-  });
-
-  return button;
+  return r2Storage.createDownloadButton(documentId, buttonText, buttonClass);
 }
 
 /**
  * Affiche les statistiques de stockage
- * @returns {string} Message formaté des statistiques
+ * @returns {Promise<string>} Message formaté des statistiques
  */
-export function getStorageStatsMessage() {
-  const stats = documentStorage.getStorageStats();
-  return `📊 Stockage: ${stats.count} document(s) - ${stats.localStorageSizeFormatted} / ${(stats.estimatedLimit / 1024 / 1024).toFixed(0)}MB (${stats.usagePercent}%)`;
+export async function getStorageStatsMessage() {
+  const stats = await r2Storage.getStorageStats();
+  return `📊 Stockage R2: ${stats.totalCount} document(s) - ${stats.totalSizeMB} MB`;
 }
 
 /**
  * Valide un fichier avant upload
  * @param {File} file - Fichier à valider
  * @param {Object} options - Options de validation
- * @returns {Object} {valid: boolean, error: string}
+ * @returns {Object} {valid: boolean, errors: array}
  */
 export function validateFile(file, options = {}) {
-  const {
-    maxSize = 5 * 1024 * 1024, // 5MB par défaut
-    allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-    allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
-  } = options;
-
-  if (!file) {
-    return { valid: false, error: 'Aucun fichier sélectionné' };
-  }
-
-  // Vérifier la taille
-  if (file.size > maxSize) {
-    return {
-      valid: false,
-      error: `Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum: ${(maxSize / 1024 / 1024).toFixed(0)}MB`
-    };
-  }
-
-  // Vérifier le type MIME
-  if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
-    // Vérifier également l'extension si le type MIME n'est pas reconnu
-    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-    if (!allowedExtensions.includes(fileExtension)) {
-      return {
-        valid: false,
-        error: `Type de fichier non autorisé. Types acceptés: ${allowedExtensions.join(', ')}`
-      };
-    }
-  }
-
-  return { valid: true, error: null };
+  // Déléguer la validation au service R2
+  return r2Storage.validateFile(file, options);
 }
 
 /**
  * Gère l'upload d'un document avec validation
  * @param {HTMLInputElement} fileInput - Element input[type=file]
- * @param {string} category - Catégorie du document
+ * @param {Object} metadata - Métadonnées du document
  * @param {Object} validationOptions - Options de validation
  * @returns {Promise<Object|null>} Métadonnées du document sauvegardé ou null
  */
-export async function handleFileUploadWithValidation(fileInput, category = 'GENERAL', validationOptions = {}) {
+export async function handleFileUploadWithValidation(fileInput, metadata = {}, validationOptions = {}) {
   if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
     return null;
   }
@@ -122,13 +86,14 @@ export async function handleFileUploadWithValidation(fileInput, category = 'GENE
   // Valider le fichier
   const validation = validateFile(file, validationOptions);
   if (!validation.valid) {
-    alert(`❌ ${validation.error}`);
+    alert(`❌ ${validation.errors.join('\n')}`);
     fileInput.value = ''; // Réinitialiser l'input
     return null;
   }
 
   // Procéder à l'upload
-  return handleFileUpload(fileInput, category);
+  metadata.validation = validationOptions;
+  return handleFileUpload(fileInput, metadata);
 }
 
 /**

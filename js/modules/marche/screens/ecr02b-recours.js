@@ -346,7 +346,7 @@ async function handleAddRecours(idOperation) {
     createdAt: new Date().toISOString()
   };
 
-  const result = await dataService.create(ENTITIES.RECOURS, recoursData);
+  const result = await dataService.add(ENTITIES.RECOURS, recoursData);
 
   if (!result.success) {
     alert('❌ Erreur lors de l\'enregistrement du recours');

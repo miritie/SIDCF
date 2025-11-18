@@ -143,3 +143,26 @@ export function clear(element) {
     element.innerHTML = '';
   }
 }
+
+/**
+ * Get element by ID
+ */
+export function id(elementId) {
+  return document.getElementById(elementId);
+}
+
+// Export all functions as a single object for convenience
+export const dom = {
+  el,
+  mount,
+  html,
+  qs,
+  qsa,
+  addClass,
+  removeClass,
+  toggleClass,
+  setAttrs,
+  remove,
+  clear,
+  id
+};

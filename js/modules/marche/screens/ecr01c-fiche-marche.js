@@ -6,8 +6,9 @@ import { el, mount } from '../../../lib/dom.js';
 import { money, date } from '../../../lib/format.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { renderSteps } from '../../../ui/widgets/steps.js';
+import { renderStepsAsync } from '../../../ui/widgets/steps.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
+import { getPhasesAsync } from '../../../lib/phase-helper.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -50,9 +51,36 @@ export async function renderFicheMarche(params) {
     ? await dataService.get(ENTITIES.BUDGET_LINE, operation.budgetLineId)
     : null;
 
+  // Charger les steps depuis l'API
+  const stepsWidget = await renderStepsAsync(fullData, idOperation);
+
+  // Charger les phases pour les boutons de navigation
+  const phases = await getPhasesAsync(operation.modePassation || 'PSD');
+
+  // Mapping des routes pour chaque phase
+  const phaseRoutes = {
+    'PLANIF': null, // On reste sur cette page
+    'PROCEDURE': '/procedure',
+    'ATTRIBUTION': '/attribution',
+    'VISA_CF': '/visa-cf',
+    'EXECUTION': '/execution',
+    'AVENANTS': '/avenants',
+    'CLOTURE': '/cloture'
+  };
+
+  // Créer les boutons de navigation dynamiques
+  const navButtons = phases.map(phase => {
+    const route = phaseRoutes[phase.code];
+    if (!route) {
+      // Bouton Identité (actif, pas de navigation)
+      return el('button', { className: 'btn btn-sm btn-primary' }, `${phase.icon} ${phase.titre}`);
+    }
+    return createButton('btn btn-sm btn-secondary', `${phase.icon} ${phase.titre}`, () => router.navigate(route, { idOperation }));
+  });
+
   const page = el('div', { className: 'page' }, [
-    // Timeline Steps (nouveau!)
-    renderSteps(fullData, idOperation),
+    // Timeline Steps (depuis la configuration BD)
+    stepsWidget,
 
     // Header
     el('div', { className: 'page-header' }, [
@@ -84,19 +112,10 @@ export async function renderFicheMarche(params) {
       ]);
     }),
 
-    // Navigation tabs
+    // Navigation tabs (dynamique selon le mode de passation)
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-body', style: { padding: '16px' } }, [
-        el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [
-          el('button', { className: 'btn btn-sm btn-secondary' }, '📋 Identité'),
-          createButton('btn btn-sm btn-secondary', '⚖️ Procédure', () => router.navigate('/procedure', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '👥 Attribution', () => router.navigate('/attribution', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '✅ Visa CF', () => router.navigate('/visa-cf', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '🔧 Exécution', () => router.navigate('/execution', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '📝 Avenants', () => router.navigate('/avenants', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '🔒 Garanties', () => router.navigate('/garanties', { idOperation })),
-          createButton('btn btn-sm btn-secondary', '🏁 Clôture', () => router.navigate('/cloture', { idOperation }))
-        ])
+        el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, navButtons)
       ])
     ]),
 
@@ -126,11 +145,36 @@ export async function renderFicheMarche(params) {
       ]),
       el('div', { className: 'card-body' }, [
         renderInfoGrid([
-          { label: 'Section', value: operation.chaineBudgetaire?.section },
-          { label: 'Programme', value: operation.chaineBudgetaire?.programme },
-          { label: 'Activité', value: operation.chaineBudgetaire?.activite },
-          { label: 'Nature économique', value: operation.chaineBudgetaire?.nature },
-          { label: 'Bailleur', value: registries.BAILLEUR.find(b => b.code === operation.chaineBudgetaire?.bailleur)?.label }
+          {
+            label: 'Section',
+            value: operation.chaineBudgetaire?.section
+              ? `${operation.chaineBudgetaire.section} - ${operation.chaineBudgetaire.sectionLib || ''}`
+              : null
+          },
+          {
+            label: 'Programme',
+            value: operation.chaineBudgetaire?.programme
+              ? `${operation.chaineBudgetaire.programme} - ${operation.chaineBudgetaire.programmeLib || ''}`
+              : null
+          },
+          {
+            label: 'Activité',
+            value: operation.chaineBudgetaire?.activite
+              ? `${operation.chaineBudgetaire.activite} - ${operation.chaineBudgetaire.activiteLib || ''}`
+              : null
+          },
+          {
+            label: 'Nature économique',
+            value: operation.chaineBudgetaire?.nature
+              ? `${operation.chaineBudgetaire.nature} - ${operation.chaineBudgetaire.natureLib || ''}`
+              : null
+          },
+          {
+            label: 'Bailleur',
+            value: operation.chaineBudgetaire?.bailleur
+              ? (registries.BAILLEUR?.find(b => b.code === operation.chaineBudgetaire?.bailleur)?.label || operation.chaineBudgetaire?.bailleur)
+              : null
+          }
         ])
       ])
     ]),

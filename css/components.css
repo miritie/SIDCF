@@ -1012,3 +1012,43 @@ input[type="color"].form-control::-moz-color-swatch {
   border-radius: 8px;
   border: 1px solid #E5E7EB;
 }
+
+/* === Tabs === */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--color-gray-200);
+  margin-bottom: var(--spacing-6);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: var(--spacing-3) var(--spacing-5);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--color-gray-600);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+  position: relative;
+  bottom: -2px;
+}
+
+.tab-btn:hover {
+  color: var(--color-blue-600);
+  background: var(--color-gray-50);
+}
+
+.tab-btn.active {
+  color: var(--color-blue-600);
+  border-bottom-color: var(--color-blue-600);
+  font-weight: var(--font-weight-semibold);
+}
+
+.tab-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}

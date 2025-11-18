@@ -535,7 +535,7 @@ async function handleSave(idOperation, echeancierItems, cleLines, montantMarche)
   if (existingCle) {
     cleResult = await dataService.update(ENTITIES.CLE_REPARTITION, cleId, cleData);
   } else {
-    cleResult = await dataService.create(ENTITIES.CLE_REPARTITION, cleData);
+    cleResult = await dataService.add(ENTITIES.CLE_REPARTITION, cleData);
   }
 
   if (!cleResult.success) {

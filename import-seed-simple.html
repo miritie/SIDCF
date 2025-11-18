@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Seed Data - SIDCF Portal</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body {
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .import-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 32px;
+    }
+    h1 {
+      color: #1e40af;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 32px;
+    }
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .warning-box {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+      margin-left: 12px;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    #result {
+      margin-top: 24px;
+    }
+    .alert {
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .alert-success {
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      color: #065f46;
+    }
+    .alert-error {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+    }
+    .loader {
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .log {
+      background: #1f2937;
+      color: #10b981;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="import-container">
+    <h1>🗄️ Import Seed Data</h1>
+    <p class="subtitle">Charger les données de test complètes dans le datastore</p>
+
+    <div class="info-box">
+      <strong>📋 Que fait cette action ?</strong>
+      <ul style="margin: 8px 0 0 20px; font-size: 14px;">
+        <li>Supprime toutes les données existantes dans localStorage</li>
+        <li>Charge le fichier seed-comprehensive.json (128 KB)</li>
+        <li>Importe 20 opérations complètes avec toutes leurs entités</li>
+        <li>Crée un jeu de données réaliste couvrant 3 années (2023-2025)</li>
+      </ul>
+    </div>
+
+    <div class="warning-box">
+      <strong>⚠️ Attention</strong><br>
+      Cette action supprimera toutes les données actuelles. Assurez-vous d'avoir sauvegardé vos données importantes avant de continuer.
+    </div>
+
+    <h3>📊 Données qui seront importées</h3>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">PPM_PLAN</div></div>
+      <div class="stat-card"><div class="stat-value">20</div><div class="stat-label">OPERATION</div></div>
+      <div class="stat-card"><div class="stat-value">20</div><div class="stat-label">BUDGET_LINE</div></div>
+      <div class="stat-card"><div class="stat-value">15</div><div class="stat-label">ENTREPRISE</div></div>
+      <div class="stat-card"><div class="stat-value">5</div><div class="stat-label">GROUPEMENT</div></div>
+      <div class="stat-card"><div class="stat-value">17</div><div class="stat-label">PROCEDURE</div></div>
+      <div class="stat-card"><div class="stat-value">14</div><div class="stat-label">ATTRIBUTION</div></div>
+      <div class="stat-card"><div class="stat-value">11</div><div class="stat-label">VISA_CF</div></div>
+      <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">ORDRE_SERVICE</div></div>
+      <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">AVENANT</div></div>
+      <div class="stat-card"><div class="stat-value">13</div><div class="stat-label">GARANTIE</div></div>
+      <div class="stat-card"><div class="stat-value">12</div><div class="stat-label">ANO</div></div>
+    </div>
+
+    <div style="text-align: center;">
+      <button id="importBtn" class="btn btn-primary">🚀 Importer le Seed Data</button>
+      <button class="btn btn-secondary" onclick="window.location.href='index.html'">← Retour à l'application</button>
+    </div>
+
+    <div id="result"></div>
+    <div id="log" class="log" style="display: none;"></div>
+  </div>
+
+  <script>
+    const DATASTORE_PREFIX = 'SIDCF_';
+    const resultDiv = document.getElementById('result');
+    const logDiv = document.getElementById('log');
+
+    function log(message) {
+      console.log(message);
+      logDiv.style.display = 'block';
+      logDiv.innerHTML += message + '<br>';
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // Simple datastore functions
+    function saveToLocalStorage(table, item) {
+      const key = `${DATASTORE_PREFIX}${table}_${item.id}`;
+      localStorage.setItem(key, JSON.stringify(item));
+    }
+
+    function getAllFromTable(table) {
+      const items = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith(`${DATASTORE_PREFIX}${table}_`)) {
+          items.push(JSON.parse(localStorage.getItem(key)));
+        }
+      }
+      return items;
+    }
+
+    function deleteFromTable(table, id) {
+      const key = `${DATASTORE_PREFIX}${table}_${id}`;
+      localStorage.removeItem(key);
+    }
+
+    async function handleImport() {
+      // Confirmation
+      const confirmed = confirm(
+        '⚠️ ATTENTION ⚠️\n\n' +
+        'Cette action va SUPPRIMER toutes les données existantes et les remplacer par le seed data.\n\n' +
+        'Voulez-vous vraiment continuer ?'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Afficher le loader
+      resultDiv.innerHTML = `
+        <div class="loader">
+          <div class="spinner"></div>
+          <strong>Import en cours...</strong><br>
+          <small style="color: #6b7280;">Veuillez patienter, cela peut prendre quelques secondes</small>
+        </div>
+      `;
+
+      logDiv.innerHTML = '';
+      logDiv.style.display = 'block';
+
+      try {
+        log('🚀 Chargement du seed data...');
+
+        // Charger le fichier JSON
+        const response = await fetch('./js/datastore/seed-comprehensive.json');
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+
+        const seedData = await response.json();
+        log(`📦 Seed data chargé: ${JSON.stringify(Object.keys(seedData))}`);
+
+        // Vider les données existantes
+        log('🗑️ Suppression des données existantes...');
+        const tables = [
+          'PPM_PLAN', 'OPERATION', 'BUDGET_LINE', 'ENTREPRISE', 'GROUPEMENT',
+          'PROCEDURE', 'RECOURS', 'ATTRIBUTION', 'ECHEANCIER', 'CLE_REPARTITION',
+          'VISA_CF', 'ORDRE_SERVICE', 'AVENANT', 'RESILIATION', 'GARANTIE',
+          'CLOTURE', 'ANO', 'DOCUMENT', 'DECOMPTE', 'DIFFICULTE'
+        ];
+
+        for (const table of tables) {
+          const items = getAllFromTable(table);
+          for (const item of items) {
+            deleteFromTable(table, item.id);
+          }
+          if (items.length > 0) {
+            log(`  Supprimé ${items.length} ${table}`);
+          }
+        }
+
+        // Importer chaque table
+        log('📥 Import des données...');
+        let totalImported = 0;
+
+        for (const [tableName, records] of Object.entries(seedData)) {
+          if (Array.isArray(records) && records.length > 0) {
+            log(`  Importing ${tableName}: ${records.length} records...`);
+
+            for (const record of records) {
+              saveToLocalStorage(tableName, record);
+              totalImported++;
+            }
+
+            log(`  ✅ ${tableName}: ${records.length} records imported`);
+          }
+        }
+
+        // Statistiques finales
+        log('\n✅ IMPORT TERMINÉ!');
+        log('📊 Statistiques:');
+        for (const table of tables) {
+          const count = getAllFromTable(table).length;
+          if (count > 0) {
+            log(`   - ${table}: ${count}`);
+          }
+        }
+        log(`\n📦 Total: ${totalImported} enregistrements importés`);
+
+        // Afficher le succès
+        resultDiv.innerHTML = `
+          <div class="alert alert-success">
+            <strong>✅ Import réussi !</strong><br>
+            ${totalImported} enregistrements ont été importés avec succès.<br><br>
+            Vous pouvez maintenant retourner à l'application pour visualiser les données.
+          </div>
+          <div style="text-align: center; margin-top: 16px;">
+            <button class="btn btn-primary" onclick="window.location.href='index.html#/dashboard'">🏠 Aller au Dashboard</button>
+            <button class="btn btn-secondary" onclick="window.location.href='index.html#/ppm-unitaire'">📋 Voir les opérations</button>
+          </div>
+        `;
+
+      } catch (error) {
+        console.error('❌ Erreur lors de l\'import:', error);
+        log(`❌ ERREUR: ${error.message}`);
+
+        // Afficher l'erreur
+        resultDiv.innerHTML = `
+          <div class="alert alert-error">
+            <strong>❌ Erreur lors de l'import</strong><br>
+            ${error.message}<br><br>
+            <small>Consultez le log ci-dessous pour plus de détails.</small>
+          </div>
+          <div style="text-align: center; margin-top: 16px;">
+            <button class="btn btn-primary" onclick="handleImport()">🔄 Réessayer</button>
+          </div>
+        `;
+      }
+    }
+
+    // Attacher l'événement au bouton
+    document.getElementById('importBtn').addEventListener('click', handleImport);
+  </script>
+</body>
+</html>

@@ -168,3 +168,19 @@ export function fileSize(bytes) {
 
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
+
+/**
+ * Format montant en millions avec séparateurs
+ * @param {number} amount - Montant en XOF
+ * @returns {string} - Ex: "4,20" pour 4200000
+ */
+export function moneyMillions(amount) {
+  if (amount == null || isNaN(amount)) return '-';
+
+  const millions = amount / 1000000;
+
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(millions);
+}

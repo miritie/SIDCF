@@ -3,7 +3,7 @@
    ============================================ */
 
 import { el, mount } from '../../../lib/dom.js';
-import { money } from '../../../lib/format.js';
+import { money, moneyMillions } from '../../../lib/format.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 
@@ -245,7 +245,7 @@ function renderSimpleTable(operations, registries) {
           el('th', { style: { minWidth: '120px' } }, 'Type'),
           el('th', { style: { minWidth: '100px' } }, 'Mode'),
           el('th', { style: { minWidth: '120px', textAlign: 'right' } }, 'Montant (M)'),
-          el('th', { style: { minWidth: '120px' } }, 'Bailleur'),
+          el('th', { style: { minWidth: '120px', textAlign: 'center' } }, 'Bailleur'),
           el('th', { style: { minWidth: '100px' } }, 'État'),
           el('th', { style: { minWidth: '180px' } }, 'Actions')
         ])
@@ -279,8 +279,8 @@ function renderSimpleRow(op, registries) {
     ),
     el('td', {}, typeMarche?.label || op.typeMarche || '-'),
     el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
-    el('td', { style: { fontWeight: '600', textAlign: 'right' } }, (op.montantPrevisionnel / 1000000).toFixed(2)),
-    el('td', { className: 'text-small', title: bailleur?.label },
+    el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
+    el('td', { className: 'text-small', style: { textAlign: 'center' }, title: bailleur?.label },
       bailleur?.code || op.sourceFinancement || '-'
     ),
     el('td', {},

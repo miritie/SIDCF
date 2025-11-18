@@ -7,6 +7,12 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderSteps } from '../../../ui/widgets/steps.js';
 import logger from '../../../lib/logger.js';
+import {
+  isFieldRequired,
+  isFieldOptional,
+  isFieldHidden,
+  getContextualConfig
+} from '../../../lib/procedure-context.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -34,6 +40,9 @@ export async function renderCloture(params) {
 
   const { operation } = fullData;
 
+  // Get mode de passation for contextual behavior
+  const modePassation = operation.modePassation || 'PSD';
+
   // Check if market is terminated (resiliée)
   const isResilie = operation.etat === 'RESILIE';
 
@@ -55,7 +64,16 @@ export async function renderCloture(params) {
     return;
   }
 
-  if (!operation.timeline.includes('EXEC')) {
+  // Vérifier si le marché peut accéder à la clôture
+  // Un marché peut être clôturé s'il est EN_EXEC, CLOS, ou s'il a des ordres de service
+  const { ordresService } = fullData;
+  const canAccessCloture =
+    operation.etat === 'EN_EXEC' ||
+    operation.etat === 'CLOS' ||
+    (ordresService && ordresService.length > 0) ||
+    (operation.timeline && operation.timeline.includes('EXEC'));
+
+  if (!canAccessCloture) {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),
       el('div', { className: 'alert alert-warning' }, [
@@ -180,6 +198,65 @@ export async function renderCloture(params) {
       ])
     ]),
 
+    // Date dernier décompte (tous les modes)
+    el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+      el('div', { className: 'card-header' }, [
+        el('h3', { className: 'card-title' }, '💰 Achèvement Physique des Prestations')
+      ]),
+      el('div', { className: 'card-body' }, [
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, ['Date du dernier décompte', el('span', { className: 'required' }, '*')]),
+          el('input', {
+            type: 'date',
+            className: 'form-input',
+            id: 'cloture-date-dernier-decompte',
+            value: cloture?.dateDernierDecompte || '',
+            required: true
+          }),
+          el('small', { className: 'text-muted' }, 'Date marquant l\'achèvement physique des prestations')
+        ])
+      ])
+    ]),
+
+    // Satisfaction bénéficiaires (PSC uniquement)
+    !isFieldHidden('satisfactionBeneficiaires', modePassation, 'cloture')
+      ? el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+          el('div', { className: 'card-header' }, [
+            el('h3', { className: 'card-title' }, '😊 Satisfaction des Bénéficiaires')
+          ]),
+          el('div', { className: 'card-body' }, [
+            el('div', { className: 'alert alert-info' }, [
+              el('strong', {}, 'Spécifique PSC:'),
+              el('p', { style: { marginTop: '8px' } }, 'Pour les procédures simplifiées de demande de cotation, il est recommandé de recueillir l\'avis des bénéficiaires finaux.')
+            ]),
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, 'Niveau de satisfaction'),
+              el('select', {
+                className: 'form-input',
+                id: 'cloture-satisfaction'
+              }, [
+                el('option', { value: '' }, '-- Sélectionner --'),
+                el('option', { value: 'TRES_SATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'TRES_SATISFAIT' }, 'Très satisfait'),
+                el('option', { value: 'SATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'SATISFAIT' }, 'Satisfait'),
+                el('option', { value: 'NEUTRE', selected: cloture?.satisfactionBeneficiaires === 'NEUTRE' }, 'Neutre'),
+                el('option', { value: 'INSATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'INSATISFAIT' }, 'Insatisfait'),
+                el('option', { value: 'TRES_INSATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'TRES_INSATISFAIT' }, 'Très insatisfait')
+              ])
+            ]),
+            el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
+              el('label', { className: 'form-label' }, 'Commentaires'),
+              el('textarea', {
+                className: 'form-input',
+                id: 'cloture-satisfaction-commentaires',
+                rows: 3,
+                value: cloture?.satisfactionCommentaires || '',
+                placeholder: 'Retours d\'expérience des bénéficiaires...'
+              })
+            ])
+          ])
+        ])
+      : null,
+
     // Synthèse finale
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
@@ -257,10 +334,18 @@ async function handleSave(idOperation, definitive) {
   const dateRP = document.getElementById('cloture-date-rp')?.value;
   const reservesRP = document.getElementById('cloture-reserves-rp')?.value;
   const dateRD = document.getElementById('cloture-date-rd')?.value;
+  const dateDernierDecompte = document.getElementById('cloture-date-dernier-decompte')?.value;
+  const satisfaction = document.getElementById('cloture-satisfaction')?.value || null;
+  const satisfactionCommentaires = document.getElementById('cloture-satisfaction-commentaires')?.value || null;
   const synthese = document.getElementById('cloture-synthese')?.value;
 
   if (!dateRP) {
     alert('⚠️ La date de réception provisoire est obligatoire');
+    return;
+  }
+
+  if (!dateDernierDecompte) {
+    alert('⚠️ La date du dernier décompte est obligatoire');
     return;
   }
 
@@ -282,6 +367,9 @@ async function handleSave(idOperation, definitive) {
       date: dateRD || null,
       pv: dateRD ? 'PV_RD_' + Date.now() + '.pdf' : null
     },
+    dateDernierDecompte,
+    satisfactionBeneficiaires: satisfaction,
+    satisfactionCommentaires,
     mainlevees: [], // TODO: track mainlevees
     syntheseFinale: synthese || '',
     closAt: definitive ? new Date().toISOString() : null,
@@ -294,7 +382,7 @@ async function handleSave(idOperation, definitive) {
   if (existing) {
     result = await dataService.update(ENTITIES.CLOTURE, clotureId, clotureData);
   } else {
-    result = await dataService.create(ENTITIES.CLOTURE, clotureData);
+    result = await dataService.add(ENTITIES.CLOTURE, clotureData);
   }
 
   if (!result.success) {

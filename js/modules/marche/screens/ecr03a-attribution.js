@@ -13,6 +13,12 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderCleRepartitionManager } from '../../../ui/widgets/cle-repartition-manager.js';
 import { renderEcheancierManager } from '../../../ui/widgets/echeancier-manager.js';
+import {
+  isFieldRequired,
+  isFieldOptional,
+  isFieldHidden,
+  getContextualConfig
+} from '../../../lib/procedure-context.js';
 
 // État global pour les widgets
 let cleRepartitionList = [];
@@ -43,6 +49,9 @@ export async function renderAttribution(params) {
     const { operation, attribution } = fullData;
     const registries = dataService.getAllRegistries();
 
+    // Get mode de passation for contextual behavior
+    const modePassation = operation.modePassation || 'PSD';
+
     // Charger attribution existante (si elle existe déjà)
     let existingAttribution = attribution;
 
@@ -61,8 +70,11 @@ export async function renderAttribution(params) {
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
 
+      // Alerte contextuelle
+      renderContextualAlert(modePassation),
+
       // Formulaire
-      renderAttributionForm(existingAttribution, operation, registries),
+      renderAttributionForm(existingAttribution, operation, registries, modePassation),
 
       // Actions
       el('div', { className: 'card' }, [
@@ -97,9 +109,35 @@ export async function renderAttribution(params) {
 }
 
 /**
+ * Alerte contextuelle
+ */
+function renderContextualAlert(modePassation) {
+  const config = getContextualConfig(modePassation, 'attribution');
+  if (!config || !config.note) return null;
+
+  const isPI = modePassation === 'PI';
+  const isAOO = modePassation === 'AOO';
+
+  return el('div', { className: 'card', style: { marginBottom: '24px', borderColor: isPI ? '#dc3545' : '#0dcaf0' } }, [
+    el('div', { className: 'card-header', style: { background: isPI ? '#f8d7da' : '#cff4fc' } }, [
+      el('h3', { className: 'card-title', style: { color: isPI ? '#842029' : '#055160' } }, [
+        el('span', {}, isPI ? '⚠️ Procédure PI - Particularités' : isAOO ? '✅ Procédure AOO - Garanties obligatoires' : '📌 Exigences contextuelles')
+      ])
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'alert ' + (isPI ? 'alert-danger' : 'alert-info') }, [
+        el('strong', {}, config.note),
+        isPI ? el('p', { style: { marginTop: '8px' } }, 'Les champs de garanties et d\'avance seront masqués automatiquement.') : null,
+        isAOO ? el('p', { style: { marginTop: '8px' } }, 'Les garanties d\'avance et de bonne exécution sont OBLIGATOIRES pour ce mode.') : null
+      ])
+    ])
+  ]);
+}
+
+/**
  * Formulaire d'attribution
  */
-function renderAttributionForm(attribution, operation, registries) {
+function renderAttributionForm(attribution, operation, registries, modePassation) {
   const existingAttr = attribution || {};
   const montantHT = existingAttr.montants?.ht || operation.montantPrevisionnel || 0;
   const montantTTC = existingAttr.montants?.ttc || (montantHT * 1.18);
@@ -108,11 +146,14 @@ function renderAttributionForm(attribution, operation, registries) {
     // Section Montants
     renderMontantsSection(montantHT, montantTTC),
 
-    // Section Garanties
-    renderGarantiesSection(existingAttr.garanties || {}),
+    // Section Garanties (contextuelle)
+    renderGarantiesSection(existingAttr.garanties || {}, modePassation),
 
     // Section Réserves CF
     renderReservesCFSection(existingAttr.decisionCF || {}),
+
+    // Section TVA supportée par l'État
+    renderTVASection(existingAttr.tvaEtat || {}),
 
     // Section Clé de Répartition
     renderCleRepartitionSection(montantHT, montantTTC, operation.livrables || [], registries),
@@ -126,27 +167,58 @@ function renderAttributionForm(attribution, operation, registries) {
  * Section Montants
  */
 function renderMontantsSection(montantHT, montantTTC) {
+  // Déterminer la base par défaut (HT si disponible, sinon TTC)
+  const defaultBase = montantHT > 0 ? 'HT' : 'TTC';
+  const defaultMontant = defaultBase === 'HT' ? montantHT : montantTTC;
+
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, '💰 Montants du marché')
     ]),
     el('div', { className: 'card-body' }, [
+      // Sélection de la base de calcul
+      el('div', { style: { marginBottom: '16px' } }, [
+        el('label', { className: 'form-label' }, 'Base de calcul'),
+        el('div', { style: { display: 'flex', gap: '16px' } }, [
+          el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+            el('input', {
+              type: 'radio',
+              name: 'base-calcul',
+              value: 'HT',
+              checked: defaultBase === 'HT',
+              onchange: () => updateMontantsDisplay()
+            }),
+            'Montant HT'
+          ]),
+          el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+            el('input', {
+              type: 'radio',
+              name: 'base-calcul',
+              value: 'TTC',
+              checked: defaultBase === 'TTC',
+              onchange: () => updateMontantsDisplay()
+            }),
+            'Montant TTC'
+          ])
+        ])
+      ]),
+
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
+        // Montant saisi (HT ou TTC selon la base)
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, ['Montant HT (XOF)', el('span', { className: 'required' }, '*')]),
+          el('label', { className: 'form-label', id: 'label-montant-base' }, [
+            defaultBase === 'HT' ? 'Montant HT (XOF)' : 'Montant TTC (XOF)',
+            el('span', { className: 'required' }, '*')
+          ]),
           el('input', {
             type: 'number',
             className: 'form-input',
-            id: 'attr-montant-ht',
-            value: montantHT,
+            id: 'attr-montant-base',
+            value: defaultMontant,
             required: true,
             min: 0,
-            step: 0.01,
-            oninput: () => {
-              const ht = parseFloat(document.getElementById('attr-montant-ht').value) || 0;
-              const ttc = ht * 1.18;
-              document.getElementById('attr-montant-ttc').value = ttc.toFixed(2);
-            }
+            step: 1,
+            oninput: () => calculerMontants()
           })
         ]),
 
@@ -155,69 +227,192 @@ function renderMontantsSection(montantHT, montantTTC) {
           el('input', {
             type: 'number',
             className: 'form-input',
+            id: 'attr-taux-tva',
             value: 18,
-            disabled: true,
-            style: { backgroundColor: '#e9ecef' }
+            min: 0,
+            max: 100,
+            step: 0.01,
+            oninput: () => calculerMontants()
           }),
-          el('small', { className: 'text-muted' }, 'Taux standard Côte d\'Ivoire')
+          el('small', { className: 'text-muted' }, 'Taux standard Côte d\'Ivoire: 18%')
         ]),
 
+        // Montant calculé (TTC ou HT selon la base)
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Montant TTC (XOF)'),
+          el('label', { className: 'form-label', id: 'label-montant-calcule' },
+            defaultBase === 'HT' ? 'Montant TTC (XOF)' : 'Montant HT (XOF)'
+          ),
           el('input', {
             type: 'number',
             className: 'form-input',
-            id: 'attr-montant-ttc',
-            value: montantTTC,
+            id: 'attr-montant-calcule',
+            value: defaultBase === 'HT' ? (montantHT * 1.18).toFixed(0) : (montantTTC / 1.18).toFixed(0),
             disabled: true,
             style: { backgroundColor: '#e9ecef', fontWeight: 'bold' }
           })
         ])
-      ])
+      ]),
+
+      // Résumé des montants
+      el('div', { id: 'montants-resume', style: { marginTop: '16px', padding: '12px', backgroundColor: 'var(--color-gray-100)', borderRadius: '8px' } }, [
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' } }, [
+          el('div', {}, [
+            el('div', { className: 'text-small text-muted' }, 'HT'),
+            el('div', { id: 'resume-ht', style: { fontWeight: '600' } }, formatMoney(defaultBase === 'HT' ? defaultMontant : defaultMontant / 1.18))
+          ]),
+          el('div', {}, [
+            el('div', { className: 'text-small text-muted' }, 'TVA (18%)'),
+            el('div', { id: 'resume-tva', style: { fontWeight: '600' } }, formatMoney(defaultBase === 'HT' ? defaultMontant * 0.18 : defaultMontant - defaultMontant / 1.18))
+          ]),
+          el('div', {}, [
+            el('div', { className: 'text-small text-muted' }, 'TTC'),
+            el('div', { id: 'resume-ttc', style: { fontWeight: '600', color: 'var(--color-primary)' } }, formatMoney(defaultBase === 'HT' ? defaultMontant * 1.18 : defaultMontant))
+          ])
+        ])
+      ]),
+
+      // Champs cachés pour stocker HT et TTC
+      el('input', { type: 'hidden', id: 'attr-montant-ht', value: defaultBase === 'HT' ? defaultMontant : (defaultMontant / 1.18).toFixed(0) }),
+      el('input', { type: 'hidden', id: 'attr-montant-ttc', value: defaultBase === 'HT' ? (defaultMontant * 1.18).toFixed(0) : defaultMontant })
     ])
   ]);
 }
 
 /**
- * Section Garanties
+ * Format money for display
  */
-function renderGarantiesSection(garanties) {
+function formatMoney(value) {
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value) + ' XOF';
+}
+
+/**
+ * Update montants display when base changes
+ */
+function updateMontantsDisplay() {
+  const base = document.querySelector('input[name="base-calcul"]:checked')?.value || 'HT';
+  const labelBase = document.getElementById('label-montant-base');
+  const labelCalcule = document.getElementById('label-montant-calcule');
+
+  if (labelBase && labelCalcule) {
+    if (base === 'HT') {
+      labelBase.innerHTML = 'Montant HT (XOF)<span class="required">*</span>';
+      labelCalcule.textContent = 'Montant TTC (XOF)';
+    } else {
+      labelBase.innerHTML = 'Montant TTC (XOF)<span class="required">*</span>';
+      labelCalcule.textContent = 'Montant HT (XOF)';
+    }
+  }
+
+  calculerMontants();
+}
+
+/**
+ * Calculer les montants HT/TTC
+ */
+function calculerMontants() {
+  const base = document.querySelector('input[name="base-calcul"]:checked')?.value || 'HT';
+  const montantBase = parseFloat(document.getElementById('attr-montant-base')?.value) || 0;
+  const tauxTVA = parseFloat(document.getElementById('attr-taux-tva')?.value) || 18;
+
+  let montantHT, montantTTC, montantTVA;
+
+  if (base === 'HT') {
+    montantHT = montantBase;
+    montantTVA = montantHT * (tauxTVA / 100);
+    montantTTC = montantHT + montantTVA;
+  } else {
+    montantTTC = montantBase;
+    montantHT = montantTTC / (1 + tauxTVA / 100);
+    montantTVA = montantTTC - montantHT;
+  }
+
+  // Update calculated field
+  const montantCalcule = document.getElementById('attr-montant-calcule');
+  if (montantCalcule) {
+    montantCalcule.value = (base === 'HT' ? montantTTC : montantHT).toFixed(0);
+  }
+
+  // Update hidden fields
+  document.getElementById('attr-montant-ht').value = montantHT.toFixed(0);
+  document.getElementById('attr-montant-ttc').value = montantTTC.toFixed(0);
+
+  // Update resume
+  const resumeHT = document.getElementById('resume-ht');
+  const resumeTVA = document.getElementById('resume-tva');
+  const resumeTTC = document.getElementById('resume-ttc');
+
+  if (resumeHT) resumeHT.textContent = formatMoney(montantHT);
+  if (resumeTVA) resumeTVA.textContent = formatMoney(montantTVA);
+  if (resumeTTC) resumeTTC.textContent = formatMoney(montantTTC);
+}
+
+/**
+ * Section Garanties (contextuelle)
+ */
+function renderGarantiesSection(garanties, modePassation) {
+  // Pour PI, masquer complètement la section garanties
+  if (isFieldHidden('garantieAvance', modePassation, 'attribution') &&
+      isFieldHidden('garantieBonneExecution', modePassation, 'attribution')) {
+    return el('div', { className: 'card', style: { display: 'none' } });
+  }
+
   const garantieAvance = garanties.garantieAvance || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
   const garantieBonneExec = garanties.garantieBonneExec || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
   const cautionnement = garanties.cautionnement || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
+
+  // Vérifier si les garanties sont obligatoires (AOO)
+  const avanceObligatoire = isFieldRequired('garantieAvance', modePassation, 'attribution');
+  const bonneExecObligatoire = isFieldRequired('garantieBonneExecution', modePassation, 'attribution');
+
+  const garantiesVisibles = [];
+
+  // Garantie d'avance (si non cachée)
+  if (!isFieldHidden('garantieAvance', modePassation, 'attribution')) {
+    garantiesVisibles.push(
+      renderGarantieItem('avance', 'Garantie d\'avance' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire)
+    );
+  }
+
+  // Garantie de bonne exécution (si non cachée)
+  if (!isFieldHidden('garantieBonneExecution', modePassation, 'attribution')) {
+    if (garantiesVisibles.length > 0) {
+      garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
+    }
+    garantiesVisibles.push(
+      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire)
+    );
+  }
+
+  // Cautionnement (toujours optionnel)
+  if (garantiesVisibles.length > 0) {
+    garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
+  }
+  garantiesVisibles.push(
+    renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false)
+  );
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, '🔐 Garanties et Cautionnement')
     ]),
-    el('div', { className: 'card-body' }, [
-      // Garantie d'avance
-      renderGarantieItem('avance', 'Garantie d\'avance', garantieAvance),
-
-      el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }),
-
-      // Garantie de bonne exécution
-      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution', garantieBonneExec),
-
-      el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }),
-
-      // Cautionnement
-      renderGarantieItem('cautionnement', 'Cautionnement', cautionnement)
-    ])
+    el('div', { className: 'card-body' }, garantiesVisibles)
   ]);
 }
 
 /**
  * Item de garantie
  */
-function renderGarantieItem(id, label, garantie) {
+function renderGarantieItem(id, label, garantie, required = false) {
+  // Par défaut décoché, sauf si existe=true dans les données
+  const isChecked = garantie.existe === true;
+
   return el('div', { style: { marginBottom: '16px' } }, [
     el('div', { style: { marginBottom: '12px' } }, [
       el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
         el('input', {
           type: 'checkbox',
           id: `garantie-${id}-existe`,
-          checked: garantie.existe,
+          checked: isChecked,
           onchange: (e) => {
             const detailsDiv = document.getElementById(`garantie-${id}-details`);
             if (detailsDiv) {
@@ -232,7 +427,7 @@ function renderGarantieItem(id, label, garantie) {
     el('div', {
       id: `garantie-${id}-details`,
       style: {
-        display: garantie.existe ? 'grid' : 'none',
+        display: isChecked ? 'grid' : 'none',
         gridTemplateColumns: 'repeat(4, 1fr)',
         gap: '12px',
         paddingLeft: '24px'
@@ -288,7 +483,8 @@ function renderGarantieItem(id, label, garantie) {
  * Section Réserves CF
  */
 function renderReservesCFSection(decisionCF) {
-  const aReserves = decisionCF.aReserves || false;
+  // Par défaut décoché, sauf si aReserves=true dans les données
+  const aReserves = decisionCF.aReserves === true;
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
@@ -350,6 +546,84 @@ function renderReservesCFSection(decisionCF) {
             rows: 2,
             placeholder: 'Commentaires additionnels...'
           }, decisionCF.commentaire || '')
+        ])
+      ])
+    ])
+  ]);
+}
+
+/**
+ * Section TVA supportée par l'État
+ */
+function renderTVASection(tvaEtat) {
+  // Par défaut décoché, sauf si supporte=true dans les données
+  const supporte = tvaEtat.supporte === true;
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '💵 TVA supportée par l\'État')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+        el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+          el('input', {
+            type: 'checkbox',
+            id: 'tva-etat-supporte',
+            checked: supporte,
+            onchange: (e) => {
+              const detailsDiv = document.getElementById('tva-etat-details');
+              if (detailsDiv) {
+                detailsDiv.style.display = e.target.checked ? 'block' : 'none';
+              }
+            }
+          }),
+          el('span', {}, 'L\'État supporte la TVA (18%)')
+        ])
+      ]),
+
+      el('div', {
+        id: 'tva-etat-details',
+        style: {
+          display: supporte ? 'block' : 'none',
+          padding: '16px',
+          backgroundColor: '#d1ecf1',
+          borderRadius: '4px'
+        }
+      }, [
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Montant TVA supporté (XOF)'),
+            el('input', {
+              type: 'number',
+              className: 'form-input',
+              id: 'tva-etat-montant',
+              value: tvaEtat.montant || '',
+              min: 0,
+              step: 0.01,
+              placeholder: 'Calculé automatiquement ou saisir manuellement'
+            })
+          ]),
+
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Référence décision'),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'tva-etat-reference',
+              value: tvaEtat.reference || '',
+              placeholder: 'Ex: Décision N°2024-XXX'
+            })
+          ])
+        ]),
+
+        el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
+          el('label', { className: 'form-label' }, 'Observations'),
+          el('textarea', {
+            className: 'form-input',
+            id: 'tva-etat-observations',
+            rows: 2,
+            placeholder: 'Observations sur la prise en charge TVA par l\'État...'
+          }, tvaEtat.observations || '')
         ])
       ])
     ])
@@ -480,7 +754,7 @@ async function handleSave(idOperation, operation) {
       attrResult = await dataService.update(ENTITIES.ATTRIBUTION, attributionId, attributionData);
       logger.info('[ECR03A] Attribution mise à jour', attributionData);
     } else {
-      attrResult = await dataService.create(ENTITIES.ATTRIBUTION, attributionData);
+      attrResult = await dataService.add(ENTITIES.ATTRIBUTION, attributionData);
       logger.info('[ECR03A] Attribution créée', attributionData);
     }
 

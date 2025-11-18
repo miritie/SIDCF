@@ -54,21 +54,13 @@ export function renderSidebar() {
       el('div', { className: 'sidebar-section' }, [
         el('div', { className: 'sidebar-section-title' }, 'Administration'),
         el('nav', { className: 'sidebar-nav' }, [
-          el('a', { href: '#/admin/institution', className: 'nav-item' }, [
-            el('span', { className: 'nav-item-icon' }, '⚙️'),
-            el('span', {}, 'Institution')
-          ]),
           el('a', { href: '#/admin/referentiels', className: 'nav-item' }, [
             el('span', { className: 'nav-item-icon' }, '📚'),
             el('span', {}, 'Référentiels')
           ]),
-          el('a', { href: '#/admin/regles', className: 'nav-item' }, [
-            el('span', { className: 'nav-item-icon' }, '⚖️'),
-            el('span', {}, 'Règles & Procédures')
-          ]),
-          el('a', { href: '#/admin/pieces', className: 'nav-item' }, [
-            el('span', { className: 'nav-item-icon' }, '📄'),
-            el('span', {}, 'Matrice des pièces')
+          el('a', { href: '#/admin/config-etapes', className: 'nav-item' }, [
+            el('span', { className: 'nav-item-icon' }, '🎯'),
+            el('span', {}, 'Configuration Étapes')
           ])
         ])
       ])

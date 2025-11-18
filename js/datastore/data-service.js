@@ -132,10 +132,11 @@ class DataService {
    */
   async loadSeedData() {
     try {
-      const seedData = await this.loadJSON('/js/datastore/seed.json');
+      // Utiliser le nouveau fichier seed avec 2 opérations par type de procédure
+      const seedData = await this.loadJSON('/js/datastore/seed-par-procedure.json');
       if (this.adapter.loadSeed) {
         await this.adapter.loadSeed(seedData);
-        logger.info('[DataService] Seed data loaded');
+        logger.info('[DataService] Seed data loaded (12 operations - 2 per procedure type)');
       }
     } catch (error) {
       logger.warn('[DataService] Failed to load seed data:', error.message);
@@ -419,6 +420,11 @@ class DataService {
 
 // Singleton instance
 const dataService = new DataService();
+
+// Export helper function for getRulesConfig
+export function getRulesConfig() {
+  return dataService.getRulesConfig();
+}
 
 export default dataService;
 export { ENTITIES };

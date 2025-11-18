@@ -1,17 +1,44 @@
 /* ============================================
    ECR04A - Exécution & Ordres de Service
+   Simplifié : OS de démarrage unique + lien Avenants
    ============================================ */
 
 import { el, mount } from '../../../lib/dom.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderSteps } from '../../../ui/widgets/steps.js';
+import { money } from '../../../lib/format.js';
 import logger from '../../../lib/logger.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
   btn.addEventListener('click', onClick);
   return btn;
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    return new Date(dateStr).toLocaleDateString('fr-FR');
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
+ * Format bureau display
+ */
+function formatBureau(bureau) {
+  if (!bureau || !bureau.type) return '-';
+  if (bureau.type === 'UA') {
+    return `🏛️ ${bureau.nom || 'UA'}`;
+  } else if (bureau.type === 'ENTREPRISE') {
+    return `🏢 ${bureau.nom || 'Entreprise'}`;
+  }
+  return '-';
 }
 
 export async function renderExecutionOS(params) {
@@ -33,11 +60,28 @@ export async function renderExecutionOS(params) {
     return;
   }
 
-  const { operation, attribution, ordresService, visasCF } = fullData;
+  const { operation, attribution, ordresService, visasCF, avenants } = fullData;
   const registries = dataService.getAllRegistries();
 
+  // Vérifier si l'OS de démarrage existe déjà
+  // Le premier OS créé est considéré comme l'OS de démarrage
+  const osDemarrage = ordresService && ordresService.length > 0 ? ordresService[0] : null;
+  const hasOSDemarrage = !!osDemarrage;
+
+  // Helper pour vérifier si l'attribution est complète (supporte les deux structures)
+  const isAttributionComplete = (attr) => {
+    if (!attr) return false;
+    // Nouvelle structure JSONB (PostgreSQL)
+    const hasAttributaire = attr.attributaire?.nom || attr.attributaire?.entrepriseId;
+    const hasMontant = attr.montants?.attribue > 0 || attr.montants?.ttc > 0;
+    if (hasAttributaire && hasMontant) return true;
+    // Ancienne structure
+    if (attr.titulaire && attr.montantAttribue > 0) return true;
+    return false;
+  };
+
   // Check if attribution is complete
-  if (!attribution || !attribution.titulaire || !attribution.montantAttribue) {
+  if (!isAttributionComplete(attribution)) {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),
       el('div', { className: 'alert alert-warning' }, [
@@ -54,9 +98,15 @@ export async function renderExecutionOS(params) {
     return;
   }
 
-  // Check if visa CF granted
-  const visaFavorable = visasCF && visasCF.length > 0 && visasCF.some(v => v.decision === 'FAVORABLE');
-  if (!visaFavorable && operation.etat !== 'EN_EXEC') {
+  // Déterminer si le visa CF est requis selon le mode de passation
+  const modePassation = operation.modePassation || 'PSD';
+  const visaRequired = ['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation);
+
+  // Check if visa CF granted (si requis)
+  const visaFavorable = visasCF && visasCF.length > 0 &&
+    visasCF.some(v => ['VISA', 'FAVORABLE', 'VISE', 'VISE_RESERVE'].includes(v.decision));
+
+  if (visaRequired && !visaFavorable && operation.etat !== 'EN_EXEC' && operation.etat !== 'CLOS') {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),
       el('div', { className: 'alert alert-warning' }, [
@@ -67,7 +117,7 @@ export async function renderExecutionOS(params) {
         ])
       ]),
       el('div', { style: { marginTop: '16px' } }, [
-        createButton('btn btn-primary', '← Vers Visa CF', () => router.navigate('/visa-cf', { idOperation })),
+        createButton('btn btn-primary', '← Vers Engagement', () => router.navigate('/visa-cf', { idOperation })),
         createButton('btn btn-secondary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
       ])
     ]));
@@ -77,6 +127,12 @@ export async function renderExecutionOS(params) {
   // Check delay alert (OS > 30 days after visa)
   const delayAlert = checkDelayAlert(operation, ordresService);
 
+  // Calcul des KPIs pour les avenants
+  const montantInitial = attribution?.montants?.ttc || attribution?.montants?.attribue || operation?.montantPrevisionnel || 0;
+  const totalAvenants = avenants?.reduce((sum, av) => sum + (av.variationMontant || 0), 0) || 0;
+  const montantActuel = montantInitial + totalAvenants;
+  const pourcentageAvenants = montantInitial > 0 ? (totalAvenants / montantInitial) * 100 : 0;
+
   const page = el('div', { className: 'page' }, [
     // Timeline
     renderSteps(fullData, idOperation),
@@ -84,7 +140,7 @@ export async function renderExecutionOS(params) {
     // Header
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Exécution & Ordres de Service'),
+      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Exécution du marché'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 
@@ -94,132 +150,218 @@ export async function renderExecutionOS(params) {
     // Attribution summary
     renderAttributionSummary(attribution),
 
-    // OS list
+    // =========================================
+    // SECTION 1: Ordre de Service de Démarrage
+    // =========================================
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Ordres de Service')
+        el('h3', { className: 'card-title' }, '🚀 Ordre de Service de Démarrage')
       ]),
       el('div', { className: 'card-body' }, [
-        ordresService && ordresService.length > 0
-          ? renderOSTable(ordresService)
-          : el('div', { className: 'alert alert-info' }, [
-              el('div', { className: 'alert-icon' }, 'ℹ️'),
-              el('div', { className: 'alert-content' }, [
-                el('div', { className: 'alert-title' }, 'Aucun ordre de service enregistré'),
-                el('div', { className: 'alert-message' }, 'Ajoutez le premier ordre de service pour démarrer l\'exécution du marché.')
+        hasOSDemarrage
+          // Afficher l'OS de démarrage existant
+          ? el('div', {}, [
+              el('div', { className: 'alert alert-success', style: { marginBottom: '16px' } }, [
+                el('div', { className: 'alert-icon' }, '✅'),
+                el('div', { className: 'alert-content' }, [
+                  el('div', { className: 'alert-title' }, 'Travaux démarrés'),
+                  el('div', { className: 'alert-message' }, `OS n° ${osDemarrage.numero} émis le ${formatDate(osDemarrage.dateEmission)}`)
+                ])
+              ]),
+              el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
+                renderField('Numéro OS', osDemarrage.numero),
+                renderField('Date d\'émission', formatDate(osDemarrage.dateEmission)),
+                renderField('Bureau de contrôle', formatBureau(osDemarrage.bureauControle)),
+                renderField('Bureau d\'études', formatBureau(osDemarrage.bureauEtudes))
+              ]),
+              osDemarrage.objet ? el('div', { style: { marginTop: '16px' } }, [
+                el('div', { className: 'text-small text-muted' }, 'Objet'),
+                el('div', { style: { marginTop: '4px' } }, osDemarrage.objet)
+              ]) : null
+            ])
+          // Formulaire pour créer l'OS de démarrage
+          : el('div', {}, [
+              el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+                el('div', { className: 'alert-icon' }, 'ℹ️'),
+                el('div', { className: 'alert-content' }, [
+                  el('div', { className: 'alert-title' }, 'Travaux non démarrés'),
+                  el('div', { className: 'alert-message' }, 'Émettez l\'ordre de service de démarrage pour lancer l\'exécution du marché.')
+                ])
+              ]),
+
+              el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
+                el('div', { className: 'form-field' }, [
+                  el('label', { className: 'form-label' }, [
+                    'Numéro OS',
+                    el('span', { className: 'required' }, '*')
+                  ]),
+                  el('input', {
+                    type: 'text',
+                    className: 'form-input',
+                    id: 'os-numero',
+                    placeholder: 'Ex: OS-2024-001'
+                  })
+                ]),
+
+                el('div', { className: 'form-field' }, [
+                  el('label', { className: 'form-label' }, [
+                    'Date d\'émission',
+                    el('span', { className: 'required' }, '*')
+                  ]),
+                  el('input', {
+                    type: 'date',
+                    className: 'form-input',
+                    id: 'os-date',
+                    value: new Date().toISOString().split('T')[0]
+                  })
+                ])
+              ]),
+
+              // Bureau de contrôle & Bureau d'études
+              el('div', { style: { marginTop: '16px' } }, [
+                el('h4', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau de contrôle / Bureau d\'études')
+              ]),
+
+              el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' } }, [
+                // Bureau de contrôle
+                el('div', { style: { border: '1px solid var(--color-gray-300)', borderRadius: '8px', padding: '12px' } }, [
+                  el('div', { className: 'form-field', style: { marginBottom: '8px' } }, [
+                    el('label', { className: 'form-label' }, 'Bureau de Contrôle'),
+                    el('select', { className: 'form-input', id: 'bc-type' }, [
+                      el('option', { value: '' }, 'Non défini'),
+                      el('option', { value: 'UA' }, 'Unité Administrative'),
+                      el('option', { value: 'ENTREPRISE' }, 'Entreprise externe')
+                    ])
+                  ]),
+                  el('div', { className: 'form-field', id: 'bc-field-container' })
+                ]),
+
+                // Bureau d'études
+                el('div', { style: { border: '1px solid var(--color-gray-300)', borderRadius: '8px', padding: '12px' } }, [
+                  el('div', { className: 'form-field', style: { marginBottom: '8px' } }, [
+                    el('label', { className: 'form-label' }, 'Bureau d\'Études'),
+                    el('select', { className: 'form-input', id: 'be-type' }, [
+                      el('option', { value: '' }, 'Non défini'),
+                      el('option', { value: 'UA' }, 'Unité Administrative'),
+                      el('option', { value: 'ENTREPRISE' }, 'Entreprise externe')
+                    ])
+                  ]),
+                  el('div', { className: 'form-field', id: 'be-field-container' })
+                ])
+              ]),
+
+              el('div', { className: 'form-field', style: { marginTop: '8px' } }, [
+                el('label', { className: 'form-label' }, 'Objet / Description'),
+                el('textarea', {
+                  className: 'form-input',
+                  id: 'os-objet',
+                  rows: 2,
+                  placeholder: 'Description de l\'ordre de service...'
+                })
+              ]),
+
+              el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
+                el('label', { className: 'form-label' }, 'Document OS (PDF)'),
+                el('input', {
+                  type: 'file',
+                  className: 'form-input',
+                  id: 'os-document',
+                  accept: '.pdf'
+                })
+              ]),
+
+              el('div', { style: { marginTop: '16px', display: 'flex', justifyContent: 'flex-end' } }, [
+                createButton('btn btn-primary', '🚀 Émettre l\'OS de démarrage', async () => {
+                  await handleAddOSDemarrage(idOperation);
+                })
               ])
             ])
       ])
     ]),
 
-    // Add OS form
+    // =========================================
+    // SECTION 2: Avenants au marché
+    // =========================================
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Ajouter un ordre de service')
+        el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+          el('h3', { className: 'card-title' }, `📑 Avenants au marché (${avenants?.length || 0})`),
+          hasOSDemarrage
+            ? createButton('btn btn-sm btn-primary', '➕ Nouvel avenant', () => {
+                router.navigate('/avenant-create', { idOperation });
+              })
+            : null
+        ])
       ]),
       el('div', { className: 'card-body' }, [
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Type d\'OS',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('select', { className: 'form-input', id: 'os-type' }, [
-              el('option', { value: '' }, '-- Sélectionnez --'),
-              el('option', { value: 'DEMARRAGE' }, 'OS de démarrage'),
-              el('option', { value: 'ARRET' }, 'OS d\'arrêt'),
-              el('option', { value: 'REPRISE' }, 'OS de reprise'),
-              el('option', { value: 'COMPLEMENTAIRE' }, 'OS complémentaire')
+        !hasOSDemarrage
+          ? el('div', { className: 'alert alert-info' }, [
+              el('div', { className: 'alert-icon' }, 'ℹ️'),
+              el('div', { className: 'alert-content' }, [
+                el('div', { className: 'alert-title' }, 'Exécution non démarrée'),
+                el('div', { className: 'alert-message' }, 'Les avenants ne peuvent être enregistrés qu\'après l\'émission de l\'OS de démarrage.')
+              ])
             ])
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Numéro OS',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'os-numero',
-              placeholder: 'Ex: OS-2024-001'
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Date émission',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'date',
-              className: 'form-input',
-              id: 'os-date',
-              value: new Date().toISOString().split('T')[0]
-            })
-          ])
-        ]),
-
-        // Bureau de contrôle & Bureau d'études
-        el('div', { style: { marginTop: '16px' } }, [
-          el('h4', { style: { fontSize: '16px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau de contrôle / Bureau d\'études')
-        ]),
-
-        el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' } }, [
-          // Bureau de contrôle
-          el('div', { style: { border: '1px solid var(--color-gray-300)', borderRadius: '8px', padding: '16px' } }, [
-            el('h5', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau de Contrôle'),
-            el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
-              el('label', { className: 'form-label' }, 'Type'),
-              el('select', { className: 'form-input', id: 'bc-type' }, [
-                el('option', { value: '' }, 'Non défini'),
-                el('option', { value: 'UA' }, 'Unité Administrative (UA)'),
-                el('option', { value: 'ENTREPRISE' }, 'Entreprise externe')
+          : avenants && avenants.length > 0
+            ? el('div', {}, [
+                // Résumé des avenants
+                el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' } }, [
+                  el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
+                    el('div', { className: 'text-small text-muted' }, 'Montant initial'),
+                    el('div', { style: { fontWeight: '600', fontSize: '14px' } }, money(montantInitial))
+                  ]),
+                  el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
+                    el('div', { className: 'text-small text-muted' }, 'Total avenants'),
+                    el('div', { style: { fontWeight: '600', fontSize: '14px', color: totalAvenants >= 0 ? 'var(--color-success)' : 'var(--color-error)' } },
+                      `${totalAvenants >= 0 ? '+' : ''}${money(totalAvenants)}`)
+                  ]),
+                  el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
+                    el('div', { className: 'text-small text-muted' }, 'Montant actuel'),
+                    el('div', { style: { fontWeight: '600', fontSize: '14px' } }, money(montantActuel))
+                  ]),
+                  el('div', { style: { textAlign: 'center', padding: '12px', background: pourcentageAvenants > 25 ? 'var(--color-warning-bg)' : 'var(--color-gray-100)', borderRadius: '8px' } }, [
+                    el('div', { className: 'text-small text-muted' }, 'Cumul (%)'),
+                    el('div', { style: { fontWeight: '600', fontSize: '14px', color: pourcentageAvenants > 25 ? 'var(--color-warning)' : 'inherit' } },
+                      `${pourcentageAvenants.toFixed(1)}%`)
+                  ])
+                ]),
+                // Liste simplifiée des avenants
+                el('div', { style: { overflowX: 'auto' } }, [
+                  el('table', { className: 'data-table' }, [
+                    el('thead', {}, [
+                      el('tr', {}, [
+                        el('th', {}, 'N°'),
+                        el('th', {}, 'Type'),
+                        el('th', {}, 'Variation'),
+                        el('th', {}, 'Date'),
+                        el('th', {}, 'Motif')
+                      ])
+                    ]),
+                    el('tbody', {},
+                      avenants.map(av => el('tr', {}, [
+                        el('td', { style: { fontWeight: '500' } }, av.numero || '-'),
+                        el('td', {}, av.type || av.typeRef || '-'),
+                        el('td', { style: { color: (av.variationMontant || 0) >= 0 ? 'var(--color-success)' : 'var(--color-error)' } },
+                          av.variationMontant ? money(av.variationMontant) : '-'),
+                        el('td', {}, av.dateSignature ? formatDate(av.dateSignature) : '-'),
+                        el('td', { className: 'text-small' }, av.motifRef || av.motif || '-')
+                      ]))
+                    )
+                  ])
+                ]),
+                // Lien vers l'écran complet
+                el('div', { style: { marginTop: '16px', textAlign: 'right' } }, [
+                  createButton('btn btn-sm btn-secondary', 'Voir tous les avenants →', () => {
+                    router.navigate('/avenants', { idOperation });
+                  })
+                ])
               ])
-            ]),
-            el('div', { className: 'form-field', id: 'bc-field-container' })
-          ]),
-
-          // Bureau d'études
-          el('div', { style: { border: '1px solid var(--color-gray-300)', borderRadius: '8px', padding: '16px' } }, [
-            el('h5', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px' } }, 'Bureau d\'Études'),
-            el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
-              el('label', { className: 'form-label' }, 'Type'),
-              el('select', { className: 'form-input', id: 'be-type' }, [
-                el('option', { value: '' }, 'Non défini'),
-                el('option', { value: 'UA' }, 'Unité Administrative (UA)'),
-                el('option', { value: 'ENTREPRISE' }, 'Entreprise externe')
+            : el('div', { className: 'text-center text-muted', style: { padding: '24px' } }, [
+                el('div', { style: { fontSize: '32px', marginBottom: '8px' } }, '📄'),
+                el('div', {}, 'Aucun avenant enregistré'),
+                el('div', { className: 'text-small', style: { marginTop: '8px' } },
+                  'Les avenants peuvent être ajoutés à tout moment pendant l\'exécution du marché.')
               ])
-            ]),
-            el('div', { className: 'form-field', id: 'be-field-container' })
-          ])
-        ]),
-
-        el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
-          el('label', { className: 'form-label' }, 'Objet / Description'),
-          el('textarea', {
-            className: 'form-input',
-            id: 'os-objet',
-            rows: 3,
-            placeholder: 'Description de l\'ordre de service...'
-          })
-        ]),
-
-        el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
-          el('label', { className: 'form-label' }, 'Document OS (PDF)'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'os-document',
-            accept: '.pdf'
-          })
-        ]),
-
-        el('div', { style: { marginTop: '16px', display: 'flex', justifyContent: 'flex-end' } }, [
-          createButton('btn btn-primary', '+ Ajouter OS', async () => {
-            await handleAddOS(idOperation);
-          })
-        ])
       ])
     ]),
 
@@ -227,8 +369,16 @@ export async function renderExecutionOS(params) {
     el('div', { className: 'card' }, [
       el('div', { className: 'card-body' }, [
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'space-between', alignItems: 'center' } }, [
-          el('div', { className: 'text-small text-muted' }, `${ordresService?.length || 0} ordre(s) de service enregistré(s)`),
-          createButton('btn btn-secondary', 'Retour', () => router.navigate('/fiche-marche', { idOperation }))
+          el('div', { className: 'text-small text-muted' },
+            hasOSDemarrage
+              ? `Travaux démarrés le ${formatDate(osDemarrage.dateEmission)} • ${avenants?.length || 0} avenant(s)`
+              : 'Travaux non démarrés'),
+          el('div', { style: { display: 'flex', gap: '8px' } }, [
+            hasOSDemarrage
+              ? createButton('btn btn-secondary', 'Avenants & Résiliation', () => router.navigate('/avenants', { idOperation }))
+              : null,
+            createButton('btn btn-secondary', '← Retour', () => router.navigate('/fiche-marche', { idOperation }))
+          ])
         ])
       ])
     ])
@@ -236,8 +386,10 @@ export async function renderExecutionOS(params) {
 
   mount('#app', page);
 
-  // Setup bureau listeners
-  setupBureauListeners();
+  // Setup bureau listeners si formulaire affiché
+  if (!hasOSDemarrage) {
+    setupBureauListeners();
+  }
 }
 
 /**
@@ -336,10 +488,52 @@ function checkDelayAlert(operation, ordresService) {
 function renderAttributionSummary(attribution) {
   if (!attribution) return null;
 
-  const isSimple = attribution.attributaire?.singleOrGroup === 'SIMPLE';
-  const attributaireName = isSimple
-    ? attribution.attributaire.entreprises?.[0]?.raisonSociale || 'N/A'
-    : attribution.attributaire.entreprises?.find(e => e.role === 'MANDATAIRE')?.raisonSociale || 'N/A';
+  // Extraire le nom de l'attributaire - supporte plusieurs structures
+  let attributaireName = 'N/A';
+  if (attribution.attributaire) {
+    // Structure avec entreprises[]
+    if (attribution.attributaire.entreprises && attribution.attributaire.entreprises.length > 0) {
+      const isSimple = attribution.attributaire.singleOrGroup === 'SIMPLE';
+      if (isSimple) {
+        attributaireName = attribution.attributaire.entreprises[0]?.raisonSociale || 'N/A';
+      } else {
+        const mandataire = attribution.attributaire.entreprises.find(e => e.role === 'MANDATAIRE');
+        attributaireName = mandataire?.raisonSociale || attribution.attributaire.entreprises[0]?.raisonSociale || 'N/A';
+      }
+    }
+    // Structure simple avec nom direct
+    else if (attribution.attributaire.nom) {
+      attributaireName = attribution.attributaire.nom;
+    }
+    // Structure simple avec raisonSociale directe
+    else if (attribution.attributaire.raisonSociale) {
+      attributaireName = attribution.attributaire.raisonSociale;
+    }
+  }
+  // Ancienne structure avec titulaire
+  else if (attribution.titulaire) {
+    attributaireName = attribution.titulaire;
+  }
+
+  // Extraire le montant TTC - supporte plusieurs sources
+  let montantTTC = 0;
+  if (attribution.montants?.ttc) {
+    montantTTC = attribution.montants.ttc;
+  } else if (attribution.montants?.attribue) {
+    montantTTC = attribution.montants.attribue;
+  } else if (attribution.montantAttribue) {
+    montantTTC = attribution.montantAttribue;
+  }
+
+  // Formatage du montant
+  const montantFormatted = montantTTC > 0
+    ? `${(montantTTC / 1000000).toFixed(2)}M XOF`
+    : 'Non renseigné';
+
+  // Extraire le délai
+  const delai = attribution.delaiExecution || attribution.delai || 0;
+  const unite = attribution.delaiUnite || 'MOIS';
+  const delaiFormatted = delai > 0 ? `${delai} ${unite}` : 'Non renseigné';
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
@@ -348,8 +542,8 @@ function renderAttributionSummary(attribution) {
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
         renderField('Attributaire', attributaireName),
-        renderField('Montant TTC', `${(attribution.montants?.ttc / 1000000).toFixed(2)}M XOF`),
-        renderField('Délai', `${attribution.delaiExecution || 0} ${attribution.delaiUnite || 'MOIS'}`)
+        renderField('Montant TTC', montantFormatted),
+        renderField('Délai d\'exécution', delaiFormatted)
       ])
     ])
   ]);
@@ -363,85 +557,10 @@ function renderField(label, value) {
 }
 
 /**
- * Render OS table
+ * Handle add OS de démarrage
  */
-function renderOSTable(ordresService) {
-  return el('div', { style: { overflowX: 'auto' } }, [
-    el('table', { className: 'data-table' }, [
-      el('thead', {}, [
-        el('tr', {}, [
-          el('th', {}, 'Type'),
-          el('th', {}, 'Numéro'),
-          el('th', {}, 'Date'),
-          el('th', {}, 'Bureau Contrôle'),
-          el('th', {}, 'Bureau Études'),
-          el('th', {}, 'Objet'),
-          el('th', {}, 'Actions')
-        ])
-      ]),
-      el('tbody', {},
-        ordresService.map(os => renderOSRow(os))
-      )
-    ])
-  ]);
-}
-
-function renderOSRow(os) {
-  // Format bureau display
-  const formatBureau = (bureau) => {
-    if (!bureau || !bureau.type) return '-';
-    if (bureau.type === 'UA') {
-      return `🏛️ ${bureau.nom || 'UA'}`;
-    } else if (bureau.type === 'ENTREPRISE') {
-      return `🏢 ${bureau.nom || 'Entreprise'}`;
-    }
-    return '-';
-  };
-
-  return el('tr', {}, [
-    el('td', {}, renderOSTypeBadge(os.type)),
-    el('td', { style: { fontWeight: '500' } }, os.numero),
-    el('td', {}, new Date(os.dateEmission).toLocaleDateString()),
-    el('td', { className: 'text-small' }, formatBureau(os.bureauControle)),
-    el('td', { className: 'text-small' }, formatBureau(os.bureauEtudes)),
-    el('td', {}, os.objet || '-'),
-    el('td', {}, [
-      os.documentId
-        ? el('button', { className: 'btn btn-sm btn-secondary', style: { fontSize: '12px' } }, '📄 Voir doc')
-        : el('span', { className: 'text-muted text-small' }, 'Aucun doc')
-    ])
-  ]);
-}
-
-function renderOSTypeBadge(type) {
-  const badgeMap = {
-    'DEMARRAGE': { label: 'Démarrage', color: 'var(--color-success)' },
-    'ARRET': { label: 'Arrêt', color: 'var(--color-error)' },
-    'REPRISE': { label: 'Reprise', color: 'var(--color-info)' },
-    'COMPLEMENTAIRE': { label: 'Complémentaire', color: 'var(--color-warning)' }
-  };
-
-  const badge = badgeMap[type] || { label: type, color: 'var(--color-gray-500)' };
-
-  return el('span', {
-    style: {
-      display: 'inline-block',
-      padding: '4px 8px',
-      borderRadius: '4px',
-      fontSize: '12px',
-      fontWeight: '500',
-      background: `${badge.color}20`,
-      color: badge.color
-    }
-  }, badge.label);
-}
-
-/**
- * Handle add OS
- */
-async function handleAddOS(idOperation) {
+async function handleAddOSDemarrage(idOperation) {
   // Collect form data
-  const type = document.getElementById('os-type')?.value;
   const numero = document.getElementById('os-numero')?.value;
   const date = document.getElementById('os-date')?.value;
   const objet = document.getElementById('os-objet')?.value;
@@ -458,11 +577,6 @@ async function handleAddOS(idOperation) {
   const beEntrepriseNom = document.getElementById('be-entreprise-nom')?.value;
 
   // Validation
-  if (!type) {
-    alert('⚠️ Veuillez sélectionner un type d\'OS');
-    return;
-  }
-
   if (!numero) {
     alert('⚠️ Veuillez saisir un numéro d\'OS');
     return;
@@ -495,42 +609,44 @@ async function handleAddOS(idOperation) {
     nom: beType === 'UA' ? beUaNom : beEntrepriseNom
   } : { type: null, uaId: null, entrepriseId: null, nom: '' };
 
-  // Create OS entity
-  const osId = `OS-${idOperation}-${Date.now()}`;
+  // Create OS de démarrage entity
+  // Note: Le schéma PostgreSQL n'a pas de colonne 'type', on utilise l'objet pour identifier le type
   const osEntity = {
-    id: osId,
     operationId: idOperation,
     numero,
     dateEmission: date,
-    objet: objet || '',
+    objet: objet || 'Ordre de service de démarrage des travaux',
     docRef,
     bureauControle,
     bureauEtudes,
     createdAt: new Date().toISOString()
   };
 
-  const result = await dataService.create(ENTITIES.ORDRE_SERVICE, osEntity);
+  const result = await dataService.add(ENTITIES.ORDRE_SERVICE, osEntity);
 
   if (!result.success) {
     alert('❌ Erreur lors de la création de l\'ordre de service');
     return;
   }
 
-  // Update operation timeline
+  // Update operation state to EN_EXEC
   const operation = await dataService.get(ENTITIES.OPERATION, idOperation);
-  const updateData = {};
+  const updateData = {
+    etat: 'EN_EXEC',
+    updatedAt: new Date().toISOString()
+  };
 
-  if (!operation.timeline.includes('EXEC')) {
-    updateData.timeline = [...operation.timeline, 'EXEC'];
-    updateData.etat = 'EN_EXEC';
+  // Si timeline existe, ajouter EXEC
+  if (operation.timeline) {
+    if (!operation.timeline.includes('EXEC')) {
+      updateData.timeline = [...operation.timeline, 'EXEC'];
+    }
   }
 
-  if (Object.keys(updateData).length > 0) {
-    await dataService.update(ENTITIES.OPERATION, idOperation, updateData);
-  }
+  await dataService.update(ENTITIES.OPERATION, idOperation, updateData);
 
-  logger.info('[Execution] OS ajouté avec succès:', osId);
-  alert('✅ Ordre de service enregistré');
+  logger.info('[Execution] OS de démarrage créé avec succès:', osId);
+  alert('✅ Ordre de service de démarrage enregistré\nLes travaux peuvent maintenant commencer.');
 
   // Reload page
   router.navigate('/execution', { idOperation });

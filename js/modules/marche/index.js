@@ -14,6 +14,7 @@ import renderEcheancierCle from './screens/ecr03b-echeancier-cle.js';
 import renderVisaCF from './screens/ecr03c-visa-cf.js';
 import renderExecutionOS from './screens/ecr04a-execution-os.js';
 import renderAvenants from './screens/ecr04b-avenants.js';
+import renderAvenantCreate from './screens/ecr04b-avenant-create.js';
 import renderGaranties from './screens/ecr04c-garanties.js';
 import renderCloture from './screens/ecr05-cloture.js';
 import renderDashboardCF from './screens/ecr06-dashboard-cf.js';
@@ -80,6 +81,7 @@ export function registerMarcheRoutes() {
   // Execution
   router.register('/execution', renderExecutionOS);
   router.register('/avenants', renderAvenants);
+  router.register('/avenant-create', renderAvenantCreate);
   router.register('/garanties', renderGaranties);
 
   // Cloture

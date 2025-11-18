@@ -31,8 +31,9 @@ export async function renderAvenants(params) {
   const montantActuel = montantInitial + totalAvenants;
   const pourcentage = montantInitial > 0 ? (totalAvenants / montantInitial) * 100 : 0;
 
+  // Seuils selon le Code des Marchés Publics (30% maximum)
   const seuilAlerte = 25;
-  const seuilBlock = 30;
+  const seuilLegal = 30;
 
   const page = el('div', { className: 'page' }, [
     el('div', { className: 'page-header' }, [
@@ -53,12 +54,14 @@ export async function renderAvenants(params) {
       ])
     ]) : null,
 
-    // Alert si seuil dépassé
-    !isResilie && pourcentage >= seuilAlerte ? el('div', { className: `alert ${pourcentage >= seuilBlock ? 'alert-error' : 'alert-warning'}` }, [
-      el('div', { className: 'alert-icon' }, pourcentage >= seuilBlock ? '🚫' : '⚠️'),
+    // Alert si seuil dépassé (30% selon le Code des Marchés Publics)
+    !isResilie && pourcentage >= seuilAlerte ? el('div', { className: `alert ${pourcentage >= seuilLegal ? 'alert-error' : 'alert-warning'}` }, [
+      el('div', { className: 'alert-icon' }, pourcentage >= seuilLegal ? '🚫' : '⚠️'),
       el('div', { className: 'alert-content' }, [
-        el('div', { className: 'alert-title' }, pourcentage >= seuilBlock ? 'Seuil dépassé' : 'Alerte seuil'),
-        el('div', { className: 'alert-message' }, `Le cumul des avenants (${pourcentage.toFixed(1)}%) ${pourcentage >= seuilBlock ? 'dépasse' : 'approche'} le seuil autorisé (${seuilBlock}%)`)
+        el('div', { className: 'alert-title' }, pourcentage >= seuilLegal ? 'Seuil légal dépassé' : 'Alerte seuil'),
+        el('div', { className: 'alert-message' }, pourcentage >= seuilLegal
+          ? `Le cumul des avenants (${pourcentage.toFixed(1)}%) dépasse le seuil légal de ${seuilLegal}% fixé par le Code des Marchés Publics. Une dérogation est requise.`
+          : `Le cumul des avenants (${pourcentage.toFixed(1)}%) approche le seuil légal de ${seuilLegal}% fixé par le Code des Marchés Publics.`)
       ])
     ]) : null,
 
@@ -84,11 +87,23 @@ export async function renderAvenants(params) {
               [
                 { key: 'numero', label: 'N°' },
                 { key: 'type', label: 'Type' },
-                { key: 'variationMontant', label: 'Montant', render: v => money(v) },
+                {
+                  key: 'variationMontant',
+                  label: 'Impact',
+                  render: (v, row) => {
+                    if (row.type === 'DELAI') {
+                      return row.variationDelai ? `+${row.variationDelai} mois` : '-';
+                    }
+                    return money(v);
+                  }
+                },
                 {
                   key: 'variationMontant',
                   label: '%',
-                  render: (v) => percent((v / montantInitial) * 100, 1)
+                  render: (v, row) => {
+                    if (row.type === 'DELAI') return '-';
+                    return percent((v / montantInitial) * 100, 1);
+                  }
                 },
                 { key: 'motifRef', label: 'Motif' },
                 { key: 'dateSignature', label: 'Date', render: d => d ? new Date(d).toLocaleDateString() : '-' }
@@ -230,7 +245,7 @@ async function handleResiliation(idOperation) {
     createdAt: new Date().toISOString()
   };
 
-  const result = await dataService.create(ENTITIES.RESILIATION, resiliationData);
+  const result = await dataService.add(ENTITIES.RESILIATION, resiliationData);
 
   if (!result.success) {
     alert('❌ Erreur lors de la résiliation');

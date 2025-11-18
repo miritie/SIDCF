@@ -331,14 +331,20 @@ export class RulesEngine {
 
     if (!matrice) return [];
 
+    const operationNature = operation.chaineBudgetaire?.nature || '';
+
     return matrice.seuils_montants.filter(seuil => {
       const montantOK =
         (seuil.min === null || operation.montantPrevisionnel >= seuil.min) &&
         (seuil.max === null || operation.montantPrevisionnel <= seuil.max);
 
+      // Match par préfixe : si la nature est "22", elle matche "221", "222", "223"
+      // ou si la règle contient "22", elle matche une opération avec "221"
       const natureOK =
         seuil.natureEco.includes('all') ||
-        seuil.natureEco.includes(operation.chaineBudgetaire?.nature);
+        seuil.natureEco.includes(operationNature) ||
+        seuil.natureEco.some(code => code.startsWith(operationNature)) ||
+        seuil.natureEco.some(code => operationNature.startsWith(code));
 
       const typeOK =
         seuil.typeMarche.includes('all') ||

@@ -1,0 +1,403 @@
+{
+  "PPM_PLAN": [
+    {
+      "id": "PPM-2024-ADMIN-001",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2024,
+      "source": "IMPORT",
+      "fichier": "PPM_2024_DGMP.xlsx",
+      "feuille": "Operations",
+      "auteur": "admin",
+      "createdAt": "2024-01-15T09:00:00.000Z",
+      "updatedAt": "2024-01-15T09:00:00.000Z"
+    }
+  ],
+  "OPERATION": [
+    {
+      "id": "OP-2024-001",
+      "planId": "PPM-2024-ADMIN-001",
+      "budgetLineId": "BL-2024-002",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2024,
+      "objet": "Construction d'un centre de santé rural à Korhogo",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 250000000,
+      "montantActuel": 307500000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 365,
+      "infrastructure": "Centre de santé",
+      "beneficiaire": "Population de Korhogo",
+      "chaineBudgetaire": {
+        "section": "Section 31",
+        "programme": "Programme Santé Rurale",
+        "activite": "Infrastructure sanitaire",
+        "nature": "231",
+        "bailleur": "ETAT_CI"
+      },
+      "livrables": [
+        {
+          "id": "LIV-001",
+          "type": "BATIMENT",
+          "objet": "Centre de santé rural avec maternité",
+          "localite": {
+            "region": "BAS_SASSANDRA",
+            "departement": "SAN_PEDRO",
+            "commune": "SAN_PEDRO",
+            "localite": "Centre-ville",
+            "lat": 4.7472,
+            "long": -6.6364
+          }
+        }
+      ],
+      "coordsOK": true,
+      "timeline": ["PLANIF", "PROC", "ATTR", "VISE", "EXEC"],
+      "etat": "EXECUTION",
+      "createdAt": "2024-01-20T10:00:00.000Z",
+      "updatedAt": "2024-05-15T14:30:00.000Z"
+    },
+    {
+      "id": "OP-2024-002",
+      "planId": "PPM-2024-ADMIN-001",
+      "budgetLineId": "BL-2024-004",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2024,
+      "objet": "Acquisition de véhicules administratifs",
+      "typeMarche": "FOURNITURES",
+      "modePassation": "PSD",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 75000000,
+      "montantActuel": 75000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 90,
+      "infrastructure": "",
+      "beneficiaire": "Services administratifs",
+      "chaineBudgetaire": {
+        "section": "Section 22",
+        "programme": "Fonctionnement Administration",
+        "activite": "Équipement bureautique",
+        "nature": "232",
+        "bailleur": "ETAT_CI"
+      },
+      "livrables": [
+        {
+          "id": "LIV-002",
+          "type": "EQUIPEMENT",
+          "objet": "15 véhicules 4x4 double cabine",
+          "localite": {
+            "region": "ABJ",
+            "departement": "ABJ_PLATEAU",
+            "commune": "PLATEAU",
+            "localite": "Plateau Centre",
+            "lat": 5.316667,
+            "long": -4.033333
+          }
+        }
+      ],
+      "coordsOK": true,
+      "timeline": ["PLANIF", "PROC", "ATTR"],
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-02-01T08:00:00.000Z",
+      "updatedAt": "2024-04-10T11:20:00.000Z"
+    },
+    {
+      "id": "OP-2024-003",
+      "planId": "PPM-2024-ADMIN-001",
+      "budgetLineId": "BL-2024-003",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2024,
+      "objet": "Étude de faisabilité pour projet routier Abidjan-Yamoussoukro",
+      "typeMarche": "SERVICES_INTELLECTUELS",
+      "modePassation": "PSO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 180000000,
+      "montantActuel": 180000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 180,
+      "infrastructure": "Route Abidjan-Yamoussoukro",
+      "beneficiaire": "Usagers de la route",
+      "chaineBudgetaire": {
+        "section": "Section 23",
+        "programme": "Infrastructures Transport",
+        "activite": "Études et conception",
+        "nature": "233",
+        "bailleur": "BAD"
+      },
+      "livrables": [
+        {
+          "id": "LIV-003",
+          "type": "ETUDE",
+          "objet": "Étude technique et environnementale",
+          "localite": {
+            "region": "YAMOUSSOUKRO",
+            "departement": "YAM",
+            "commune": "YAM",
+            "localite": "Centre-ville",
+            "lat": 6.8276,
+            "long": -5.2893
+          }
+        }
+      ],
+      "coordsOK": true,
+      "timeline": ["PLANIF"],
+      "etat": "PLANIFIE",
+      "createdAt": "2024-03-05T09:30:00.000Z",
+      "updatedAt": "2024-03-05T09:30:00.000Z"
+    }
+  ],
+  "PROCEDURE": [
+    {
+      "id": "PROC-2024-001",
+      "operationId": "OP-2024-001",
+      "commission": "COJO",
+      "modePassation": "AOO",
+      "categorie": "NATIONALE",
+      "dates": {
+        "ouverture": "2024-03-15T09:00:00.000Z",
+        "analyse": "2024-03-20T14:00:00.000Z",
+        "jugement": "2024-03-25T10:00:00.000Z"
+      },
+      "nbOffresRecues": 8,
+      "nbOffresClassees": 5,
+      "pv": {
+        "ouverture": "PV_OUVERTURE_OP001.pdf",
+        "analyse": "PV_ANALYSE_OP001.pdf",
+        "jugement": "PV_JUGEMENT_OP001.pdf"
+      },
+      "rapportAnalyseDoc": "RAPPORT_ANALYSE_OP001.pdf",
+      "decisionAttributionRef": "DECISION_ATTR_OP001.pdf",
+      "createdAt": "2024-03-10T08:00:00.000Z",
+      "updatedAt": "2024-03-25T16:00:00.000Z"
+    }
+  ],
+  "ATTRIBUTION": [
+    {
+      "id": "ATTR-2024-001",
+      "operationId": "OP-2024-001",
+      "attributaire": {
+        "singleOrGroup": "SIMPLE",
+        "groupType": null,
+        "entreprises": [
+          {
+            "id": "ENT-001",
+            "raisonSociale": "SOBEA Construction CI",
+            "RCCM": "CI-ABJ-2015-B-12345",
+            "IFU": "1234567890",
+            "banque": {
+              "nom": "SGBCI",
+              "compte": "CI93 CI02 0001 1234 5678 90",
+              "swift": "SGBCCIXXX"
+            },
+            "part": 100
+          }
+        ]
+      },
+      "montants": {
+        "ht": 245000000,
+        "ttc": 245000000,
+        "confidentiel": false
+      },
+      "dates": {
+        "signatureTitulaire": "2024-04-05T00:00:00.000Z",
+        "signatureAC": "2024-04-08T00:00:00.000Z",
+        "approbation": "2024-04-10T00:00:00.000Z",
+        "decisionCF": "2024-04-15T00:00:00.000Z"
+      },
+      "decisionCF": {
+        "etat": "VISA",
+        "motifRef": null,
+        "commentaire": "Visa accordé sous réserve de transmission des garanties"
+      },
+      "createdAt": "2024-04-01T10:00:00.000Z",
+      "updatedAt": "2024-04-15T15:30:00.000Z"
+    }
+  ],
+  "AVENANT": [
+    {
+      "id": "AVE-2024-001",
+      "operationId": "OP-2024-001",
+      "numero": 1,
+      "type": "FINAN",
+      "variationMontant": 62500000,
+      "variationDuree": 0,
+      "dateSignature": "2024-08-20T00:00:00.000Z",
+      "motifRef": "TRAVAUX_SUPP",
+      "motifAutre": "Travaux de terrassement supplémentaires suite à modification du terrain",
+      "cumulPourcent": 25.5,
+      "visaCFRef": null,
+      "autorisation": null,
+      "createdAt": "2024-08-15T09:00:00.000Z",
+      "updatedAt": "2024-08-20T14:00:00.000Z"
+    }
+  ],
+  "GARANTIE": [
+    {
+      "id": "GAR-2024-001",
+      "operationId": "OP-2024-001",
+      "type": "BONNE_EXEC",
+      "montant": 24500000,
+      "taux": 10,
+      "dateEmission": "2024-04-18T00:00:00.000Z",
+      "dateEcheance": "2025-04-18T00:00:00.000Z",
+      "etat": "ACTIVE",
+      "doc": "GARANTIE_BONNE_EXEC_OP001.pdf",
+      "mainleveeDate": null,
+      "mainleveeDoc": null,
+      "createdAt": "2024-04-18T10:00:00.000Z",
+      "updatedAt": "2024-04-18T10:00:00.000Z"
+    }
+  ],
+  "BUDGET_LINE": [
+    {
+      "id": "BL-2024-001",
+      "section": "101",
+      "sectionLib": "Représentation Nationale",
+      "programme": "13001",
+      "programmeLib": "Assemblée Nationale",
+      "grandeNature": "4",
+      "uaCode": "31990001",
+      "uaLib": "Direction des Affaires Financières / Section 101",
+      "zoneCode": "",
+      "zoneLib": "",
+      "actionCode": "1300101",
+      "actionLib": "Législation",
+      "activiteCode": "78011100361",
+      "activiteLib": "Mettre en oeuvre le projet E-Parlement",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "643220",
+      "ligneLib": "Transferts aux Institutions Constitutionnelles",
+      "AE": 850000000,
+      "CP": 850000000,
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-002",
+      "section": "120",
+      "sectionLib": "Ministère de la Santé et de l'Hygiène Publique",
+      "programme": "15001",
+      "programmeLib": "Administration Générale de la Santé",
+      "grandeNature": "4",
+      "uaCode": "12011001",
+      "uaLib": "Direction Générale de la Santé",
+      "zoneCode": "780102",
+      "zoneLib": "Sous-préfecture de Bingerville",
+      "actionCode": "1500102",
+      "actionLib": "Infrastructure sanitaire rurale",
+      "activiteCode": "78010200145",
+      "activiteLib": "Construire et équiper des centres de santé ruraux",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "231100",
+      "ligneLib": "Bâtiments administratifs et sociaux",
+      "AE": 5500000000,
+      "CP": 4200000000,
+      "createdAt": "2024-01-12T00:00:00.000Z",
+      "updatedAt": "2024-01-12T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-003",
+      "section": "135",
+      "sectionLib": "Ministère de l'Équipement et de l'Entretien Routier",
+      "programme": "17002",
+      "programmeLib": "Infrastructures Routières",
+      "grandeNature": "4",
+      "uaCode": "13512003",
+      "uaLib": "Direction des Grands Travaux",
+      "zoneCode": "",
+      "zoneLib": "",
+      "actionCode": "1700201",
+      "actionLib": "Construction et réhabilitation routes",
+      "activiteCode": "78020100987",
+      "activiteLib": "Réaliser des études de faisabilité routières",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BAD - Banque Africaine de Développement",
+      "ligneCode": "233200",
+      "ligneLib": "Études techniques et d'ingénierie",
+      "AE": 12000000000,
+      "CP": 8500000000,
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-004",
+      "section": "110",
+      "sectionLib": "Ministère de l'Administration du Territoire",
+      "programme": "14001",
+      "programmeLib": "Administration Territoriale",
+      "grandeNature": "2",
+      "uaCode": "11002001",
+      "uaLib": "Direction du Matériel et de la Logistique",
+      "zoneCode": "",
+      "zoneLib": "",
+      "actionCode": "1400105",
+      "actionLib": "Équipement des services",
+      "activiteCode": "78010500234",
+      "activiteLib": "Acquérir des véhicules administratifs",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "232300",
+      "ligneLib": "Matériel de transport",
+      "AE": 3200000000,
+      "CP": 3200000000,
+      "createdAt": "2024-01-18T00:00:00.000Z",
+      "updatedAt": "2024-01-18T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-005",
+      "section": "145",
+      "sectionLib": "Ministère de l'Éducation Nationale",
+      "programme": "18003",
+      "programmeLib": "Enseignement Primaire",
+      "grandeNature": "4",
+      "uaCode": "14523001",
+      "uaLib": "Direction de la Construction Scolaire",
+      "zoneCode": "780310",
+      "zoneLib": "Sous-préfecture de Korhogo",
+      "actionCode": "1800301",
+      "actionLib": "Construction écoles primaires",
+      "activiteCode": "78030100456",
+      "activiteLib": "Construire 50 salles de classe en zones rurales",
+      "typeFinancement": "3 Don",
+      "sourceFinancement": "UE - Union Européenne",
+      "ligneCode": "231200",
+      "ligneLib": "Bâtiments scolaires et universitaires",
+      "AE": 7800000000,
+      "CP": 6500000000,
+      "createdAt": "2024-01-20T00:00:00.000Z",
+      "updatedAt": "2024-01-20T00:00:00.000Z"
+    }
+  ],
+  "ECHEANCIER": [],
+  "CLE_REPARTITION": [],
+  "RECOURS": [],
+  "ORDRE_SERVICE": [],
+  "CLOTURE": [],
+  "ENTREPRISE": [
+    {
+      "id": "ENT-001",
+      "raisonSociale": "SOBEA Construction CI",
+      "RCCM": "CI-ABJ-2015-B-12345",
+      "IFU": "1234567890",
+      "adresse": "Zone Industrielle de Yopougon, Abidjan",
+      "telephone": "+225 27 22 45 67 89",
+      "email": "contact@sobea-ci.com",
+      "banque": {
+        "nom": "SGBCI",
+        "compte": "CI93 CI02 0001 1234 5678 90",
+        "swift": "SGBCCIXXX"
+      },
+      "part": null,
+      "createdAt": "2024-01-10T08:00:00.000Z"
+    }
+  ],
+  "DOCUMENT": []
+}

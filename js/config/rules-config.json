@@ -38,32 +38,49 @@
       "description": "Seuils pour administrations centrales",
       "seuils_montants": [
         {
-          "mode": "PSC",
-          "min": 0,
-          "max": 5000000,
-          "natureEco": ["221", "222", "223"],
-          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS"]
-        },
-        {
           "mode": "PSD",
-          "min": 5000001,
-          "max": 50000000,
-          "natureEco": ["221", "222", "223", "232"],
-          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX"]
+          "label": "Procédure Simplifiée d'Entente Directe",
+          "min": 0,
+          "max": 10000000,
+          "natureEco": ["221", "222", "223", "232", "233"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "description": "Montant strictement inférieur à 10M XOF"
         },
         {
-          "mode": "AOO",
-          "min": 50000001,
-          "max": null,
-          "natureEco": ["231", "232", "233"],
-          "typeMarche": ["TRAVAUX", "FOURNITURES", "SERVICES_COURANTS", "SERVICES_INTELLECTUELS"]
+          "mode": "PSC",
+          "label": "Procédure Simplifiée de Demande de Cotation",
+          "min": 10000000,
+          "max": 30000000,
+          "natureEco": ["221", "222", "223", "232", "233"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "description": "Entre 10M et 30M XOF - Demande à 3 fournisseurs minimum"
+        },
+        {
+          "mode": "PSL",
+          "label": "Procédure Simplifiée à Compétition Limitée",
+          "min": 30000000,
+          "max": 50000000,
+          "natureEco": ["221", "222", "223", "232", "233"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "description": "Entre 30M et 50M XOF - Validation DGMP obligatoire"
         },
         {
           "mode": "PSO",
-          "min": 50000001,
+          "label": "Procédure Simplifiée à Compétition Ouverte",
+          "min": 50000000,
+          "max": 100000000,
+          "natureEco": ["221", "222", "223", "232", "233"],
+          "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "description": "Entre 50M et 100M XOF - Validation DGMP + Publication obligatoire"
+        },
+        {
+          "mode": "AOO",
+          "label": "Appel d'Offres Ouvert",
+          "min": 100000000,
           "max": null,
-          "natureEco": ["233"],
-          "typeMarche": ["SERVICES_INTELLECTUELS"]
+          "natureEco": ["231", "232", "233"],
+          "typeMarche": ["TRAVAUX", "FOURNITURES", "SERVICES_COURANTS", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "description": "100M XOF et plus - Validation DGMP + Publication + COJO"
         }
       ]
     },
@@ -227,7 +244,7 @@
   "referentiels": {
     "description": "Listes de référence pour les formulaires",
     "types_marche": ["TRAVAUX", "FOURNITURES", "SERVICES_COURANTS", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
-    "modes_passation": ["AOO", "AON", "AOI", "AOD", "PSO", "PSC", "PSD", "DGD", "CASU"],
+    "modes_passation": ["AOO", "AON", "AOI", "AOD", "PSO", "PSL", "PSC", "PSD", "PI", "DGD", "CASU"],
     "categories_procedure": ["NATIONALE", "INTERNATIONALE", "RESTREINTE", "OUVERTE"],
     "natures_prix": ["FORFAIT", "UNITAIRES", "MIXTE"],
     "revues": ["A_PRIORI", "A_POSTERIORI", "AUCUNE"],
@@ -297,5 +314,268 @@
       {"code": "BADEA", "label": "Banque Arabe pour le Développement Économique en Afrique"},
       {"code": "AUTRE", "label": "Autre source"}
     ]
+  },
+  "contextualite_procedures": {
+    "description": "Configuration des champs contextuels par mode de passation",
+    "PSD": {
+      "label": "Procédure Simplifiée d'Entente Directe",
+      "phases": ["planification", "contractualisation", "attribution", "execution", "cloture"],
+      "planification": {
+        "champs_requis": ["section", "programme", "action", "region", "departement", "unite", "activite", "natureEco", "typeMarche", "dotation", "objet", "modePassation", "typeLivrable", "typeOperation", "montantPrevHT", "montantPrevTTC", "dateDebutPrev", "dateFinPrev", "dureePrev"],
+        "champs_optionnels": ["sousPrefecture", "beneficiaire", "localite", "coordGPS"],
+        "champs_caches": []
+      },
+      "contractualisation": {
+        "champs_requis": ["bonCommande", "factureProforma"],
+        "champs_optionnels": ["devisConcurrence", "formulaireSelection"],
+        "champs_caches": ["daoPublication", "pvOuverture", "pvAnalyse", "pvJugement", "commission", "categorieProcedure", "typeDossierAppel", "nbOffresRecues", "nbOffresClassees"],
+        "documents_requis": ["BON_COMMANDE", "FACTURE_PROFORMA"],
+        "documents_optionnels": ["DEVIS_CONCURRENCE"],
+        "info_soumissionnaires": false,
+        "info_lots": false,
+        "info_recours": false
+      },
+      "attribution": {
+        "champs_requis": ["numeroBC", "montantAttribution", "dureeExecution", "ncc", "raisonSociale", "banque", "numeroCompte", "typeLivrable", "livrable", "echeancier", "cleRepartition", "programmation"],
+        "champs_optionnels": ["avanceDemarrage", "tauxAvance", "montantAvance", "garantieAvance", "montantGarantie", "dureeGarantie", "coordGPS", "dateVisaCF"],
+        "champs_caches": ["numeroMarche", "lettreMarche"],
+        "note": "PSD: Bon de commande, garanties optionnelles"
+      },
+      "execution": {
+        "champs_requis": ["numeroOS", "dateOS", "dureeExecution", "dateFinPrev"],
+        "champs_optionnels": ["bureauControle", "bureauEtude", "dateResiliation", "motifResiliation", "avenant", "typeAvenant", "typeFinancement", "sourceFinancement", "natureEco", "exoneration"],
+        "champs_caches": []
+      },
+      "cloture": {
+        "champs_requis": ["dateReceptionProv", "pvReceptionProv"],
+        "champs_optionnels": ["periodeGarantie", "dateReceptionDefPrev", "dateFinMarche", "dateDernierDecompte", "dateReceptionDefReelle", "pvReceptionDef"],
+        "champs_caches": [],
+        "note": "Date dernier décompte pour indiquer marché physiquement terminé"
+      }
+    },
+    "PSC": {
+      "label": "Procédure Simplifiée de Demande de Cotation",
+      "phases": ["planification", "contractualisation", "attribution", "execution", "cloture"],
+      "planification": {
+        "champs_requis": ["section", "programme", "action", "region", "departement", "unite", "activite", "natureEco", "typeMarche", "dotation", "objet", "modePassation", "typeLivrable", "typeOperation", "montantPrevHT", "montantPrevTTC", "dateDebutPrev", "dateFinPrev", "dureePrev"],
+        "champs_optionnels": ["sousPrefecture", "beneficiaire", "localite", "coordGPS"],
+        "champs_caches": []
+      },
+      "contractualisation": {
+        "champs_requis": ["dossierConcurrence", "formulaireSelection", "pvOuverture", "dateOuverture", "dateSelection"],
+        "champs_optionnels": ["rapportAnalyse", "dossierRecours"],
+        "champs_caches": ["daoPublication", "pvJugement", "commission", "nbOffresRecues", "nbOffresClassees"],
+        "documents_requis": ["DOSSIER_CONCURRENCE", "FORMULAIRE_SELECTION", "PV_OUVERTURE"],
+        "documents_optionnels": ["RAPPORT_ANALYSE", "DOSSIER_RECOURS"],
+        "info_soumissionnaires": true,
+        "champs_soumissionnaires": ["ncc", "raisonSociale", "natureSiGroupement", "statutSanction"],
+        "info_lots": true,
+        "champs_lots": ["entreprisesSoumissionnaires", "objet", "montantPrevHT", "montantPrevTTC", "livrablesAttendus"],
+        "info_recours": true,
+        "champs_recours": ["motifRecours"]
+      },
+      "attribution": {
+        "champs_requis": ["numeroBC", "numeroMarche", "montantAttribution", "dureeExecution", "ncc", "raisonSociale", "banque", "numeroCompte", "typeLivrable", "livrable", "echeancier", "cleRepartition", "programmation"],
+        "champs_optionnels": ["numeroFacture", "dateVisaCF", "avanceDemarrage", "tauxAvance", "montantAvance", "garantieAvance", "dureeGarantie", "coordGPS"],
+        "champs_caches": [],
+        "note": "PSC: Bon de commande + Numéro marché/lettre de marché le cas échéant"
+      },
+      "execution": {
+        "champs_requis": ["numeroOS", "dateOS", "dureeExecution", "dateFinPrev"],
+        "champs_optionnels": ["bureauControle", "bureauEtude", "dateResiliation", "motifResiliation", "avenant", "typeAvenant", "typeFinancement", "sourceFinancement", "natureEco", "exoneration"],
+        "champs_caches": []
+      },
+      "cloture": {
+        "champs_requis": ["dateReceptionProv", "pvReceptionProv"],
+        "champs_optionnels": ["periodeGarantie", "dateReceptionDefPrev", "dateFinMarche", "dateDernierDecompte", "dateReceptionDefReelle", "pvReceptionDef", "satisfactionBeneficiaires"],
+        "champs_caches": [],
+        "note": "PSC: Satisfaction bénéficiaires/livrables + Date dernier décompte"
+      }
+    },
+    "PSL": {
+      "label": "Procédure Simplifiée à Compétition Limitée",
+      "phases": ["planification", "contractualisation", "attribution", "execution", "cloture"],
+      "planification": {
+        "champs_requis": ["section", "programme", "action", "region", "departement", "unite", "activite", "natureEco", "typeMarche", "dotation", "objet", "modePassation", "typeLivrable", "typeOperation", "montantPrevHT", "montantPrevTTC", "dateDebutPrev", "dateFinPrev", "dureePrev"],
+        "champs_optionnels": ["sousPrefecture", "beneficiaire", "localite", "coordGPS"],
+        "champs_caches": []
+      },
+      "contractualisation": {
+        "champs_requis": ["courrierInvitation", "daoValide", "pvOuverture", "rapportAnalyse", "pvJugement", "dateOuverture", "dateJugement", "commission"],
+        "champs_optionnels": ["mandatRepresentation", "dossierRecours"],
+        "champs_caches": [],
+        "documents_requis": ["COURRIER_INVITATION", "DAO", "PV_OUVERTURE", "RAPPORT_ANALYSE", "PV_JUGEMENT"],
+        "documents_optionnels": ["MANDAT_REPRESENTATION", "DOSSIER_RECOURS", "COURRIERS_ANO", "ECLAIRCISSEMENTS"],
+        "info_soumissionnaires": true,
+        "champs_soumissionnaires": ["ncc", "raisonSociale", "natureSiGroupement", "statutSanction", "statutJuridique"],
+        "info_lots": true,
+        "champs_lots": ["entreprisesSoumissionnaires", "objet", "montantPrevHT", "montantPrevTTC", "livrablesAttendus"],
+        "info_recours": true,
+        "champs_recours": ["motifRecours"],
+        "validation_dgmp": true,
+        "cojo_obligatoire": true
+      },
+      "attribution": {
+        "champs_requis": ["numeroMarche", "montantAttribution", "ncc", "raisonSociale", "banque", "numeroCompte", "typeLivrable", "livrable", "coordGPS", "echeancier", "cleRepartition", "programmation"],
+        "champs_optionnels": ["dateVisaCF", "avanceDemarrage", "tauxAvance", "montantAvance", "garantieAvance", "garantieBonneExecution", "tauxGarantieBonneExecution", "montantGarantieBonneExecution", "dureeGarantie"],
+        "champs_caches": [],
+        "note": "PSL: Garanties optionnelles mais recommandées - Si avance: taux 15% max, Si garantie: 3-5%"
+      },
+      "execution": {
+        "champs_requis": ["numeroOS", "dateOS", "dureeExecution", "dateFinPrev"],
+        "champs_optionnels": ["bureauControle", "bureauEtude", "dateResiliation", "motifResiliation", "avenant", "typeAvenant", "typeFinancement", "sourceFinancement", "natureEco", "exoneration"],
+        "champs_caches": []
+      },
+      "cloture": {
+        "champs_requis": ["dateReceptionProv", "pvReceptionProv"],
+        "champs_optionnels": ["periodeGarantie", "dateReceptionDefPrev", "dateFinMarche", "dateDernierDecompte", "dateReceptionDefReelle", "pvReceptionDef"],
+        "champs_caches": [],
+        "note": "Date dernier décompte pour indiquer marché physiquement terminé"
+      }
+    },
+    "PSO": {
+      "label": "Procédure Simplifiée à Compétition Ouverte",
+      "phases": ["planification", "contractualisation", "attribution", "execution", "cloture"],
+      "planification": {
+        "champs_requis": ["section", "programme", "action", "region", "departement", "unite", "activite", "natureEco", "typeMarche", "dotation", "objet", "modePassation", "typeLivrable", "typeOperation", "montantPrevHT", "montantPrevTTC", "dateDebutPrev", "dateFinPrev", "dureePrev"],
+        "champs_optionnels": ["sousPrefecture", "beneficiaire", "localite", "coordGPS"],
+        "champs_caches": []
+      },
+      "contractualisation": {
+        "champs_requis": ["courrierInvitation", "daoValide", "pvOuverture", "rapportAnalyse", "pvJugement", "dateOuverture", "dateJugement", "commission"],
+        "champs_optionnels": ["mandatRepresentation", "dossierRecours"],
+        "champs_caches": [],
+        "documents_requis": ["COURRIER_INVITATION", "DAO", "PV_OUVERTURE", "RAPPORT_ANALYSE", "PV_JUGEMENT"],
+        "documents_optionnels": ["MANDAT_REPRESENTATION", "DOSSIER_RECOURS", "COURRIERS_ANO", "ECLAIRCISSEMENTS"],
+        "info_soumissionnaires": true,
+        "champs_soumissionnaires": ["ncc", "raisonSociale", "natureSiGroupement", "statutSanction"],
+        "info_lots": true,
+        "champs_lots": ["entreprisesSoumissionnaires", "objet", "montantPrevHT", "montantPrevTTC", "livrablesAttendus"],
+        "info_recours": true,
+        "champs_recours": ["motifRecours"],
+        "validation_dgmp": true,
+        "publication_obligatoire": true,
+        "cojo_obligatoire": true
+      },
+      "attribution": {
+        "champs_requis": ["numeroMarche", "montantAttribution", "ncc", "raisonSociale", "banque", "numeroCompte", "typeLivrable", "livrable", "coordGPS", "echeancier", "cleRepartition", "programmation"],
+        "champs_optionnels": ["dateVisaCF", "avanceDemarrage", "tauxAvance", "montantAvance", "garantieAvance", "garantieBonneExecution", "tauxGarantieBonneExecution", "montantGarantieBonneExecution", "dureeGarantie"],
+        "champs_caches": [],
+        "note": "PSO: Garanties optionnelles mais recommandées - Si avance: taux 15% max, Si garantie: 3-5%"
+      },
+      "execution": {
+        "champs_requis": ["numeroOS", "dateOS", "dureeExecution", "dateFinPrev"],
+        "champs_optionnels": ["bureauControle", "bureauEtude", "dateResiliation", "motifResiliation", "avenant", "typeAvenant", "typeFinancement", "sourceFinancement", "natureEco", "exoneration"],
+        "champs_caches": []
+      },
+      "cloture": {
+        "champs_requis": ["dateReceptionProv", "pvReceptionProv"],
+        "champs_optionnels": ["periodeGarantie", "dateReceptionDefPrev", "dateFinMarche", "dateDernierDecompte", "dateReceptionDefReelle", "pvReceptionDef"],
+        "champs_caches": [],
+        "note": "Date dernier décompte pour indiquer marché physiquement terminé"
+      }
+    },
+    "AOO": {
+      "label": "Appel d'Offres Ouvert",
+      "phases": ["planification", "contractualisation", "attribution", "execution", "cloture"],
+      "planification": {
+        "champs_requis": ["section", "programme", "action", "region", "departement", "unite", "activite", "natureEco", "typeMarche", "dotation", "objet", "modePassation", "typeLivrable", "typeOperation", "montantPrevHT", "montantPrevTTC", "dateDebutPrev", "dateFinPrev", "dureePrev"],
+        "champs_optionnels": ["sousPrefecture", "beneficiaire", "localite", "coordGPS"],
+        "champs_caches": []
+      },
+      "contractualisation": {
+        "champs_requis": ["courrierInvitation", "daoValide", "pvOuverture", "rapportAnalyse", "pvJugement", "dateOuverture", "dateJugement", "commission"],
+        "champs_optionnels": ["mandatRepresentation", "dossierRecours"],
+        "champs_caches": [],
+        "documents_requis": ["COURRIER_INVITATION", "DAO", "PV_OUVERTURE", "RAPPORT_ANALYSE", "PV_JUGEMENT"],
+        "documents_optionnels": ["MANDAT_REPRESENTATION", "DOSSIER_RECOURS", "COURRIERS_ANO", "ECLAIRCISSEMENTS"],
+        "info_soumissionnaires": true,
+        "champs_soumissionnaires": ["ncc", "raisonSociale", "natureSiGroupement", "statutSanction", "statutJuridique"],
+        "info_lots": true,
+        "champs_lots": ["entreprisesSoumissionnaires", "objet", "montantPrevHT", "montantPrevTTC", "livrablesAttendus"],
+        "info_recours": true,
+        "champs_recours": ["motifRecours"],
+        "validation_dgmp": true,
+        "publication_obligatoire": true,
+        "cojo_obligatoire": true
+      },
+      "attribution": {
+        "champs_requis": ["numeroMarche", "montantAttribution", "ncc", "raisonSociale", "banque", "numeroCompte", "avanceDemarrage", "tauxAvance", "montantAvance", "garantieAvance", "garantieBonneExecution", "tauxGarantieBonneExecution", "montantGarantieBonneExecution", "dureeGarantie", "typeLivrable", "livrable", "coordGPS", "echeancier", "cleRepartition", "programmation"],
+        "champs_optionnels": [],
+        "champs_caches": [],
+        "taux_avance": {"min": 0, "max": 15, "recommande": 15, "note": "Forfaitaire 15% ou Facultative 15% - Art 129 et 130"},
+        "taux_garantie_bonne_exec": {"min": 3, "max": 5, "recommande": 5, "note": "Obligatoire entre 3% et 5% - Art 97.3"},
+        "note": "AOO: Garanties obligatoires - Avance forfaitaire/facultative 15%, Garantie bonne exécution 3-5%"
+      },
+      "execution": {
+        "champs_requis": ["numeroOS", "dateOS", "dureeExecution", "dateFinPrev"],
+        "champs_optionnels": ["bureauControle", "bureauEtude", "dateResiliation", "motifResiliation", "avenant", "typeAvenant", "typeFinancement", "sourceFinancement", "natureEco", "exoneration"],
+        "champs_caches": []
+      },
+      "cloture": {
+        "champs_requis": ["dateReceptionProv", "pvReceptionProv"],
+        "champs_optionnels": ["periodeGarantie", "dateReceptionDefPrev", "dateFinMarche", "dateDernierDecompte", "dateReceptionDefReelle", "pvReceptionDef"],
+        "champs_caches": [],
+        "note": "Date dernier décompte pour indiquer marché physiquement terminé"
+      }
+    },
+    "PI": {
+      "label": "Prestations Intellectuelles",
+      "phases": ["planification", "contractualisation", "attribution", "execution", "cloture"],
+      "planification": {
+        "champs_requis": ["section", "programme", "action", "region", "departement", "unite", "activite", "natureEco", "typeMarche", "dotation", "objet", "modePassation", "typeLivrable", "typeOperation", "montantPrevHT", "montantPrevTTC", "dateDebutPrev", "dateFinPrev", "dureePrev"],
+        "champs_optionnels": ["sousPrefecture", "beneficiaire", "localite", "coordGPS"],
+        "champs_caches": []
+      },
+      "contractualisation": {
+        "champs_requis": ["courrierInvitation", "amiOuDP", "pvOuverture", "rapportAnalyse", "pvJugement", "dateOuverture", "dateJugement", "commission"],
+        "champs_optionnels": ["mandatRepresentation", "dossierRecours"],
+        "champs_caches": [],
+        "documents_requis": ["COURRIER_INVITATION", "AMI_DP", "PV_OUVERTURE", "RAPPORT_ANALYSE", "PV_JUGEMENT"],
+        "documents_optionnels": ["MANDAT_REPRESENTATION", "DOSSIER_RECOURS", "COURRIERS_ANO", "ECLAIRCISSEMENTS"],
+        "info_soumissionnaires": true,
+        "champs_soumissionnaires": ["ncc", "raisonSociale", "natureSiGroupement", "statutSanction", "statutJuridique"],
+        "info_lots": true,
+        "champs_lots": ["entreprisesSoumissionnaires", "objet", "montantPrevHT", "montantPrevTTC", "livrablesAttendus"],
+        "info_recours": true,
+        "champs_recours": ["motifRecours"],
+        "validation_dgmp": true,
+        "publication_obligatoire": true,
+        "cojo_obligatoire": true,
+        "methode_selection": ["QBS", "QCBS", "FBS", "LCS"]
+      },
+      "attribution": {
+        "champs_requis": ["numeroMarche", "montantAttribution", "ncc", "raisonSociale", "banque", "numeroCompte", "typeLivrable", "livrable", "coordGPS", "echeancier", "cleRepartition", "programmation"],
+        "champs_optionnels": ["dateVisaCF"],
+        "champs_caches": ["avanceDemarrage", "tauxAvance", "montantAvance", "garantieAvance", "garantieBonneExecution", "tauxGarantieBonneExecution", "montantGarantieBonneExecution", "dureeGarantie"],
+        "note": "PI: Pas de garanties ni d'avance - Art. spécifique prestations intellectuelles"
+      },
+      "execution": {
+        "champs_requis": ["numeroOS", "dateOS", "dureeExecution", "dateFinPrev"],
+        "champs_optionnels": ["bureauControle", "bureauEtude", "dateResiliation", "motifResiliation", "avenant", "typeAvenant", "typeFinancement", "sourceFinancement", "natureEco", "exoneration"],
+        "champs_caches": []
+      },
+      "cloture": {
+        "champs_requis": ["dateReceptionProv", "pvReceptionProv"],
+        "champs_optionnels": ["periodeGarantie", "dateReceptionDefPrev", "dateFinMarche", "dateDernierDecompte", "dateReceptionDefReelle", "pvReceptionDef"],
+        "champs_caches": [],
+        "note": "Date dernier décompte pour indiquer marché physiquement terminé"
+      }
+    }
+  },
+  "nomenclature_etapes": {
+    "description": "Nomenclature paramétrable des étapes du cycle de vie",
+    "defaut": {
+      "PLANIFICATION": "Planification",
+      "PROCEDURE": "Procédure & PV",
+      "ATTRIBUTION": "Attribution",
+      "VISA_CF": "Visa CF",
+      "EXECUTION": "Exécution",
+      "AVENANTS": "Avenants",
+      "GARANTIES": "Garanties",
+      "CLOTURE": "Clôture"
+    },
+    "personnalisable": true,
+    "config_utilisateur": {}
   }
 }

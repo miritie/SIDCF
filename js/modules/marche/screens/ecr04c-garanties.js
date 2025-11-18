@@ -442,7 +442,7 @@ async function handleAddGarantie(idOperation, montantMarche) {
     createdAt: new Date().toISOString()
   };
 
-  const result = await dataService.create(ENTITIES.GARANTIE, garantieData);
+  const result = await dataService.add(ENTITIES.GARANTIE, garantieData);
 
   if (!result.success) {
     alert('❌ Erreur lors de l\'enregistrement de la garantie');
