@@ -68,7 +68,18 @@ function snakeToCamel(obj) {
   if (obj !== null && typeof obj === 'object') {
     return Object.keys(obj).reduce((acc, key) => {
       const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-      acc[camelKey] = snakeToCamel(obj[key]);
+      let value = obj[key];
+
+      // Convertir les montants décimaux (string) en nombres
+      if (typeof value === 'string' && /^\d+(\.\d+)?$/.test(value)) {
+        // C'est un nombre décimal sous forme de string (ex: "75000000.00")
+        const numericKeys = ['montant', 'total', 'pourcentage', 'pourcent'];
+        if (numericKeys.some(k => camelKey.toLowerCase().includes(k))) {
+          value = parseFloat(value);
+        }
+      }
+
+      acc[camelKey] = snakeToCamel(value);
       return acc;
     }, {});
   }
@@ -154,7 +165,7 @@ async function createEntity(entityType, data, env) {
   const values = columns.map(col => {
     const val = snakeData[col];
     if (val === null || val === undefined) return 'NULL';
-    if (typeof val === 'object') return `'${JSON.stringify(val)}'::jsonb`;
+    if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
     if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
     return val;
   });
@@ -184,7 +195,7 @@ async function updateEntity(entityType, id, patch, env) {
     .map(col => {
       const val = snakePatch[col];
       if (val === null || val === undefined) return `${col} = NULL`;
-      if (typeof val === 'object') return `${col} = '${JSON.stringify(val)}'::jsonb`;
+      if (typeof val === 'object') return `${col} = '${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
       if (typeof val === 'string') return `${col} = '${val.replace(/'/g, "''")}'`;
       return `${col} = ${val}`;
     })
@@ -337,7 +348,8 @@ async function handleRequest(request, env) {
     }
 
     // GET /api/entities/:entityType/:id
-    if (method === 'GET' && path.match(/^\/api\/entities\/([A-Z_]+)\/[a-f0-9-]+$/)) {
+    // Support both UUID format and custom IDs (like CLO-OP-2023-001, OS-xxx, etc.)
+    if (method === 'GET' && path.match(/^\/api\/entities\/([A-Z_]+)\/[a-zA-Z0-9_-]+$/)) {
       const parts = path.split('/');
       const entityType = parts[3];
       const id = parts[4];
@@ -354,7 +366,7 @@ async function handleRequest(request, env) {
     }
 
     // PUT /api/entities/:entityType/:id
-    if (method === 'PUT' && path.match(/^\/api\/entities\/([A-Z_]+)\/[a-f0-9-]+$/)) {
+    if (method === 'PUT' && path.match(/^\/api\/entities\/([A-Z_]+)\/[a-zA-Z0-9_-]+$/)) {
       const parts = path.split('/');
       const entityType = parts[3];
       const id = parts[4];
@@ -364,7 +376,7 @@ async function handleRequest(request, env) {
     }
 
     // DELETE /api/entities/:entityType/:id
-    if (method === 'DELETE' && path.match(/^\/api\/entities\/([A-Z_]+)\/[a-f0-9-]+$/)) {
+    if (method === 'DELETE' && path.match(/^\/api\/entities\/([A-Z_]+)\/[a-zA-Z0-9_-]+$/)) {
       const parts = path.split('/');
       const entityType = parts[3];
       const id = parts[4];
@@ -438,6 +450,85 @@ async function handleRequest(request, env) {
     if (method === 'GET' && path === '/api/operations/full') {
       const operations = await queryDatabase('SELECT * FROM v_operations_full ORDER BY created_at DESC', env);
       return jsonResponse(operations);
+    }
+
+    // ============================================
+    // Configuration Routes (Phase Config)
+    // ============================================
+
+    // GET /api/config/phases - Get all phase configurations
+    if (method === 'GET' && path === '/api/config/phases') {
+      const phases = await queryDatabase('SELECT * FROM phase_config WHERE is_active = true ORDER BY mode_passation, phase_order', env);
+      return jsonResponse(phases);
+    }
+
+    // GET /api/config/phases/:modePassation - Get phases for a specific mode
+    if (method === 'GET' && path.match(/^\/api\/config\/phases\/[A-Z]+$/)) {
+      const modePassation = path.split('/')[4];
+      const phases = await queryDatabase(
+        `SELECT * FROM phase_config WHERE mode_passation = '${modePassation}' AND is_active = true ORDER BY phase_order`,
+        env
+      );
+      return jsonResponse(phases);
+    }
+
+    // PUT /api/config/phases/:id - Update a phase configuration
+    if (method === 'PUT' && path.match(/^\/api\/config\/phases\/\d+$/)) {
+      const id = path.split('/')[4];
+      const data = await request.json();
+      const snakeData = camelToSnake(data);
+
+      const setClause = Object.keys(snakeData)
+        .filter(k => k !== 'id' && k !== 'created_at')
+        .map(col => {
+          const val = snakeData[col];
+          if (val === null || val === undefined) return `${col} = NULL`;
+          if (typeof val === 'boolean') return `${col} = ${val}`;
+          if (typeof val === 'number') return `${col} = ${val}`;
+          return `${col} = '${String(val).replace(/'/g, "''")}'`;
+        })
+        .join(', ');
+
+      const sql = `UPDATE phase_config SET ${setClause} WHERE id = ${id} RETURNING *`;
+      const result = await queryDatabase(sql, env);
+
+      if (result.length === 0) {
+        return errorResponse('Phase configuration not found', 404);
+      }
+
+      return jsonResponse(result[0]);
+    }
+
+    // POST /api/config/phases - Create a new phase configuration
+    if (method === 'POST' && path === '/api/config/phases') {
+      const data = await request.json();
+      const snakeData = camelToSnake(data);
+
+      const columns = Object.keys(snakeData).filter(k => k !== 'id');
+      const values = columns.map(col => {
+        const val = snakeData[col];
+        if (val === null || val === undefined) return 'NULL';
+        if (typeof val === 'boolean') return val;
+        if (typeof val === 'number') return val;
+        return `'${String(val).replace(/'/g, "''")}'`;
+      });
+
+      const sql = `INSERT INTO phase_config (${columns.join(', ')}) VALUES (${values.join(', ')}) RETURNING *`;
+      const result = await queryDatabase(sql, env);
+
+      return jsonResponse(result[0], 201);
+    }
+
+    // DELETE /api/config/phases/:id - Delete a phase configuration
+    if (method === 'DELETE' && path.match(/^\/api\/config\/phases\/\d+$/)) {
+      const id = path.split('/')[4];
+      const result = await queryDatabase(`DELETE FROM phase_config WHERE id = ${id} RETURNING *`, env);
+
+      if (result.length === 0) {
+        return errorResponse('Phase configuration not found', 404);
+      }
+
+      return jsonResponse({ success: true, deleted: result[0] });
     }
 
     // Not found
