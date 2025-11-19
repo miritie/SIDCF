@@ -1,0 +1,777 @@
+{
+  "TYPE_INSTITUTION": [
+    { "code": "ADMIN_CENTRALE", "label": "Administration Centrale" },
+    { "code": "SOCIETE_ETAT", "label": "Société d'État" },
+    { "code": "PROJET", "label": "Projet" },
+    { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" }
+  ],
+  "TYPE_MARCHE": [
+    { "code": "TRAVAUX", "label": "Travaux" },
+    { "code": "FOURNITURES", "label": "Fournitures" },
+    { "code": "SERVICES_COURANTS", "label": "Services Courants" },
+    { "code": "SERVICES_INTELLECTUELS", "label": "Services Intellectuels" },
+    { "code": "DELEGATION_SERVICE_PUBLIC", "label": "Délégation de Service Public" }
+  ],
+  "MODE_PASSATION": [
+    { "code": "PSC", "label": "Procédure Simplifiée sur Consultation (PSC)", "seuil": true },
+    { "code": "PSD", "label": "Procédure Simplifiée sur Demande de prix (PSD)", "seuil": true },
+    { "code": "AOO", "label": "Appel d'Offres Ouvert (AOO)", "seuil": true },
+    { "code": "PSO", "label": "Procédure Spécialisée sur Offres (PSO)", "seuil": true },
+    { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false },
+    { "code": "CI", "label": "Concours d'Ingénierie (CI)", "seuil": false },
+    { "code": "DEM", "label": "Demande d'Expression de Manifestation (DEM)", "seuil": false },
+    { "code": "ENTENTE_DIRECTE", "label": "Entente Directe", "seuil": false }
+  ],
+  "CATEGORIE_PROCEDURE": [
+    { "code": "NATIONALE", "label": "Nationale" },
+    { "code": "INTERNATIONALE", "label": "Internationale" }
+  ],
+  "NATURE_PRIX": [
+    { "code": "UNITAIRE", "label": "Prix Unitaire" },
+    { "code": "FORFAITAIRE", "label": "Prix Forfaitaire" },
+    { "code": "MIXTE", "label": "Prix Mixte" }
+  ],
+  "TYPE_COMMISSION": [
+    { "code": "COJO", "label": "Commission de Jugement des Offres (COJO)" },
+    { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" },
+    { "code": "TECH", "label": "Commission Technique" }
+  ],
+  "TYPE_DOSSIER_APPEL": [
+    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOR"] },
+    { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["DEM", "CI"] },
+    { "code": "AONO", "label": "Avis d'Offres Négociées (AONO)", "modes": ["ENTENTE_DIRECTE"] },
+    { "code": "DPI", "label": "Demande de Prix (DPI)", "modes": ["PSD"] },
+    { "code": "DC", "label": "Demande de Cotation (DC)", "modes": ["PSC"] },
+    { "code": "DPS", "label": "Dossier de Procédure Spécialisée (DPS)", "modes": ["PSO"] },
+    { "code": "AUTRE", "label": "Autre dossier", "modes": [] }
+  ],
+  "TYPE_LIVRABLE": [
+    { "code": "INFRASTRUCTURE", "label": "Infrastructure" },
+    { "code": "BATIMENT", "label": "Bâtiment" },
+    { "code": "EQUIPEMENT", "label": "Équipement" },
+    { "code": "FOURNITURE", "label": "Fourniture" },
+    { "code": "SERVICE", "label": "Service" },
+    { "code": "ETUDE", "label": "Étude" },
+    { "code": "FORMATION", "label": "Formation" },
+    { "code": "LOGICIEL", "label": "Logiciel" }
+  ],
+  "LOCALITE_CI": {
+    "regions": [
+      {
+        "code": "ABJ",
+        "label": "Abidjan Autonome",
+        "departements": [
+          {
+            "code": "ABJ_ABOBO",
+            "label": "Abobo",
+            "sousPrefectures": [
+              { "code": "ABOBO", "label": "Abobo", "localites": ["Abobo Gare", "Abobo PK-18", "Anonkoua Kouté"] }
+            ]
+          },
+          {
+            "code": "ABJ_ADJAME",
+            "label": "Adjamé",
+            "sousPrefectures": [
+              { "code": "ADJAME", "label": "Adjamé", "localites": ["Adjamé Centre", "Williamsville", "Liberté"] }
+            ]
+          },
+          {
+            "code": "ABJ_ATTÉCOUBÉ",
+            "label": "Attécoubé",
+            "sousPrefectures": [
+              { "code": "ATTECOUBE", "label": "Attécoubé", "localites": ["Attécoubé Centre", "Locodjro", "Santé"] }
+            ]
+          },
+          {
+            "code": "ABJ_COCODY",
+            "label": "Cocody",
+            "sousPrefectures": [
+              { "code": "COCODY", "label": "Cocody", "localites": ["Deux Plateaux", "Riviera", "Angré", "II Plateaux"] }
+            ]
+          },
+          {
+            "code": "ABJ_KOUMASSI",
+            "label": "Koumassi",
+            "sousPrefectures": [
+              { "code": "KOUMASSI", "label": "Koumassi", "localites": ["Koumassi Centre", "Remblais", "Grand-Carrefour"] }
+            ]
+          },
+          {
+            "code": "ABJ_MARCORY",
+            "label": "Marcory",
+            "sousPrefectures": [
+              { "code": "MARCORY", "label": "Marcory", "localites": ["Marcory Zone 4", "Biétry", "Anoumabo"] }
+            ]
+          },
+          {
+            "code": "ABJ_PLATEAU",
+            "label": "Plateau",
+            "sousPrefectures": [
+              { "code": "PLATEAU", "label": "Plateau", "localites": ["Plateau Centre", "Zone 4", "Cité Administrative"] }
+            ]
+          },
+          {
+            "code": "ABJ_PORT_BOUET",
+            "label": "Port-Bouët",
+            "sousPrefectures": [
+              { "code": "PORT_BOUET", "label": "Port-Bouët", "localites": ["Vridi", "Aéroport", "Gonzagueville"] }
+            ]
+          },
+          {
+            "code": "ABJ_TREICHVILLE",
+            "label": "Treichville",
+            "sousPrefectures": [
+              { "code": "TREICHVILLE", "label": "Treichville", "localites": ["Treichville Centre", "Zone 3", "Biafra"] }
+            ]
+          },
+          {
+            "code": "ABJ_YOPOUGON",
+            "label": "Yopougon",
+            "sousPrefectures": [
+              { "code": "YOPOUGON", "label": "Yopougon", "localites": ["Yopougon Selmer", "Niangon", "Banco"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "YAMOUSSOUKRO",
+        "label": "Yamoussoukro Autonome",
+        "departements": [
+          {
+            "code": "YAM",
+            "label": "Yamoussoukro",
+            "sousPrefectures": [
+              { "code": "YAM_CENTRE", "label": "Yamoussoukro", "localites": ["Centre-ville", "Habitat", "N'Zuessy", "Kokrenou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "AGNEBY_TIASSA",
+        "label": "Agnéby-Tiassa",
+        "departements": [
+          {
+            "code": "AGBOVILLE",
+            "label": "Agboville",
+            "sousPrefectures": [
+              { "code": "AGBOVILLE", "label": "Agboville", "localites": ["Agboville Centre", "Azaguié", "Rubino"] }
+            ]
+          },
+          {
+            "code": "TIASSALE",
+            "label": "Tiassalé",
+            "sousPrefectures": [
+              { "code": "TIASSALE", "label": "Tiassalé", "localites": ["Tiassalé Centre", "Taabo"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAFING",
+        "label": "Bafing",
+        "departements": [
+          {
+            "code": "TOUBA",
+            "label": "Touba",
+            "sousPrefectures": [
+              { "code": "TOUBA", "label": "Touba", "localites": ["Touba Centre", "Booko", "Guintéguéla"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAGOUE",
+        "label": "Bagoué",
+        "departements": [
+          {
+            "code": "BOUNDIALI",
+            "label": "Boundiali",
+            "sousPrefectures": [
+              { "code": "BOUNDIALI", "label": "Boundiali", "localites": ["Boundiali Centre", "Ganaoni", "Kasséré"] }
+            ]
+          },
+          {
+            "code": "TENGRELA",
+            "label": "Tengréla",
+            "sousPrefectures": [
+              { "code": "TENGRELA", "label": "Tengréla", "localites": ["Tengréla Centre", "Kouto"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BAS_SASSANDRA",
+        "label": "Bas-Sassandra",
+        "departements": [
+          {
+            "code": "SAN_PEDRO",
+            "label": "San-Pédro",
+            "sousPrefectures": [
+              { "code": "SAN_PEDRO", "label": "San-Pédro", "localites": ["Centre-ville", "Bardo", "Balmer"] },
+              { "code": "GRAND_BEREBY", "label": "Grand-Béréby", "localites": ["Grand-Béréby Centre", "Djamandioké"] }
+            ]
+          },
+          {
+            "code": "SASSANDRA",
+            "label": "Sassandra",
+            "sousPrefectures": [
+              { "code": "SASSANDRA", "label": "Sassandra", "localites": ["Sassandra Centre", "Dakpadou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BELIER",
+        "label": "Bélier",
+        "departements": [
+          {
+            "code": "TOUMODI",
+            "label": "Toumodi",
+            "sousPrefectures": [
+              { "code": "TOUMODI", "label": "Toumodi", "localites": ["Toumodi Centre", "Kouakro"] }
+            ]
+          },
+          {
+            "code": "TIEBISSOU",
+            "label": "Tiébissou",
+            "sousPrefectures": [
+              { "code": "TIEBISSOU", "label": "Tiébissou", "localites": ["Tiébissou Centre", "Tafiré"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BERE",
+        "label": "Béré",
+        "departements": [
+          {
+            "code": "MANKONO",
+            "label": "Mankono",
+            "sousPrefectures": [
+              { "code": "MANKONO", "label": "Mankono", "localites": ["Mankono Centre", "Tiéningboué", "Bouandougou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "BOUNKANI",
+        "label": "Bounkani",
+        "departements": [
+          {
+            "code": "BOUNA",
+            "label": "Bouna",
+            "sousPrefectures": [
+              { "code": "BOUNA", "label": "Bouna", "localites": ["Bouna Centre", "Doropo", "Tehini"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "CAVALLY",
+        "label": "Cavally",
+        "departements": [
+          {
+            "code": "GUIGLO",
+            "label": "Guiglo",
+            "sousPrefectures": [
+              { "code": "GUIGLO", "label": "Guiglo", "localites": ["Guiglo Centre", "Taï", "Bloléquin"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GBEKE",
+        "label": "Gbêkê",
+        "departements": [
+          {
+            "code": "BOUAKE",
+            "label": "Bouaké",
+            "sousPrefectures": [
+              { "code": "BOUAKE", "label": "Bouaké", "localites": ["Bouaké Centre", "Belleville", "Kennedy", "Koko"] },
+              { "code": "BROBO", "label": "Brobo", "localites": ["Brobo Centre"] }
+            ]
+          },
+          {
+            "code": "SAKASSOU",
+            "label": "Sakassou",
+            "sousPrefectures": [
+              { "code": "SAKASSOU", "label": "Sakassou", "localites": ["Sakassou Centre", "Bodokro"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GBOKLE",
+        "label": "Gbôklé",
+        "departements": [
+          {
+            "code": "SASSANDRA",
+            "label": "Sassandra",
+            "sousPrefectures": [
+              { "code": "SASSANDRA_GBOKLÉ", "label": "Sassandra", "localites": ["Fresco", "Méagui"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GOH",
+        "label": "Gôh",
+        "departements": [
+          {
+            "code": "GAGNOA",
+            "label": "Gagnoa",
+            "sousPrefectures": [
+              { "code": "GAGNOA", "label": "Gagnoa", "localites": ["Gagnoa Centre", "Bayota", "Oumé"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GONTOUGO",
+        "label": "Gontougo",
+        "departements": [
+          {
+            "code": "BONDOUKOU",
+            "label": "Bondoukou",
+            "sousPrefectures": [
+              { "code": "BONDOUKOU", "label": "Bondoukou", "localites": ["Bondoukou Centre", "Gouméré", "Tanda"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GRANDS_PONTS",
+        "label": "Grands-Ponts",
+        "departements": [
+          {
+            "code": "DABOU",
+            "label": "Dabou",
+            "sousPrefectures": [
+              { "code": "DABOU", "label": "Dabou", "localites": ["Dabou Centre", "Jacqueville", "Grand-Lahou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "GUEMON",
+        "label": "Guémon",
+        "departements": [
+          {
+            "code": "DUEKOUE",
+            "label": "Duékoué",
+            "sousPrefectures": [
+              { "code": "DUEKOUE", "label": "Duékoué", "localites": ["Duékoué Centre", "Bangolo", "Facobly"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "HAMBOL",
+        "label": "Hambol",
+        "departements": [
+          {
+            "code": "KATIOLA",
+            "label": "Katiola",
+            "sousPrefectures": [
+              { "code": "KATIOLA", "label": "Katiola", "localites": ["Katiola Centre", "Niakara", "Dabakala"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "HAUT_SASSANDRA",
+        "label": "Haut-Sassandra",
+        "departements": [
+          {
+            "code": "DALOA",
+            "label": "Daloa",
+            "sousPrefectures": [
+              { "code": "DALOA", "label": "Daloa", "localites": ["Daloa Centre", "Vavoua", "Issia"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "IFFOU",
+        "label": "Iffou",
+        "departements": [
+          {
+            "code": "DAOUKRO",
+            "label": "Daoukro",
+            "sousPrefectures": [
+              { "code": "DAOUKRO", "label": "Daoukro", "localites": ["Daoukro Centre", "M'Bahiakro"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "INDENIE_DJUABLIN",
+        "label": "Indénié-Djuablin",
+        "departements": [
+          {
+            "code": "ABENGOUROU",
+            "label": "Abengourou",
+            "sousPrefectures": [
+              { "code": "ABENGOUROU", "label": "Abengourou", "localites": ["Abengourou Centre", "Agnibilékrou", "Bettié"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "KABADOUGOU",
+        "label": "Kabadougou",
+        "departements": [
+          {
+            "code": "ODIENNE",
+            "label": "Odienné",
+            "sousPrefectures": [
+              { "code": "ODIENNE", "label": "Odienné", "localites": ["Odienné Centre", "Marandallah", "Tienko"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "LACS",
+        "label": "Lacs",
+        "departements": [
+          {
+            "code": "DIMBOKRO",
+            "label": "Dimbokro",
+            "sousPrefectures": [
+              { "code": "DIMBOKRO", "label": "Dimbokro", "localites": ["Dimbokro Centre", "Bocanda"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "LAGUNES",
+        "label": "Lagunes",
+        "departements": [
+          {
+            "code": "GRAND_BASSAM",
+            "label": "Grand-Bassam",
+            "sousPrefectures": [
+              { "code": "GRAND_BASSAM", "label": "Grand-Bassam", "localites": ["Grand-Bassam Centre", "Bingerville", "Bonoua"] }
+            ]
+          },
+          {
+            "code": "ADZOPE",
+            "label": "Adzopé",
+            "sousPrefectures": [
+              { "code": "ADZOPE", "label": "Adzopé", "localites": ["Adzopé Centre", "Yakassé-Attobrou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "MARAHOUE",
+        "label": "Marahoué",
+        "departements": [
+          {
+            "code": "BOUAFLE",
+            "label": "Bouaflé",
+            "sousPrefectures": [
+              { "code": "BOUAFLE", "label": "Bouaflé", "localites": ["Bouaflé Centre", "Zuénoula", "Bonon"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "MORONOU",
+        "label": "Moronou",
+        "departements": [
+          {
+            "code": "BONGOUANOU",
+            "label": "Bongouanou",
+            "sousPrefectures": [
+              { "code": "BONGOUANOU", "label": "Bongouanou", "localites": ["Bongouanou Centre", "Arrah", "M'Batto"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "NAWA",
+        "label": "Nawa",
+        "departements": [
+          {
+            "code": "SOUBRE",
+            "label": "Soubré",
+            "sousPrefectures": [
+              { "code": "SOUBRE", "label": "Soubré", "localites": ["Soubré Centre", "Buyo", "Méadji"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "NZIE",
+        "label": "N'zi",
+        "departements": [
+          {
+            "code": "DIVO",
+            "label": "Divo",
+            "sousPrefectures": [
+              { "code": "DIVO", "label": "Divo", "localites": ["Divo Centre", "Hiré", "Lakota"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "PORO",
+        "label": "Poro",
+        "departements": [
+          {
+            "code": "KORHOGO",
+            "label": "Korhogo",
+            "sousPrefectures": [
+              { "code": "KORHOGO", "label": "Korhogo", "localites": ["Korhogo Centre", "Sinématiali", "Dikodougou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "SAN_PEDRO",
+        "label": "San-Pédro",
+        "departements": [
+          {
+            "code": "SAN_PEDRO_REGION",
+            "label": "San-Pédro",
+            "sousPrefectures": [
+              { "code": "SAN_PEDRO_SP", "label": "San-Pédro", "localites": ["San-Pédro Centre", "Tabou"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "TCHOLOGO",
+        "label": "Tchologo",
+        "departements": [
+          {
+            "code": "FERKESSEDOUGOU",
+            "label": "Ferkessédougou",
+            "sousPrefectures": [
+              { "code": "FERKESSEDOUGOU", "label": "Ferkessédougou", "localites": ["Ferkessédougou Centre", "Ouangolodougou", "Kong"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "TONKPI",
+        "label": "Tonkpi",
+        "departements": [
+          {
+            "code": "MAN",
+            "label": "Man",
+            "sousPrefectures": [
+              { "code": "MAN", "label": "Man", "localites": ["Man Centre", "Danané", "Biankouma"] }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "WORODOUGOU",
+        "label": "Worodougou",
+        "departements": [
+          {
+            "code": "SEGUELA",
+            "label": "Séguéla",
+            "sousPrefectures": [
+              { "code": "SEGUELA", "label": "Séguéla", "localites": ["Séguéla Centre", "Kani", "Massala"] }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "CATEGORIE_PRESTATION": [
+    { "code": "INFRASTRUCTURE", "label": "Infrastructure" },
+    { "code": "SERVICE", "label": "Service" },
+    { "code": "EQUIPEMENT", "label": "Équipement" },
+    { "code": "ETUDE", "label": "Étude / Conseil" },
+    { "code": "FORMATION", "label": "Formation" },
+    { "code": "FOURNITURE", "label": "Fourniture" }
+  ],
+  "BAILLEUR": [
+    { "code": "TRESOR", "label": "Trésor Public (CI)", "typeFinancement": "ETAT" },
+    { "code": "BAD", "label": "Banque Africaine de Développement (BAD)", "typeFinancement": "EXTERNE" },
+    { "code": "BM", "label": "Banque Mondiale (BM)", "typeFinancement": "EXTERNE" },
+    { "code": "AFD", "label": "Agence Française de Développement (AFD)", "typeFinancement": "EXTERNE" },
+    { "code": "UE", "label": "Union Européenne (UE)", "typeFinancement": "EXTERNE" },
+    { "code": "USAID", "label": "United States Agency for International Development (USAID)", "typeFinancement": "EXTERNE" },
+    { "code": "BID", "label": "Banque Islamique de Développement (BID)", "typeFinancement": "EXTERNE" },
+    { "code": "BADEA", "label": "Banque Arabe pour le Développement Économique en Afrique (BADEA)", "typeFinancement": "EXTERNE" },
+    { "code": "JICA", "label": "Agence Japonaise de Coopération (JICA)", "typeFinancement": "EXTERNE" },
+    { "code": "KFW", "label": "Banque Allemande de Développement (KfW)", "typeFinancement": "EXTERNE" },
+    { "code": "BEI", "label": "Banque Européenne d'Investissement (BEI)", "typeFinancement": "EXTERNE" },
+    { "code": "BIDC", "label": "Banque d'Investissement et de Développement CEDEAO (BIDC)", "typeFinancement": "EXTERNE" },
+    { "code": "BOAD", "label": "Banque Ouest-Africaine de Développement (BOAD)", "typeFinancement": "EXTERNE" },
+    { "code": "FMI", "label": "Fonds Monétaire International (FMI)", "typeFinancement": "EXTERNE" },
+    { "code": "OPEP", "label": "Fonds de l'OPEP pour le développement international", "typeFinancement": "EXTERNE" }
+  ],
+  "CHAINE_BUDGETAIRE": {
+    "sections": [
+      {
+        "code": "31990001",
+        "label": "Direction de zone 780 102",
+        "programmes": [
+          {
+            "code": "780102",
+            "label": "Sous-préfecture 1300101",
+            "unites": [
+              { "code": "13001", "label": "Assemblée N 1 Personnel", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 1 Investissements", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 1 Transferts", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 2 Biens et services", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 2 Transferts", "zone": "ZONE_13001" },
+              { "code": "13001", "label": "Assemblée N 2 Biens et services", "zone": "ZONE_13001" }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "13030016",
+        "label": "Sénat",
+        "programmes": [
+          {
+            "code": "110101",
+            "label": "Sous-préfecture 1303001",
+            "unites": [
+              { "code": "13030", "label": "Assemblée N 3 Biens et services", "zone": "SENAT_13030" },
+              { "code": "13030", "label": "Assemblée N 3 Personnel", "zone": "SENAT_13030" },
+              { "code": "13030", "label": "Assemblée N 2 Biens et services", "zone": "SENAT_13030" },
+              { "code": "13030", "label": "Assemblée N 3 Transferts", "zone": "SENAT_13030" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "TYPE_FINANCEMENT": [
+    { "code": "ETAT", "label": "Budget de l'État" },
+    { "code": "EMPRUNT", "label": "Emprunt" },
+    { "code": "DON", "label": "Don" }
+  ],
+  "TYPE_REVUE": [
+    { "code": "A_PRIORI", "label": "A priori (Visa CF obligatoire avant signature)", "description": "Le marché nécessite un visa du Contrôle Financier AVANT la signature du contrat" },
+    { "code": "A_POSTERIORI", "label": "A posteriori (Contrôle après signature)", "description": "Le marché est signé puis transmis au Contrôle Financier pour vérification" },
+    { "code": "AUCUNE", "label": "Aucune (Pas de contrôle CF)", "description": "Le marché n'est pas soumis au contrôle du Contrôle Financier" }
+  ],
+  "NATURE_ECO": [
+    { "code": "221", "label": "221 - Fonctionnement courant" },
+    { "code": "222", "label": "222 - Dépenses de maintenance" },
+    { "code": "223", "label": "223 - Achats de biens et services" },
+    { "code": "231", "label": "231 - Constructions" },
+    { "code": "232", "label": "232 - Équipements et matériels" },
+    { "code": "233", "label": "233 - Études et prestations intellectuelles" }
+  ],
+  "TYPE_ECHEANCE": [
+    { "code": "AVANCE", "label": "Avance de démarrage" },
+    { "code": "ACOMPTE", "label": "Acompte sur travaux" },
+    { "code": "SOLDE", "label": "Solde" },
+    { "code": "MENSUEL", "label": "Paiement mensuel" },
+    { "code": "TRIMESTRIEL", "label": "Paiement trimestriel" }
+  ],
+  "TYPE_AVENANT": [
+    { "code": "FINAN", "label": "Financier (augmentation montant)" },
+    { "code": "DELAI", "label": "Délai (prolongation)" },
+    { "code": "TECH", "label": "Technique (modification prestation)" }
+  ],
+  "TYPE_GARANTIE": [
+    { "code": "AVANCE", "label": "Garantie d'avance" },
+    { "code": "BONNE_EXEC", "label": "Garantie de bonne exécution" },
+    { "code": "RETENUE", "label": "Retenue de garantie" }
+  ],
+  "ETAT_GARANTIE": [
+    { "code": "ACTIVE", "label": "Active" },
+    { "code": "MAINLEVEE", "label": "Mainlevée accordée" },
+    { "code": "EXPIREE", "label": "Expirée" }
+  ],
+  "TYPE_RECOURS": [
+    { "code": "GRACIEUX", "label": "Recours gracieux" },
+    { "code": "HIERARCHIQUE", "label": "Recours hiérarchique" },
+    { "code": "CONTENTIEUX", "label": "Recours contentieux" }
+  ],
+  "ETAT_MARCHE": [
+    { "code": "PLANIFIE", "label": "Planifié", "color": "gray" },
+    { "code": "EN_PROC", "label": "En procédure", "color": "info" },
+    { "code": "ATTRIBUE", "label": "Attribué", "color": "warning" },
+    { "code": "VISE", "label": "Visé", "color": "primary" },
+    { "code": "EXECUTION", "label": "En exécution", "color": "primary" },
+    { "code": "RESILIE", "label": "Résilié", "color": "error" },
+    { "code": "CLOS", "label": "Clôturé", "color": "success" }
+  ],
+  "DECISION_CF": [
+    { "code": "VISA", "label": "Visa accordé", "color": "success" },
+    { "code": "VISA_RESERVE", "label": "Visa avec réserves", "color": "warning" },
+    { "code": "REFUS", "label": "Visa refusé", "color": "error" },
+    { "code": "EN_ATTENTE", "label": "En attente d'examen", "color": "info" }
+  ],
+  "STATUT_LIVRABLE": [
+    { "code": "NON_DEMARRE", "label": "Non démarré" },
+    { "code": "DEMARRE", "label": "Démarré" },
+    { "code": "EN_COURS", "label": "En cours", "withPourcentage": true },
+    { "code": "TERMINE", "label": "Terminé" }
+  ],
+  "TYPE_BUREAU": [
+    { "code": "UA", "label": "Unité Administrative" },
+    { "code": "ENTREPRISE", "label": "Entreprise externe" }
+  ],
+  "PERIODICITE_ECHEANCE": [
+    { "code": "LIBRE", "label": "Périodicité libre" },
+    { "code": "MENSUEL", "label": "Mensuel (30 jours)" },
+    { "code": "BIMESTRIEL", "label": "Bimestriel (60 jours)" },
+    { "code": "TRIMESTRIEL", "label": "Trimestriel (90 jours)" },
+    { "code": "SEMESTRIEL", "label": "Semestriel (180 jours)" },
+    { "code": "ANNUEL", "label": "Annuel (365 jours)" }
+  ],
+  "BASE_CALCUL_CLE": [
+    { "code": "HT", "label": "Hors Taxe (HT)" },
+    { "code": "TTC", "label": "Toutes Taxes Comprises (TTC)" },
+    { "code": "HT_TTC", "label": "HT et TTC" }
+  ],
+  "TYPE_PIECE": [
+    { "code": "PPM_APPROUVE", "label": "PPM approuvé" },
+    { "code": "TDR", "label": "Termes de Référence (TdR)" },
+    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)" },
+    { "code": "PV_OUVERTURE", "label": "PV d'ouverture des plis" },
+    { "code": "PV_ANALYSE", "label": "PV d'analyse des offres" },
+    { "code": "PV_JUGEMENT", "label": "PV de jugement" },
+    { "code": "RAPPORT_ANALYSE", "label": "Rapport d'analyse technique et financière" },
+    { "code": "DECISION_ATTRIBUTION", "label": "Décision d'attribution" },
+    { "code": "CONTRAT", "label": "Contrat signé" },
+    { "code": "CAUTION_AVANCE", "label": "Caution d'avance" },
+    { "code": "CAUTION_BONNE_EXEC", "label": "Caution de bonne exécution" },
+    { "code": "OS", "label": "Ordre de Service (OS)" },
+    { "code": "DECOMPTE", "label": "Décompte" },
+    { "code": "AVENANT", "label": "Avenant" },
+    { "code": "PV_RECEPTION_PROV", "label": "PV de réception provisoire" },
+    { "code": "PV_RECEPTION_DEF", "label": "PV de réception définitive" }
+  ],
+  "MOTIF_RESERVE": [
+    { "code": "SEUIL_AVENANT", "label": "Seuil d'avenant proche ou dépassé" },
+    { "code": "DELAI_EXECUTION", "label": "Délai d'exécution excessif" },
+    { "code": "PIECE_MANQUANTE", "label": "Pièce justificative manquante" },
+    { "code": "MONTANT_ELEVE", "label": "Montant jugé élevé" },
+    { "code": "JUSTIFICATION_INSUFFISANTE", "label": "Justification insuffisante" }
+  ],
+  "MOTIF_REFUS": [
+    { "code": "SEUIL_DEPASSE", "label": "Seuil d'avenant dépassé sans autorisation" },
+    { "code": "NON_CONFORME", "label": "Non-conformité réglementaire" },
+    { "code": "BUDGET_INSUFFISANT", "label": "Budget insuffisant" },
+    { "code": "PIECE_INVALIDE", "label": "Pièce justificative invalide" },
+    { "code": "PROCEDURE_IRREGULIERE", "label": "Irrégularité de procédure" }
+  ],
+  "MOTIF_AVENANT": [
+    { "code": "TRAVAUX_SUPP", "label": "Travaux supplémentaires non prévus" },
+    { "code": "MODIFICATION_TECH", "label": "Modification technique" },
+    { "code": "RIGUEUR_CLIMATIQUE", "label": "Rigueur climatique / Intempéries" },
+    { "code": "ARRET_CHANTIER", "label": "Arrêt de chantier imposé" },
+    { "code": "REVISION_PRIX", "label": "Révision des prix" }
+  ],
+  "MOTIF_RESILIATION": [
+    { "code": "DEFAILLANCE_TITULAIRE", "label": "Défaillance du titulaire" },
+    { "code": "NON_RESPECT_DELAI", "label": "Non-respect des délais" },
+    { "code": "MALFACON", "label": "Malfaçons graves" },
+    { "code": "FORCE_MAJEURE", "label": "Force majeure" },
+    { "code": "INTERET_PUBLIC", "label": "Intérêt public" }
+  ]
+}

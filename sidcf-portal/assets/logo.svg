@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" fill="none">
+  <!-- DCF Logo -->
+  <rect x="10" y="10" width="60" height="60" rx="8" fill="#0f5132"/>
+  <text x="40" y="50" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#fff" text-anchor="middle">DCF</text>
+
+  <!-- SIDCF Text -->
+  <text x="85" y="35" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#0f5132">SIDCF</text>
+  <text x="85" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#6b7280">Contrôle Financier</text>
+</svg>

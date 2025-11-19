@@ -1,0 +1,30 @@
+{
+  "_description": "Configuration du lien entre Unités Administratives (UA) et leurs Activités envisageables",
+  "_structure": "{ 'UA_CODE': [ { code, libelle, categorie } ] }",
+
+  "13001": [
+    { "code": "ACT_13001_001", "libelle": "Réhabilitation des infrastructures administratives", "categorie": "INFRASTRUCTURE" },
+    { "code": "ACT_13001_002", "libelle": "Acquisition d'équipements bureautiques", "categorie": "EQUIPEMENT" },
+    { "code": "ACT_13001_003", "libelle": "Formation du personnel administratif", "categorie": "FORMATION" },
+    { "code": "ACT_13001_004", "libelle": "Prestations de services courants", "categorie": "SERVICE" },
+    { "code": "ACT_13001_005", "libelle": "Études et audits", "categorie": "ETUDE" }
+  ],
+
+  "13030": [
+    { "code": "ACT_13030_001", "libelle": "Construction de bâtiments administratifs", "categorie": "INFRASTRUCTURE" },
+    { "code": "ACT_13030_002", "libelle": "Équipement des salles de réunion", "categorie": "EQUIPEMENT" },
+    { "code": "ACT_13030_003", "libelle": "Services d'entretien et maintenance", "categorie": "SERVICE" },
+    { "code": "ACT_13030_004", "libelle": "Acquisition de véhicules administratifs", "categorie": "EQUIPEMENT" },
+    { "code": "ACT_13030_005", "libelle": "Fournitures de bureau", "categorie": "FOURNITURE" },
+    { "code": "ACT_13030_006", "libelle": "Prestations intellectuelles et conseil", "categorie": "ETUDE" }
+  ],
+
+  "_DEFAULT": [
+    { "code": "ACT_DEFAULT_001", "libelle": "Travaux d'infrastructure", "categorie": "INFRASTRUCTURE" },
+    { "code": "ACT_DEFAULT_002", "libelle": "Fournitures diverses", "categorie": "FOURNITURE" },
+    { "code": "ACT_DEFAULT_003", "libelle": "Services courants", "categorie": "SERVICE" },
+    { "code": "ACT_DEFAULT_004", "libelle": "Équipements", "categorie": "EQUIPEMENT" },
+    { "code": "ACT_DEFAULT_005", "libelle": "Études et prestations intellectuelles", "categorie": "ETUDE" },
+    { "code": "ACT_DEFAULT_006", "libelle": "Formation et renforcement de capacités", "categorie": "FORMATION" }
+  ]
+}

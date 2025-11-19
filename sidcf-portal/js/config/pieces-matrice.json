@@ -1,0 +1,380 @@
+{
+  "version": "1.0",
+  "description": "Matrice des pièces obligatoires par phase, mode de passation et type de marché",
+  "matrice": [
+    {
+      "phase": "PLANIF",
+      "label": "Planification",
+      "pieces": [
+        {
+          "code": "PPM_APPROUVE",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "INVITATION",
+      "label": "Invitation",
+      "pieces": [
+        {
+          "code": "COURRIER_INVITATION",
+          "label": "Courrier d'invitation",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "DAC",
+          "label": "Dossier d'Appel à Concurrence",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "DAO",
+          "label": "Dossier d'Appel d'Offres",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "DDC",
+          "label": "Dossier de Demande de Cotations",
+          "obligatoire": true,
+          "modePassation": ["PSC"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "TDR",
+          "label": "Termes de Référence",
+          "obligatoire": true,
+          "modePassation": ["PSO", "CI"],
+          "typeMarche": ["SERVICES_INTELLECTUELS"]
+        },
+        {
+          "code": "MANDAT_CF",
+          "label": "Mandat de représentation du Contrôleur Financier",
+          "obligatoire": false,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "OUVERTURE",
+      "label": "Ouverture des plis",
+      "pieces": [
+        {
+          "code": "LISTE_PRESENCE_COMMISSION",
+          "label": "Liste de présence des membres de la commission (COPE/COJO)",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "MANDAT_COMMISSION",
+          "label": "Copie du mandat des membres de la commission",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "LISTE_DEPOT_PLIS",
+          "label": "Liste de dépôt des plis",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "LISTE_PRESENCE_SOUMISSIONNAIRES",
+          "label": "Liste de présence des soumissionnaires",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "PV_OUVERTURE",
+          "label": "PV d'ouverture des plis",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "COPIES_OFFRES",
+          "label": "Copies des offres des soumissionnaires",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "GRILLE_ANALYSE",
+          "label": "Grille d'analyse des offres",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "DESIGNATION_COMITE_EVAL",
+          "label": "Désignation du comité d'évaluation",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "RAPPORT_OUVERTURE_CF",
+          "label": "Rapport d'ouverture à présenter au CF",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "ANALYSE",
+      "label": "Analyse des offres",
+      "pieces": [
+        {
+          "code": "LISTE_PRESENCE_COMMISSION_ANALYSE",
+          "label": "Liste de présence des membres (si séance séparée)",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "GRILLE_ANALYSE_RENSEIGNEE",
+          "label": "Grille d'analyse des offres renseignée",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "PROJET_RAPPORT_ANALYSE_AGENT",
+          "label": "Projet de rapport d'analyse de l'agent",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "COURRIERS_ECLAIRCISSEMENT",
+          "label": "Courriers de demande et réponses d'éclaircissement",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "RAPPORT_ANALYSE_CONSOLIDE",
+          "label": "Rapport d'analyse consolidé par la commission",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "JUGEMENT",
+      "label": "Jugement",
+      "pieces": [
+        {
+          "code": "DEMANDE_ANO_DGMP",
+          "label": "Demande d'ANO DGMP (si applicable)",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "REPONSE_ANO_DGMP",
+          "label": "Réponse ANO DGMP",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "DEMANDE_ANO_BAILLEUR",
+          "label": "Demande d'ANO Bailleur (si applicable)",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "REPONSE_ANO_BAILLEUR",
+          "label": "Réponse ANO Bailleur",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "DOCUMENTS_RECOURS",
+          "label": "Documents sur les recours éventuels",
+          "obligatoire": false,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "PV_JUGEMENT",
+          "label": "PV de jugement",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "APPROBATION",
+      "label": "Approbation du marché",
+      "pieces": [
+        {
+          "code": "MARCHE_NUMEROTE",
+          "label": "Marché/Contrat numéroté, approuvé et enregistré",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "LETTRE_MARCHE",
+          "label": "Lettre de marché",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        },
+        {
+          "code": "FORMULAIRE_SELECTION",
+          "label": "Formulaire de sélection",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "VISE",
+      "label": "Visa CF",
+      "pieces": [
+        {
+          "code": "VISA_CF",
+          "label": "Visa du Contrôleur Financier",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["*"]
+        }
+      ]
+    },
+    {
+      "phase": "EXEC",
+      "label": "Exécution",
+      "pieces": [
+        {
+          "code": "OS_DEMARRAGE",
+          "label": "Ordre de service de démarrage",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"],
+          "delaiMax": 30
+        },
+        {
+          "code": "GARANTIE_AVANCE",
+          "label": "Garantie de restitution d'avance",
+          "obligatoire": false,
+          "modePassation": ["*"],
+          "typeMarche": ["*"],
+          "condition": "Si avance demandée"
+        },
+        {
+          "code": "GARANTIE_BONNE_EXEC",
+          "label": "Garantie de bonne exécution",
+          "obligatoire": true,
+          "modePassation": ["AOO", "AOR", "PSO"],
+          "typeMarche": ["TRAVAUX", "FOURNITURES"]
+        },
+        {
+          "code": "DECOMPTE",
+          "label": "Décompte de paiement",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"],
+          "multiple": true
+        },
+        {
+          "code": "AVENANT",
+          "label": "Avenant au marché",
+          "obligatoire": false,
+          "modePassation": ["*"],
+          "typeMarche": ["*"],
+          "multiple": true,
+          "condition": "Si modification du marché"
+        },
+        {
+          "code": "RESILIATION",
+          "label": "Document de résiliation",
+          "obligatoire": false,
+          "modePassation": ["*"],
+          "typeMarche": ["*"],
+          "condition": "Si résiliation du marché"
+        }
+      ]
+    },
+    {
+      "phase": "CLOT",
+      "label": "Clôture",
+      "pieces": [
+        {
+          "code": "PV_RECEPTION_PROV",
+          "label": "PV de réception provisoire",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"]
+        },
+        {
+          "code": "RESERVES_RECEPTION_PROV",
+          "label": "Réserves de la réception provisoire",
+          "obligatoire": false,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"]
+        },
+        {
+          "code": "PV_RECEPTION_DEF",
+          "label": "PV de réception définitive",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"]
+        },
+        {
+          "code": "MAINLEVEE_GARANTIES",
+          "label": "Mainlevées des garanties",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"],
+          "multiple": true
+        },
+        {
+          "code": "DECOMPTE_FINAL",
+          "label": "Décompte final et général",
+          "obligatoire": true,
+          "modePassation": ["*"],
+          "typeMarche": ["TRAVAUX"]
+        }
+      ]
+    }
+  ],
+  "regles_conditionnelles": [
+    {
+      "id": "AVANCE_CAUTION",
+      "description": "Si avance > 0, caution d'avance obligatoire",
+      "condition": "avance > 0",
+      "piece_requise": "CAUTION_AVANCE"
+    },
+    {
+      "id": "AVENANT_VISA",
+      "description": "Tout avenant > 10% nécessite visa CF préalable",
+      "condition": "avenant.pourcentage > 10",
+      "action": "VISA_CF_REQUIS"
+    },
+    {
+      "id": "GARANTIE_MAINLEVEE",
+      "description": "Mainlevée des garanties après réception définitive",
+      "condition": "reception_definitive = true",
+      "action": "MAINLEVEE_POSSIBLE"
+    }
+  ]
+}

@@ -1,0 +1,4234 @@
+{
+  "PPM_PLAN": [
+    {
+      "id": "PPM-2023-001",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2023,
+      "source": "IMPORT",
+      "fichier": "PPM_2023_DGMP.xlsx",
+      "feuille": "Operations",
+      "auteur": "admin",
+      "createdAt": "2023-01-15T09:00:00.000Z",
+      "updatedAt": "2023-01-15T09:00:00.000Z"
+    },
+    {
+      "id": "PPM-2024-001",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2024,
+      "source": "IMPORT",
+      "fichier": "PPM_2024_DGMP.xlsx",
+      "feuille": "Operations",
+      "auteur": "admin",
+      "createdAt": "2024-01-15T09:00:00.000Z",
+      "updatedAt": "2024-01-15T09:00:00.000Z"
+    },
+    {
+      "id": "PPM-2025-001",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2025,
+      "source": "IMPORT",
+      "fichier": "PPM_2025_DGMP.xlsx",
+      "feuille": "Operations",
+      "auteur": "admin",
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-01-10T09:00:00.000Z"
+    }
+  ],
+  "OPERATION": [
+    {
+      "id": "OP-2023-001",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-001",
+      "unite": "Direction de la Construction Scolaire",
+      "exercice": 2023,
+      "objet": "Construction de 20 salles de classe à Bouaké",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 380000000,
+      "montantActuel": 380000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 240,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 8,
+      "beneficiaire": "Élèves de Bouaké",
+      "chaineBudgetaire": {
+        "section": "145",
+        "programme": "18003",
+        "activite": "Construction écoles",
+        "nature": "231",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Gbêkê",
+        "regionCode": "GBEKE",
+        "departement": "Bouaké",
+        "departementCode": "BOUAKE",
+        "sousPrefecture": "Bouaké Centre",
+        "sousPrefectureCode": "BOUAKE",
+        "localite": "Bouaké Centre",
+        "latitude": "7.6900",
+        "longitude": "-5.0300",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC",
+        "CLOT"
+      ],
+      "etat": "CLOS",
+      "createdAt": "2023-02-10T10:00:00.000Z",
+      "updatedAt": "2024-02-15T14:30:00.000Z"
+    },
+    {
+      "id": "OP-2023-002",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-002",
+      "unite": "Direction Générale de la Santé",
+      "exercice": 2023,
+      "objet": "Fourniture d'équipements médicaux pour hôpitaux régionaux",
+      "typeMarche": "FOURNITURES",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 850000000,
+      "montantActuel": 850000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 180,
+      "sourceFinancement": "BAD",
+      "typeFinancement": "EMPRUNT",
+      "categoriePrestation": "EQUIPEMENT",
+      "delaiExecution": 6,
+      "beneficiaire": "Hôpitaux régionaux CI",
+      "chaineBudgetaire": {
+        "section": "120",
+        "programme": "15001",
+        "activite": "Équipement sanitaire",
+        "nature": "232",
+        "bailleur": "BAD"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Cocody",
+        "departementCode": "ABJ_COCODY",
+        "sousPrefecture": "Cocody",
+        "sousPrefectureCode": "COCODY",
+        "localite": "Deux Plateaux",
+        "latitude": "5.3600",
+        "longitude": "-3.9900",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC",
+        "CLOT"
+      ],
+      "etat": "CLOS",
+      "createdAt": "2023-01-20T08:00:00.000Z",
+      "updatedAt": "2023-11-10T16:00:00.000Z"
+    },
+    {
+      "id": "OP-2023-003",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-003",
+      "unite": "Direction des Grands Travaux",
+      "exercice": 2023,
+      "objet": "Réhabilitation route Yamoussoukro-Bouaké (75km)",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "MIXTE",
+      "revue": "Oui",
+      "montantPrevisionnel": 12500000000,
+      "montantActuel": 14375000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 730,
+      "sourceFinancement": "BM",
+      "typeFinancement": "EMPRUNT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 24,
+      "beneficiaire": "Usagers route Yamoussoukro-Bouaké",
+      "chaineBudgetaire": {
+        "section": "135",
+        "programme": "17002",
+        "activite": "Réhabilitation routière",
+        "nature": "231",
+        "bailleur": "BM"
+      },
+      "localisation": {
+        "region": "Bélier",
+        "regionCode": "BELIER",
+        "departement": "Toumodi",
+        "departementCode": "TOUMODI",
+        "sousPrefecture": "Toumodi",
+        "sousPrefectureCode": "TOUMODI",
+        "localite": "Toumodi Centre",
+        "latitude": "6.5500",
+        "longitude": "-5.0200",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC"
+      ],
+      "etat": "EXECUTION",
+      "procDerogation": {
+        "horsBareme": false,
+        "motif": null,
+        "justificationDoc": null
+      },
+      "createdAt": "2023-03-15T09:00:00.000Z",
+      "updatedAt": "2024-09-20T11:30:00.000Z"
+    },
+    {
+      "id": "OP-2023-004",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-004",
+      "unite": "Direction de l'Assainissement",
+      "exercice": 2023,
+      "objet": "Étude d'impact environnemental projet assainissement Abidjan",
+      "typeMarche": "SERVICES_INTELLECTUELS",
+      "modePassation": "CI",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 125000000,
+      "montantActuel": 125000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 120,
+      "sourceFinancement": "AFD",
+      "typeFinancement": "DON",
+      "categoriePrestation": "ETUDE",
+      "delaiExecution": 4,
+      "beneficiaire": "Ville d'Abidjan",
+      "chaineBudgetaire": {
+        "section": "138",
+        "programme": "17005",
+        "activite": "Études environnementales",
+        "nature": "233",
+        "bailleur": "AFD"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Yopougon",
+        "departementCode": "ABJ_YOPOUGON",
+        "sousPrefecture": "Yopougon",
+        "sousPrefectureCode": "YOPOUGON",
+        "localite": "Yopougon Selmer",
+        "latitude": "5.3353",
+        "longitude": "-4.0671",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC",
+        "CLOT"
+      ],
+      "etat": "CLOS",
+      "createdAt": "2023-02-25T10:00:00.000Z",
+      "updatedAt": "2023-09-15T15:00:00.000Z"
+    },
+    {
+      "id": "OP-2023-005",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-005",
+      "unite": "Direction du Matériel et de la Logistique",
+      "exercice": 2023,
+      "objet": "Acquisition mobilier de bureau (500 lots)",
+      "typeMarche": "FOURNITURES",
+      "modePassation": "PSD",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 45000000,
+      "montantActuel": 45000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 60,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "EQUIPEMENT",
+      "delaiExecution": 2,
+      "beneficiaire": "Administrations publiques",
+      "chaineBudgetaire": {
+        "section": "110",
+        "programme": "14001",
+        "activite": "Équipement bureautique",
+        "nature": "232",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Plateau",
+        "departementCode": "ABJ_PLATEAU",
+        "sousPrefecture": "Plateau",
+        "sousPrefectureCode": "PLATEAU",
+        "localite": "Plateau Centre",
+        "latitude": "5.3167",
+        "longitude": "-4.0333",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC",
+        "CLOT"
+      ],
+      "etat": "CLOS",
+      "createdAt": "2023-04-10T08:30:00.000Z",
+      "updatedAt": "2023-08-20T14:00:00.000Z"
+    },
+    {
+      "id": "OP-2023-006",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-006",
+      "unite": "Direction de la Maintenance",
+      "exercice": 2023,
+      "objet": "Entretien et maintenance climatisation bâtiments administratifs",
+      "typeMarche": "SERVICES_COURANTS",
+      "modePassation": "PSC",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 18000000,
+      "montantActuel": 18000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 365,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "SERVICE",
+      "delaiExecution": 12,
+      "beneficiaire": "Fonctionnaires ministères",
+      "chaineBudgetaire": {
+        "section": "110",
+        "programme": "14001",
+        "activite": "Maintenance équipements",
+        "nature": "222",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Plateau",
+        "departementCode": "ABJ_PLATEAU",
+        "sousPrefecture": "Plateau",
+        "sousPrefectureCode": "PLATEAU",
+        "localite": "Cité Administrative",
+        "latitude": "5.3200",
+        "longitude": "-4.0250",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC",
+        "CLOT"
+      ],
+      "etat": "CLOS",
+      "createdAt": "2023-01-05T09:00:00.000Z",
+      "updatedAt": "2024-01-30T10:00:00.000Z"
+    },
+    {
+      "id": "OP-2023-007",
+      "planId": "PPM-2023-001",
+      "budgetLineId": "BL-2023-007",
+      "unite": "Direction du Développement Rural",
+      "exercice": 2023,
+      "objet": "Construction pont sur le fleuve Sassandra",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 2800000000,
+      "montantActuel": 2450000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 540,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 18,
+      "beneficiaire": "Population région Sassandra",
+      "chaineBudgetaire": {
+        "section": "135",
+        "programme": "17002",
+        "activite": "Ponts et ouvrages d'art",
+        "nature": "231",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Bas-Sassandra",
+        "regionCode": "BAS_SASSANDRA",
+        "departement": "Sassandra",
+        "departementCode": "SASSANDRA",
+        "sousPrefecture": "Sassandra",
+        "sousPrefectureCode": "SASSANDRA",
+        "localite": "Sassandra Centre",
+        "latitude": "4.9500",
+        "longitude": "-6.0833",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC"
+      ],
+      "etat": "RESILIE",
+      "createdAt": "2023-02-01T10:00:00.000Z",
+      "updatedAt": "2024-06-15T16:30:00.000Z"
+    },
+    {
+      "id": "OP-2024-001",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-001",
+      "unite": "Direction Générale des Marchés Publics",
+      "exercice": 2024,
+      "objet": "Construction centre de santé rural à Korhogo",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 250000000,
+      "montantActuel": 307500000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 365,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 12,
+      "beneficiaire": "Population de Korhogo",
+      "chaineBudgetaire": {
+        "section": "120",
+        "programme": "15001",
+        "activite": "Infrastructure sanitaire",
+        "nature": "231",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Poro",
+        "regionCode": "PORO",
+        "departement": "Korhogo",
+        "departementCode": "KORHOGO",
+        "sousPrefecture": "Korhogo",
+        "sousPrefectureCode": "KORHOGO",
+        "localite": "Korhogo Centre",
+        "latitude": "9.4580",
+        "longitude": "-5.6290",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC"
+      ],
+      "etat": "EXECUTION",
+      "createdAt": "2024-01-20T10:00:00.000Z",
+      "updatedAt": "2024-05-15T14:30:00.000Z"
+    },
+    {
+      "id": "OP-2024-002",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-002",
+      "unite": "Direction du Matériel Roulant",
+      "exercice": 2024,
+      "objet": "Acquisition de 15 véhicules administratifs 4x4",
+      "typeMarche": "FOURNITURES",
+      "modePassation": "PSD",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 75000000,
+      "montantActuel": 75000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 90,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "EQUIPEMENT",
+      "delaiExecution": 3,
+      "beneficiaire": "Services administratifs",
+      "chaineBudgetaire": {
+        "section": "110",
+        "programme": "14001",
+        "activite": "Équipement transport",
+        "nature": "232",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Plateau",
+        "departementCode": "ABJ_PLATEAU",
+        "sousPrefecture": "Plateau",
+        "sousPrefectureCode": "PLATEAU",
+        "localite": "Plateau Centre",
+        "latitude": "5.3167",
+        "longitude": "-4.0333",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR"
+      ],
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-02-01T08:00:00.000Z",
+      "updatedAt": "2024-04-10T11:20:00.000Z"
+    },
+    {
+      "id": "OP-2024-003",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-003",
+      "unite": "Direction des Grands Travaux",
+      "exercice": 2024,
+      "objet": "Étude de faisabilité projet routier Abidjan-Yamoussoukro",
+      "typeMarche": "SERVICES_INTELLECTUELS",
+      "modePassation": "PSO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 180000000,
+      "montantActuel": 180000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 180,
+      "sourceFinancement": "BAD",
+      "typeFinancement": "EMPRUNT",
+      "categoriePrestation": "ETUDE",
+      "delaiExecution": 6,
+      "beneficiaire": "Usagers de la route",
+      "chaineBudgetaire": {
+        "section": "135",
+        "programme": "17002",
+        "activite": "Études routières",
+        "nature": "233",
+        "bailleur": "BAD"
+      },
+      "localisation": {
+        "region": "Yamoussoukro Autonome",
+        "regionCode": "YAMOUSSOUKRO",
+        "departement": "Yamoussoukro",
+        "departementCode": "YAM",
+        "sousPrefecture": "Yamoussoukro",
+        "sousPrefectureCode": "YAM_CENTRE",
+        "localite": "Centre-ville",
+        "latitude": "6.8276",
+        "longitude": "-5.2893",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF"
+      ],
+      "etat": "PLANIFIE",
+      "createdAt": "2024-03-05T09:30:00.000Z",
+      "updatedAt": "2024-03-05T09:30:00.000Z"
+    },
+    {
+      "id": "OP-2024-004",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-004",
+      "unite": "Direction de l'Hydraulique Rurale",
+      "exercice": 2024,
+      "objet": "Forage et équipement de 50 pompes hydrauliques villageoises",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 320000000,
+      "montantActuel": 320000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 270,
+      "sourceFinancement": "UE",
+      "typeFinancement": "DON",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 9,
+      "beneficiaire": "Villages zones rurales",
+      "chaineBudgetaire": {
+        "section": "138",
+        "programme": "17005",
+        "activite": "Hydraulique rurale",
+        "nature": "231",
+        "bailleur": "UE"
+      },
+      "localisation": {
+        "region": "Tonkpi",
+        "regionCode": "TONKPI",
+        "departement": "Man",
+        "departementCode": "MAN",
+        "sousPrefecture": "Man",
+        "sousPrefectureCode": "MAN",
+        "localite": "Man Centre",
+        "latitude": "7.4125",
+        "longitude": "-7.5547",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC"
+      ],
+      "etat": "EN_PROC",
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-03-20T15:00:00.000Z"
+    },
+    {
+      "id": "OP-2024-005",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-005",
+      "unite": "Direction de la Formation Professionnelle",
+      "exercice": 2024,
+      "objet": "Formation continue agents publics (500 personnes)",
+      "typeMarche": "SERVICES_INTELLECTUELS",
+      "modePassation": "PSO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 35000000,
+      "montantActuel": 35000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 120,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "FORMATION",
+      "delaiExecution": 4,
+      "beneficiaire": "Agents fonction publique",
+      "chaineBudgetaire": {
+        "section": "110",
+        "programme": "14001",
+        "activite": "Formation continue",
+        "nature": "221",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Cocody",
+        "departementCode": "ABJ_COCODY",
+        "sousPrefecture": "Cocody",
+        "sousPrefectureCode": "COCODY",
+        "localite": "Riviera",
+        "latitude": "5.3700",
+        "longitude": "-3.9700",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC"
+      ],
+      "etat": "EN_PROC",
+      "createdAt": "2024-02-10T09:00:00.000Z",
+      "updatedAt": "2024-04-05T12:00:00.000Z"
+    },
+    {
+      "id": "OP-2024-006",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-006",
+      "unite": "Direction de la Sécurité Civile",
+      "exercice": 2024,
+      "objet": "Acquisition équipements pompiers (camions, matériel)",
+      "typeMarche": "FOURNITURES",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "MIXTE",
+      "revue": "Oui",
+      "montantPrevisionnel": 650000000,
+      "montantActuel": 650000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 180,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "EQUIPEMENT",
+      "delaiExecution": 6,
+      "beneficiaire": "Corps des sapeurs-pompiers",
+      "chaineBudgetaire": {
+        "section": "115",
+        "programme": "14501",
+        "activite": "Équipement sécurité",
+        "nature": "232",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Marcory",
+        "departementCode": "ABJ_MARCORY",
+        "sousPrefecture": "Marcory",
+        "sousPrefectureCode": "MARCORY",
+        "localite": "Marcory Zone 4",
+        "latitude": "5.2900",
+        "longitude": "-3.9800",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE"
+      ],
+      "etat": "VISE",
+      "createdAt": "2024-01-25T11:00:00.000Z",
+      "updatedAt": "2024-05-30T16:00:00.000Z"
+    },
+    {
+      "id": "OP-2024-007",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-007",
+      "unite": "Direction de la Construction Pénitentiaire",
+      "exercice": 2024,
+      "objet": "Réhabilitation maison d'arrêt et de correction d'Abidjan",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 480000000,
+      "montantActuel": 576000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 300,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 10,
+      "beneficiaire": "Administration pénitentiaire",
+      "chaineBudgetaire": {
+        "section": "117",
+        "programme": "14601",
+        "activite": "Infrastructure carcérale",
+        "nature": "231",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Yopougon",
+        "departementCode": "ABJ_YOPOUGON",
+        "sousPrefecture": "Yopougon",
+        "sousPrefectureCode": "YOPOUGON",
+        "localite": "Niangon",
+        "latitude": "5.3400",
+        "longitude": "-4.0900",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC"
+      ],
+      "etat": "EXECUTION",
+      "createdAt": "2024-02-20T08:30:00.000Z",
+      "updatedAt": "2024-08-15T14:00:00.000Z"
+    },
+    {
+      "id": "OP-2024-008",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-008",
+      "unite": "Direction des Énergies Renouvelables",
+      "exercice": 2024,
+      "objet": "Installation panneaux solaires dans 30 établissements scolaires",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 890000000,
+      "montantActuel": 890000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 240,
+      "sourceFinancement": "USAID",
+      "typeFinancement": "DON",
+      "categoriePrestation": "EQUIPEMENT",
+      "delaiExecution": 8,
+      "beneficiaire": "Établissements scolaires",
+      "chaineBudgetaire": {
+        "section": "145",
+        "programme": "18003",
+        "activite": "Électrification écoles",
+        "nature": "232",
+        "bailleur": "USAID"
+      },
+      "localisation": {
+        "region": "Lagunes",
+        "regionCode": "LAGUNES",
+        "departement": "Grand-Bassam",
+        "departementCode": "GRAND_BASSAM",
+        "sousPrefecture": "Grand-Bassam",
+        "sousPrefectureCode": "GRAND_BASSAM",
+        "localite": "Grand-Bassam Centre",
+        "latitude": "5.2100",
+        "longitude": "-3.7400",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC"
+      ],
+      "etat": "EN_PROC",
+      "createdAt": "2024-03-10T10:00:00.000Z",
+      "updatedAt": "2024-05-15T11:00:00.000Z"
+    },
+    {
+      "id": "OP-2024-009",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-009",
+      "unite": "Direction de la Lutte contre le Paludisme",
+      "exercice": 2024,
+      "objet": "Fourniture moustiquaires imprégnées (2 millions unités)",
+      "typeMarche": "FOURNITURES",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "UNITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 720000000,
+      "montantActuel": 720000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 150,
+      "sourceFinancement": "BM",
+      "typeFinancement": "EMPRUNT",
+      "categoriePrestation": "FOURNITURE",
+      "delaiExecution": 5,
+      "beneficiaire": "Population zones endémiques",
+      "chaineBudgetaire": {
+        "section": "120",
+        "programme": "15001",
+        "activite": "Lutte paludisme",
+        "nature": "223",
+        "bailleur": "BM"
+      },
+      "localisation": {
+        "region": "Nawa",
+        "regionCode": "NAWA",
+        "departement": "Soubré",
+        "departementCode": "SOUBRE",
+        "sousPrefecture": "Soubré",
+        "sousPrefectureCode": "SOUBRE",
+        "localite": "Soubré Centre",
+        "latitude": "5.7850",
+        "longitude": "-6.6070",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE"
+      ],
+      "etat": "VISE",
+      "createdAt": "2024-01-30T09:00:00.000Z",
+      "updatedAt": "2024-06-10T15:30:00.000Z"
+    },
+    {
+      "id": "OP-2024-010",
+      "planId": "PPM-2024-001",
+      "budgetLineId": "BL-2024-010",
+      "unite": "Direction de l'Agriculture Vivrière",
+      "exercice": 2024,
+      "objet": "Aménagement périmètres rizicoles (500 hectares)",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "MIXTE",
+      "revue": "Non",
+      "montantPrevisionnel": 1200000000,
+      "montantActuel": 1020000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 360,
+      "sourceFinancement": "BOAD",
+      "typeFinancement": "EMPRUNT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 12,
+      "beneficiaire": "Coopératives rizicoles",
+      "chaineBudgetaire": {
+        "section": "125",
+        "programme": "16001",
+        "activite": "Aménagement agricole",
+        "nature": "231",
+        "bailleur": "BOAD"
+      },
+      "localisation": {
+        "region": "Gontougo",
+        "regionCode": "GONTOUGO",
+        "departement": "Bondoukou",
+        "departementCode": "BONDOUKOU",
+        "sousPrefecture": "Bondoukou",
+        "sousPrefectureCode": "BONDOUKOU",
+        "localite": "Bondoukou Centre",
+        "latitude": "8.0400",
+        "longitude": "-2.8000",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC",
+        "ATTR",
+        "VISE",
+        "EXEC"
+      ],
+      "etat": "RESILIE",
+      "createdAt": "2024-01-10T08:00:00.000Z",
+      "updatedAt": "2024-09-05T16:45:00.000Z"
+    },
+    {
+      "id": "OP-2025-001",
+      "planId": "PPM-2025-001",
+      "unite": "Direction de la Voirie Urbaine",
+      "exercice": 2025,
+      "objet": "Réfection voirie quartiers Abidjan (25km)",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "MIXTE",
+      "revue": "Non",
+      "montantPrevisionnel": 3500000000,
+      "montantActuel": 3500000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 450,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 15,
+      "beneficiaire": "Population Abidjan",
+      "chaineBudgetaire": {
+        "section": "135",
+        "programme": "17002",
+        "activite": "Voirie urbaine",
+        "nature": "231",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Abobo",
+        "departementCode": "ABJ_ABOBO",
+        "sousPrefecture": "Abobo",
+        "sousPrefectureCode": "ABOBO",
+        "localite": "Abobo Gare",
+        "latitude": "5.4200",
+        "longitude": "-4.0200",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF"
+      ],
+      "etat": "PLANIFIE",
+      "createdAt": "2025-01-15T10:00:00.000Z",
+      "updatedAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "OP-2025-002",
+      "planId": "PPM-2025-001",
+      "unite": "Direction des Technologies de l'Information",
+      "exercice": 2025,
+      "objet": "Déploiement infrastructure réseau fibre optique administrations",
+      "typeMarche": "TRAVAUX",
+      "modePassation": "AOO",
+      "categorieProcedure": "INTERNATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Oui",
+      "montantPrevisionnel": 1850000000,
+      "montantActuel": 1850000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 300,
+      "sourceFinancement": "BAD",
+      "typeFinancement": "EMPRUNT",
+      "categoriePrestation": "INFRASTRUCTURE",
+      "delaiExecution": 10,
+      "beneficiaire": "Administrations publiques",
+      "chaineBudgetaire": {
+        "section": "110",
+        "programme": "14001",
+        "activite": "Infrastructure TIC",
+        "nature": "231",
+        "bailleur": "BAD"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Plateau",
+        "departementCode": "ABJ_PLATEAU",
+        "sousPrefecture": "Plateau",
+        "sousPrefectureCode": "PLATEAU",
+        "localite": "Plateau Centre",
+        "latitude": "5.3167",
+        "longitude": "-4.0333",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF"
+      ],
+      "etat": "PLANIFIE",
+      "createdAt": "2025-01-20T09:00:00.000Z",
+      "updatedAt": "2025-01-20T09:00:00.000Z"
+    },
+    {
+      "id": "OP-2025-003",
+      "planId": "PPM-2025-001",
+      "unite": "Direction de la Protection Civile",
+      "exercice": 2025,
+      "objet": "Formation agents protection civile (300 personnes)",
+      "typeMarche": "SERVICES_INTELLECTUELS",
+      "modePassation": "PSO",
+      "categorieProcedure": "NATIONALE",
+      "naturePrix": "FORFAITAIRE",
+      "revue": "Non",
+      "montantPrevisionnel": 42000000,
+      "montantActuel": 42000000,
+      "devise": "XOF",
+      "dureePrevisionnelle": 90,
+      "sourceFinancement": "TRESOR",
+      "typeFinancement": "ETAT",
+      "categoriePrestation": "FORMATION",
+      "delaiExecution": 3,
+      "beneficiaire": "Agents protection civile",
+      "chaineBudgetaire": {
+        "section": "115",
+        "programme": "14501",
+        "activite": "Formation sécurité",
+        "nature": "221",
+        "bailleur": "TRESOR"
+      },
+      "localisation": {
+        "region": "Abidjan Autonome",
+        "regionCode": "ABJ",
+        "departement": "Port-Bouët",
+        "departementCode": "ABJ_PORT_BOUET",
+        "sousPrefecture": "Port-Bouët",
+        "sousPrefectureCode": "PORT_BOUET",
+        "localite": "Vridi",
+        "latitude": "5.2500",
+        "longitude": "-3.9300",
+        "coordsOK": true
+      },
+      "timeline": [
+        "PLANIF",
+        "PROC"
+      ],
+      "etat": "EN_PROC",
+      "createdAt": "2025-02-01T08:30:00.000Z",
+      "updatedAt": "2025-03-15T11:00:00.000Z"
+    }
+  ],
+  "BUDGET_LINE": [
+    {
+      "id": "BL-2023-001",
+      "section": "145",
+      "sectionLib": "Ministère de l'Éducation Nationale",
+      "programme": "18003",
+      "programmeLib": "Enseignement Primaire",
+      "grandeNature": "4",
+      "uaCode": "14523001",
+      "uaLib": "Direction de la Construction Scolaire",
+      "actionCode": "1800301",
+      "actionLib": "Construction écoles primaires",
+      "activiteCode": "78030100456",
+      "activiteLib": "Construire salles de classe zones rurales",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "231200",
+      "ligneLib": "Bâtiments scolaires",
+      "AE": 7800000000,
+      "CP": 6500000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2023-002",
+      "section": "120",
+      "sectionLib": "Ministère de la Santé",
+      "programme": "15001",
+      "programmeLib": "Administration Générale Santé",
+      "grandeNature": "4",
+      "uaCode": "12011001",
+      "uaLib": "Direction Générale de la Santé",
+      "actionCode": "1500102",
+      "actionLib": "Équipement sanitaire",
+      "activiteCode": "78010200145",
+      "activiteLib": "Équiper hôpitaux régionaux",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BAD - Banque Africaine de Développement",
+      "ligneCode": "232100",
+      "ligneLib": "Équipements médicaux",
+      "AE": 5500000000,
+      "CP": 4200000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2023-003",
+      "section": "135",
+      "sectionLib": "Ministère des Infrastructures Économiques",
+      "programme": "17002",
+      "programmeLib": "Routes et Ouvrages d'Art",
+      "grandeNature": "4",
+      "uaCode": "13517002",
+      "uaLib": "Direction des Grands Travaux",
+      "actionCode": "1700201",
+      "actionLib": "Réhabilitation réseau routier",
+      "activiteCode": "78020100234",
+      "activiteLib": "Réhabiliter axes routiers prioritaires",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BM - Banque Mondiale",
+      "ligneCode": "231100",
+      "ligneLib": "Routes et voiries",
+      "AE": 18500000000,
+      "CP": 14200000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2023-004",
+      "section": "138",
+      "sectionLib": "Ministère de l'Environnement et du Développement Durable",
+      "programme": "17005",
+      "programmeLib": "Assainissement et Environnement",
+      "grandeNature": "4",
+      "uaCode": "13817005",
+      "uaLib": "Direction de l'Assainissement",
+      "actionCode": "1700502",
+      "actionLib": "Études environnementales",
+      "activiteCode": "78050200123",
+      "activiteLib": "Réaliser études d'impact environnemental",
+      "typeFinancement": "3 Don",
+      "sourceFinancement": "AFD - Agence Française de Développement",
+      "ligneCode": "233100",
+      "ligneLib": "Études et recherches",
+      "AE": 450000000,
+      "CP": 380000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2023-005",
+      "section": "110",
+      "sectionLib": "Services du Premier Ministre",
+      "programme": "14001",
+      "programmeLib": "Administration Générale",
+      "grandeNature": "4",
+      "uaCode": "11014001",
+      "uaLib": "Direction du Matériel et de la Logistique",
+      "actionCode": "1400103",
+      "actionLib": "Équipement bureautique",
+      "activiteCode": "78010300089",
+      "activiteLib": "Équiper services administratifs",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "232200",
+      "ligneLib": "Mobilier et matériel de bureau",
+      "AE": 250000000,
+      "CP": 220000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2023-006",
+      "section": "110",
+      "sectionLib": "Services du Premier Ministre",
+      "programme": "14001",
+      "programmeLib": "Administration Générale",
+      "grandeNature": "2",
+      "uaCode": "11014001",
+      "uaLib": "Direction de la Maintenance",
+      "actionCode": "1400104",
+      "actionLib": "Maintenance équipements",
+      "activiteCode": "78010400045",
+      "activiteLib": "Maintenir équipements techniques",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "222100",
+      "ligneLib": "Entretien et maintenance",
+      "AE": 85000000,
+      "CP": 78000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2023-007",
+      "section": "135",
+      "sectionLib": "Ministère des Infrastructures Économiques",
+      "programme": "17002",
+      "programmeLib": "Routes et Ouvrages d'Art",
+      "grandeNature": "4",
+      "uaCode": "13517002",
+      "uaLib": "Direction du Développement Rural",
+      "actionCode": "1700202",
+      "actionLib": "Ponts et ouvrages d'art",
+      "activiteCode": "78020200156",
+      "activiteLib": "Construire ponts zones rurales",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "231100",
+      "ligneLib": "Routes et voiries",
+      "AE": 4500000000,
+      "CP": 3800000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2023-01-10T00:00:00.000Z",
+      "updatedAt": "2023-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-001",
+      "section": "120",
+      "sectionLib": "Ministère de la Santé",
+      "programme": "15001",
+      "programmeLib": "Administration Générale Santé",
+      "grandeNature": "4",
+      "uaCode": "12011001",
+      "uaLib": "Direction Générale des Marchés Publics",
+      "actionCode": "1500101",
+      "actionLib": "Infrastructure sanitaire",
+      "activiteCode": "78010100234",
+      "activiteLib": "Construire centres de santé ruraux",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "231200",
+      "ligneLib": "Bâtiments sanitaires",
+      "AE": 1200000000,
+      "CP": 980000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-002",
+      "section": "110",
+      "sectionLib": "Services du Premier Ministre",
+      "programme": "14001",
+      "programmeLib": "Administration Générale",
+      "grandeNature": "4",
+      "uaCode": "11014001",
+      "uaLib": "Direction du Matériel Roulant",
+      "actionCode": "1400105",
+      "actionLib": "Équipement transport",
+      "activiteCode": "78010500067",
+      "activiteLib": "Acquérir véhicules administratifs",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "232300",
+      "ligneLib": "Matériel de transport",
+      "AE": 350000000,
+      "CP": 320000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-003",
+      "section": "135",
+      "sectionLib": "Ministère des Infrastructures Économiques",
+      "programme": "17002",
+      "programmeLib": "Routes et Ouvrages d'Art",
+      "grandeNature": "4",
+      "uaCode": "13517002",
+      "uaLib": "Direction des Grands Travaux",
+      "actionCode": "1700203",
+      "actionLib": "Études routières",
+      "activiteCode": "78020300089",
+      "activiteLib": "Études techniques projets routiers",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BAD - Banque Africaine de Développement",
+      "ligneCode": "233100",
+      "ligneLib": "Études et recherches",
+      "AE": 650000000,
+      "CP": 580000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-004",
+      "section": "138",
+      "sectionLib": "Ministère de l'Environnement et du Développement Durable",
+      "programme": "17005",
+      "programmeLib": "Assainissement et Environnement",
+      "grandeNature": "4",
+      "uaCode": "13817005",
+      "uaLib": "Direction de l'Hydraulique Rurale",
+      "actionCode": "1700503",
+      "actionLib": "Hydraulique rurale",
+      "activiteCode": "78050300234",
+      "activiteLib": "Réaliser forages villageois",
+      "typeFinancement": "3 Don",
+      "sourceFinancement": "UE - Union Européenne",
+      "ligneCode": "231300",
+      "ligneLib": "Ouvrages hydrauliques",
+      "AE": 1500000000,
+      "CP": 1200000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-005",
+      "section": "110",
+      "sectionLib": "Services du Premier Ministre",
+      "programme": "14001",
+      "programmeLib": "Administration Générale",
+      "grandeNature": "2",
+      "uaCode": "11014001",
+      "uaLib": "Direction de la Formation Professionnelle",
+      "actionCode": "1400106",
+      "actionLib": "Formation continue",
+      "activiteCode": "78010600123",
+      "activiteLib": "Former agents publics",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "221100",
+      "ligneLib": "Prestations intellectuelles",
+      "AE": 180000000,
+      "CP": 165000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-006",
+      "section": "115",
+      "sectionLib": "Ministère de l'Intérieur et de la Sécurité",
+      "programme": "14501",
+      "programmeLib": "Sécurité Civile",
+      "grandeNature": "4",
+      "uaCode": "11514501",
+      "uaLib": "Direction de la Sécurité Civile",
+      "actionCode": "1450101",
+      "actionLib": "Équipement sécurité",
+      "activiteCode": "78450100145",
+      "activiteLib": "Équiper services pompiers",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "232400",
+      "ligneLib": "Équipements spécialisés",
+      "AE": 2500000000,
+      "CP": 2100000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-007",
+      "section": "117",
+      "sectionLib": "Ministère de la Justice",
+      "programme": "14601",
+      "programmeLib": "Administration Pénitentiaire",
+      "grandeNature": "4",
+      "uaCode": "11714601",
+      "uaLib": "Direction de la Construction Pénitentiaire",
+      "actionCode": "1460101",
+      "actionLib": "Infrastructure carcérale",
+      "activiteCode": "78460100234",
+      "activiteLib": "Réhabiliter infrastructures pénitentiaires",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "231200",
+      "ligneLib": "Bâtiments administratifs",
+      "AE": 1800000000,
+      "CP": 1450000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-008",
+      "section": "145",
+      "sectionLib": "Ministère de l'Éducation Nationale",
+      "programme": "18003",
+      "programmeLib": "Enseignement Primaire",
+      "grandeNature": "4",
+      "uaCode": "14523001",
+      "uaLib": "Direction des Énergies Renouvelables",
+      "actionCode": "1800302",
+      "actionLib": "Électrification écoles",
+      "activiteCode": "78030200345",
+      "activiteLib": "Installer panneaux solaires établissements",
+      "typeFinancement": "3 Don",
+      "sourceFinancement": "USAID - Agence Américaine",
+      "ligneCode": "232500",
+      "ligneLib": "Équipements énergétiques",
+      "AE": 2800000000,
+      "CP": 2400000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-009",
+      "section": "120",
+      "sectionLib": "Ministère de la Santé",
+      "programme": "15001",
+      "programmeLib": "Administration Générale Santé",
+      "grandeNature": "2",
+      "uaCode": "12011001",
+      "uaLib": "Direction de la Lutte contre le Paludisme",
+      "actionCode": "1500103",
+      "actionLib": "Lutte paludisme",
+      "activiteCode": "78010300456",
+      "activiteLib": "Fournir moustiquaires zones endémiques",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BM - Banque Mondiale",
+      "ligneCode": "223100",
+      "ligneLib": "Fournitures médicales",
+      "AE": 1500000000,
+      "CP": 1280000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2024-010",
+      "section": "125",
+      "sectionLib": "Ministère de l'Agriculture",
+      "programme": "16001",
+      "programmeLib": "Agriculture Vivrière",
+      "grandeNature": "4",
+      "uaCode": "12516001",
+      "uaLib": "Direction de l'Agriculture Vivrière",
+      "actionCode": "1600101",
+      "actionLib": "Aménagement agricole",
+      "activiteCode": "78600100234",
+      "activiteLib": "Aménager périmètres rizicoles",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BOAD - Banque Ouest Africaine de Développement",
+      "ligneCode": "231400",
+      "ligneLib": "Aménagements agricoles",
+      "AE": 3500000000,
+      "CP": 2800000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2024-01-10T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2025-001",
+      "section": "135",
+      "sectionLib": "Ministère des Infrastructures Économiques",
+      "programme": "17002",
+      "programmeLib": "Routes et Ouvrages d'Art",
+      "grandeNature": "4",
+      "uaCode": "13517002",
+      "uaLib": "Direction de la Voirie Urbaine",
+      "actionCode": "1700204",
+      "actionLib": "Voirie urbaine",
+      "activiteCode": "78020400123",
+      "activiteLib": "Réfectionner voirie quartiers",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "231100",
+      "ligneLib": "Routes et voiries",
+      "AE": 8500000000,
+      "CP": 7200000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2025-01-10T00:00:00.000Z",
+      "updatedAt": "2025-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2025-002",
+      "section": "110",
+      "sectionLib": "Services du Premier Ministre",
+      "programme": "14001",
+      "programmeLib": "Administration Générale",
+      "grandeNature": "4",
+      "uaCode": "11014001",
+      "uaLib": "Direction des Technologies de l'Information",
+      "actionCode": "1400107",
+      "actionLib": "Infrastructure TIC",
+      "activiteCode": "78010700234",
+      "activiteLib": "Déployer infrastructure réseau",
+      "typeFinancement": "2 Emprunt",
+      "sourceFinancement": "BAD - Banque Africaine de Développement",
+      "ligneCode": "231500",
+      "ligneLib": "Infrastructures télécommunications",
+      "AE": 5500000000,
+      "CP": 4800000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2025-01-10T00:00:00.000Z",
+      "updatedAt": "2025-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "BL-2025-003",
+      "section": "115",
+      "sectionLib": "Ministère de l'Intérieur et de la Sécurité",
+      "programme": "14501",
+      "programmeLib": "Sécurité Civile",
+      "grandeNature": "2",
+      "uaCode": "11514501",
+      "uaLib": "Direction de la Protection Civile",
+      "actionCode": "1450102",
+      "actionLib": "Formation sécurité",
+      "activiteCode": "78450200056",
+      "activiteLib": "Former agents protection civile",
+      "typeFinancement": "1 Trésor",
+      "sourceFinancement": "101 ETAT DE COTE D'IVOIRE",
+      "ligneCode": "221100",
+      "ligneLib": "Prestations intellectuelles",
+      "AE": 125000000,
+      "CP": 110000000,
+      "zoneCode": "",
+      "zoneLib": "",
+      "createdAt": "2025-01-10T00:00:00.000Z",
+      "updatedAt": "2025-01-10T00:00:00.000Z"
+    }
+  ],
+  "ENTREPRISE": [
+    {
+      "id": "ENT-001",
+      "raisonSociale": "SOBEA Construction CI",
+      "ncc": "CI-ABJ-2015-B-12345",
+      "rccm": "CI-ABJ-2015-B-12345",
+      "ifu": "0123456789",
+      "adresse": "Zone Industrielle Yopougon, Abidjan",
+      "telephone": "+225 27 22 45 67 89",
+      "email": "contact@sobea-ci.com",
+      "domaine": "Bâtiment et Travaux Publics",
+      "banque": {
+        "nom": "SGBCI",
+        "compte": "CI93 CI02 0001 1234 5678 90",
+        "swift": "SGBCCIXXX"
+      },
+      "createdAt": "2020-01-10T08:00:00.000Z"
+    },
+    {
+      "id": "ENT-002",
+      "raisonSociale": "COLAS Côte d'Ivoire",
+      "ncc": "CI-ABJ-2010-B-23456",
+      "rccm": "CI-ABJ-2010-B-23456",
+      "ifu": "1234567890",
+      "adresse": "Boulevard Lagunaire, Marcory, Abidjan",
+      "telephone": "+225 27 21 35 78 90",
+      "email": "contact@colas.ci",
+      "domaine": "Routes et infrastructures",
+      "banque": {
+        "nom": "BICICI",
+        "compte": "CI45 BI03 0002 2345 6789 01",
+        "swift": "BICICIXXX"
+      },
+      "createdAt": "2018-03-15T10:00:00.000Z"
+    },
+    {
+      "id": "ENT-003",
+      "raisonSociale": "SITARAIL Fournitures SA",
+      "ncc": "CI-ABJ-2012-B-34567",
+      "rccm": "CI-ABJ-2012-B-34567",
+      "ifu": "2345678901",
+      "adresse": "Avenue 7, Zone 4C, Marcory, Abidjan",
+      "telephone": "+225 27 21 26 45 78",
+      "email": "commercial@sitarail.ci",
+      "domaine": "Fournitures et équipements",
+      "banque": {
+        "nom": "Ecobank CI",
+        "compte": "CI67 EC04 0003 3456 7890 12",
+        "swift": "ECOCCIAB"
+      },
+      "createdAt": "2019-06-20T09:00:00.000Z"
+    },
+    {
+      "id": "ENT-004",
+      "raisonSociale": "SOTRA-BTP Côte d'Ivoire",
+      "ncc": "CI-ABJ-2013-B-45678",
+      "rccm": "CI-ABJ-2013-B-45678",
+      "ifu": "3456789012",
+      "adresse": "Boulevard Valéry Giscard d'Estaing, Cocody, Abidjan",
+      "telephone": "+225 27 22 48 56 73",
+      "email": "info@sotrabtp.ci",
+      "domaine": "Bâtiment et Génie Civil",
+      "banque": {
+        "nom": "SGBCI",
+        "compte": "CI12 CI02 0004 4567 8901 23",
+        "swift": "SGBCCIXXX"
+      },
+      "createdAt": "2017-09-10T11:00:00.000Z"
+    },
+    {
+      "id": "ENT-005",
+      "raisonSociale": "SATMACI Matériel Médical",
+      "ncc": "CI-ABJ-2016-B-56789",
+      "rccm": "CI-ABJ-2016-B-56789",
+      "ifu": "4567890123",
+      "adresse": "Rue des Jardins, II Plateaux, Cocody, Abidjan",
+      "telephone": "+225 27 22 51 89 34",
+      "email": "satmaci@satmaci.ci",
+      "domaine": "Équipements médicaux",
+      "banque": {
+        "nom": "BICICI",
+        "compte": "CI34 BI03 0005 5678 9012 34",
+        "swift": "BICICIXXX"
+      },
+      "createdAt": "2018-11-25T09:30:00.000Z"
+    },
+    {
+      "id": "ENT-006",
+      "raisonSociale": "AIGLE D'OR BTP",
+      "ncc": "CI-ABJ-2014-B-67890",
+      "rccm": "CI-ABJ-2014-B-67890",
+      "ifu": "5678901234",
+      "adresse": "Km 17, Autoroute du Nord, Anyama, Abidjan",
+      "telephone": "+225 27 20 34 56 78",
+      "email": "contact@aigledor.ci",
+      "domaine": "Travaux publics et voirie",
+      "banque": {
+        "nom": "BOA CI",
+        "compte": "CI56 BO05 0006 6789 0123 45",
+        "swift": "AFRICIAB"
+      },
+      "createdAt": "2016-04-12T08:00:00.000Z"
+    },
+    {
+      "id": "ENT-007",
+      "raisonSociale": "CFAO Technologies CI",
+      "ncc": "CI-ABJ-2011-B-78901",
+      "rccm": "CI-ABJ-2011-B-78901",
+      "ifu": "6789012345",
+      "adresse": "Avenue Terrasson de Fougères, Plateau, Abidjan",
+      "telephone": "+225 27 20 21 22 23",
+      "email": "info@cfao-tech.ci",
+      "domaine": "Technologies et Télécommunications",
+      "banque": {
+        "nom": "Société Générale CI",
+        "compte": "CI78 SG06 0007 7890 1234 56",
+        "swift": "SOGECIAB"
+      },
+      "createdAt": "2015-07-20T10:00:00.000Z"
+    },
+    {
+      "id": "ENT-008",
+      "raisonSociale": "ETSO Études & Conseils",
+      "ncc": "CI-ABJ-2017-B-89012",
+      "rccm": "CI-ABJ-2017-B-89012",
+      "ifu": "7890123456",
+      "adresse": "Rue Lecoeur, Plateau, Abidjan",
+      "telephone": "+225 27 20 32 45 67",
+      "email": "etudes@etso.ci",
+      "domaine": "Études et ingénierie",
+      "banque": {
+        "nom": "NSIA Banque CI",
+        "compte": "CI90 NS07 0008 8901 2345 67",
+        "swift": "NSIACIAB"
+      },
+      "createdAt": "2019-02-15T09:00:00.000Z"
+    },
+    {
+      "id": "ENT-009",
+      "raisonSociale": "HYDRO-CI Forages et Équipements",
+      "ncc": "CI-ABJ-2013-B-90123",
+      "rccm": "CI-ABJ-2013-B-90123",
+      "ifu": "8901234567",
+      "adresse": "Boulevard Achalme, Treichville, Abidjan",
+      "telephone": "+225 27 21 45 78 90",
+      "email": "contact@hydroci.ci",
+      "domaine": "Hydraulique et forages",
+      "banque": {
+        "nom": "Ecobank CI",
+        "compte": "CI23 EC04 0009 9012 3456 78",
+        "swift": "ECOCCIAB"
+      },
+      "createdAt": "2017-05-30T08:30:00.000Z"
+    },
+    {
+      "id": "ENT-010",
+      "raisonSociale": "MOBILEX Fournitures Bureautiques",
+      "ncc": "CI-ABJ-2018-B-01234",
+      "rccm": "CI-ABJ-2018-B-01234",
+      "ifu": "9012345678",
+      "adresse": "Rue du Commerce, Zone 4, Marcory, Abidjan",
+      "telephone": "+225 27 21 56 89 12",
+      "email": "ventes@mobilex.ci",
+      "domaine": "Mobilier et fournitures de bureau",
+      "banque": {
+        "nom": "SGBCI",
+        "compte": "CI45 CI02 0010 0123 4567 89",
+        "swift": "SGBCCIXXX"
+      },
+      "createdAt": "2019-08-10T10:00:00.000Z"
+    },
+    {
+      "id": "ENT-011",
+      "raisonSociale": "CLIMATIC Services CI",
+      "ncc": "CI-ABJ-2015-B-12346",
+      "rccm": "CI-ABJ-2015-B-12346",
+      "ifu": "0123456790",
+      "adresse": "Avenue 13, Treichville, Abidjan",
+      "telephone": "+225 27 21 34 67 89",
+      "email": "service@climatic.ci",
+      "domaine": "Climatisation et maintenance",
+      "banque": {
+        "nom": "BOA CI",
+        "compte": "CI67 BO05 0011 1234 5678 90",
+        "swift": "AFRICIAB"
+      },
+      "createdAt": "2018-03-22T09:00:00.000Z"
+    },
+    {
+      "id": "ENT-012",
+      "raisonSociale": "AUTO-MECA Véhicules et Pièces",
+      "ncc": "CI-ABJ-2014-B-23457",
+      "rccm": "CI-ABJ-2014-B-23457",
+      "ifu": "1234567891",
+      "adresse": "Boulevard de Marseille, Zone Industrielle, Yopougon, Abidjan",
+      "telephone": "+225 27 22 67 89 01",
+      "email": "ventes@automeca.ci",
+      "domaine": "Véhicules et équipements automobiles",
+      "banque": {
+        "nom": "BICICI",
+        "compte": "CI89 BI03 0012 2345 6789 01",
+        "swift": "BICICIXXX"
+      },
+      "createdAt": "2016-11-15T08:00:00.000Z"
+    },
+    {
+      "id": "ENT-013",
+      "raisonSociale": "PHARMACO-CI Distribution",
+      "ncc": "CI-ABJ-2016-B-34568",
+      "rccm": "CI-ABJ-2016-B-34568",
+      "ifu": "2345678902",
+      "adresse": "Rue Lecoeur, Plateau, Abidjan",
+      "telephone": "+225 27 20 45 78 90",
+      "email": "distribution@pharmaco.ci",
+      "domaine": "Produits pharmaceutiques et équipements médicaux",
+      "banque": {
+        "nom": "NSIA Banque CI",
+        "compte": "CI01 NS07 0013 3456 7890 12",
+        "swift": "NSIACIAB"
+      },
+      "createdAt": "2018-06-10T10:30:00.000Z"
+    },
+    {
+      "id": "ENT-014",
+      "raisonSociale": "SOLAR-TECH Énergie CI",
+      "ncc": "CI-ABJ-2019-B-45679",
+      "rccm": "CI-ABJ-2019-B-45679",
+      "ifu": "3456789013",
+      "adresse": "Riviera Golf, Cocody, Abidjan",
+      "telephone": "+225 27 22 78 90 12",
+      "email": "projets@solartech.ci",
+      "domaine": "Énergies renouvelables et panneaux solaires",
+      "banque": {
+        "nom": "Société Générale CI",
+        "compte": "CI23 SG06 0014 4567 8901 23",
+        "swift": "SOGECIAB"
+      },
+      "createdAt": "2020-01-15T09:00:00.000Z"
+    },
+    {
+      "id": "ENT-015",
+      "raisonSociale": "AGRO-PLUS Aménagements Ruraux",
+      "ncc": "CI-ABJ-2012-B-56780",
+      "rccm": "CI-ABJ-2012-B-56780",
+      "ifu": "4567890124",
+      "adresse": "Km 12, Route de Bassam, Bingerville, Abidjan",
+      "telephone": "+225 27 21 89 01 23",
+      "email": "projets@agroplus.ci",
+      "domaine": "Aménagements agricoles et génie rural",
+      "banque": {
+        "nom": "Ecobank CI",
+        "compte": "CI45 EC04 0015 5678 9012 34",
+        "swift": "ECOCCIAB"
+      },
+      "createdAt": "2017-04-20T08:00:00.000Z"
+    }
+  ],
+  "GROUPEMENT": [
+    {
+      "id": "GRP-001",
+      "nom": "Groupement COLAS-SOBEA",
+      "type": "SOLIDAIRE",
+      "membres": [
+        {
+          "entrepriseId": "ENT-002",
+          "role": "MANDATAIRE",
+          "pourcentage": 60
+        },
+        {
+          "entrepriseId": "ENT-001",
+          "role": "COTRAITANT",
+          "pourcentage": 40
+        }
+      ],
+      "dateConstitution": "2023-01-20T00:00:00.000Z",
+      "createdAt": "2023-01-20T09:00:00.000Z"
+    },
+    {
+      "id": "GRP-002",
+      "nom": "Consortium AGRO-PLUS / HYDRO-CI",
+      "type": "CONJOINT",
+      "membres": [
+        {
+          "entrepriseId": "ENT-015",
+          "role": "MANDATAIRE",
+          "pourcentage": 55
+        },
+        {
+          "entrepriseId": "ENT-009",
+          "role": "COTRAITANT",
+          "pourcentage": 45
+        }
+      ],
+      "dateConstitution": "2023-12-10T00:00:00.000Z",
+      "createdAt": "2023-12-10T10:00:00.000Z"
+    },
+    {
+      "id": "GRP-003",
+      "nom": "Groupement AIGLE D'OR - SOTRA-BTP",
+      "type": "SOLIDAIRE",
+      "membres": [
+        {
+          "entrepriseId": "ENT-006",
+          "role": "MANDATAIRE",
+          "pourcentage": 50
+        },
+        {
+          "entrepriseId": "ENT-004",
+          "role": "COTRAITANT",
+          "pourcentage": 50
+        }
+      ],
+      "dateConstitution": "2024-01-15T00:00:00.000Z",
+      "createdAt": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": "GRP-004",
+      "nom": "Consortium SATMACI-PHARMACO",
+      "type": "CONJOINT",
+      "membres": [
+        {
+          "entrepriseId": "ENT-005",
+          "role": "MANDATAIRE",
+          "pourcentage": 70
+        },
+        {
+          "entrepriseId": "ENT-013",
+          "role": "COTRAITANT",
+          "pourcentage": 30
+        }
+      ],
+      "dateConstitution": "2023-05-20T00:00:00.000Z",
+      "createdAt": "2023-05-20T09:00:00.000Z"
+    },
+    {
+      "id": "GRP-005",
+      "nom": "Groupement SOLAR-TECH / CFAO Technologies",
+      "type": "SOLIDAIRE",
+      "membres": [
+        {
+          "entrepriseId": "ENT-014",
+          "role": "MANDATAIRE",
+          "pourcentage": 65
+        },
+        {
+          "entrepriseId": "ENT-007",
+          "role": "COTRAITANT",
+          "pourcentage": 35
+        }
+      ],
+      "dateConstitution": "2024-02-01T00:00:00.000Z",
+      "createdAt": "2024-02-01T08:30:00.000Z"
+    }
+  ],
+  "PROCEDURE": [
+    {
+      "id": "PROC-2023-001",
+      "operationId": "OP-2023-001",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2023-02-15T00:00:00.000Z",
+      "dateLimiteDepot": "2023-03-20T17:00:00.000Z",
+      "dateOuverturePlis": "2023-03-21T09:00:00.000Z",
+      "lieuDepot": "Direction de la Construction Scolaire, Abidjan-Plateau",
+      "lieuOuverture": "Salle des marchés, Plateau",
+      "montantCautionnement": 7600000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 60
+        },
+        {
+          "libelle": "Délai",
+          "ponderation": 20
+        },
+        {
+          "libelle": "Qualifications",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-001",
+          "montant": 380000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-004",
+          "montant": 395000000,
+          "conforme": true,
+          "classement": 2
+        },
+        {
+          "entrepriseId": "ENT-006",
+          "montant": 410000000,
+          "conforme": true,
+          "classement": 3
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-03-21T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2023-03-21T10:30:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2023-03-28T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-04-05T11:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-001",
+      "dateAttributionProvisoire": "2023-04-05T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-02-15T09:00:00.000Z",
+      "updatedAt": "2023-04-05T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2023-002",
+      "operationId": "OP-2023-002",
+      "modePassation": "AOO",
+      "type": "FOURNITURES",
+      "datePublication": "2023-01-25T00:00:00.000Z",
+      "dateLimiteDepot": "2023-03-01T17:00:00.000Z",
+      "dateOuverturePlis": "2023-03-02T09:00:00.000Z",
+      "lieuDepot": "Direction Générale de la Santé, Abidjan-Cocody",
+      "lieuOuverture": "Salle des marchés, DGS",
+      "montantCautionnement": 17000000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Qualité technique",
+          "ponderation": 30
+        },
+        {
+          "libelle": "Garanties",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "groupementId": "GRP-004",
+          "montant": 850000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-005",
+          "montant": 880000000,
+          "conforme": true,
+          "classement": 2
+        },
+        {
+          "entrepriseId": "ENT-003",
+          "montant": 920000000,
+          "conforme": false,
+          "classement": null
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-03-02T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2023-03-02T11:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2023-03-15T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-03-22T10:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "GRP-004",
+      "dateAttributionProvisoire": "2023-03-22T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-01-25T09:00:00.000Z",
+      "updatedAt": "2023-03-22T15:00:00.000Z"
+    },
+    {
+      "id": "PROC-2023-003",
+      "operationId": "OP-2023-003",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2023-03-20T00:00:00.000Z",
+      "dateLimiteDepot": "2023-05-10T17:00:00.000Z",
+      "dateOuverturePlis": "2023-05-11T09:00:00.000Z",
+      "lieuDepot": "Direction des Grands Travaux, Abidjan-Plateau",
+      "lieuOuverture": "Salle des marchés, DGT",
+      "montantCautionnement": 250000000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Délai d'exécution",
+          "ponderation": 25
+        },
+        {
+          "libelle": "Expérience similaire",
+          "ponderation": 15
+        },
+        {
+          "libelle": "Moyens techniques",
+          "ponderation": 10
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "groupementId": "GRP-001",
+          "montant": 12500000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-002",
+          "montant": 13200000000,
+          "conforme": true,
+          "classement": 2
+        },
+        {
+          "groupementId": "GRP-003",
+          "montant": 13800000000,
+          "conforme": true,
+          "classement": 3
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-05-11T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2023-05-11T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2023-06-05T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-06-20T10:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "GRP-001",
+      "dateAttributionProvisoire": "2023-06-20T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-03-20T09:00:00.000Z",
+      "updatedAt": "2023-06-20T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2023-004",
+      "operationId": "OP-2023-004",
+      "modePassation": "CI",
+      "type": "SERVICES_INTELLECTUELS",
+      "datePublication": "2023-03-01T00:00:00.000Z",
+      "dateLimiteDepot": "2023-03-31T17:00:00.000Z",
+      "dateOuverturePlis": "2023-04-03T09:00:00.000Z",
+      "lieuDepot": "Direction de l'Assainissement, Abidjan-Yopougon",
+      "lieuOuverture": "Bureau du directeur",
+      "montantCautionnement": 2500000,
+      "criteres": [
+        {
+          "libelle": "Qualifications consultant",
+          "ponderation": 40
+        },
+        {
+          "libelle": "Méthodologie",
+          "ponderation": 35
+        },
+        {
+          "libelle": "Prix",
+          "ponderation": 25
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-008",
+          "montant": 125000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-008",
+          "montant": 138000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-04-03T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2023-04-12T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-04-18T10:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-008",
+      "dateAttributionProvisoire": "2023-04-18T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-03-01T09:00:00.000Z",
+      "updatedAt": "2023-04-18T14:00:00.000Z"
+    },
+    {
+      "id": "PROC-2023-005",
+      "operationId": "OP-2023-005",
+      "modePassation": "PSD",
+      "type": "FOURNITURES",
+      "datePublication": "2023-04-15T00:00:00.000Z",
+      "dateLimiteDepot": "2023-05-10T17:00:00.000Z",
+      "dateOuverturePlis": "2023-05-11T09:00:00.000Z",
+      "lieuDepot": "Direction du Matériel, Abidjan-Plateau",
+      "lieuOuverture": "Salle des marchés",
+      "montantCautionnement": 900000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 70
+        },
+        {
+          "libelle": "Délai livraison",
+          "ponderation": 30
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-010",
+          "montant": 45000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-003",
+          "montant": 47500000,
+          "conforme": true,
+          "classement": 2
+        },
+        {
+          "entrepriseId": "ENT-010",
+          "montant": 49000000,
+          "conforme": true,
+          "classement": 3
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-05-11T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2023-05-11T10:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2023-05-16T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-05-20T10:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-010",
+      "dateAttributionProvisoire": "2023-05-20T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-04-15T09:00:00.000Z",
+      "updatedAt": "2023-05-20T15:00:00.000Z"
+    },
+    {
+      "id": "PROC-2023-006",
+      "operationId": "OP-2023-006",
+      "modePassation": "PSC",
+      "type": "SERVICES_COURANTS",
+      "datePublication": "2023-01-10T00:00:00.000Z",
+      "dateLimiteDepot": "2023-02-05T17:00:00.000Z",
+      "dateOuverturePlis": "2023-02-06T09:00:00.000Z",
+      "lieuDepot": "Direction de la Maintenance, Abidjan-Plateau",
+      "lieuOuverture": "Bureau direction",
+      "montantCautionnement": 360000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 60
+        },
+        {
+          "libelle": "Expérience",
+          "ponderation": 40
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-011",
+          "montant": 18000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-011",
+          "montant": 19500000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-02-06T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2023-02-06T10:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-02-10T14:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-011",
+      "dateAttributionProvisoire": "2023-02-10T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-01-10T09:00:00.000Z",
+      "updatedAt": "2023-02-10T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2023-007",
+      "operationId": "OP-2023-007",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2023-02-05T00:00:00.000Z",
+      "dateLimiteDepot": "2023-03-20T17:00:00.000Z",
+      "dateOuverturePlis": "2023-03-21T09:00:00.000Z",
+      "lieuDepot": "Direction du Développement Rural, Abidjan-Plateau",
+      "lieuOuverture": "Salle des marchés",
+      "montantCautionnement": 56000000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Expérience ponts",
+          "ponderation": 30
+        },
+        {
+          "libelle": "Moyens techniques",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-002",
+          "montant": 2800000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "groupementId": "GRP-001",
+          "montant": 2950000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2023-03-21T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2023-03-21T11:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2023-04-10T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2023-04-25T10:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-002",
+      "dateAttributionProvisoire": "2023-04-25T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2023-02-05T09:00:00.000Z",
+      "updatedAt": "2023-04-25T15:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-001",
+      "operationId": "OP-2024-001",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2024-01-25T00:00:00.000Z",
+      "dateLimiteDepot": "2024-02-25T17:00:00.000Z",
+      "dateOuverturePlis": "2024-02-26T09:00:00.000Z",
+      "lieuDepot": "Direction Générale des Marchés Publics, Abidjan-Plateau",
+      "lieuOuverture": "Salle des marchés, DGMP",
+      "montantCautionnement": 5000000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 60
+        },
+        {
+          "libelle": "Délai",
+          "ponderation": 25
+        },
+        {
+          "libelle": "Qualifications",
+          "ponderation": 15
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-004",
+          "montant": 250000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-001",
+          "montant": 268000000,
+          "conforme": true,
+          "classement": 2
+        },
+        {
+          "entrepriseId": "ENT-006",
+          "montant": 275000000,
+          "conforme": true,
+          "classement": 3
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-02-26T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-02-26T10:30:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-03-05T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2024-03-12T11:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-004",
+      "dateAttributionProvisoire": "2024-03-12T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-01-25T09:00:00.000Z",
+      "updatedAt": "2024-03-12T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-002",
+      "operationId": "OP-2024-002",
+      "modePassation": "PSD",
+      "type": "FOURNITURES",
+      "datePublication": "2024-02-05T00:00:00.000Z",
+      "dateLimiteDepot": "2024-03-05T17:00:00.000Z",
+      "dateOuverturePlis": "2024-03-06T09:00:00.000Z",
+      "lieuDepot": "Direction du Matériel Roulant, Abidjan-Plateau",
+      "lieuOuverture": "Salle des marchés",
+      "montantCautionnement": 1500000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Qualité véhicules",
+          "ponderation": 30
+        },
+        {
+          "libelle": "SAV et garanties",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-012",
+          "montant": 75000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-012",
+          "montant": 78000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-03-06T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-03-06T10:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-03-20T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2024-03-28T10:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-012",
+      "dateAttributionProvisoire": "2024-03-28T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-02-05T09:00:00.000Z",
+      "updatedAt": "2024-03-28T15:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-004",
+      "operationId": "OP-2024-004",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2024-01-20T00:00:00.000Z",
+      "dateLimiteDepot": "2024-03-05T17:00:00.000Z",
+      "dateOuverturePlis": "2024-03-06T09:00:00.000Z",
+      "lieuDepot": "Direction de l'Hydraulique Rurale, Man",
+      "lieuOuverture": "Salle des marchés, DHR",
+      "montantCautionnement": 6400000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 55
+        },
+        {
+          "libelle": "Expérience forages",
+          "ponderation": 25
+        },
+        {
+          "libelle": "Moyens techniques",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-009",
+          "montant": 320000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-009",
+          "montant": 335000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-03-06T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-03-06T10:30:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-03-18T14:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": null,
+      "dateAttributionProvisoire": null,
+      "etat": "EN_ANALYSE",
+      "createdAt": "2024-01-20T09:00:00.000Z",
+      "updatedAt": "2024-03-20T15:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-005",
+      "operationId": "OP-2024-005",
+      "modePassation": "PSO",
+      "type": "SERVICES_INTELLECTUELS",
+      "datePublication": "2024-02-15T00:00:00.000Z",
+      "dateLimiteDepot": "2024-03-20T17:00:00.000Z",
+      "dateOuverturePlis": "2024-03-21T09:00:00.000Z",
+      "lieuDepot": "Direction de la Formation Professionnelle, Abidjan-Cocody",
+      "lieuOuverture": "Bureau direction",
+      "montantCautionnement": 700000,
+      "criteres": [
+        {
+          "libelle": "Qualifications formateurs",
+          "ponderation": 40
+        },
+        {
+          "libelle": "Méthodologie",
+          "ponderation": 35
+        },
+        {
+          "libelle": "Prix",
+          "ponderation": 25
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-008",
+          "montant": 35000000,
+          "conforme": true,
+          "classement": 1
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-03-21T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-04-02T14:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": null,
+      "dateAttributionProvisoire": null,
+      "etat": "EN_ANALYSE",
+      "createdAt": "2024-02-15T09:00:00.000Z",
+      "updatedAt": "2024-04-05T12:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-006",
+      "operationId": "OP-2024-006",
+      "modePassation": "AOO",
+      "type": "FOURNITURES",
+      "datePublication": "2024-02-01T00:00:00.000Z",
+      "dateLimiteDepot": "2024-03-10T17:00:00.000Z",
+      "dateOuverturePlis": "2024-03-11T09:00:00.000Z",
+      "lieuDepot": "Direction de la Sécurité Civile, Abidjan-Marcory",
+      "lieuOuverture": "Salle des marchés, DSC",
+      "montantCautionnement": 13000000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Qualité équipements",
+          "ponderation": 30
+        },
+        {
+          "libelle": "Garanties et SAV",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-005",
+          "montant": 650000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-003",
+          "montant": 685000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-03-11T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-03-11T10:30:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-03-25T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2024-04-05T11:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-005",
+      "dateAttributionProvisoire": "2024-04-05T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-02-01T09:00:00.000Z",
+      "updatedAt": "2024-04-05T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-007",
+      "operationId": "OP-2024-007",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2024-02-25T00:00:00.000Z",
+      "dateLimiteDepot": "2024-04-05T17:00:00.000Z",
+      "dateOuverturePlis": "2024-04-08T09:00:00.000Z",
+      "lieuDepot": "Direction de la Construction Pénitentiaire, Abidjan-Yopougon",
+      "lieuOuverture": "Salle des marchés, DCP",
+      "montantCautionnement": 9600000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 55
+        },
+        {
+          "libelle": "Délai",
+          "ponderation": 25
+        },
+        {
+          "libelle": "Expérience",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-006",
+          "montant": 480000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-004",
+          "montant": 495000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-04-08T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-04-08T10:30:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-04-22T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2024-04-30T11:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-006",
+      "dateAttributionProvisoire": "2024-04-30T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-02-25T09:00:00.000Z",
+      "updatedAt": "2024-04-30T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-008",
+      "operationId": "OP-2024-008",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2024-03-15T00:00:00.000Z",
+      "dateLimiteDepot": "2024-04-20T17:00:00.000Z",
+      "dateOuverturePlis": "2024-04-22T09:00:00.000Z",
+      "lieuDepot": "Direction des Énergies Renouvelables, Grand-Bassam",
+      "lieuOuverture": "Salle des marchés, DER",
+      "montantCautionnement": 17800000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Qualité panneaux",
+          "ponderation": 30
+        },
+        {
+          "libelle": "Expérience solaire",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "groupementId": "GRP-005",
+          "montant": 890000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-014",
+          "montant": 925000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-04-22T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-04-22T11:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-05-03T14:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "GRP-005",
+      "dateAttributionProvisoire": "2024-05-03T00:00:00.000Z",
+      "etat": "EN_ATTRIBUTION",
+      "createdAt": "2024-03-15T09:00:00.000Z",
+      "updatedAt": "2024-05-15T11:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-009",
+      "operationId": "OP-2024-009",
+      "modePassation": "AOO",
+      "type": "FOURNITURES",
+      "datePublication": "2024-02-05T00:00:00.000Z",
+      "dateLimiteDepot": "2024-03-15T17:00:00.000Z",
+      "dateOuverturePlis": "2024-03-18T09:00:00.000Z",
+      "lieuDepot": "Direction de la Lutte contre le Paludisme, Soubré",
+      "lieuOuverture": "Salle des marchés, DLP",
+      "montantCautionnement": 14400000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Qualité moustiquaires",
+          "ponderation": 35
+        },
+        {
+          "libelle": "Délai livraison",
+          "ponderation": 15
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-013",
+          "montant": 720000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-005",
+          "montant": 755000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-03-18T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-03-18T10:30:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-04-02T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2024-04-12T11:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "ENT-013",
+      "dateAttributionProvisoire": "2024-04-12T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-02-05T09:00:00.000Z",
+      "updatedAt": "2024-04-12T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2024-010",
+      "operationId": "OP-2024-010",
+      "modePassation": "AOO",
+      "type": "TRAVAUX",
+      "datePublication": "2024-01-15T00:00:00.000Z",
+      "dateLimiteDepot": "2024-02-25T17:00:00.000Z",
+      "dateOuverturePlis": "2024-02-26T09:00:00.000Z",
+      "lieuDepot": "Direction de l'Agriculture Vivrière, Bondoukou",
+      "lieuOuverture": "Salle des marchés, DAV",
+      "montantCautionnement": 24000000,
+      "criteres": [
+        {
+          "libelle": "Prix",
+          "ponderation": 50
+        },
+        {
+          "libelle": "Expérience aménagements",
+          "ponderation": 30
+        },
+        {
+          "libelle": "Moyens techniques",
+          "ponderation": 20
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "groupementId": "GRP-002",
+          "montant": 1200000000,
+          "conforme": true,
+          "classement": 1
+        },
+        {
+          "entrepriseId": "ENT-015",
+          "montant": 1280000000,
+          "conforme": true,
+          "classement": 2
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2024-02-26T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "OUVERTURE",
+          "date": "2024-02-26T11:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2024-03-08T14:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "JUGEMENT",
+          "date": "2024-03-15T11:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": "GRP-002",
+      "dateAttributionProvisoire": "2024-03-15T00:00:00.000Z",
+      "etat": "ATTRIBUE",
+      "createdAt": "2024-01-15T09:00:00.000Z",
+      "updatedAt": "2024-03-15T16:00:00.000Z"
+    },
+    {
+      "id": "PROC-2025-003",
+      "operationId": "OP-2025-003",
+      "modePassation": "PSO",
+      "type": "SERVICES_INTELLECTUELS",
+      "datePublication": "2025-02-05T00:00:00.000Z",
+      "dateLimiteDepot": "2025-03-05T17:00:00.000Z",
+      "dateOuverturePlis": "2025-03-06T09:00:00.000Z",
+      "lieuDepot": "Direction de la Protection Civile, Abidjan-Port-Bouët",
+      "lieuOuverture": "Bureau direction",
+      "montantCautionnement": 840000,
+      "criteres": [
+        {
+          "libelle": "Qualifications formateurs",
+          "ponderation": 40
+        },
+        {
+          "libelle": "Méthodologie",
+          "ponderation": 35
+        },
+        {
+          "libelle": "Prix",
+          "ponderation": 25
+        }
+      ],
+      "soumissionnaires": [
+        {
+          "entrepriseId": "ENT-008",
+          "montant": 42000000,
+          "conforme": true,
+          "classement": 1
+        }
+      ],
+      "pvs": [
+        {
+          "type": "DEPOT",
+          "date": "2025-03-06T09:00:00.000Z",
+          "documentId": null
+        },
+        {
+          "type": "ANALYSE",
+          "date": "2025-03-12T14:00:00.000Z",
+          "documentId": null
+        }
+      ],
+      "attributaireProvisoire": null,
+      "dateAttributionProvisoire": null,
+      "etat": "EN_ANALYSE",
+      "createdAt": "2025-02-05T09:00:00.000Z",
+      "updatedAt": "2025-03-15T11:00:00.000Z"
+    }
+  ],
+  "RECOURS": [
+    {
+      "id": "REC-2023-001",
+      "operationId": "OP-2023-001",
+      "procedureId": "PROC-2023-001",
+      "soumissionnaire": "ENT-004",
+      "dateDepot": "2023-04-08T00:00:00.000Z",
+      "motif": "Contestation des résultats de l'évaluation technique",
+      "statutRGMP": "REJETE",
+      "dateDecisionRGMP": "2023-04-12T00:00:00.000Z",
+      "observationsRGMP": "Recours non fondé - Critères d'évaluation correctement appliqués",
+      "createdAt": "2023-04-08T09:00:00.000Z",
+      "updatedAt": "2023-04-12T14:00:00.000Z"
+    },
+    {
+      "id": "REC-2024-001",
+      "operationId": "OP-2024-004",
+      "procedureId": "PROC-2024-004",
+      "soumissionnaire": "ENT-009",
+      "dateDepot": "2024-03-22T00:00:00.000Z",
+      "motif": "Demande de précisions sur les spécifications techniques du DAO",
+      "statutRGMP": "ACCEPTE",
+      "dateDecisionRGMP": "2024-03-25T00:00:00.000Z",
+      "observationsRGMP": "Report de la date limite de dépôt de 7 jours pour clarifications",
+      "createdAt": "2024-03-22T09:00:00.000Z",
+      "updatedAt": "2024-03-25T14:00:00.000Z"
+    }
+  ],
+  "ATTRIBUTION": [
+    {
+      "id": "ATTR-2023-001",
+      "operationId": "OP-2023-001",
+      "procedureId": "PROC-2023-001",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-001"
+      },
+      "montantAttribue": 380000000,
+      "montantMarche": 380000000,
+      "delaiExecution": 8,
+      "dateNotification": "2023-04-15T00:00:00.000Z",
+      "dateSignature": "2023-04-28T00:00:00.000Z",
+      "numeroMarche": "2023/DCS/AOO/001",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-001",
+      "anoDate": "2023-05-10T00:00:00.000Z",
+      "createdAt": "2023-04-15T10:00:00.000Z",
+      "updatedAt": "2023-05-10T14:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2023-002",
+      "operationId": "OP-2023-002",
+      "procedureId": "PROC-2023-002",
+      "titulaire": {
+        "type": "GROUPEMENT",
+        "id": "GRP-004"
+      },
+      "montantAttribue": 850000000,
+      "montantMarche": 850000000,
+      "delaiExecution": 6,
+      "dateNotification": "2023-03-28T00:00:00.000Z",
+      "dateSignature": "2023-04-10T00:00:00.000Z",
+      "numeroMarche": "2023/DGS/AOO/002",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-002",
+      "anoDate": "2023-04-25T00:00:00.000Z",
+      "createdAt": "2023-03-28T10:00:00.000Z",
+      "updatedAt": "2023-04-25T14:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2023-003",
+      "operationId": "OP-2023-003",
+      "procedureId": "PROC-2023-003",
+      "titulaire": {
+        "type": "GROUPEMENT",
+        "id": "GRP-001"
+      },
+      "montantAttribue": 12500000000,
+      "montantMarche": 14375000000,
+      "delaiExecution": 24,
+      "dateNotification": "2023-06-25T00:00:00.000Z",
+      "dateSignature": "2023-07-10T00:00:00.000Z",
+      "numeroMarche": "2023/DGT/AOO/003",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-003",
+      "anoDate": "2023-07-25T00:00:00.000Z",
+      "createdAt": "2023-06-25T10:00:00.000Z",
+      "updatedAt": "2024-09-15T16:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2023-004",
+      "operationId": "OP-2023-004",
+      "procedureId": "PROC-2023-004",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-008"
+      },
+      "montantAttribue": 125000000,
+      "montantMarche": 125000000,
+      "delaiExecution": 4,
+      "dateNotification": "2023-04-22T00:00:00.000Z",
+      "dateSignature": "2023-05-05T00:00:00.000Z",
+      "numeroMarche": "2023/DA/CI/004",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-004",
+      "anoDate": "2023-05-18T00:00:00.000Z",
+      "createdAt": "2023-04-22T10:00:00.000Z",
+      "updatedAt": "2023-05-18T14:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2023-005",
+      "operationId": "OP-2023-005",
+      "procedureId": "PROC-2023-005",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-010"
+      },
+      "montantAttribue": 45000000,
+      "montantMarche": 45000000,
+      "delaiExecution": 2,
+      "dateNotification": "2023-05-25T00:00:00.000Z",
+      "dateSignature": "2023-06-05T00:00:00.000Z",
+      "numeroMarche": "2023/DML/PSD/005",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-005",
+      "anoDate": "2023-06-15T00:00:00.000Z",
+      "createdAt": "2023-05-25T10:00:00.000Z",
+      "updatedAt": "2023-06-15T14:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2023-006",
+      "operationId": "OP-2023-006",
+      "procedureId": "PROC-2023-006",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-011"
+      },
+      "montantAttribue": 18000000,
+      "montantMarche": 18000000,
+      "delaiExecution": 12,
+      "dateNotification": "2023-02-15T00:00:00.000Z",
+      "dateSignature": "2023-02-25T00:00:00.000Z",
+      "numeroMarche": "2023/DM/PSC/006",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-006",
+      "anoDate": "2023-03-10T00:00:00.000Z",
+      "createdAt": "2023-02-15T10:00:00.000Z",
+      "updatedAt": "2023-03-10T14:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2023-007",
+      "operationId": "OP-2023-007",
+      "procedureId": "PROC-2023-007",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-002"
+      },
+      "montantAttribue": 2800000000,
+      "montantMarche": 2450000000,
+      "delaiExecution": 18,
+      "dateNotification": "2023-05-05T00:00:00.000Z",
+      "dateSignature": "2023-05-20T00:00:00.000Z",
+      "numeroMarche": "2023/DDR/AOO/007",
+      "anoEmis": true,
+      "anoNumero": "ANO-2023-007",
+      "anoDate": "2023-06-05T00:00:00.000Z",
+      "createdAt": "2023-05-05T10:00:00.000Z",
+      "updatedAt": "2024-06-15T16:30:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-001",
+      "operationId": "OP-2024-001",
+      "procedureId": "PROC-2024-001",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-004"
+      },
+      "montantAttribue": 250000000,
+      "montantMarche": 307500000,
+      "delaiExecution": 12,
+      "dateNotification": "2024-03-18T00:00:00.000Z",
+      "dateSignature": "2024-04-05T00:00:00.000Z",
+      "numeroMarche": "2024/DGMP/AOO/001",
+      "anoEmis": true,
+      "anoNumero": "ANO-2024-001",
+      "anoDate": "2024-04-20T00:00:00.000Z",
+      "createdAt": "2024-03-18T10:00:00.000Z",
+      "updatedAt": "2024-05-15T14:30:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-002",
+      "operationId": "OP-2024-002",
+      "procedureId": "PROC-2024-002",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-012"
+      },
+      "montantAttribue": 75000000,
+      "montantMarche": 75000000,
+      "delaiExecution": 3,
+      "dateNotification": "2024-04-05T00:00:00.000Z",
+      "dateSignature": null,
+      "numeroMarche": null,
+      "anoEmis": false,
+      "anoNumero": null,
+      "anoDate": null,
+      "createdAt": "2024-04-05T10:00:00.000Z",
+      "updatedAt": "2024-04-10T11:20:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-006",
+      "operationId": "OP-2024-006",
+      "procedureId": "PROC-2024-006",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-005"
+      },
+      "montantAttribue": 650000000,
+      "montantMarche": 650000000,
+      "delaiExecution": 6,
+      "dateNotification": "2024-04-15T00:00:00.000Z",
+      "dateSignature": "2024-05-05T00:00:00.000Z",
+      "numeroMarche": "2024/DSC/AOO/006",
+      "anoEmis": true,
+      "anoNumero": "ANO-2024-006",
+      "anoDate": "2024-05-20T00:00:00.000Z",
+      "createdAt": "2024-04-15T10:00:00.000Z",
+      "updatedAt": "2024-05-30T16:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-007",
+      "operationId": "OP-2024-007",
+      "procedureId": "PROC-2024-007",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-006"
+      },
+      "montantAttribue": 480000000,
+      "montantMarche": 576000000,
+      "delaiExecution": 10,
+      "dateNotification": "2024-05-10T00:00:00.000Z",
+      "dateSignature": "2024-05-28T00:00:00.000Z",
+      "numeroMarche": "2024/DCP/AOO/007",
+      "anoEmis": true,
+      "anoNumero": "ANO-2024-007",
+      "anoDate": "2024-06-12T00:00:00.000Z",
+      "createdAt": "2024-05-10T10:00:00.000Z",
+      "updatedAt": "2024-08-15T14:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-008",
+      "operationId": "OP-2024-008",
+      "procedureId": "PROC-2024-008",
+      "titulaire": {
+        "type": "GROUPEMENT",
+        "id": "GRP-005"
+      },
+      "montantAttribue": 890000000,
+      "montantMarche": 890000000,
+      "delaiExecution": 8,
+      "dateNotification": "2024-05-05T00:00:00.000Z",
+      "dateSignature": null,
+      "numeroMarche": null,
+      "anoEmis": false,
+      "anoNumero": null,
+      "anoDate": null,
+      "createdAt": "2024-05-05T10:00:00.000Z",
+      "updatedAt": "2024-05-15T11:00:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-009",
+      "operationId": "OP-2024-009",
+      "procedureId": "PROC-2024-009",
+      "titulaire": {
+        "type": "ENTREPRISE",
+        "id": "ENT-013"
+      },
+      "montantAttribue": 720000000,
+      "montantMarche": 720000000,
+      "delaiExecution": 5,
+      "dateNotification": "2024-04-20T00:00:00.000Z",
+      "dateSignature": "2024-05-08T00:00:00.000Z",
+      "numeroMarche": "2024/DLP/AOO/009",
+      "anoEmis": true,
+      "anoNumero": "ANO-2024-009",
+      "anoDate": "2024-05-25T00:00:00.000Z",
+      "createdAt": "2024-04-20T10:00:00.000Z",
+      "updatedAt": "2024-06-10T15:30:00.000Z"
+    },
+    {
+      "id": "ATTR-2024-010",
+      "operationId": "OP-2024-010",
+      "procedureId": "PROC-2024-010",
+      "titulaire": {
+        "type": "GROUPEMENT",
+        "id": "GRP-002"
+      },
+      "montantAttribue": 1200000000,
+      "montantMarche": 1020000000,
+      "delaiExecution": 12,
+      "dateNotification": "2024-03-20T00:00:00.000Z",
+      "dateSignature": "2024-04-10T00:00:00.000Z",
+      "numeroMarche": "2024/DAV/AOO/010",
+      "anoEmis": true,
+      "anoNumero": "ANO-2024-010",
+      "anoDate": "2024-04-28T00:00:00.000Z",
+      "createdAt": "2024-03-20T10:00:00.000Z",
+      "updatedAt": "2024-09-05T16:45:00.000Z"
+    }
+  ],
+  "ECHEANCIER": [
+    {
+      "id": "ECH-2023-003",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "montantTotal": 14375000000,
+      "lignes": [
+        {
+          "tranche": 1,
+          "description": "Travaux préparatoires et installations de chantier",
+          "pourcentage": 10,
+          "montant": 1437500000,
+          "datePrevisionnelle": "2023-12-01T00:00:00.000Z"
+        },
+        {
+          "tranche": 2,
+          "description": "Terrassement et drainage PK 0-25",
+          "pourcentage": 20,
+          "montant": 2875000000,
+          "datePrevisionnelle": "2024-04-01T00:00:00.000Z"
+        },
+        {
+          "tranche": 3,
+          "description": "Corps de chaussée PK 0-25",
+          "pourcentage": 15,
+          "montant": 2156250000,
+          "datePrevisionnelle": "2024-08-01T00:00:00.000Z"
+        },
+        {
+          "tranche": 4,
+          "description": "Terrassement et drainage PK 25-50",
+          "pourcentage": 20,
+          "montant": 2875000000,
+          "datePrevisionnelle": "2024-12-01T00:00:00.000Z"
+        },
+        {
+          "tranche": 5,
+          "description": "Corps de chaussée PK 25-50",
+          "pourcentage": 15,
+          "montant": 2156250000,
+          "datePrevisionnelle": "2025-04-01T00:00:00.000Z"
+        },
+        {
+          "tranche": 6,
+          "description": "Revêtement final PK 0-50 et ouvrages complémentaires",
+          "pourcentage": 15,
+          "montant": 2156250000,
+          "datePrevisionnelle": "2025-08-01T00:00:00.000Z"
+        },
+        {
+          "tranche": 7,
+          "description": "Finitions, signalisation et réception",
+          "pourcentage": 5,
+          "montant": 718750000,
+          "datePrevisionnelle": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "createdAt": "2023-08-20T09:00:00.000Z",
+      "updatedAt": "2024-09-15T16:00:00.000Z"
+    }
+  ],
+  "CLE_REPARTITION": [
+    {
+      "id": "CLE-2023-003",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "montantTotal": 14375000000,
+      "bailleurs": [
+        {
+          "nom": "Banque Mondiale",
+          "sigle": "BM",
+          "pourcentage": 70,
+          "montant": 10062500000
+        },
+        {
+          "nom": "Trésor Public CI",
+          "sigle": "TRESOR",
+          "pourcentage": 30,
+          "montant": 4312500000
+        }
+      ],
+      "createdAt": "2023-08-20T09:00:00.000Z",
+      "updatedAt": "2024-09-15T16:00:00.000Z"
+    }
+  ],
+  "VISA_CF": [
+    {
+      "id": "VISA-2023-001",
+      "operationId": "OP-2023-001",
+      "attributionId": "ATTR-2023-001",
+      "dateDepot": "2023-05-15T00:00:00.000Z",
+      "dateVisa": "2023-05-25T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/001",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 380000000,
+      "delaiVise": 8,
+      "viseur": "Jean-Baptiste KOFFI",
+      "fonction": "Contrôleur Financier",
+      "createdAt": "2023-05-15T09:00:00.000Z",
+      "updatedAt": "2023-05-25T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2023-002",
+      "operationId": "OP-2023-002",
+      "attributionId": "ATTR-2023-002",
+      "dateDepot": "2023-04-28T00:00:00.000Z",
+      "dateVisa": "2023-05-08T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/002",
+      "observations": "Visa accordé avec réserve sur le délai de livraison",
+      "montantVise": 850000000,
+      "delaiVise": 6,
+      "viseur": "Marie-Thérèse BROU",
+      "fonction": "Contrôleuse Financière",
+      "createdAt": "2023-04-28T09:00:00.000Z",
+      "updatedAt": "2023-05-08T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2023-003",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "dateDepot": "2023-07-28T00:00:00.000Z",
+      "dateVisa": "2023-08-15T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/003",
+      "observations": "Visa accordé - Montant supérieur à 10 milliards, avis CNCMP requis",
+      "montantVise": 12500000000,
+      "delaiVise": 24,
+      "viseur": "Amadou TOURE",
+      "fonction": "Contrôleur Financier Chef",
+      "createdAt": "2023-07-28T09:00:00.000Z",
+      "updatedAt": "2023-08-15T16:00:00.000Z"
+    },
+    {
+      "id": "VISA-2023-004",
+      "operationId": "OP-2023-004",
+      "attributionId": "ATTR-2023-004",
+      "dateDepot": "2023-05-22T00:00:00.000Z",
+      "dateVisa": "2023-06-02T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/004",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 125000000,
+      "delaiVise": 4,
+      "viseur": "Jean-Baptiste KOFFI",
+      "fonction": "Contrôleur Financier",
+      "createdAt": "2023-05-22T09:00:00.000Z",
+      "updatedAt": "2023-06-02T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2023-005",
+      "operationId": "OP-2023-005",
+      "attributionId": "ATTR-2023-005",
+      "dateDepot": "2023-06-18T00:00:00.000Z",
+      "dateVisa": "2023-06-25T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/005",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 45000000,
+      "delaiVise": 2,
+      "viseur": "Marie-Thérèse BROU",
+      "fonction": "Contrôleuse Financière",
+      "createdAt": "2023-06-18T09:00:00.000Z",
+      "updatedAt": "2023-06-25T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2023-006",
+      "operationId": "OP-2023-006",
+      "attributionId": "ATTR-2023-006",
+      "dateDepot": "2023-03-15T00:00:00.000Z",
+      "dateVisa": "2023-03-25T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/006",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 18000000,
+      "delaiVise": 12,
+      "viseur": "Jean-Baptiste KOFFI",
+      "fonction": "Contrôleur Financier",
+      "createdAt": "2023-03-15T09:00:00.000Z",
+      "updatedAt": "2023-03-25T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2023-007",
+      "operationId": "OP-2023-007",
+      "attributionId": "ATTR-2023-007",
+      "dateDepot": "2023-06-08T00:00:00.000Z",
+      "dateVisa": "2023-06-20T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2023/007",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 2800000000,
+      "delaiVise": 18,
+      "viseur": "Amadou TOURE",
+      "fonction": "Contrôleur Financier Chef",
+      "createdAt": "2023-06-08T09:00:00.000Z",
+      "updatedAt": "2023-06-20T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2024-001",
+      "operationId": "OP-2024-001",
+      "attributionId": "ATTR-2024-001",
+      "dateDepot": "2024-04-25T00:00:00.000Z",
+      "dateVisa": "2024-05-08T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2024/001",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 250000000,
+      "delaiVise": 12,
+      "viseur": "Marie-Thérèse BROU",
+      "fonction": "Contrôleuse Financière",
+      "createdAt": "2024-04-25T09:00:00.000Z",
+      "updatedAt": "2024-05-08T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2024-006",
+      "operationId": "OP-2024-006",
+      "attributionId": "ATTR-2024-006",
+      "dateDepot": "2024-05-22T00:00:00.000Z",
+      "dateVisa": null,
+      "numeroVisa": null,
+      "observations": "Dossier en cours d'instruction",
+      "montantVise": null,
+      "delaiVise": null,
+      "viseur": "Amadou TOURE",
+      "fonction": "Contrôleur Financier Chef",
+      "createdAt": "2024-05-22T09:00:00.000Z",
+      "updatedAt": "2024-05-30T16:00:00.000Z"
+    },
+    {
+      "id": "VISA-2024-007",
+      "operationId": "OP-2024-007",
+      "attributionId": "ATTR-2024-007",
+      "dateDepot": "2024-06-15T00:00:00.000Z",
+      "dateVisa": "2024-06-28T00:00:00.000Z",
+      "numeroVisa": "VISA/CF/2024/007",
+      "observations": "Visa accordé sans réserve",
+      "montantVise": 480000000,
+      "delaiVise": 10,
+      "viseur": "Jean-Baptiste KOFFI",
+      "fonction": "Contrôleur Financier",
+      "createdAt": "2024-06-15T09:00:00.000Z",
+      "updatedAt": "2024-06-28T14:00:00.000Z"
+    },
+    {
+      "id": "VISA-2024-009",
+      "operationId": "OP-2024-009",
+      "attributionId": "ATTR-2024-009",
+      "dateDepot": "2024-05-28T00:00:00.000Z",
+      "dateVisa": null,
+      "numeroVisa": null,
+      "observations": "Dossier en cours d'instruction",
+      "montantVise": null,
+      "delaiVise": null,
+      "viseur": "Marie-Thérèse BROU",
+      "fonction": "Contrôleuse Financière",
+      "createdAt": "2024-05-28T09:00:00.000Z",
+      "updatedAt": "2024-06-10T15:30:00.000Z"
+    }
+  ],
+  "ORDRE_SERVICE": [
+    {
+      "id": "OS-2023-003-001",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "numero": "OS-001/DGT/2023",
+      "type": "DEMARRAGE",
+      "dateEmission": "2023-08-20T00:00:00.000Z",
+      "dateEffet": "2023-09-01T00:00:00.000Z",
+      "dateFinPrevue": "2025-09-01T00:00:00.000Z",
+      "objet": "Ordre de service de démarrage des travaux de réhabilitation route Yamoussoukro-Bouaké",
+      "montant": 12500000000,
+      "delai": 24,
+      "lieuxTravaux": "Axe Yamoussoukro-Bouaké, PK 0 à PK 75",
+      "emetteur": "Directeur des Grands Travaux",
+      "bureauControle": {
+        "type": "ENTREPRISE",
+        "id": "ENT-008",
+        "nom": "ETSO Études & Conseils"
+      },
+      "bureauEtudes": {
+        "type": "ENTREPRISE",
+        "id": "ENT-008",
+        "nom": "ETSO Études & Conseils"
+      },
+      "createdAt": "2023-08-20T09:00:00.000Z",
+      "updatedAt": "2023-08-20T14:00:00.000Z"
+    },
+    {
+      "id": "OS-2024-001-001",
+      "operationId": "OP-2024-001",
+      "attributionId": "ATTR-2024-001",
+      "numero": "OS-001/DGMP/2024",
+      "type": "DEMARRAGE",
+      "dateEmission": "2024-05-12T00:00:00.000Z",
+      "dateEffet": "2024-06-01T00:00:00.000Z",
+      "dateFinPrevue": "2025-06-01T00:00:00.000Z",
+      "objet": "Ordre de service de démarrage construction centre de santé Korhogo",
+      "montant": 250000000,
+      "delai": 12,
+      "lieuxTravaux": "Korhogo Centre, terrain identifié par le Ministère de la Santé",
+      "emetteur": "Directeur Général des Marchés Publics",
+      "bureauControle": {
+        "type": "UA",
+        "nom": "Direction Générale de la Santé"
+      },
+      "bureauEtudes": {
+        "type": "ENTREPRISE",
+        "id": "ENT-008",
+        "nom": "ETSO Études & Conseils"
+      },
+      "createdAt": "2024-05-12T09:00:00.000Z",
+      "updatedAt": "2024-05-12T14:00:00.000Z"
+    },
+    {
+      "id": "OS-2024-007-001",
+      "operationId": "OP-2024-007",
+      "attributionId": "ATTR-2024-007",
+      "numero": "OS-001/DCP/2024",
+      "type": "DEMARRAGE",
+      "dateEmission": "2024-07-05T00:00:00.000Z",
+      "dateEffet": "2024-07-15T00:00:00.000Z",
+      "dateFinPrevue": "2025-05-15T00:00:00.000Z",
+      "objet": "Ordre de service de démarrage réhabilitation MACA Abidjan",
+      "montant": 480000000,
+      "delai": 10,
+      "lieuxTravaux": "MACA Yopougon-Niangon, Abidjan",
+      "emetteur": "Directeur de la Construction Pénitentiaire",
+      "bureauControle": {
+        "type": "UA",
+        "nom": "Direction de la Construction Pénitentiaire"
+      },
+      "bureauEtudes": {
+        "type": "ENTREPRISE",
+        "id": "ENT-008",
+        "nom": "ETSO Études & Conseils"
+      },
+      "createdAt": "2024-07-05T09:00:00.000Z",
+      "updatedAt": "2024-07-05T14:00:00.000Z"
+    }
+  ],
+  "AVENANT": [
+    {
+      "id": "AVE-2023-003-001",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "numero": "AVENANT-001/DGT/2024",
+      "dateSignature": "2024-09-10T00:00:00.000Z",
+      "motif": "MODIFICATION_TECH",
+      "motifAutre": null,
+      "description": "Extension de l'ouvrage d'art au PK 38 suite aux études géotechniques complémentaires",
+      "montantInitial": 12500000000,
+      "montantAvenant": 1875000000,
+      "montantCumule": 14375000000,
+      "pourcentageAvenant": 15,
+      "pourcentageCumule": 15,
+      "delaiInitial": 24,
+      "delaiAvenant": 4,
+      "delaiTotal": 28,
+      "dateFinInitiale": "2025-09-01T00:00:00.000Z",
+      "dateFinRevisee": "2026-01-01T00:00:00.000Z",
+      "visa": {
+        "dateVisa": "2024-09-20T00:00:00.000Z",
+        "numeroVisa": "VISA/CF/AVE/2024/003-001",
+        "viseur": "Amadou TOURE"
+      },
+      "createdAt": "2024-09-10T09:00:00.000Z",
+      "updatedAt": "2024-09-20T14:00:00.000Z"
+    },
+    {
+      "id": "AVE-2024-001-001",
+      "operationId": "OP-2024-001",
+      "attributionId": "ATTR-2024-001",
+      "numero": "AVENANT-001/DGMP/2024",
+      "dateSignature": "2024-11-05T00:00:00.000Z",
+      "motif": "PRIX_HAUSSE",
+      "motifAutre": null,
+      "description": "Ajustement des prix suite à la hausse du ciment et des matériaux de construction (+18%) et ajout d'un bloc administratif",
+      "montantInitial": 250000000,
+      "montantAvenant": 57500000,
+      "montantCumule": 307500000,
+      "pourcentageAvenant": 23,
+      "pourcentageCumule": 23,
+      "delaiInitial": 12,
+      "delaiAvenant": 2,
+      "delaiTotal": 14,
+      "dateFinInitiale": "2025-06-01T00:00:00.000Z",
+      "dateFinRevisee": "2025-08-01T00:00:00.000Z",
+      "visa": {
+        "dateVisa": "2024-11-15T00:00:00.000Z",
+        "numeroVisa": "VISA/CF/AVE/2024/001-001",
+        "viseur": "Marie-Thérèse BROU"
+      },
+      "createdAt": "2024-11-05T09:00:00.000Z",
+      "updatedAt": "2024-11-15T14:00:00.000Z"
+    },
+    {
+      "id": "AVE-2024-007-001",
+      "operationId": "OP-2024-007",
+      "attributionId": "ATTR-2024-007",
+      "numero": "AVENANT-001/DCP/2024",
+      "dateSignature": "2024-10-20T00:00:00.000Z",
+      "motif": "TRAVAUX_SUPP",
+      "motifAutre": null,
+      "description": "Travaux supplémentaires non prévus: réfection complète du système électrique et installation système de sécurité renforcé",
+      "montantInitial": 480000000,
+      "montantAvenant": 96000000,
+      "montantCumule": 576000000,
+      "pourcentageAvenant": 20,
+      "pourcentageCumule": 20,
+      "delaiInitial": 10,
+      "delaiAvenant": 2,
+      "delaiTotal": 12,
+      "dateFinInitiale": "2025-05-15T00:00:00.000Z",
+      "dateFinRevisee": "2025-07-15T00:00:00.000Z",
+      "visa": {
+        "dateVisa": "2024-10-28T00:00:00.000Z",
+        "numeroVisa": "VISA/CF/AVE/2024/007-001",
+        "viseur": "Jean-Baptiste KOFFI"
+      },
+      "createdAt": "2024-10-20T09:00:00.000Z",
+      "updatedAt": "2024-10-28T14:00:00.000Z"
+    }
+  ],
+  "RESILIATION": [
+    {
+      "id": "RES-2023-007",
+      "operationId": "OP-2023-007",
+      "attributionId": "ATTR-2023-007",
+      "dateResiliation": "2024-06-10T00:00:00.000Z",
+      "motif": "ENTREPRENEUR",
+      "motifDetail": "Non-respect des délais contractuels et abandon du chantier après 8 mois d'exécution",
+      "montantExecute": 450000000,
+      "tauxRealisation": 16.07,
+      "pvResiliation": "PV-RES-2024-007",
+      "dateNotification": "2024-06-15T00:00:00.000Z",
+      "penalites": 35000000,
+      "createdAt": "2024-06-10T09:00:00.000Z",
+      "updatedAt": "2024-06-15T16:30:00.000Z"
+    },
+    {
+      "id": "RES-2024-010",
+      "operationId": "OP-2024-010",
+      "attributionId": "ATTR-2024-010",
+      "dateResiliation": "2024-09-01T00:00:00.000Z",
+      "motif": "AUTORITE",
+      "motifDetail": "Réaffectation budgétaire suite à réorientation des priorités gouvernementales - arrêt après 15% de réalisation",
+      "montantExecute": 180000000,
+      "tauxRealisation": 15,
+      "pvResiliation": "PV-RES-2024-010",
+      "dateNotification": "2024-09-05T00:00:00.000Z",
+      "penalites": 0,
+      "createdAt": "2024-09-01T09:00:00.000Z",
+      "updatedAt": "2024-09-05T16:45:00.000Z"
+    }
+  ],
+  "GARANTIE": [
+    {
+      "id": "GAR-2023-001-BG",
+      "operationId": "OP-2023-001",
+      "attributionId": "ATTR-2023-001",
+      "type": "BONNE_EXEC",
+      "montant": 19000000,
+      "pourcentage": 5,
+      "dateEmission": "2023-04-20T00:00:00.000Z",
+      "dateExpiration": "2024-06-01T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-001-SGBCI",
+      "banque": "SGBCI",
+      "beneficiaire": "Direction de la Construction Scolaire",
+      "etat": "MAINLEVEE",
+      "dateMainlevee": "2024-02-20T00:00:00.000Z",
+      "createdAt": "2023-04-20T09:00:00.000Z",
+      "updatedAt": "2024-02-20T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2023-001-RG",
+      "operationId": "OP-2023-001",
+      "attributionId": "ATTR-2023-001",
+      "type": "RETENUE_GARANTIE",
+      "montant": 19000000,
+      "pourcentage": 5,
+      "dateDebut": "2023-06-01T00:00:00.000Z",
+      "dateExpiration": "2024-08-01T00:00:00.000Z",
+      "prelevementMensuel": 2375000,
+      "montantPreleveTotal": 19000000,
+      "etat": "MAINLEVEE",
+      "dateMainlevee": "2024-02-20T00:00:00.000Z",
+      "createdAt": "2023-06-01T09:00:00.000Z",
+      "updatedAt": "2024-02-20T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2023-002-BG",
+      "operationId": "OP-2023-002",
+      "attributionId": "ATTR-2023-002",
+      "type": "BONNE_EXEC",
+      "montant": 42500000,
+      "pourcentage": 5,
+      "dateEmission": "2023-04-05T00:00:00.000Z",
+      "dateExpiration": "2023-11-10T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-002-ECOBANK",
+      "banque": "Ecobank CI",
+      "beneficiaire": "Direction Générale de la Santé",
+      "etat": "MAINLEVEE",
+      "dateMainlevee": "2023-11-15T00:00:00.000Z",
+      "createdAt": "2023-04-05T09:00:00.000Z",
+      "updatedAt": "2023-11-15T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2023-003-BG",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "type": "BONNE_EXEC",
+      "montant": 625000000,
+      "pourcentage": 5,
+      "dateEmission": "2023-07-05T00:00:00.000Z",
+      "dateExpiration": "2026-03-01T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-003-BICICI",
+      "banque": "BICICI",
+      "beneficiaire": "Direction des Grands Travaux",
+      "etat": "ACTIVE",
+      "dateMainlevee": null,
+      "createdAt": "2023-07-05T09:00:00.000Z",
+      "updatedAt": "2024-09-20T11:30:00.000Z"
+    },
+    {
+      "id": "GAR-2023-003-RG",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "type": "RETENUE_GARANTIE",
+      "montant": 625000000,
+      "pourcentage": 5,
+      "dateDebut": "2023-09-01T00:00:00.000Z",
+      "dateExpiration": "2026-05-01T00:00:00.000Z",
+      "prelevementMensuel": 26041667,
+      "montantPreleveTotal": 312500000,
+      "etat": "EN_COURS",
+      "dateMainlevee": null,
+      "createdAt": "2023-09-01T09:00:00.000Z",
+      "updatedAt": "2024-09-20T11:30:00.000Z"
+    },
+    {
+      "id": "GAR-2023-004-BG",
+      "operationId": "OP-2023-004",
+      "attributionId": "ATTR-2023-004",
+      "type": "BONNE_EXEC",
+      "montant": 6250000,
+      "pourcentage": 5,
+      "dateEmission": "2023-05-02T00:00:00.000Z",
+      "dateExpiration": "2023-10-05T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-004-NSIA",
+      "banque": "NSIA Banque CI",
+      "beneficiaire": "Direction de l'Assainissement",
+      "etat": "MAINLEVEE",
+      "dateMainlevee": "2023-09-20T00:00:00.000Z",
+      "createdAt": "2023-05-02T09:00:00.000Z",
+      "updatedAt": "2023-09-20T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2023-005-BG",
+      "operationId": "OP-2023-005",
+      "attributionId": "ATTR-2023-005",
+      "type": "BONNE_EXEC",
+      "montant": 2250000,
+      "pourcentage": 5,
+      "dateEmission": "2023-06-02T00:00:00.000Z",
+      "dateExpiration": "2023-09-05T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-005-SGBCI",
+      "banque": "SGBCI",
+      "beneficiaire": "Direction du Matériel et de la Logistique",
+      "etat": "MAINLEVEE",
+      "dateMainlevee": "2023-08-25T00:00:00.000Z",
+      "createdAt": "2023-06-02T09:00:00.000Z",
+      "updatedAt": "2023-08-25T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2023-006-BG",
+      "operationId": "OP-2023-006",
+      "attributionId": "ATTR-2023-006",
+      "type": "BONNE_EXEC",
+      "montant": 900000,
+      "pourcentage": 5,
+      "dateEmission": "2023-02-22T00:00:00.000Z",
+      "dateExpiration": "2024-03-25T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-006-BOA",
+      "banque": "BOA CI",
+      "beneficiaire": "Direction de la Maintenance",
+      "etat": "MAINLEVEE",
+      "dateMainlevee": "2024-02-05T00:00:00.000Z",
+      "createdAt": "2023-02-22T09:00:00.000Z",
+      "updatedAt": "2024-02-05T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2023-007-BG",
+      "operationId": "OP-2023-007",
+      "attributionId": "ATTR-2023-007",
+      "type": "BONNE_EXEC",
+      "montant": 140000000,
+      "pourcentage": 5,
+      "dateEmission": "2023-05-18T00:00:00.000Z",
+      "dateExpiration": "2025-12-20T00:00:00.000Z",
+      "numeroGarantie": "BG-2023-007-BICICI",
+      "banque": "BICICI",
+      "beneficiaire": "Direction du Développement Rural",
+      "etat": "APPELEE",
+      "dateAppel": "2024-06-15T00:00:00.000Z",
+      "montantAppele": 140000000,
+      "motifAppel": "Résiliation pour faute de l'entrepreneur",
+      "createdAt": "2023-05-18T09:00:00.000Z",
+      "updatedAt": "2024-06-15T16:30:00.000Z"
+    },
+    {
+      "id": "GAR-2024-001-BG",
+      "operationId": "OP-2024-001",
+      "attributionId": "ATTR-2024-001",
+      "type": "BONNE_EXEC",
+      "montant": 12500000,
+      "pourcentage": 5,
+      "dateEmission": "2024-04-02T00:00:00.000Z",
+      "dateExpiration": "2025-08-05T00:00:00.000Z",
+      "numeroGarantie": "BG-2024-001-SGBCI",
+      "banque": "SGBCI",
+      "beneficiaire": "Direction Générale des Marchés Publics",
+      "etat": "ACTIVE",
+      "dateMainlevee": null,
+      "createdAt": "2024-04-02T09:00:00.000Z",
+      "updatedAt": "2024-05-15T14:30:00.000Z"
+    },
+    {
+      "id": "GAR-2024-001-RG",
+      "operationId": "OP-2024-001",
+      "attributionId": "ATTR-2024-001",
+      "type": "RETENUE_GARANTIE",
+      "montant": 12500000,
+      "pourcentage": 5,
+      "dateDebut": "2024-06-01T00:00:00.000Z",
+      "dateExpiration": "2025-10-01T00:00:00.000Z",
+      "prelevementMensuel": 892857,
+      "montantPreleveTotal": 4464286,
+      "etat": "EN_COURS",
+      "dateMainlevee": null,
+      "createdAt": "2024-06-01T09:00:00.000Z",
+      "updatedAt": "2024-11-15T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2024-007-BG",
+      "operationId": "OP-2024-007",
+      "attributionId": "ATTR-2024-007",
+      "type": "BONNE_EXEC",
+      "montant": 24000000,
+      "pourcentage": 5,
+      "dateEmission": "2024-06-25T00:00:00.000Z",
+      "dateExpiration": "2025-08-15T00:00:00.000Z",
+      "numeroGarantie": "BG-2024-007-BOA",
+      "banque": "BOA CI",
+      "beneficiaire": "Direction de la Construction Pénitentiaire",
+      "etat": "ACTIVE",
+      "dateMainlevee": null,
+      "createdAt": "2024-06-25T09:00:00.000Z",
+      "updatedAt": "2024-08-15T14:00:00.000Z"
+    },
+    {
+      "id": "GAR-2024-007-RG",
+      "operationId": "OP-2024-007",
+      "attributionId": "ATTR-2024-007",
+      "type": "RETENUE_GARANTIE",
+      "montant": 24000000,
+      "pourcentage": 5,
+      "dateDebut": "2024-07-15T00:00:00.000Z",
+      "dateExpiration": "2025-09-15T00:00:00.000Z",
+      "prelevementMensuel": 2000000,
+      "montantPreleveTotal": 8000000,
+      "etat": "EN_COURS",
+      "dateMainlevee": null,
+      "createdAt": "2024-07-15T09:00:00.000Z",
+      "updatedAt": "2024-10-28T14:00:00.000Z"
+    }
+  ],
+  "CLOTURE": [
+    {
+      "id": "CLO-2023-001",
+      "operationId": "OP-2023-001",
+      "attributionId": "ATTR-2023-001",
+      "pvProvisoire": {
+        "numero": "PV-PROV-2023-001",
+        "date": "2024-01-28T00:00:00.000Z",
+        "reserves": "Quelques finitions mineures sur peintures extérieures",
+        "leveeReserves": "2024-02-10T00:00:00.000Z"
+      },
+      "pvDefinitif": {
+        "numero": "PV-DEF-2023-001",
+        "date": "2024-02-15T00:00:00.000Z",
+        "observations": "Réception définitive sans réserve"
+      },
+      "montantFinal": 380000000,
+      "tauxExecution": 100,
+      "delaiReel": 8,
+      "dateFinReelle": "2024-01-28T00:00:00.000Z",
+      "penalitesRetard": 0,
+      "createdAt": "2024-01-28T09:00:00.000Z",
+      "updatedAt": "2024-02-15T14:30:00.000Z"
+    },
+    {
+      "id": "CLO-2023-002",
+      "operationId": "OP-2023-002",
+      "attributionId": "ATTR-2023-002",
+      "pvProvisoire": {
+        "numero": "PV-PROV-2023-002",
+        "date": "2023-10-20T00:00:00.000Z",
+        "reserves": "Ajustement de 2 équipements non conformes aux spécifications",
+        "leveeReserves": "2023-11-05T00:00:00.000Z"
+      },
+      "pvDefinitif": {
+        "numero": "PV-DEF-2023-002",
+        "date": "2023-11-10T00:00:00.000Z",
+        "observations": "Réception définitive avec satisfaction"
+      },
+      "montantFinal": 850000000,
+      "tauxExecution": 100,
+      "delaiReel": 6,
+      "dateFinReelle": "2023-10-20T00:00:00.000Z",
+      "penalitesRetard": 0,
+      "createdAt": "2023-10-20T09:00:00.000Z",
+      "updatedAt": "2023-11-10T16:00:00.000Z"
+    },
+    {
+      "id": "CLO-2023-004",
+      "operationId": "OP-2023-004",
+      "attributionId": "ATTR-2023-004",
+      "pvProvisoire": {
+        "numero": "PV-PROV-2023-004",
+        "date": "2023-09-08T00:00:00.000Z",
+        "reserves": null,
+        "leveeReserves": null
+      },
+      "pvDefinitif": {
+        "numero": "PV-DEF-2023-004",
+        "date": "2023-09-15T00:00:00.000Z",
+        "observations": "Étude livrée conforme aux termes de référence"
+      },
+      "montantFinal": 125000000,
+      "tauxExecution": 100,
+      "delaiReel": 4,
+      "dateFinReelle": "2023-09-08T00:00:00.000Z",
+      "penalitesRetard": 0,
+      "createdAt": "2023-09-08T09:00:00.000Z",
+      "updatedAt": "2023-09-15T15:00:00.000Z"
+    },
+    {
+      "id": "CLO-2023-005",
+      "operationId": "OP-2023-005",
+      "attributionId": "ATTR-2023-005",
+      "pvProvisoire": {
+        "numero": "PV-PROV-2023-005",
+        "date": "2023-08-10T00:00:00.000Z",
+        "reserves": null,
+        "leveeReserves": null
+      },
+      "pvDefinitif": {
+        "numero": "PV-DEF-2023-005",
+        "date": "2023-08-20T00:00:00.000Z",
+        "observations": "Livraison complète et conforme"
+      },
+      "montantFinal": 45000000,
+      "tauxExecution": 100,
+      "delaiReel": 2,
+      "dateFinReelle": "2023-08-10T00:00:00.000Z",
+      "penalitesRetard": 0,
+      "createdAt": "2023-08-10T09:00:00.000Z",
+      "updatedAt": "2023-08-20T14:00:00.000Z"
+    },
+    {
+      "id": "CLO-2023-006",
+      "operationId": "OP-2023-006",
+      "attributionId": "ATTR-2023-006",
+      "pvProvisoire": {
+        "numero": "PV-PROV-2023-006",
+        "date": "2024-01-20T00:00:00.000Z",
+        "reserves": null,
+        "leveeReserves": null
+      },
+      "pvDefinitif": {
+        "numero": "PV-DEF-2023-006",
+        "date": "2024-01-30T00:00:00.000Z",
+        "observations": "Prestation annuelle satisfaisante"
+      },
+      "montantFinal": 18000000,
+      "tauxExecution": 100,
+      "delaiReel": 12,
+      "dateFinReelle": "2024-01-20T00:00:00.000Z",
+      "penalitesRetard": 0,
+      "createdAt": "2024-01-20T09:00:00.000Z",
+      "updatedAt": "2024-01-30T10:00:00.000Z"
+    }
+  ],
+  "ANO": [
+    {
+      "id": "ANO-2023-001",
+      "operationId": "OP-2023-001",
+      "attributionId": "ATTR-2023-001",
+      "numero": "ANO-DCS-2023-001",
+      "dateEmission": "2023-05-10T00:00:00.000Z",
+      "montant": 380000000,
+      "delai": 8,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2023-05-10T09:00:00.000Z",
+      "updatedAt": "2023-05-10T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2023-002",
+      "operationId": "OP-2023-002",
+      "attributionId": "ATTR-2023-002",
+      "numero": "ANO-DGS-2023-002",
+      "dateEmission": "2023-04-25T00:00:00.000Z",
+      "montant": 850000000,
+      "delai": 6,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2023-04-25T09:00:00.000Z",
+      "updatedAt": "2023-04-25T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2023-003",
+      "operationId": "OP-2023-003",
+      "attributionId": "ATTR-2023-003",
+      "numero": "ANO-DGT-2023-003",
+      "dateEmission": "2023-07-25T00:00:00.000Z",
+      "montant": 12500000000,
+      "delai": 24,
+      "observations": "ANO émis après avis favorable CNCMP",
+      "createdAt": "2023-07-25T09:00:00.000Z",
+      "updatedAt": "2023-07-25T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2023-004",
+      "operationId": "OP-2023-004",
+      "attributionId": "ATTR-2023-004",
+      "numero": "ANO-DA-2023-004",
+      "dateEmission": "2023-05-18T00:00:00.000Z",
+      "montant": 125000000,
+      "delai": 4,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2023-05-18T09:00:00.000Z",
+      "updatedAt": "2023-05-18T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2023-005",
+      "operationId": "OP-2023-005",
+      "attributionId": "ATTR-2023-005",
+      "numero": "ANO-DML-2023-005",
+      "dateEmission": "2023-06-15T00:00:00.000Z",
+      "montant": 45000000,
+      "delai": 2,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2023-06-15T09:00:00.000Z",
+      "updatedAt": "2023-06-15T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2023-006",
+      "operationId": "OP-2023-006",
+      "attributionId": "ATTR-2023-006",
+      "numero": "ANO-DM-2023-006",
+      "dateEmission": "2023-03-10T00:00:00.000Z",
+      "montant": 18000000,
+      "delai": 12,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2023-03-10T09:00:00.000Z",
+      "updatedAt": "2023-03-10T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2023-007",
+      "operationId": "OP-2023-007",
+      "attributionId": "ATTR-2023-007",
+      "numero": "ANO-DDR-2023-007",
+      "dateEmission": "2023-06-05T00:00:00.000Z",
+      "montant": 2800000000,
+      "delai": 18,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2023-06-05T09:00:00.000Z",
+      "updatedAt": "2023-06-05T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2024-001",
+      "operationId": "OP-2024-001",
+      "attributionId": "ATTR-2024-001",
+      "numero": "ANO-DGMP-2024-001",
+      "dateEmission": "2024-04-20T00:00:00.000Z",
+      "montant": 250000000,
+      "delai": 12,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2024-04-20T09:00:00.000Z",
+      "updatedAt": "2024-04-20T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2024-006",
+      "operationId": "OP-2024-006",
+      "attributionId": "ATTR-2024-006",
+      "numero": "ANO-DSC-2024-006",
+      "dateEmission": "2024-05-20T00:00:00.000Z",
+      "montant": 650000000,
+      "delai": 6,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2024-05-20T09:00:00.000Z",
+      "updatedAt": "2024-05-20T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2024-007",
+      "operationId": "OP-2024-007",
+      "attributionId": "ATTR-2024-007",
+      "numero": "ANO-DCP-2024-007",
+      "dateEmission": "2024-06-12T00:00:00.000Z",
+      "montant": 480000000,
+      "delai": 10,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2024-06-12T09:00:00.000Z",
+      "updatedAt": "2024-06-12T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2024-009",
+      "operationId": "OP-2024-009",
+      "attributionId": "ATTR-2024-009",
+      "numero": "ANO-DLP-2024-009",
+      "dateEmission": "2024-05-25T00:00:00.000Z",
+      "montant": 720000000,
+      "delai": 5,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2024-05-25T09:00:00.000Z",
+      "updatedAt": "2024-05-25T14:00:00.000Z"
+    },
+    {
+      "id": "ANO-2024-010",
+      "operationId": "OP-2024-010",
+      "attributionId": "ATTR-2024-010",
+      "numero": "ANO-DAV-2024-010",
+      "dateEmission": "2024-04-28T00:00:00.000Z",
+      "montant": 1200000000,
+      "delai": 12,
+      "observations": "ANO émis conformément au marché",
+      "createdAt": "2024-04-28T09:00:00.000Z",
+      "updatedAt": "2024-04-28T14:00:00.000Z"
+    }
+  ],
+  "DOCUMENT": [],
+  "DECOMPTE": [],
+  "DIFFICULTE": []
+}

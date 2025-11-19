@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIDCF Portal - Système Intégré de la Dépense et du Contrôle Financier</title>
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
+  <!-- Design system CSS -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/widgets.css">
+</head>
+<body>
+  <!-- Debug boot panel (hidden by default) -->
+  <div id="debugBoot" class="debug-boot" style="display:none;">
+    <div class="debug-boot-content">
+      <h3>⚠️ Journal de démarrage</h3>
+      <div id="debugLog"></div>
+      <button onclick="document.getElementById('debugBoot').style.display='none'">Fermer</button>
+    </div>
+  </div>
+
+  <!-- Top bar -->
+  <header id="topbar"></header>
+
+  <!-- Main layout -->
+  <div class="layout">
+    <!-- Sidebar navigation -->
+    <aside id="sidebar"></aside>
+
+    <!-- Main content area -->
+    <main id="app">
+      <div class="loading-screen">
+        <div class="spinner"></div>
+        <p>Chargement du portail SIDCF...</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Boot sequence -->
+  <script type="module" src="js/main.js"></script>
+
+  <!-- (note Maxence) Fallback de dernier recours : si loader visible après 10s, forcer message d'erreur -->
+  <script>
+    setTimeout(() => {
+      const app = document.getElementById('app');
+      const loader = app?.querySelector('.loading-screen');
+
+      if (loader && loader.parentElement === app) {
+        console.error('[FALLBACK] Loader toujours visible après 10s - Forçage message d\'erreur');
+        app.innerHTML = `
+          <div class="page">
+            <div class="alert alert-error">
+              <div class="alert-icon">🚫</div>
+              <div class="alert-content">
+                <div class="alert-title">Erreur de chargement</div>
+                <div class="alert-message">
+                  L'application n'a pas pu démarrer dans les délais normaux.<br>
+                  <strong>Causes possibles :</strong>
+                  <ul style="margin-top: 8px; padding-left: 20px;">
+                    <li>Serveur HTTP non lancé (Exécutez: <code>python3 -m http.server 7001</code>)</li>
+                    <li>Erreur JavaScript (Ouvrez la console F12)</li>
+                    <li>Fichiers manquants ou imports incorrects</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="location.reload()">
+              Recharger la page
+            </button>
+            <button class="btn btn-secondary" onclick="console.log('Voir console pour plus de détails')">
+              Ouvrir console (F12)
+            </button>
+          </div>
+        `;
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
