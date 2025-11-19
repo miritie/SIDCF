@@ -21,7 +21,7 @@ function getApiBaseUrl() {
   return 'https://sidcf-portal-api.sidcf.workers.dev';
 }
 
-const API_BASE_URL = getApiBaseUrl();
+// Note: getApiBaseUrl() is called dynamically each time to ensure dataService is initialized
 
 // Cache pour les configurations chargées
 let phaseConfigCache = {};
@@ -88,7 +88,7 @@ let cachedPhaseConfig = null;
  */
 async function fetchPhasesFromAPI(modePassation) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/config/phases/${modePassation}`);
+    const response = await fetch(`${getApiBaseUrl()}/api/config/phases/${modePassation}`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -194,7 +194,7 @@ export async function getAllPhaseConfigsAsync() {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/config/phases`);
+    const response = await fetch(`${getApiBaseUrl()}/api/config/phases`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }

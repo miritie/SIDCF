@@ -23,7 +23,7 @@ function getApiBaseUrl() {
   return 'https://sidcf-portal-api.sidcf.workers.dev';
 }
 
-const API_BASE_URL = getApiBaseUrl();
+// Note: getApiBaseUrl() is called dynamically each time to ensure dataService is initialized
 
 const MODES_PASSATION = [
   { code: 'PSD', label: 'Procédure Simplifiée d\'Entente Directe' },
@@ -140,7 +140,7 @@ export default async function renderConfigEtapes() {
  */
 async function loadPhaseConfigs() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/config/phases`);
+    const response = await fetch(`${getApiBaseUrl()}/api/config/phases`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -352,7 +352,7 @@ async function saveAllPhases() {
         }
       } else {
         // Create new phase
-        const response = await fetch(`${API_BASE_URL}/api/config/phases`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/config/phases`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
