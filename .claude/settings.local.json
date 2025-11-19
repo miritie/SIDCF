@@ -20,7 +20,11 @@
       "Bash(lsof:*)",
       "Bash(npm install)",
       "Bash(npm run migrate:*)",
-      "Bash(npm run seed:*)"
+      "Bash(npm run seed:*)",
+      "Bash(mdfind:*)",
+      "Bash(git rm:*)",
+      "Bash(git reset:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
