@@ -8,12 +8,22 @@
 import { mount } from '../lib/dom.js';
 import logger from '../lib/logger.js';
 import { clearCache } from '../lib/phase-helper.js';
+import dataService from '../datastore/data-service.js';
 
-// URL de l'API - utilise localhost en dev, sinon la config ou le Worker déployé
-const API_BASE_URL = window.SIDCF_CONFIG?.apiBaseUrl ||
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8787'
-    : 'https://sidcf-api.jecourbie-dev.workers.dev');
+// URL de l'API - récupère depuis la config app-config.json
+function getApiBaseUrl() {
+  const config = dataService.getConfig();
+  if (config?.postgres?.apiUrl) {
+    return config.postgres.apiUrl;
+  }
+  // Fallback pour dev local
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8787';
+  }
+  return 'https://sidcf-portal-api.sidcf.workers.dev';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 const MODES_PASSATION = [
   { code: 'PSD', label: 'Procédure Simplifiée d\'Entente Directe' },
