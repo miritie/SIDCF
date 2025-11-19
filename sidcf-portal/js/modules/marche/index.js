@@ -18,7 +18,7 @@ import renderAvenantCreate from './screens/ecr04b-avenant-create.js';
 import renderGaranties from './screens/ecr04c-garanties.js';
 import renderCloture from './screens/ecr05-cloture.js';
 import renderDashboardCF from './screens/ecr06-dashboard-cf.js';
-import renderDashboard from './screens/ecr07-dashboard-v2.js';
+// Note: ecr06-dashboard-cf.js is now the main and only dashboard
 import logger from '../../lib/logger.js';
 import { mount } from '../../lib/dom.js';
 
@@ -87,9 +87,9 @@ export function registerMarcheRoutes() {
   // Cloture
   router.register('/cloture', renderCloture);
 
-  // Dashboard
-  router.register('/dashboard-cf', renderDashboardCF);
-  router.register('/dashboard', renderDashboard);
+  // Dashboard - unified (ecr06-dashboard-cf is the only dashboard)
+  router.register('/dashboard', renderDashboardCF);
+  router.register('/dashboard-cf', renderDashboardCF); // Legacy route
 
   // === ALIASES (Retro-compatibility) ===
   router.alias('/ecr01a-import-ppm', '/ppm-import');
@@ -104,8 +104,8 @@ export function registerMarcheRoutes() {
   router.alias('/ecr04b-avenants', '/avenants');
   router.alias('/ecr04c-garanties-resiliation', '/garanties');
   router.alias('/ecr05-cloture-receptions', '/cloture');
-  router.alias('/ecr06-dashboard-cf', '/dashboard-cf');
-  router.alias('/ecr07-dashboard', '/dashboard');
+  router.alias('/ecr06-dashboard-cf', '/dashboard');
+  router.alias('/ecr07-dashboard', '/dashboard'); // Legacy - redirects to new dashboard
 
   logger.info('[Marché] Routes registered with aliases');
 }
