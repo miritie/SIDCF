@@ -1,6 +1,6 @@
 /* ============================================
    ECR06 - Dashboard Contrôle Financier
-   Design BOLD & Impactant - Data-Driven
+   Design Professionnel - Charte Graphique SIDCF
    ============================================ */
 
 import { el, mount } from '../../../lib/dom.js';
@@ -16,18 +16,17 @@ function createButton(className, text, onClick) {
 
 function formatMoney(amount) {
   if (!amount) return '0';
-  if (amount >= 1000000000) {
-    return (amount / 1000000000).toFixed(1);
-  } else if (amount >= 1000000) {
-    return (amount / 1000000).toFixed(0);
-  }
   return amount.toLocaleString('fr-FR');
 }
 
-function formatMoneyUnit(amount) {
-  if (amount >= 1000000000) return 'Md XOF';
-  if (amount >= 1000000) return 'M XOF';
-  return 'XOF';
+function formatMoneyCompact(amount) {
+  if (!amount) return '0 XOF';
+  if (amount >= 1000000000) {
+    return `${(amount / 1000000000).toFixed(2)} Md XOF`;
+  } else if (amount >= 1000000) {
+    return `${(amount / 1000000).toFixed(0)} M XOF`;
+  }
+  return `${amount.toLocaleString('fr-FR')} XOF`;
 }
 
 export async function renderDashboardCF(params) {
@@ -38,47 +37,59 @@ export async function renderDashboardCF(params) {
 
     const metrics = calculateMetrics(operations, garanties, avenants);
 
-    // Dark theme dashboard
+    // Couleurs principales (charte graphique SIDCF)
+    const colors = {
+      primary: '#0f5132',      // Vert foncé
+      secondary: '#198754',    // Vert moyen
+      accent: '#f59e0b',       // Orange
+      background: '#f8f9fa',
+      cardBg: '#ffffff',
+      text: '#212529',
+      textMuted: '#6c757d',
+      border: '#dee2e6'
+    };
+
     const page = el('div', {
       className: 'page',
       style: {
-        background: '#0f172a',
+        background: colors.background,
         minHeight: '100vh',
-        padding: '32px',
+        padding: '24px',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
       }
     }, [
-      // Top Bar
-      renderTopBar(),
+      // Header avec bannière verte
+      renderHeader(metrics, colors),
 
-      // Hero Section - Big Numbers
-      renderHeroSection(metrics),
+      // KPIs principaux
+      renderKPICards(metrics, colors),
 
-      // Main Grid
-      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '24px' } }, [
-        // Donut Chart - États
-        renderDonutChart(metrics),
-        // Gauge - Engagement
-        renderGaugeCard(metrics.tauxEngagement, 'Engagement', '#10b981'),
-        // Gauge - Exécution
-        renderGaugeCard(metrics.tauxExecution, 'Exécution', '#3b82f6')
+      // Grille principale
+      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' } }, [
+        // Répartition par État
+        renderStateDistribution(metrics, colors),
+        // Alertes Critiques
+        renderAlerts(metrics, colors)
       ]),
 
-      // Second Row
-      el('div', { style: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' } }, [
-        // Bar Chart - Bailleurs
-        renderBailleursBarChart(metrics),
-        // Stats Cards
-        renderStatsColumn(metrics)
+      // Deuxième rangée
+      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' } }, [
+        // Répartition par Source de Financement
+        renderFinancingSource(metrics, colors),
+        // Taux d'exécution
+        renderExecutionRate(metrics, colors)
       ]),
 
-      // Bottom Row
-      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' } }, [
-        // Activity Timeline
-        renderActivityTimeline(metrics),
-        // Quick Actions
-        renderQuickActionsGrid()
-      ])
+      // Troisième rangée
+      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' } }, [
+        // Top 5 Marchés
+        renderTopMarches(metrics, colors),
+        // Activités Récentes
+        renderRecentActivity(metrics, colors)
+      ]),
+
+      // Actions rapides
+      renderQuickActions(colors)
     ]);
 
     mount('#app', page);
@@ -99,6 +110,7 @@ function calculateMetrics(operations, garanties, avenants) {
   const byType = {};
   const byMode = {};
   const byBailleur = {};
+  const byUA = {};
 
   let totalMontant = 0;
   let montantEngaged = 0;
@@ -114,10 +126,13 @@ function calculateMetrics(operations, garanties, avenants) {
     const mode = op.modePassation || op.mode_passation || 'AUTRE';
     byMode[mode] = (byMode[mode] || 0) + 1;
 
-    const bailleur = op.chaineBudgetaire?.bailleur || op.chaine_budgetaire?.bailleur || 'TRESOR';
+    const bailleur = op.chaineBudgetaire?.bailleur || op.chaine_budgetaire?.bailleur || 'Non spécifiée';
     byBailleur[bailleur] = byBailleur[bailleur] || { count: 0, montant: 0 };
     byBailleur[bailleur].count++;
     byBailleur[bailleur].montant += op.montantPrevisionnel || op.montant_previsionnel || 0;
+
+    const ua = op.uniteAdministrative || op.unite_administrative || 'Non spécifiée';
+    byUA[ua] = (byUA[ua] || 0) + 1;
 
     const montant = op.montantPrevisionnel || op.montant_previsionnel || 0;
     totalMontant += montant;
@@ -130,12 +145,23 @@ function calculateMetrics(operations, garanties, avenants) {
     }
   });
 
+  // Trier les opérations par montant pour le top 5
+  const topOperations = [...operations]
+    .sort((a, b) => (b.montantPrevisionnel || 0) - (a.montantPrevisionnel || 0))
+    .slice(0, 5);
+
+  // Dernières activités
+  const recentOperations = [...operations]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+    .slice(0, 5);
+
   return {
     total: operations.length,
     byState,
     byType,
     byMode,
     byBailleur,
+    byUA,
     totalMontant,
     montantEngaged,
     montantExecuted,
@@ -143,322 +169,312 @@ function calculateMetrics(operations, garanties, avenants) {
     tauxExecution: montantEngaged > 0 ? (montantExecuted / montantEngaged * 100) : 0,
     garanties: {
       actives: garanties.filter(g => g.etat === 'ACTIVE').length,
-      liberees: garanties.filter(g => g.etat === 'LIBEREE').length
+      liberees: garanties.filter(g => g.etat === 'LIBEREE').length,
+      total: garanties.length
     },
     avenants: {
-      count: avenants.length
-    }
+      count: avenants.length,
+      total: avenants.reduce((sum, av) => sum + (av.variationMontant || 0), 0)
+    },
+    topOperations,
+    recentOperations
   };
 }
 
-function renderTopBar() {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-
-  return el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' } }, [
+function renderHeader(metrics, colors) {
+  return el('div', {
+    style: {
+      background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+      borderRadius: '16px',
+      padding: '24px 32px',
+      marginBottom: '20px',
+      color: 'white',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      boxShadow: '0 4px 12px rgba(15, 81, 50, 0.3)'
+    }
+  }, [
     el('div', {}, [
-      el('h1', { style: { fontSize: '28px', fontWeight: '800', color: '#ffffff', margin: '0 0 4px 0', letterSpacing: '-0.5px' } },
-        'CONTRÔLE FINANCIER'),
-      el('p', { style: { color: '#64748b', margin: 0, fontSize: '14px' } }, 'Tableau de bord stratégique')
+      el('h1', { style: { margin: '0 0 4px 0', fontSize: '24px', fontWeight: '700' } },
+        '📊 Dashboard SIDCF'),
+      el('p', { style: { margin: 0, opacity: 0.9, fontSize: '14px' } },
+        `Pilotage de ${metrics.total} marchés publics`)
     ]),
-    el('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } }, [
-      el('div', { style: { textAlign: 'right' } }, [
-        el('div', { style: { fontSize: '24px', fontWeight: '700', color: '#ffffff' } }, timeStr),
-        el('div', { style: { fontSize: '12px', color: '#64748b', textTransform: 'uppercase' } }, dateStr)
-      ]),
-      el('div', {
-        style: {
-          width: '48px',
-          height: '48px',
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '20px',
-          cursor: 'pointer'
-        },
-        onclick: () => location.reload()
-      }, '↻')
+    el('div', { style: { display: 'flex', gap: '12px' } }, [
+      createButton('btn btn-light btn-sm', '📋 PPM', () => router.navigate('/ppm-list')),
+      createButton('btn btn-warning btn-sm', '✨ Import', () => router.navigate('/import-ppm'))
     ])
   ]);
 }
 
-function renderHeroSection(metrics) {
-  const cards = [
+function renderKPICards(metrics, colors) {
+  const kpis = [
     {
+      label: 'Total Marchés',
       value: metrics.total,
-      label: 'OPÉRATIONS',
-      sublabel: 'au PPM 2025',
-      gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-      icon: '📊'
+      icon: '📊',
+      color: colors.primary
     },
     {
-      value: formatMoney(metrics.totalMontant),
-      label: formatMoneyUnit(metrics.totalMontant),
-      sublabel: 'Enveloppe globale',
-      gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-      icon: '💰'
+      label: 'En Exécution',
+      value: metrics.byState.EN_EXEC.length,
+      icon: '⚡',
+      color: '#198754'
     },
     {
-      value: formatMoney(metrics.montantEngaged),
-      label: formatMoneyUnit(metrics.montantEngaged),
-      sublabel: 'Engagé',
-      gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-      icon: '📝'
+      label: 'Budget Prévisionnel',
+      value: formatMoneyCompact(metrics.totalMontant),
+      icon: '💰',
+      color: '#0d6efd',
+      isLarge: true
     },
     {
-      value: formatMoney(metrics.montantExecuted),
-      label: formatMoneyUnit(metrics.montantExecuted),
-      sublabel: 'Exécuté',
-      gradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-      icon: '✅'
+      label: 'Budget Actuel',
+      value: formatMoneyCompact(metrics.montantEngaged),
+      icon: '📈',
+      color: '#6f42c1',
+      isLarge: true
+    },
+    {
+      label: 'Taux Exécution',
+      value: `${metrics.tauxExecution.toFixed(0)}%`,
+      icon: '🎯',
+      color: colors.accent
+    },
+    {
+      label: 'Clôturés',
+      value: metrics.byState.CLOS.length,
+      icon: '✅',
+      color: '#6c757d'
     }
   ];
 
-  return el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' } },
-    cards.map(card =>
+  return el('div', {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(6, 1fr)',
+      gap: '16px',
+      marginBottom: '20px'
+    }
+  },
+    kpis.map(kpi =>
       el('div', {
         style: {
-          background: card.gradient,
-          borderRadius: '20px',
-          padding: '28px 24px',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+          background: colors.cardBg,
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          borderTop: `4px solid ${kpi.color}`,
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          cursor: 'default'
+        },
+        onmouseenter: (e) => {
+          e.currentTarget.style.transform = 'translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.12)';
+        },
+        onmouseleave: (e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
         }
       }, [
-        // Big number
-        el('div', { style: { fontSize: '48px', fontWeight: '900', color: '#ffffff', lineHeight: '1', marginBottom: '8px' } },
-          String(card.value)),
-        // Label
-        el('div', { style: { fontSize: '14px', fontWeight: '700', color: 'rgba(255,255,255,0.9)', letterSpacing: '1px' } },
-          card.label),
-        // Sublabel
-        el('div', { style: { fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginTop: '4px' } },
-          card.sublabel),
-        // Background icon
+        el('div', { style: { fontSize: '12px', color: colors.textMuted, marginBottom: '8px', fontWeight: '500' } },
+          kpi.label),
         el('div', {
           style: {
-            position: 'absolute',
-            right: '16px',
-            bottom: '16px',
-            fontSize: '64px',
-            opacity: '0.2'
+            fontSize: kpi.isLarge ? '16px' : '28px',
+            fontWeight: '700',
+            color: colors.text,
+            lineHeight: '1.2'
           }
-        }, card.icon)
+        }, String(kpi.value))
       ])
     )
   );
 }
 
-function renderDonutChart(metrics) {
-  const total = metrics.total || 1;
-  const segments = [
-    { label: 'Planifié', count: metrics.byState.PLANIFIE.length, color: '#6366f1' },
-    { label: 'Procédure', count: metrics.byState.EN_PROC.length, color: '#f59e0b' },
-    { label: 'Attribué', count: metrics.byState.ATTRIBUE.length, color: '#8b5cf6' },
-    { label: 'Visé', count: metrics.byState.VISE.length, color: '#06b6d4' },
-    { label: 'Exécution', count: metrics.byState.EN_EXEC.length, color: '#10b981' },
-    { label: 'Clôturé', count: metrics.byState.CLOS.length, color: '#64748b' }
+function renderStateDistribution(metrics, colors) {
+  const states = [
+    { key: 'PLANIFIE', label: 'Planifié', color: '#ffc107', count: metrics.byState.PLANIFIE.length },
+    { key: 'EN_EXEC', label: 'En Exécution', color: '#198754', count: metrics.byState.EN_EXEC.length },
+    { key: 'EN_PROC', label: 'EN_PROC', color: '#0dcaf0', count: metrics.byState.EN_PROC.length },
+    { key: 'ATTRIBUE', label: 'ATTRIBUE', color: '#6f42c1', count: metrics.byState.ATTRIBUE.length },
+    { key: 'VISE', label: 'Visé', color: '#0d6efd', count: metrics.byState.VISE.length },
+    { key: 'CLOS', label: 'Clôturé', color: '#6c757d', count: metrics.byState.CLOS.length }
   ];
 
-  // Calculate SVG donut segments
-  let currentAngle = 0;
-  const radius = 80;
-  const strokeWidth = 24;
-  const circumference = 2 * Math.PI * radius;
+  const maxCount = Math.max(...states.map(s => s.count), 1);
 
   return el('div', {
     style: {
-      background: '#1e293b',
-      borderRadius: '20px',
-      padding: '24px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
     }
   }, [
-    el('h3', { style: { fontSize: '14px', fontWeight: '700', color: '#94a3b8', margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '1px' } },
-      'Pipeline'),
+    el('h3', { style: { margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Répartition par État'),
 
-    el('div', { style: { display: 'flex', alignItems: 'center', gap: '24px' } }, [
-      // SVG Donut
-      el('div', { style: { position: 'relative', width: '180px', height: '180px' } }, [
-        (() => {
-          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svg.setAttribute('width', '180');
-          svg.setAttribute('height', '180');
-          svg.setAttribute('viewBox', '0 0 200 200');
-
-          segments.forEach(seg => {
-            if (seg.count === 0) return;
-            const pct = seg.count / total;
-            const dashLength = pct * circumference;
-            const dashOffset = -currentAngle * circumference / 360;
-
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', '100');
-            circle.setAttribute('cy', '100');
-            circle.setAttribute('r', String(radius));
-            circle.setAttribute('fill', 'none');
-            circle.setAttribute('stroke', seg.color);
-            circle.setAttribute('stroke-width', String(strokeWidth));
-            circle.setAttribute('stroke-dasharray', `${dashLength} ${circumference}`);
-            circle.setAttribute('stroke-dashoffset', String(dashOffset));
-            circle.setAttribute('transform', 'rotate(-90 100 100)');
-            svg.appendChild(circle);
-
-            currentAngle += pct * 360;
-          });
-
-          return svg;
-        })(),
-        // Center text
-        el('div', {
-          style: {
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            textAlign: 'center'
-          }
-        }, [
-          el('div', { style: { fontSize: '36px', fontWeight: '900', color: '#ffffff' } }, String(total)),
-          el('div', { style: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase' } }, 'Total')
-        ])
-      ]),
-
-      // Legend
-      el('div', { style: { flex: 1 } },
-        segments.map(seg =>
-          el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' } }, [
-            el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
-              el('div', { style: { width: '12px', height: '12px', borderRadius: '3px', background: seg.color } }),
-              el('span', { style: { fontSize: '12px', color: '#cbd5e1' } }, seg.label)
-            ]),
-            el('span', { style: { fontSize: '14px', fontWeight: '700', color: '#ffffff' } }, String(seg.count))
-          ])
-        )
-      )
-    ])
-  ]);
-}
-
-function renderGaugeCard(value, label, color) {
-  const angle = (value / 100) * 180;
-
-  return el('div', {
-    style: {
-      background: '#1e293b',
-      borderRadius: '20px',
-      padding: '24px',
-      textAlign: 'center',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-    }
-  }, [
-    el('h3', { style: { fontSize: '14px', fontWeight: '700', color: '#94a3b8', margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '1px' } },
-      label),
-
-    // Gauge SVG
-    el('div', { style: { position: 'relative', width: '160px', height: '100px', margin: '0 auto' } }, [
-      (() => {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '160');
-        svg.setAttribute('height', '100');
-        svg.setAttribute('viewBox', '0 0 160 100');
-
-        // Background arc
-        const bgPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        bgPath.setAttribute('d', 'M 20 90 A 60 60 0 0 1 140 90');
-        bgPath.setAttribute('fill', 'none');
-        bgPath.setAttribute('stroke', '#334155');
-        bgPath.setAttribute('stroke-width', '12');
-        bgPath.setAttribute('stroke-linecap', 'round');
-        svg.appendChild(bgPath);
-
-        // Value arc
-        const valuePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const endX = 80 + 60 * Math.cos((180 - angle) * Math.PI / 180);
-        const endY = 90 - 60 * Math.sin((180 - angle) * Math.PI / 180);
-        const largeArc = angle > 90 ? 1 : 0;
-        valuePath.setAttribute('d', `M 20 90 A 60 60 0 ${largeArc} 1 ${endX} ${endY}`);
-        valuePath.setAttribute('fill', 'none');
-        valuePath.setAttribute('stroke', color);
-        valuePath.setAttribute('stroke-width', '12');
-        valuePath.setAttribute('stroke-linecap', 'round');
-        svg.appendChild(valuePath);
-
-        return svg;
-      })()
-    ]),
-
-    // Value display
-    el('div', { style: { marginTop: '12px' } }, [
-      el('span', { style: { fontSize: '42px', fontWeight: '900', color: '#ffffff' } }, value.toFixed(0)),
-      el('span', { style: { fontSize: '24px', fontWeight: '700', color: '#64748b' } }, '%')
-    ])
-  ]);
-}
-
-function renderBailleursBarChart(metrics) {
-  const sortedBailleurs = Object.entries(metrics.byBailleur)
-    .sort((a, b) => b[1].montant - a[1].montant);
-
-  const maxMontant = sortedBailleurs.length > 0 ? sortedBailleurs[0][1].montant : 1;
-
-  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
-
-  return el('div', {
-    style: {
-      background: '#1e293b',
-      borderRadius: '20px',
-      padding: '24px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-    }
-  }, [
-    el('h3', { style: { fontSize: '14px', fontWeight: '700', color: '#94a3b8', margin: '0 0 24px 0', textTransform: 'uppercase', letterSpacing: '1px' } },
-      'Financement par Bailleur'),
-
-    el('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
-      sortedBailleurs.map(([bailleur, data], i) => {
-        const pct = (data.montant / maxMontant * 100);
-        const color = colors[i % colors.length];
-        const isExternal = bailleur !== 'TRESOR';
-
-        return el('div', {}, [
-          el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' } }, [
-            el('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } }, [
-              el('span', { style: { fontSize: '14px', fontWeight: '600', color: '#ffffff' } }, bailleur),
-              isExternal ? el('span', {
-                style: {
-                  fontSize: '9px',
-                  padding: '3px 6px',
-                  background: '#3b82f620',
-                  color: '#60a5fa',
-                  borderRadius: '4px',
-                  fontWeight: '700',
-                  letterSpacing: '0.5px'
-                }
-              }, 'PTF') : null
-            ]),
-            el('div', { style: { textAlign: 'right' } }, [
-              el('span', { style: { fontSize: '16px', fontWeight: '800', color: '#ffffff' } },
-                `${formatMoney(data.montant)}`),
-              el('span', { style: { fontSize: '11px', color: '#64748b', marginLeft: '4px' } },
-                formatMoneyUnit(data.montant))
-            ])
+    el('div', { style: { display: 'flex', flexDirection: 'column', gap: '12px' } },
+      states.map(state =>
+        el('div', {}, [
+          el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } }, [
+            el('span', { style: { fontSize: '12px', color: colors.textMuted } }, state.label),
+            el('span', { style: { fontSize: '14px', fontWeight: '600', color: colors.text } }, String(state.count))
           ]),
-          // Bar
-          el('div', { style: { background: '#0f172a', borderRadius: '8px', height: '12px', overflow: 'hidden' } }, [
+          el('div', { style: { background: '#e9ecef', borderRadius: '4px', height: '8px', overflow: 'hidden' } }, [
             el('div', {
               style: {
-                width: `${pct}%`,
+                width: `${(state.count / maxCount) * 100}%`,
                 height: '100%',
-                background: `linear-gradient(90deg, ${color} 0%, ${color}80 100%)`,
-                borderRadius: '8px',
-                transition: 'width 0.8s ease'
+                background: state.color,
+                borderRadius: '4px',
+                transition: 'width 0.5s ease'
               }
             })
+          ])
+        ])
+      )
+    ),
+
+    // Badges résumé
+    el('div', { style: { display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' } },
+      states.filter(s => s.count > 0).map(state =>
+        el('span', {
+          style: {
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontWeight: '600',
+            background: `${state.color}20`,
+            color: state.color
+          }
+        }, `${state.label}: ${state.count}`)
+      )
+    )
+  ]);
+}
+
+function renderAlerts(metrics, colors) {
+  const alerts = [];
+
+  // Générer des alertes basées sur les métriques
+  if (metrics.byState.VISE.length > 0) {
+    alerts.push({
+      type: 'warning',
+      message: `${metrics.byState.VISE.length} marché(s) visé(s) en attente d'OS`,
+      icon: '⚠️'
+    });
+  }
+  if (metrics.garanties.actives > 0) {
+    alerts.push({
+      type: 'info',
+      message: `${metrics.garanties.actives} garantie(s) active(s) à suivre`,
+      icon: 'ℹ️'
+    });
+  }
+  if (metrics.tauxExecution < 50 && metrics.byState.EN_EXEC.length > 0) {
+    alerts.push({
+      type: 'danger',
+      message: `Taux d'exécution faible (${metrics.tauxExecution.toFixed(0)}%)`,
+      icon: '🚨'
+    });
+  }
+
+  return el('div', {
+    style: {
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+    }
+  }, [
+    el('h3', { style: { margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Alertes Critiques'),
+
+    el('div', { style: { marginBottom: '12px' } }, [
+      el('div', {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '4px 8px',
+          background: '#dc354520',
+          borderRadius: '4px',
+          color: '#dc3545',
+          fontSize: '12px',
+          fontWeight: '600'
+        }
+      }, [
+        el('span', {}, 'Alertes'),
+        el('span', { style: { marginLeft: '8px', background: '#dc3545', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px' } },
+          String(alerts.length))
+      ])
+    ]),
+
+    alerts.length > 0
+      ? el('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+          alerts.map(alert =>
+            el('div', {
+              style: {
+                padding: '12px',
+                borderRadius: '8px',
+                background: alert.type === 'danger' ? '#dc354510' :
+                           alert.type === 'warning' ? '#ffc10710' : '#0d6efd10',
+                borderLeft: `3px solid ${alert.type === 'danger' ? '#dc3545' :
+                           alert.type === 'warning' ? '#ffc107' : '#0d6efd'}`,
+                fontSize: '13px',
+                color: colors.text
+              }
+            }, [
+              el('span', { style: { marginRight: '8px' } }, alert.icon),
+              alert.message
+            ])
+          )
+        )
+      : el('div', { style: { textAlign: 'center', padding: '20px', color: colors.textMuted } }, [
+          el('div', { style: { fontSize: '24px', marginBottom: '8px' } }, '✅'),
+          el('div', { style: { fontSize: '13px' } }, 'Aucune alerte active')
+        ])
+  ]);
+}
+
+function renderFinancingSource(metrics, colors) {
+  const sources = Object.entries(metrics.byBailleur)
+    .sort((a, b) => b[1].montant - a[1].montant);
+
+  const total = sources.reduce((sum, [, data]) => sum + data.montant, 0);
+
+  return el('div', {
+    style: {
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+    }
+  }, [
+    el('h3', { style: { margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Répartition par Source de Financement'),
+
+    el('div', { style: { display: 'flex', flexDirection: 'column', gap: '12px' } },
+      sources.map(([bailleur, data], i) => {
+        const pct = total > 0 ? (data.montant / total * 100) : 0;
+        const sourceColors = ['#0d6efd', '#198754', '#6f42c1', '#fd7e14', '#20c997'];
+        const color = sourceColors[i % sourceColors.length];
+
+        return el('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }
+        }, [
+          el('div', { style: { width: '12px', height: '12px', borderRadius: '2px', background: color, flexShrink: 0 } }),
+          el('div', { style: { flex: 1, minWidth: 0 } }, [
+            el('div', { style: { fontSize: '13px', color: colors.text, fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+              bailleur),
+            el('div', { style: { fontSize: '11px', color: colors.textMuted } },
+              `${formatMoneyCompact(data.montant)} (${pct.toFixed(1)}%)`)
           ])
         ]);
       })
@@ -466,174 +482,243 @@ function renderBailleursBarChart(metrics) {
   ]);
 }
 
-function renderStatsColumn(metrics) {
-  const stats = [
-    {
-      icon: '🔒',
-      label: 'Garanties actives',
-      value: metrics.garanties.actives,
-      color: '#f59e0b'
-    },
-    {
-      icon: '✓',
-      label: 'Garanties libérées',
-      value: metrics.garanties.liberees,
-      color: '#10b981'
-    },
-    {
-      icon: '📝',
-      label: 'Avenants',
-      value: metrics.avenants.count,
-      color: '#8b5cf6'
-    },
-    {
-      icon: '⏳',
-      label: 'En attente visa',
-      value: metrics.byState.VISE.length,
-      color: '#06b6d4'
-    }
-  ];
+function renderExecutionRate(metrics, colors) {
+  const gaugeValue = metrics.tauxExecution;
 
   return el('div', {
     style: {
-      background: '#1e293b',
-      borderRadius: '20px',
-      padding: '24px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      textAlign: 'center'
     }
   }, [
-    el('h3', { style: { fontSize: '14px', fontWeight: '700', color: '#94a3b8', margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '1px' } },
-      'Indicateurs'),
+    el('h3', { style: { margin: '0 0 20px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Taux d\'Exécution Global'),
 
-    el('div', { style: { display: 'flex', flexDirection: 'column', gap: '12px' } },
-      stats.map(stat =>
-        el('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px',
-            background: '#0f172a',
-            borderRadius: '12px',
-            borderLeft: `4px solid ${stat.color}`
-          }
-        }, [
-          el('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } }, [
-            el('span', { style: { fontSize: '20px' } }, stat.icon),
-            el('span', { style: { fontSize: '13px', color: '#cbd5e1' } }, stat.label)
-          ]),
-          el('span', { style: { fontSize: '24px', fontWeight: '800', color: '#ffffff' } }, String(stat.value))
-        ])
-      )
-    )
-  ]);
-}
-
-function renderActivityTimeline(metrics) {
-  const activities = [
-    { time: 'Aujourd\'hui', event: `${metrics.byState.EN_EXEC.length} marchés en exécution`, color: '#10b981' },
-    { time: 'Cette semaine', event: `${metrics.byState.VISE.length} visas CF en attente d\'OS`, color: '#f59e0b' },
-    { time: 'Ce mois', event: `${metrics.byState.CLOS.length} marchés clôturés`, color: '#6366f1' },
-    { time: '2025', event: `${metrics.total} opérations au PPM`, color: '#8b5cf6' }
-  ];
-
-  return el('div', {
-    style: {
-      background: '#1e293b',
-      borderRadius: '20px',
-      padding: '24px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-    }
-  }, [
-    el('h3', { style: { fontSize: '14px', fontWeight: '700', color: '#94a3b8', margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '1px' } },
-      'Activité'),
-
-    el('div', { style: { position: 'relative', paddingLeft: '24px' } }, [
-      // Timeline line
+    // Gauge visuel
+    el('div', { style: { position: 'relative', width: '160px', height: '80px', margin: '0 auto 16px' } }, [
+      // Background arc
       el('div', {
         style: {
           position: 'absolute',
-          left: '6px',
-          top: '8px',
-          bottom: '8px',
-          width: '2px',
-          background: '#334155'
+          width: '160px',
+          height: '80px',
+          borderRadius: '80px 80px 0 0',
+          background: '#e9ecef',
+          overflow: 'hidden'
         }
-      }),
+      }, [
+        // Value arc
+        el('div', {
+          style: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '160px',
+            height: '80px',
+            borderRadius: '80px 80px 0 0',
+            background: gaugeValue >= 70 ? '#198754' : gaugeValue >= 40 ? '#ffc107' : '#dc3545',
+            transformOrigin: 'bottom center',
+            transform: `rotate(${(gaugeValue / 100) * 180 - 180}deg)`,
+            transition: 'transform 0.5s ease'
+          }
+        })
+      ]),
+      // Center circle
+      el('div', {
+        style: {
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '120px',
+          height: '60px',
+          borderRadius: '60px 60px 0 0',
+          background: colors.cardBg
+        }
+      })
+    ]),
 
-      el('div', { style: { display: 'flex', flexDirection: 'column', gap: '20px' } },
-        activities.map(activity =>
-          el('div', { style: { position: 'relative' } }, [
-            // Dot
-            el('div', {
-              style: {
-                position: 'absolute',
-                left: '-22px',
-                top: '4px',
-                width: '14px',
-                height: '14px',
-                borderRadius: '50%',
-                background: activity.color,
-                border: '3px solid #1e293b'
-              }
-            }),
-            el('div', { style: { fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase' } },
-              activity.time),
-            el('div', { style: { fontSize: '14px', color: '#ffffff', fontWeight: '500' } },
-              activity.event)
-          ])
-        )
-      )
+    el('div', { style: { fontSize: '36px', fontWeight: '700', color: colors.text } },
+      `${gaugeValue.toFixed(0)}%`),
+    el('div', { style: { fontSize: '12px', color: colors.textMuted, marginTop: '4px' } },
+      'Budget exécuté / Budget engagé'),
+
+    // Stats complémentaires
+    el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${colors.border}` } }, [
+      el('div', {}, [
+        el('div', { style: { fontSize: '18px', fontWeight: '700', color: colors.primary } },
+          formatMoneyCompact(metrics.montantExecuted)),
+        el('div', { style: { fontSize: '11px', color: colors.textMuted } }, 'Exécuté')
+      ]),
+      el('div', {}, [
+        el('div', { style: { fontSize: '18px', fontWeight: '700', color: colors.accent } },
+          formatMoneyCompact(metrics.montantEngaged)),
+        el('div', { style: { fontSize: '11px', color: colors.textMuted } }, 'Engagé')
+      ])
     ])
   ]);
 }
 
-function renderQuickActionsGrid() {
+function renderTopMarches(metrics, colors) {
+  return el('div', {
+    style: {
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+    }
+  }, [
+    el('h3', { style: { margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Top 5 Marchés'),
+
+    el('div', { style: { overflowX: 'auto' } }, [
+      el('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' } }, [
+        el('thead', {}, [
+          el('tr', { style: { borderBottom: `1px solid ${colors.border}` } }, [
+            el('th', { style: { textAlign: 'left', padding: '8px 8px 8px 0', fontWeight: '600', color: colors.textMuted, fontSize: '11px' } }, 'Objet'),
+            el('th', { style: { textAlign: 'right', padding: '8px 0 8px 8px', fontWeight: '600', color: colors.textMuted, fontSize: '11px' } }, 'Montant')
+          ])
+        ]),
+        el('tbody', {},
+          metrics.topOperations.map(op =>
+            el('tr', {
+              style: { borderBottom: `1px solid ${colors.border}`, cursor: 'pointer' },
+              onclick: () => router.navigate('/fiche-marche', { idOperation: op.id })
+            }, [
+              el('td', { style: { padding: '10px 8px 10px 0', color: colors.text } }, [
+                el('div', { style: { fontWeight: '500', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+                  op.objet || 'Sans objet'),
+              ]),
+              el('td', { style: { padding: '10px 0 10px 8px', textAlign: 'right', fontWeight: '600', color: colors.primary, whiteSpace: 'nowrap' } },
+                formatMoneyCompact(op.montantPrevisionnel || 0))
+            ])
+          )
+        )
+      ])
+    ])
+  ]);
+}
+
+function renderRecentActivity(metrics, colors) {
+  const stateLabels = {
+    PLANIFIE: 'Planifié',
+    EN_PROC: 'EN_PROC',
+    ATTRIBUE: 'ATTRIBUE',
+    VISE: 'Visé',
+    EN_EXEC: 'En Exécution',
+    CLOS: 'Clôturé'
+  };
+
+  const stateColors = {
+    PLANIFIE: '#ffc107',
+    EN_PROC: '#0dcaf0',
+    ATTRIBUE: '#6f42c1',
+    VISE: '#0d6efd',
+    EN_EXEC: '#198754',
+    CLOS: '#6c757d'
+  };
+
+  return el('div', {
+    style: {
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+    }
+  }, [
+    el('h3', { style: { margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Activités Récentes'),
+
+    el('div', { style: { overflowX: 'auto' } }, [
+      el('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: '13px' } }, [
+        el('thead', {}, [
+          el('tr', { style: { borderBottom: `1px solid ${colors.border}` } }, [
+            el('th', { style: { textAlign: 'left', padding: '8px 8px 8px 0', fontWeight: '600', color: colors.textMuted, fontSize: '11px' } }, 'Date'),
+            el('th', { style: { textAlign: 'left', padding: '8px', fontWeight: '600', color: colors.textMuted, fontSize: '11px' } }, 'Marché'),
+            el('th', { style: { textAlign: 'right', padding: '8px 0 8px 8px', fontWeight: '600', color: colors.textMuted, fontSize: '11px' } }, 'État')
+          ])
+        ]),
+        el('tbody', {},
+          metrics.recentOperations.map(op => {
+            const date = op.updatedAt || op.createdAt;
+            const dateStr = date ? new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '-';
+            const etat = op.etat || 'PLANIFIE';
+
+            return el('tr', {
+              style: { borderBottom: `1px solid ${colors.border}`, cursor: 'pointer' },
+              onclick: () => router.navigate('/fiche-marche', { idOperation: op.id })
+            }, [
+              el('td', { style: { padding: '10px 8px 10px 0', color: colors.textMuted, fontSize: '12px' } }, dateStr),
+              el('td', { style: { padding: '10px 8px', color: colors.text, maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+                op.objet || 'Sans objet'),
+              el('td', { style: { padding: '10px 0 10px 8px', textAlign: 'right' } }, [
+                el('span', {
+                  style: {
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    background: `${stateColors[etat]}20`,
+                    color: stateColors[etat]
+                  }
+                }, stateLabels[etat] || etat)
+              ])
+            ]);
+          })
+        )
+      ])
+    ])
+  ]);
+}
+
+function renderQuickActions(colors) {
   const actions = [
-    { icon: '📋', label: 'Liste PPM', route: '/ppm-list', color: '#6366f1' },
-    { icon: '➕', label: 'Nouvelle op.', route: '/ppm-create', color: '#10b981' },
-    { icon: '📊', label: 'Rapports', route: '/rapports', color: '#f59e0b' },
-    { icon: '⚙️', label: 'Config', route: '/admin/config-etapes', color: '#8b5cf6' }
+    { icon: '📋', label: 'Liste PPM', route: '/ppm-list', color: colors.primary },
+    { icon: '➕', label: 'Nouvelle opération', route: '/ppm-create', color: '#198754' },
+    { icon: '📊', label: 'Dashboard principal', route: '/dashboard', color: '#0d6efd' },
+    { icon: '⚙️', label: 'Configuration', route: '/admin/config-etapes', color: '#6f42c1' }
   ];
 
   return el('div', {
     style: {
-      background: '#1e293b',
-      borderRadius: '20px',
-      padding: '24px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+      background: colors.cardBg,
+      borderRadius: '12px',
+      padding: '20px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
     }
   }, [
-    el('h3', { style: { fontSize: '14px', fontWeight: '700', color: '#94a3b8', margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '1px' } },
-      'Actions'),
+    el('h3', { style: { margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: colors.text } },
+      'Actions Rapides'),
 
-    el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' } },
       actions.map(action => {
         const btn = el('div', {
           style: {
-            padding: '20px 16px',
-            background: '#0f172a',
-            borderRadius: '12px',
+            padding: '16px',
+            borderRadius: '8px',
+            border: `1px solid ${colors.border}`,
             textAlign: 'center',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            border: '2px solid transparent'
+            transition: 'all 0.2s ease'
           }
         }, [
-          el('div', { style: { fontSize: '28px', marginBottom: '8px' } }, action.icon),
-          el('div', { style: { fontSize: '12px', fontWeight: '600', color: '#cbd5e1' } }, action.label)
+          el('div', { style: { fontSize: '24px', marginBottom: '8px' } }, action.icon),
+          el('div', { style: { fontSize: '12px', fontWeight: '500', color: colors.text } }, action.label)
         ]);
 
         btn.addEventListener('click', () => router.navigate(action.route));
         btn.addEventListener('mouseenter', () => {
+          btn.style.background = `${action.color}10`;
           btn.style.borderColor = action.color;
-          btn.style.transform = 'translateY(-4px)';
-          btn.style.boxShadow = `0 8px 24px ${action.color}40`;
+          btn.style.transform = 'translateY(-2px)';
         });
         btn.addEventListener('mouseleave', () => {
-          btn.style.borderColor = 'transparent';
+          btn.style.background = 'transparent';
+          btn.style.borderColor = colors.border;
           btn.style.transform = 'translateY(0)';
-          btn.style.boxShadow = 'none';
         });
 
         return btn;
