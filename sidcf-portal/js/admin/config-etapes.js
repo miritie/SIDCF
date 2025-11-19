@@ -341,7 +341,7 @@ async function saveAllPhases() {
 
       if (phase.id && typeof phase.id === 'number') {
         // Update existing phase
-        const response = await fetch(`${API_BASE_URL}/api/config/phases/${phase.id}`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/config/phases/${phase.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -472,7 +472,7 @@ window.deletePhase = async function(phaseId) {
     // If it's a real database ID, delete from API
     if (typeof phase.id === 'number') {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/config/phases/${phase.id}`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/config/phases/${phase.id}`, {
           method: 'DELETE'
         });
 
