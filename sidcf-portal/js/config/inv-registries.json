@@ -1,0 +1,270 @@
+{
+  "TYPE_PROJET": [
+    { "code": "SIGOBE", "libelle": "Projet SIGOBE", "description": "Projet inscrit au SIGOBE" },
+    { "code": "TRANSFERT", "libelle": "Projet en transfert", "description": "Projet bénéficiant de transferts budgétaires" },
+    { "code": "HORS_SIGOBE", "libelle": "Hors SIGOBE", "description": "Projet non inscrit au SIGOBE" }
+  ],
+  "NATURE_PROJET": [
+    { "code": "NOUVEAU", "libelle": "Projet nouveau", "description": "Nouveau projet" },
+    { "code": "RECURRENT", "libelle": "Projet récurrent", "description": "Projet récurrent" },
+    { "code": "NOUVELLE_PHASE", "libelle": "Nouvelle phase", "description": "Nouvelle phase d'un projet existant" }
+  ],
+  "TYPE_ENTITE": [
+    { "code": "UCP", "libelle": "Unité de Coordination de Projet", "description": "Structure dédiée à la gestion du projet" },
+    { "code": "EPN", "libelle": "Établissement Public National", "description": "EPA, EPIC, etc." },
+    { "code": "COLLECTIVITE", "libelle": "Collectivité territoriale", "description": "Région, district, commune" },
+    { "code": "ADMIN", "libelle": "Administration centrale", "description": "Ministère, direction, service" }
+  ],
+  "SECTEUR": [
+    { "code": "EDUCATION", "libelle": "Éducation", "description": "Éducation nationale et enseignement" },
+    { "code": "SANTE", "libelle": "Santé", "description": "Santé publique" },
+    { "code": "INFRASTRUCTURES", "libelle": "Infrastructures", "description": "Routes, ponts, bâtiments" },
+    { "code": "EAU_ASSAINISSEMENT", "libelle": "Eau et Assainissement", "description": "Hydraulique, assainissement" },
+    { "code": "ENERGIE", "libelle": "Énergie", "description": "Électricité, énergies renouvelables" },
+    { "code": "AGRICULTURE", "libelle": "Agriculture", "description": "Agriculture et développement rural" },
+    { "code": "TRANSPORT", "libelle": "Transport", "description": "Transport et mobilité" },
+    { "code": "NUMERIQUE", "libelle": "Numérique", "description": "TIC et transformation digitale" },
+    { "code": "ENVIRONNEMENT", "libelle": "Environnement", "description": "Protection de l'environnement" },
+    { "code": "SOCIAL", "libelle": "Social", "description": "Protection sociale et action sociale" },
+    { "code": "AUTRE", "libelle": "Autre", "description": "Autre secteur" }
+  ],
+  "STATUT_PROJET": [
+    { "code": "PLANIFIE", "libelle": "Planifié", "description": "Projet en cours de planification", "color": "var(--color-info)" },
+    { "code": "EN_COURS", "libelle": "En cours", "description": "Projet en cours d'exécution", "color": "var(--color-primary)" },
+    { "code": "SUSPENDU", "libelle": "Suspendu", "description": "Projet temporairement suspendu", "color": "var(--color-warning)" },
+    { "code": "TERMINE", "libelle": "Terminé", "description": "Projet terminé", "color": "var(--color-success)" },
+    { "code": "ABANDONNE", "libelle": "Abandonné", "description": "Projet abandonné", "color": "var(--color-error)" }
+  ],
+  "PHASE_PROJET": [
+    { "code": "NOTIFIE", "libelle": "Notifié", "description": "Budget inscrit en loi de finances", "ordre": 1 },
+    { "code": "TRANSFERE", "libelle": "Transféré", "description": "Crédits transférés à l'entité exécutante", "ordre": 2 },
+    { "code": "ECLATE", "libelle": "Éclaté", "description": "Budget éclaté par ligne budgétaire", "ordre": 3 },
+    { "code": "EXECUTE", "libelle": "Exécuté", "description": "Budget en cours d'exécution", "ordre": 4 }
+  ],
+  "PRIORITE_ALERTE": [
+    { "code": "CRITIQUE", "libelle": "Critique", "description": "Action immédiate requise", "color": "#dc2626", "icon": "!!" },
+    { "code": "MAJEURE", "libelle": "Majeure", "description": "Action dans les 48h", "color": "#f59e0b", "icon": "!" },
+    { "code": "MINEURE", "libelle": "Mineure", "description": "À traiter dans la semaine", "color": "#3b82f6", "icon": "i" },
+    { "code": "INFO", "libelle": "Information", "description": "Pour information", "color": "#6b7280", "icon": "o" }
+  ],
+  "TYPE_ALERTE": [
+    { "code": "BUDGET_ECLATE_MANQUANT", "libelle": "Budget éclaté manquant", "description": "Projet en transfert sans budget éclaté", "priorite_defaut": "CRITIQUE" },
+    { "code": "ECART_NOTIFIE_ECLATE", "libelle": "Écart Notifié/Éclaté", "description": "Le montant notifié ne correspond pas au budget éclaté", "priorite_defaut": "MAJEURE" },
+    { "code": "TRANSFERE_INFERIEUR_EXECUTE", "libelle": "Transféré < Exécuté", "description": "Montant exécuté supérieur au montant transféré", "priorite_defaut": "CRITIQUE" },
+    { "code": "VARIATION_COUT_CRITIQUE", "libelle": "Variation coût > 30%", "description": "Variation du coût du projet supérieure à 30%", "priorite_defaut": "CRITIQUE" },
+    { "code": "LETTRE_AVANCE_NON_REGULARISEE", "libelle": "Lettre d'avance non régularisée", "description": "Lettre d'avance en dépassement de délai", "priorite_defaut": "MAJEURE" },
+    { "code": "MISSION_TERRAIN_MANQUANTE", "libelle": "Mission terrain manquante", "description": "Mission terrain non réalisée dans les délais", "priorite_defaut": "MAJEURE" },
+    { "code": "RSF_MANQUANT_CLASSE_2", "libelle": "RSF manquant (Classe 2)", "description": "RSF manquant pour dépense de classe 2 avec exécution", "priorite_defaut": "MAJEURE" },
+    { "code": "INDICATEUR_A_RISQUE", "libelle": "Indicateur à risque", "description": "Indicateur GAR en situation de risque", "priorite_defaut": "MINEURE" },
+    { "code": "RETARD_EXECUTION", "libelle": "Retard d'exécution", "description": "Retard significatif dans l'exécution", "priorite_defaut": "MAJEURE" }
+  ],
+  "STATUT_ALERTE": [
+    { "code": "ACTIVE", "libelle": "Active", "description": "Alerte active" },
+    { "code": "ACQUITTEE", "libelle": "Acquittée", "description": "Alerte prise en compte" },
+    { "code": "RESOLUE", "libelle": "Résolue", "description": "Alerte résolue" },
+    { "code": "EXPIREE", "libelle": "Expirée", "description": "Alerte expirée" }
+  ],
+  "MODALITE_LETTRE_AVANCE": [
+    { "code": "RESERVE", "libelle": "Réserve sur UA", "description": "Couverture par réserve sur une UA" },
+    { "code": "RALLONGE", "libelle": "Rallonge sur autre UA", "description": "Couverture par rallonge sur une autre UA" },
+    { "code": "MIXTE", "libelle": "Mixte", "description": "Combinaison réserve et rallonge" }
+  ],
+  "STATUT_LETTRE_AVANCE": [
+    { "code": "EMISE", "libelle": "Émise", "description": "Lettre d'avance émise" },
+    { "code": "PARTIELLE", "libelle": "Partiellement régularisée", "description": "Régularisation partielle" },
+    { "code": "REGULARISEE", "libelle": "Régularisée", "description": "Entièrement régularisée" },
+    { "code": "EXPIREE", "libelle": "Expirée", "description": "Délai de régularisation dépassé" }
+  ],
+  "STATUT_TRANSFERT": [
+    { "code": "PREVU", "libelle": "Prévu", "description": "Transfert planifié" },
+    { "code": "EN_ATTENTE", "libelle": "En attente", "description": "En attente de l'OP" },
+    { "code": "TRANSFERE", "libelle": "Transféré", "description": "Transfert effectué" },
+    { "code": "PARTIEL", "libelle": "Partiel", "description": "Transfert partiel" }
+  ],
+  "TYPE_SUIVI_PHYSIQUE": [
+    { "code": "RSF", "libelle": "Rapport de Suivi Financier", "description": "RSF avec preuves physiques" },
+    { "code": "MISSION_TERRAIN", "libelle": "Mission terrain", "description": "Visite de chantier/site" },
+    { "code": "RAPPORT_TECHNIQUE", "libelle": "Rapport technique", "description": "Rapport technique de suivi" }
+  ],
+  "TYPE_MISSION_TERRAIN": [
+    { "code": "BASELINE", "libelle": "Baseline", "description": "Mission de référence après OS de démarrage" },
+    { "code": "PONCTUELLE", "libelle": "Ponctuelle", "description": "Mission ponctuelle" },
+    { "code": "PERIODIQUE", "libelle": "Périodique", "description": "Mission de suivi régulier" }
+  ],
+  "CLASSE_RSF": [
+    { "code": "2", "libelle": "Classe 2", "description": "Dépenses avec RSF systématique obligatoire", "rsf_obligatoire": true },
+    { "code": "6", "libelle": "Classe 6", "description": "Dépenses avec RSF non systématique", "rsf_obligatoire": false }
+  ],
+  "RESULTAT_SUIVI": [
+    { "code": "CONFORME", "libelle": "Conforme", "description": "Réalisation conforme", "color": "var(--color-success)" },
+    { "code": "ECART_MINEUR", "libelle": "Écart mineur", "description": "Écart mineur à corriger", "color": "var(--color-info)" },
+    { "code": "ECART_MAJEUR", "libelle": "Écart majeur", "description": "Écart majeur nécessitant action", "color": "var(--color-warning)" },
+    { "code": "NON_CONFORME", "libelle": "Non conforme", "description": "Réalisation non conforme", "color": "var(--color-error)" }
+  ],
+  "NIVEAU_INDICATEUR_GAR": [
+    { "code": "OUTPUT", "libelle": "Produit (Output)", "description": "Résultat direct des activités" },
+    { "code": "OUTCOME", "libelle": "Effet (Outcome)", "description": "Changement à moyen terme" },
+    { "code": "IMPACT", "libelle": "Impact", "description": "Changement à long terme" }
+  ],
+  "FREQUENCE_MESURE": [
+    { "code": "MENSUELLE", "libelle": "Mensuelle", "description": "Mesure mensuelle" },
+    { "code": "TRIMESTRIELLE", "libelle": "Trimestrielle", "description": "Mesure trimestrielle" },
+    { "code": "SEMESTRIELLE", "libelle": "Semestrielle", "description": "Mesure semestrielle" },
+    { "code": "ANNUELLE", "libelle": "Annuelle", "description": "Mesure annuelle" }
+  ],
+  "STATUT_EVALUATION": [
+    { "code": "EN_BONNE_VOIE", "libelle": "En bonne voie", "description": "Progression satisfaisante", "color": "var(--color-success)" },
+    { "code": "A_RISQUE", "libelle": "À risque", "description": "Risque de non-atteinte", "color": "var(--color-warning)" },
+    { "code": "NON_ATTEINT", "libelle": "Non atteint", "description": "Objectif non atteint", "color": "var(--color-error)" },
+    { "code": "DEPASSE", "libelle": "Dépassé", "description": "Objectif dépassé", "color": "var(--color-primary)" }
+  ],
+  "TYPE_EVALUATION": [
+    { "code": "INFRA_ANNUELLE", "libelle": "Infra-annuelle", "description": "Évaluation trimestrielle ou semestrielle" },
+    { "code": "ANNUELLE", "libelle": "Annuelle", "description": "Évaluation annuelle" },
+    { "code": "PLURIANNUELLE", "libelle": "Pluriannuelle", "description": "Évaluation sur plusieurs années" },
+    { "code": "FINALE", "libelle": "Finale", "description": "Évaluation de clôture" }
+  ],
+  "CATEGORIE_DOCUMENT": [
+    { "code": "FICHE_VIE", "libelle": "Fiche de vie", "description": "Document de cycle de vie du projet" },
+    { "code": "DECISION_CF", "libelle": "Décision CF/DCF", "description": "Décision du Contrôle Financier" },
+    { "code": "DEROGATION", "libelle": "Dérogation", "description": "Demande ou accord de dérogation" },
+    { "code": "OP_PROVISOIRE", "libelle": "OP provisoire", "description": "Ordre de paiement provisoire" },
+    { "code": "LETTRE_AVANCE", "libelle": "Lettre d'avance", "description": "Document de lettre d'avance" },
+    { "code": "TDR", "libelle": "TDR", "description": "Termes de référence" },
+    { "code": "AUDIT", "libelle": "Audit", "description": "Rapport d'audit" },
+    { "code": "PTBA", "libelle": "PTBA", "description": "Plan de Travail et Budget Annuel" },
+    { "code": "RAPPORT", "libelle": "Rapport", "description": "Rapport général" },
+    { "code": "AUTRE", "libelle": "Autre", "description": "Autre type de document" }
+  ],
+  "CATEGORIE_MOTIF_GLISSEMENT": [
+    { "code": "TECHNIQUE", "libelle": "Technique", "description": "Difficultés techniques" },
+    { "code": "FINANCIER", "libelle": "Financier", "description": "Problèmes de financement" },
+    { "code": "ADMINISTRATIF", "libelle": "Administratif", "description": "Retards administratifs" },
+    { "code": "FORCE_MAJEURE", "libelle": "Force majeure", "description": "Cas de force majeure" },
+    { "code": "AUTRE", "libelle": "Autre", "description": "Autre motif" }
+  ],
+  "BAILLEUR": [
+    { "code": "ETAT", "libelle": "État de Côte d'Ivoire", "type": "ETAT" },
+    { "code": "BM", "libelle": "Banque Mondiale", "type": "MULTILATERAL" },
+    { "code": "BAD", "libelle": "Banque Africaine de Développement", "type": "MULTILATERAL" },
+    { "code": "AFD", "libelle": "Agence Française de Développement", "type": "BILATERAL" },
+    { "code": "UE", "libelle": "Union Européenne", "type": "MULTILATERAL" },
+    { "code": "BID", "libelle": "Banque Islamique de Développement", "type": "MULTILATERAL" },
+    { "code": "BADEA", "libelle": "Banque Arabe pour le Développement Économique en Afrique", "type": "MULTILATERAL" },
+    { "code": "JICA", "libelle": "Agence Japonaise de Coopération Internationale", "type": "BILATERAL" },
+    { "code": "KFW", "libelle": "KfW Bankengruppe", "type": "BILATERAL" },
+    { "code": "USAID", "libelle": "USAID", "type": "BILATERAL" },
+    { "code": "CHINE", "libelle": "Coopération Chinoise", "type": "BILATERAL" },
+    { "code": "AUTRE", "libelle": "Autre", "type": "AUTRE" }
+  ],
+
+  "_ENRICHISSEMENT_V2": "=== Nouveaux registres pour renforcement DCF ===",
+
+  "STATUT_TEMPORAL_PROJET": [
+    { "code": "NOUVEAU", "libelle": "Projet nouveau", "description": "Jamais inscrit au PIP" },
+    { "code": "REAPPARU_MEME_DYNAMIQUE", "libelle": "Réapparu même dynamique", "description": "Réapparu après interruption, même objectifs" },
+    { "code": "REAPPARU_NOUVELLE_DYNAMIQUE", "libelle": "Réapparu nouvelle dynamique", "description": "Réapparu avec nouveaux objectifs" },
+    { "code": "PHASE_CONTINUATION", "libelle": "Phase de continuation", "description": "Nouvelle phase d'un projet existant" }
+  ],
+
+  "PERIMETRE_DCF": [
+    { "code": "OUI", "libelle": "Dans le périmètre", "description": "Projet dans le périmètre de contrôle DCF", "color": "var(--color-success)" },
+    { "code": "NON", "libelle": "Hors périmètre", "description": "Projet hors périmètre DCF", "color": "var(--color-muted)" },
+    { "code": "PARTIEL", "libelle": "Périmètre partiel", "description": "Périmètre partiellement couvert", "color": "var(--color-warning)" }
+  ],
+
+  "SOURCE_LF": [
+    { "code": "LF_INITIALE", "libelle": "LF initiale", "description": "Loi de finances initiale" },
+    { "code": "LF_RECTIFICATIVE", "libelle": "LF rectificative", "description": "Loi de finances rectificative" },
+    { "code": "COLLECTIF", "libelle": "Collectif budgétaire", "description": "Loi de finances rectificative (collectif)" }
+  ],
+
+  "STATUT_OP_PROVISOIRE": [
+    { "code": "EMIS", "libelle": "Émis", "description": "OP provisoire émis" },
+    { "code": "PARTIEL", "libelle": "Partiellement régularisé", "description": "Régularisation partielle" },
+    { "code": "REGULARISE", "libelle": "Régularisé", "description": "Entièrement régularisé" },
+    { "code": "ANNULE", "libelle": "Annulé", "description": "Annulé en fin d'exercice" },
+    { "code": "REPORTE", "libelle": "Reporté", "description": "Reporté comme dépense prioritaire N+1" }
+  ],
+
+  "TYPE_REGIE": [
+    { "code": "AVANCES", "libelle": "Régie d'avances", "description": "Régie pour paiements de menues dépenses" },
+    { "code": "RECETTES", "libelle": "Régie de recettes", "description": "Régie pour encaissement de recettes" },
+    { "code": "MIXTE", "libelle": "Régie mixte", "description": "Régie d'avances et de recettes" }
+  ],
+
+  "STATUT_REGIE": [
+    { "code": "ACTIVE", "libelle": "Active", "description": "Régie en fonctionnement" },
+    { "code": "SUSPENDUE", "libelle": "Suspendue", "description": "Régie temporairement suspendue" },
+    { "code": "CLOTUREE", "libelle": "Clôturée", "description": "Régie clôturée" }
+  ],
+
+  "TYPE_MOUVEMENT_REGIE": [
+    { "code": "ALIMENTATION", "libelle": "Alimentation", "description": "Approvisionnement de la régie" },
+    { "code": "DEPENSE", "libelle": "Dépense", "description": "Paiement effectué sur la régie" },
+    { "code": "JUSTIFICATION", "libelle": "Justification", "description": "Justification des dépenses" },
+    { "code": "REVERSEMENT", "libelle": "Reversement", "description": "Reversement au Trésor" }
+  ],
+
+  "APPRECIATION_TRIMESTRIELLE": [
+    { "code": "EXCELLENT", "libelle": "Excellent", "description": "Performance excellente", "color": "#10b981" },
+    { "code": "BON", "libelle": "Bon", "description": "Bonne performance", "color": "#3b82f6" },
+    { "code": "NORMAL", "libelle": "Normal", "description": "Performance normale", "color": "#6b7280" },
+    { "code": "RETARD", "libelle": "En retard", "description": "Retard significatif", "color": "#f59e0b" },
+    { "code": "CRITIQUE", "libelle": "Critique", "description": "Situation critique", "color": "#dc2626" }
+  ],
+
+  "TYPE_DECISION_CF": [
+    { "code": "AVIS", "libelle": "Avis", "description": "Avis du Contrôle Financier" },
+    { "code": "VISA", "libelle": "Visa", "description": "Visa du CF" },
+    { "code": "DEROGATION", "libelle": "Dérogation", "description": "Accord de dérogation" },
+    { "code": "REJET", "libelle": "Rejet", "description": "Rejet de la demande" },
+    { "code": "SUSPENSION", "libelle": "Suspension", "description": "Suspension d'une activité" },
+    { "code": "MAINLEVEE", "libelle": "Mainlevée", "description": "Mainlevée d'une suspension/réserve" },
+    { "code": "AUTRE", "libelle": "Autre", "description": "Autre type de décision" }
+  ],
+
+  "EMETTEUR_DECISION": [
+    { "code": "CF", "libelle": "Contrôleur Financier", "description": "CF de l'entité" },
+    { "code": "DCF", "libelle": "Direction Contrôle Financier", "description": "Direction centrale CF" },
+    { "code": "DGBF", "libelle": "DGBF", "description": "Direction Générale du Budget et des Finances" },
+    { "code": "MINISTERE", "libelle": "Ministère de tutelle", "description": "Ministère de rattachement" }
+  ],
+
+  "STATUT_PIP_HISTOIRE": [
+    { "code": "INSCRIT", "libelle": "Inscrit", "description": "Projet inscrit au PIP" },
+    { "code": "SUSPENDU", "libelle": "Suspendu", "description": "Inscription suspendue" },
+    { "code": "RETIRE", "libelle": "Retiré", "description": "Retiré du PIP" },
+    { "code": "TERMINE", "libelle": "Terminé", "description": "Projet achevé" }
+  ],
+
+  "TYPE_CRITERE_OPE": [
+    { "code": "INCLUSION", "libelle": "Critère d'inclusion", "description": "Critère pour inclure un projet comme OPE" },
+    { "code": "EXCLUSION", "libelle": "Critère d'exclusion", "description": "Critère excluant un projet des OPE" },
+    { "code": "PRIORITE", "libelle": "Critère de priorité", "description": "Critère de priorisation entre OPE" }
+  ],
+
+  "VALIDATEUR_GAR": [
+    { "code": "CF", "libelle": "Contrôle Financier", "description": "Validation par le CF" },
+    { "code": "TECHNIQUE", "libelle": "Entité technique", "description": "Validation par l'équipe technique" },
+    { "code": "MIXTE", "libelle": "Validation mixte", "description": "Co-validation CF et technique" }
+  ],
+
+  "CATEGORIE_PARAMETRE": [
+    { "code": "SEUIL", "libelle": "Seuil", "description": "Seuil numérique déclenchant une règle" },
+    { "code": "DELAI", "libelle": "Délai", "description": "Délai en jours/mois" },
+    { "code": "REGLE", "libelle": "Règle métier", "description": "Règle de gestion" },
+    { "code": "AFFICHAGE", "libelle": "Affichage", "description": "Paramètre d'affichage UI" },
+    { "code": "WORKFLOW", "libelle": "Workflow", "description": "Paramètre de workflow" }
+  ],
+
+  "PERIODE_GAR": [
+    { "code": "T1", "libelle": "Trimestre 1", "description": "Janvier - Mars" },
+    { "code": "T2", "libelle": "Trimestre 2", "description": "Avril - Juin" },
+    { "code": "T3", "libelle": "Trimestre 3", "description": "Juillet - Septembre" },
+    { "code": "T4", "libelle": "Trimestre 4", "description": "Octobre - Décembre" },
+    { "code": "S1", "libelle": "Semestre 1", "description": "Janvier - Juin" },
+    { "code": "S2", "libelle": "Semestre 2", "description": "Juillet - Décembre" },
+    { "code": "ANNUEL", "libelle": "Annuel", "description": "Année complète" }
+  ]
+}

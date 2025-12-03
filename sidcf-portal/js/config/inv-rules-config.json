@@ -1,0 +1,275 @@
+{
+  "_description": "Configuration du moteur d'alertes Module Investissement - DCF Côte d'Ivoire",
+  "_version": "2.0",
+
+  "parametres_globaux": {
+    "seuil_variation_budget_pct": 30,
+    "delai_regularisation_lettre_avance_jours": 90,
+    "delai_regularisation_op_provisoire_jours": 60,
+    "periodicite_mission_terrain_jours": 60,
+    "classes_rsf_obligatoire": ["2"],
+    "tolerance_ecart_notifie_eclate_fcfa": 0,
+    "seuil_retard_execution_pct": 15,
+    "delai_alerte_expiration_garantie_jours": 30
+  },
+
+  "regles_alertes": [
+    {
+      "code": "ALT-001",
+      "type": "BUDGET_ECLATE_MANQUANT",
+      "libelle": "Projet en transfert sans budget éclaté",
+      "description": "Un projet de type TRANSFERT doit avoir un budget éclaté validé avant le second transfert",
+      "priorite": "CRITIQUE",
+      "conditions": [
+        { "champ": "type_projet", "operateur": "=", "valeur": "TRANSFERT" },
+        { "champ": "nb_lignes_eclate", "operateur": "=", "valeur": 0 }
+      ],
+      "action_bloquante": true,
+      "message_template": "Le projet {code} est de type TRANSFERT mais n'a pas de budget éclaté. Le second transfert ne peut être effectué.",
+      "lien_action": "/investissement/projet?id={id}&tab=budget",
+      "actif": true
+    },
+    {
+      "code": "ALT-002",
+      "type": "ECART_NOTIFIE_ECLATE",
+      "libelle": "Écart entre montant notifié et budget éclaté",
+      "description": "Le montant notifié doit correspondre exactement au total du budget éclaté",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "ecart_notifie_eclate", "operateur": "!=", "valeur": 0 }
+      ],
+      "seuil_parametre": "tolerance_ecart_notifie_eclate_fcfa",
+      "action_bloquante": false,
+      "message_template": "Écart de {ecart_notifie_eclate} FCFA entre le montant notifié ({montant_notifie}) et le budget éclaté ({montant_eclate})",
+      "lien_action": "/investissement/projet?id={id}&tab=budget",
+      "actif": true
+    },
+    {
+      "code": "ALT-003",
+      "type": "TRANSFERE_INFERIEUR_EXECUTE",
+      "libelle": "Montant exécuté supérieur au transféré",
+      "description": "Anomalie grave: le montant exécuté ne peut dépasser le montant transféré",
+      "priorite": "CRITIQUE",
+      "conditions": [
+        { "champ": "montant_execute", "operateur": ">", "valeur_champ": "montant_transfere" }
+      ],
+      "action_bloquante": true,
+      "message_template": "Le montant exécuté ({montant_execute}) dépasse le montant transféré ({montant_transfere}). Anomalie de {ecart} FCFA.",
+      "lien_action": "/investissement/projet?id={id}&tab=financier",
+      "actif": true
+    },
+    {
+      "code": "ALT-004",
+      "type": "VARIATION_COUT_CRITIQUE",
+      "libelle": "Variation de coût supérieure au seuil",
+      "description": "Variation du coût total du projet dépassant le seuil paramétré (impact marchés)",
+      "priorite": "CRITIQUE",
+      "conditions": [
+        { "champ": "variation_cout_pct", "operateur": ">", "valeur_parametre": "seuil_variation_budget_pct" }
+      ],
+      "action_bloquante": false,
+      "message_template": "Le coût du projet a augmenté de {variation_cout_pct}% (de {cout_initial} à {cout_actuel}). Seuil: {seuil}%. Nouveaux marchés probablement requis.",
+      "lien_action": "/investissement/projet?id={id}&tab=financier",
+      "actif": true
+    },
+    {
+      "code": "ALT-005",
+      "type": "LETTRE_AVANCE_NON_REGULARISEE",
+      "libelle": "Lettre d'avance en dépassement de délai",
+      "description": "Une lettre d'avance doit être régularisée dans le délai paramétré",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "statut_lettre", "operateur": "in", "valeur": ["EMISE", "PARTIELLE"] },
+        { "champ": "jours_depuis_emission", "operateur": ">", "valeur_parametre": "delai_regularisation_lettre_avance_jours" }
+      ],
+      "action_bloquante": false,
+      "message_template": "La lettre d'avance {reference} de {montant} FCFA n'est pas régularisée. Délai dépassé de {jours_depassement} jours.",
+      "lien_action": "/investissement/projet?id={project_id}&tab=transferts",
+      "actif": true
+    },
+    {
+      "code": "ALT-006",
+      "type": "OP_PROVISOIRE_NON_REGULARISE",
+      "libelle": "OP provisoire non régularisé",
+      "description": "Les OP provisoires doivent être régularisés avant la fin d'exercice",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "statut_op", "operateur": "in", "valeur": ["EMIS", "PARTIEL"] },
+        { "champ": "jours_avant_fin_exercice", "operateur": "<", "valeur_parametre": "delai_regularisation_op_provisoire_jours" }
+      ],
+      "action_bloquante": false,
+      "message_template": "L'OP provisoire {reference} de {montant} FCFA n'est pas régularisé. {jours_restants} jours avant fin d'exercice.",
+      "lien_action": "/investissement/projet?id={project_id}&tab=financier",
+      "actif": true
+    },
+    {
+      "code": "ALT-007",
+      "type": "MISSION_TERRAIN_MANQUANTE",
+      "libelle": "Mission terrain non réalisée dans les délais",
+      "description": "Les missions de terrain périodiques doivent respecter la fréquence paramétrée",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "jours_depuis_derniere_mission", "operateur": ">", "valeur_parametre": "periodicite_mission_terrain_jours" }
+      ],
+      "action_bloquante": false,
+      "message_template": "Aucune mission terrain depuis {jours_depuis_derniere_mission} jours. Fréquence attendue: tous les {periodicite} jours.",
+      "lien_action": "/investissement/projet?id={id}&tab=physique",
+      "actif": true
+    },
+    {
+      "code": "ALT-008",
+      "type": "RSF_MANQUANT_CLASSE_2",
+      "libelle": "RSF manquant pour dépense classe 2",
+      "description": "Les dépenses de classe 2 (investissement) nécessitent un RSF avec preuves physiques",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "classe_depense", "operateur": "in", "valeur_parametre": "classes_rsf_obligatoire" },
+        { "champ": "a_execution_sans_rsf", "operateur": "=", "valeur": true }
+      ],
+      "action_bloquante": false,
+      "message_template": "Des dépenses de classe 2 ont été exécutées sans RSF validé. Montant concerné: {montant_sans_rsf} FCFA.",
+      "lien_action": "/investissement/projet?id={id}&tab=physique",
+      "actif": true
+    },
+    {
+      "code": "ALT-009",
+      "type": "BASELINE_MANQUANTE",
+      "libelle": "Mission baseline non réalisée",
+      "description": "Tout projet démarré doit avoir une mission baseline de référence après l'OS",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "a_os_demarrage", "operateur": "=", "valeur": true },
+        { "champ": "a_mission_baseline", "operateur": "=", "valeur": false }
+      ],
+      "action_bloquante": false,
+      "message_template": "Le projet {code} a un OS de démarrage mais pas de mission baseline de référence.",
+      "lien_action": "/investissement/projet?id={id}&tab=physique",
+      "actif": true
+    },
+    {
+      "code": "ALT-010",
+      "type": "INDICATEUR_A_RISQUE",
+      "libelle": "Indicateur GAR en situation de risque",
+      "description": "Un indicateur GAR montre un écart significatif par rapport à la cible",
+      "priorite": "MINEURE",
+      "conditions": [
+        { "champ": "statut_indicateur", "operateur": "=", "valeur": "A_RISQUE" }
+      ],
+      "action_bloquante": false,
+      "message_template": "L'indicateur '{libelle_indicateur}' ({niveau}) est à risque: valeur actuelle {valeur_actuelle} vs cible {valeur_cible}.",
+      "lien_action": "/investissement/projet?id={project_id}&tab=gar",
+      "actif": true
+    },
+    {
+      "code": "ALT-011",
+      "type": "RETARD_EXECUTION",
+      "libelle": "Retard significatif dans l'exécution",
+      "description": "Écart entre le niveau d'avancement prévu et réel supérieur au seuil",
+      "priorite": "MAJEURE",
+      "conditions": [
+        { "champ": "ecart_avancement_pct", "operateur": ">", "valeur_parametre": "seuil_retard_execution_pct" }
+      ],
+      "action_bloquante": false,
+      "message_template": "Retard d'exécution de {ecart_avancement_pct}% (prévu: {niveau_prevu}%, réel: {niveau_reel}%).",
+      "lien_action": "/investissement/projet?id={id}&tab=suivi",
+      "actif": true
+    },
+    {
+      "code": "ALT-012",
+      "type": "DOCUMENT_OBLIGATOIRE_MANQUANT",
+      "libelle": "Document obligatoire manquant",
+      "description": "Un document obligatoire selon la matrice documentaire n'est pas fourni",
+      "priorite": "MINEURE",
+      "conditions": [
+        { "champ": "doc_obligatoire_absent", "operateur": "=", "valeur": true }
+      ],
+      "action_bloquante": false,
+      "message_template": "Le document '{type_document}' (obligatoire pour la phase {phase}) n'est pas fourni.",
+      "lien_action": "/investissement/projet?id={id}&tab=gouvernance",
+      "actif": true
+    },
+    {
+      "code": "ALT-013",
+      "type": "REGIE_PLAFOND_ATTEINT",
+      "libelle": "Régie proche du plafond",
+      "description": "Le solde disponible de la régie atteint un niveau critique",
+      "priorite": "INFO",
+      "conditions": [
+        { "champ": "taux_utilisation_regie", "operateur": ">", "valeur": 90 }
+      ],
+      "action_bloquante": false,
+      "message_template": "La régie {reference} a un taux d'utilisation de {taux_utilisation}%. Solde disponible: {solde_disponible} FCFA.",
+      "lien_action": "/investissement/projet?id={project_id}&tab=financier",
+      "actif": true
+    },
+    {
+      "code": "ALT-014",
+      "type": "BLOCAGE_TRANSFERT_SANS_ECLATE",
+      "libelle": "Blocage transfert: budget éclaté manquant",
+      "description": "Le 2e transfert est bloqué car le budget éclaté n'est pas validé",
+      "priorite": "CRITIQUE",
+      "conditions": [
+        { "champ": "type_projet", "operateur": "=", "valeur": "TRANSFERT" },
+        { "champ": "nb_transferts_effectues", "operateur": ">=", "valeur": 1 },
+        { "champ": "budget_eclate_valide", "operateur": "=", "valeur": false }
+      ],
+      "action_bloquante": true,
+      "message_template": "Le 2e transfert pour le projet {code} est bloqué: le budget éclaté doit d'abord être validé.",
+      "lien_action": "/investissement/projet?id={id}&tab=budget",
+      "actif": true
+    },
+    {
+      "code": "ALT-015",
+      "type": "PROJET_OPE_EN_DIFFICULTE",
+      "libelle": "Projet OPE en difficulté",
+      "description": "Un projet OPE présente des indicateurs de performance en dessous des attentes",
+      "priorite": "CRITIQUE",
+      "conditions": [
+        { "champ": "is_ope", "operateur": "=", "valeur": true },
+        { "champ": "taux_execution", "operateur": "<", "valeur": 50 },
+        { "champ": "trimestre_courant", "operateur": ">=", "valeur": 3 }
+      ],
+      "action_bloquante": false,
+      "message_template": "Le projet OPE {code} a un taux d'exécution de {taux_execution}% au T{trimestre}. Attention requise.",
+      "lien_action": "/investissement/projet?id={id}&tab=dashboard",
+      "actif": true
+    }
+  ],
+
+  "frequence_evaluation": {
+    "alertes_financieres": "QUOTIDIEN",
+    "alertes_physiques": "HEBDOMADAIRE",
+    "alertes_gar": "MENSUEL",
+    "alertes_documents": "HEBDOMADAIRE"
+  },
+
+  "notifications": {
+    "critique": {
+      "email": true,
+      "sms": true,
+      "dashboard_banner": true
+    },
+    "majeure": {
+      "email": true,
+      "sms": false,
+      "dashboard_banner": true
+    },
+    "mineure": {
+      "email": false,
+      "sms": false,
+      "dashboard_banner": false
+    },
+    "info": {
+      "email": false,
+      "sms": false,
+      "dashboard_banner": false
+    }
+  },
+
+  "escalade": {
+    "delai_non_traitement_critique_heures": 24,
+    "delai_non_traitement_majeure_heures": 72,
+    "destinataires_escalade": ["DCF", "DGBF"],
+    "actif": false
+  }
+}

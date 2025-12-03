@@ -6,6 +6,7 @@
  * Entity names (used as keys in storage)
  */
 export const ENTITIES = {
+  // Module Marché
   PPM_PLAN: 'PPM_PLAN',
   OPERATION: 'OPERATION',
   BUDGET_LINE: 'BUDGET_LINE',
@@ -26,7 +27,34 @@ export const ENTITIES = {
   ANO: 'ANO',
   DOCUMENT: 'DOCUMENT',
   DECOMPTE: 'DECOMPTE',
-  DIFFICULTE: 'DIFFICULTE'
+  DIFFICULTE: 'DIFFICULTE',
+
+  // Module Investissement
+  INV_PROJECT: 'INV_PROJECT',
+  INV_BUDGET: 'INV_BUDGET',
+  INV_BUDGET_BREAKDOWN: 'INV_BUDGET_BREAKDOWN',
+  INV_TRANSFER: 'INV_TRANSFER',
+  INV_ADVANCE_LETTER: 'INV_ADVANCE_LETTER',
+  INV_COMPONENT: 'INV_COMPONENT',
+  INV_ACTIVITY: 'INV_ACTIVITY',
+  INV_PHYSICAL_TRACKING: 'INV_PHYSICAL_TRACKING',
+  INV_FINANCIAL_STATUS: 'INV_FINANCIAL_STATUS',
+  INV_GLIDE: 'INV_GLIDE',
+  INV_GAR_INDICATOR: 'INV_GAR_INDICATOR',
+  INV_EVALUATION: 'INV_EVALUATION',
+  INV_ALERT: 'INV_ALERT',
+  INV_DOCUMENT: 'INV_DOCUMENT',
+  // Module Investissement - Enrichissements
+  INV_PIP_HISTORY: 'INV_PIP_HISTORY',
+  INV_OPE_CRITERIA: 'INV_OPE_CRITERIA',
+  INV_PROVISIONAL_OP: 'INV_PROVISIONAL_OP',
+  INV_IMPREST: 'INV_IMPREST',
+  INV_IMPREST_MOVEMENT: 'INV_IMPREST_MOVEMENT',
+  INV_QUARTERLY_TRACKING: 'INV_QUARTERLY_TRACKING',
+  INV_GAR_VALUES: 'INV_GAR_VALUES',
+  INV_DOC_MATRIX: 'INV_DOC_MATRIX',
+  INV_DECISION: 'INV_DECISION',
+  INV_SETTINGS: 'INV_SETTINGS'
 };
 
 /**
@@ -577,6 +605,618 @@ export const SCHEMAS = {
     categorieProbleme: '', // TECHNIQUE | FINANCIER | JURIDIQUE | AUTRE
     actionsCorrectives: '', // Mesures prises
 
+    createdAt: null,
+    updatedAt: null
+  },
+
+  // ============================================
+  // MODULE INVESTISSEMENT - Schemas
+  // ============================================
+
+  INV_PROJECT: {
+    id: null,
+    code: '',                               // Code SIGOBE ou interne
+    nom: '',                                // Nom du projet
+    description: '',
+
+    // Classification
+    typeProjet: 'SIGOBE',                   // SIGOBE | TRANSFERT | HORS_SIGOBE
+    natureProjet: 'NOUVEAU',                // NOUVEAU | RECURRENT | NOUVELLE_PHASE
+    isOpe: false,                           // Opération Prioritaire de l'État
+    isPrioritaire: false,
+
+    // Entité exécutante
+    typeEntite: 'ADMIN',                    // UCP | EPN | COLLECTIVITE | ADMIN
+    entiteExecutante: '',
+    entiteCode: '',
+
+    // Cadre institutionnel
+    ministere: '',
+    ministereCode: '',
+    secteur: '',                            // Éducation, Santé, Routes, etc.
+    secteurCode: '',
+    domaine: '',                            // Construction d'école, etc.
+
+    // Localisation
+    district: '',
+    region: '',
+    departement: '',
+    commune: '',
+    localisationDetail: '',
+    latitude: null,
+    longitude: null,
+
+    // Financier global
+    coutTotal: 0,
+    devise: 'XOF',
+    dureePrevueMois: 12,
+    dateDebutPrevue: null,
+    dateFinPrevue: null,
+
+    // Sources de financement
+    partEtat: 0,
+    partBailleur: 0,
+    partContrepartie: 0,
+    bailleurs: [],                          // [{code, nom, montant, devise}]
+
+    // Acteurs
+    controleurFinancier: '',
+    coordonnateur: '',
+    responsableFinancier: '',
+    specialisteMarche: '',
+
+    // Statut
+    statut: 'PLANIFIE',                     // PLANIFIE | EN_COURS | SUSPENDU | TERMINE | ABANDONNE
+    phase: 'NOTIFIE',                       // NOTIFIE | TRANSFERE | ECLATE | EXECUTE
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_BUDGET: {
+    id: null,
+    projectId: null,
+    annee: new Date().getFullYear(),
+
+    montantInitial: 0,
+    montantActuel: 0,
+    revisions: [],                          // [{date, ancien, nouveau, motif}]
+
+    montantNotifie: 0,
+    montantEclate: 0,
+    ecartNotifieEclate: 0,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_BUDGET_BREAKDOWN: {
+    id: null,
+    budgetId: null,
+    projectId: null,
+
+    // Chaîne budgétaire
+    uaCode: '',
+    uaLib: '',
+    activiteCode: '',
+    activiteLib: '',
+    ligneCode: '',
+    ligneLib: '',
+
+    // Composante
+    composanteId: null,
+    composanteNom: '',
+
+    // Montants
+    montantPrevu: 0,
+    montantEngage: 0,
+    observations: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_TRANSFER: {
+    id: null,
+    projectId: null,
+
+    annee: new Date().getFullYear(),
+    trimestre: 1,
+
+    montantPrevu: 0,
+    montantTransfere: 0,
+    dateOp: null,
+    numeroOp: '',
+
+    ecart: 0,
+    statut: 'PREVU',                        // PREVU | EN_ATTENTE | TRANSFERE | PARTIEL
+    commentaire: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_ADVANCE_LETTER: {
+    id: null,
+    projectId: null,
+
+    reference: '',
+    montant: 0,
+    dateEmission: null,
+    dateEcheance: null,
+
+    modalite: 'RESERVE',                    // RESERVE | RALLONGE | MIXTE
+    uaReserve: '',
+    uaRallonge: '',
+
+    montantRegularise: 0,
+    dateRegularisation: null,
+    statut: 'EMISE',                        // EMISE | PARTIELLE | REGULARISEE | EXPIREE
+
+    delaiRegularisationJours: 90,
+    documentRef: null,
+    commentaire: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_COMPONENT: {
+    id: null,
+    projectId: null,
+
+    code: '',
+    nom: '',
+    description: '',
+
+    coutPrevu: 0,
+    coutActuel: 0,
+
+    zoneIntervention: '',
+    livrablesPrincipaux: [],                // [{type, description}]
+    marchesAssocies: [],                    // [operationId, ...]
+    indicateurs: [],                        // [{code, libelle, baseline, cible}]
+
+    ordre: 1,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_ACTIVITY: {
+    id: null,
+    projectId: null,
+    componentId: null,
+
+    code: '',
+    libelle: '',
+    description: '',
+
+    dateDebut: null,
+    dateFin: null,
+    annee: null,
+    trimestre: null,
+
+    budgetPrevu: 0,
+    budgetExecute: 0,
+
+    source: 'ETAT',                         // ETAT | BAILLEUR | MIXTE
+    bailleurCode: '',
+
+    livrableAttendu: '',
+    indicateurCode: '',
+
+    statut: 'PLANIFIE',                     // PLANIFIE | EN_COURS | TERMINE | REPORTE | ANNULE
+    tauxRealisation: 0,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_PHYSICAL_TRACKING: {
+    id: null,
+    projectId: null,
+    componentId: null,
+    activityId: null,
+
+    typeSuivi: 'RSF',                       // RSF | MISSION_TERRAIN | RAPPORT_TECHNIQUE
+    classeRsf: null,                        // 2 | 6
+
+    typeMission: null,                      // BASELINE | PONCTUELLE | PERIODIQUE
+    periodiciteJours: 60,
+
+    dateSuivi: null,
+    dateProchaine: null,
+    livrableConcerne: '',
+
+    localisation: '',
+    latitude: null,
+    longitude: null,
+
+    observations: '',
+    resultat: 'CONFORME',                   // CONFORME | ECART_MINEUR | ECART_MAJEUR | NON_CONFORME
+    actionsRequises: '',
+
+    documentRef: null,
+    photos: [],
+
+    validePar: '',
+    dateValidation: null,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_FINANCIAL_STATUS: {
+    id: null,
+    projectId: null,
+
+    annee: new Date().getFullYear(),
+    mois: null,
+
+    montantNotifie: 0,
+    montantEclate: 0,
+    montantTransfere: 0,
+    montantExecute: 0,
+
+    rae: 0,                                 // Reste à Exécuter
+    rab: 0,                                 // Reste à Budgétiser
+
+    tauxExecution: 0,
+    tauxAbsorption: 0,
+
+    executionParBailleur: [],               // [{bailleur, montant, taux}]
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_GLIDE: {
+    id: null,
+    projectId: null,
+
+    anneeOrigine: null,
+    anneeDestination: null,
+
+    montantInitial: 0,
+    montantRealise: 0,
+    montantGlisse: 0,
+
+    ecartAbsolu: 0,
+    ecartPourcentage: 0,
+
+    motif: '',
+    categorieMotif: null,                   // TECHNIQUE | FINANCIER | ADMINISTRATIF | FORCE_MAJEURE | AUTRE
+
+    isVariationCritique: false,             // > 30%
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_GAR_INDICATOR: {
+    id: null,
+    projectId: null,
+    componentId: null,
+
+    code: '',
+    libelle: '',
+    description: '',
+
+    niveau: 'OUTPUT',                       // OUTPUT | OUTCOME | IMPACT
+
+    unite: '',
+    baseline: null,
+    baselineAnnee: null,
+
+    cibles: [],                             // [{annee, valeur}]
+    valeurActuelle: null,
+    dateDerniereMesure: null,
+
+    sourceVerification: '',
+    frequenceMesure: 'ANNUELLE',            // MENSUELLE | TRIMESTRIELLE | SEMESTRIELLE | ANNUELLE
+
+    objectifParent: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_EVALUATION: {
+    id: null,
+    projectId: null,
+    indicatorId: null,
+
+    typeEvaluation: 'ANNUELLE',             // INFRA_ANNUELLE | ANNUELLE | PLURIANNUELLE | FINALE
+    annee: new Date().getFullYear(),
+    trimestre: null,
+
+    valeurCible: null,
+    valeurRealisee: null,
+    ecart: null,
+    ecartPourcentage: null,
+
+    statut: 'EN_BONNE_VOIE',                // EN_BONNE_VOIE | A_RISQUE | NON_ATTEINT | DEPASSE
+
+    observations: '',
+    actionsCorrectives: '',
+
+    validePar: '',
+    dateValidation: null,
+    validateurType: null,                   // CF | ENTITE_TECHNIQUE | DCF | MINISTERE
+
+    documentRef: null,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_ALERT: {
+    id: null,
+    projectId: null,
+
+    typeAlerte: '',
+    codeAlerte: '',
+
+    priorite: 'MAJEURE',                    // CRITIQUE | MAJEURE | MINEURE | INFO
+
+    titre: '',
+    description: '',
+
+    entiteType: null,
+    entiteId: null,
+    annee: null,
+
+    valeurSeuil: null,
+    valeurActuelle: null,
+
+    statut: 'ACTIVE',                       // ACTIVE | ACQUITTEE | RESOLUE | EXPIREE
+
+    dateDetection: null,
+    dateAcquittement: null,
+    acquittePar: '',
+    dateResolution: null,
+    resolutionCommentaire: '',
+
+    lienAction: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_DOCUMENT: {
+    id: null,
+    projectId: null,
+
+    categorie: '',                          // FICHE_VIE | DECISION_CF | DEROGATION | OP_PROVISOIRE | LETTRE_AVANCE | TDR | AUDIT | PTBA | RAPPORT | AUTRE
+    typeDocument: '',
+
+    titre: '',
+    description: '',
+    reference: '',
+    dateDocument: null,
+
+    fichierUrl: null,
+    fichierNom: '',
+    fichierTaille: 0,
+
+    obligatoire: false,
+    statut: 'DRAFT',                        // DRAFT | VALIDE | REJETE | ARCHIVE
+
+    uploadedBy: '',
+    uploadedAt: null,
+    validePar: '',
+    dateValidation: null,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  // ============================================
+  // MODULE INVESTISSEMENT - Nouvelles Entités (Enrichissement)
+  // ============================================
+
+  INV_PIP_HISTORY: {
+    id: null,
+    projectId: null,
+    annee: new Date().getFullYear(),
+    montantInscrit: 0,
+    montantExecute: 0,
+    tauxExecution: 0,
+    statut: 'INSCRIT',                              // INSCRIT | SUSPENDU | RETIRE | TERMINE
+    rangPriorite: null,
+    observations: '',
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_OPE_CRITERIA: {
+    id: null,
+    code: '',
+    libelle: '',
+    description: '',
+    typeCritere: 'INCLUSION',                       // INCLUSION | EXCLUSION | PRIORITE
+    conditions: [],                                 // [{field, operator, value}]
+    poids: 1,
+    isBloquant: false,
+    actif: true,
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_PROVISIONAL_OP: {
+    id: null,
+    projectId: null,
+    reference: '',
+    montant: 0,
+    dateEmission: null,
+    anneeExercice: new Date().getFullYear(),
+    montantRegularise: 0,
+    dateRegularisation: null,
+    referenceRegularisation: '',
+    statut: 'EMIS',                                 // EMIS | PARTIEL | REGULARISE | ANNULE | REPORTE
+    dateAnnulation: null,
+    motifAnnulation: '',
+    isPrioritaireNPlus1: false,
+    anneeReport: null,
+    objet: '',
+    beneficiaire: '',
+    uaCode: '',
+    commentaire: '',
+    documentRef: null,
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_IMPREST: {
+    id: null,
+    projectId: null,
+    reference: '',
+    typeRegie: 'AVANCES',                           // AVANCES | RECETTES | MIXTE
+    plafond: 0,
+    montantAlimente: 0,
+    montantDepense: 0,
+    montantJustifie: 0,
+    soldeDisponible: 0,
+    regisseurNom: '',
+    regisseurFonction: '',
+    dateNomination: null,
+    statut: 'ACTIVE',                               // ACTIVE | SUSPENDUE | CLOTUREE
+    dateCreation: null,
+    dateDernierApprovisionnement: null,
+    dateDerniereJustification: null,
+    arreteCreationRef: null,
+    documentCautionnement: null,
+    commentaire: '',
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_IMPREST_MOVEMENT: {
+    id: null,
+    imprestId: null,
+    typeMouvement: 'DEPENSE',                       // ALIMENTATION | DEPENSE | JUSTIFICATION | REVERSEMENT
+    montant: 0,
+    dateMouvement: null,
+    reference: '',
+    objet: '',
+    beneficiaire: '',
+    pieceJustificative: null,
+    numeroOp: '',
+    commentaire: '',
+    createdAt: null
+  },
+
+  INV_QUARTERLY_TRACKING: {
+    id: null,
+    projectId: null,
+    annee: new Date().getFullYear(),
+    trimestre: 1,
+    niveauAttendu: 0,
+    niveauReel: 0,
+    ecart: 0,
+    budgetPrevuCumule: 0,
+    budgetExecuteCumule: 0,
+    tauxExecution: 0,
+    activitesPrevues: 0,
+    activitesRealisees: 0,
+    livrablesAttendus: 0,
+    livrablesLivres: 0,
+    appreciation: 'NORMAL',                         // EXCELLENT | BON | NORMAL | RETARD | CRITIQUE
+    observations: '',
+    actionsCorrectives: '',
+    risquesIdentifies: '',
+    dateRapport: null,
+    validePar: '',
+    dateValidation: null,
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_GAR_VALUES: {
+    id: null,
+    indicatorId: null,
+    projectId: null,
+    annee: new Date().getFullYear(),
+    periode: 'ANNUEL',                              // T1 | T2 | T3 | T4 | S1 | S2 | ANNUEL
+    valeurCible: null,
+    valeurRealisee: null,
+    ecart: null,
+    tauxAtteinte: null,
+    sourceDonnee: '',
+    methodeCollecte: '',
+    dateCollecte: null,
+    observations: '',
+    facteursSucces: '',
+    facteursEchec: '',
+    validePar: '',
+    dateValidation: null,
+    validateurType: null,                           // CF | TECHNIQUE | MIXTE
+    documentRef: null,
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_DOC_MATRIX: {
+    id: null,
+    typeProjet: 'ALL',                              // SIGOBE | TRANSFERT | HORS_SIGOBE | ALL
+    phaseProjet: 'ALL',                             // NOTIFIE | TRANSFERE | ECLATE | EXECUTE | ALL
+    typeEntite: 'ALL',                              // UCP | EPN | COLLECTIVITE | ADMIN | ALL
+    categorieDocument: '',
+    typeDocument: '',
+    libelle: '',
+    description: '',
+    obligatoire: false,
+    bloquant: false,
+    delaiProductionJours: null,
+    recurrent: false,
+    frequence: null,                                // MENSUEL | TRIMESTRIEL | SEMESTRIEL | ANNUEL
+    validateur: null,                               // CF | DCF | UCP | MINISTERE | BAILLEUR
+    ordre: 1,
+    actif: true,
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_DECISION: {
+    id: null,
+    projectId: null,
+    reference: '',
+    typeDecision: 'AVIS',                           // AVIS | VISA | DEROGATION | REJET | SUSPENSION | MAINLEVEE | AUTRE
+    objet: '',
+    motif: '',
+    emetteur: 'CF',                                 // CF | DCF | DGBF | MINISTERE
+    signataireNom: '',
+    signataireFonction: '',
+    dateDecision: null,
+    dateEffet: null,
+    dateExpiration: null,
+    statut: 'VALIDE',                               // PROJET | VALIDE | ANNULE | EXPIRE
+    entiteConcernee: null,                          // BUDGET | MARCHE | AVENANT | LETTRE_AVANCE | etc.
+    entiteId: null,
+    documentRef: null,
+    fichierUrl: null,
+    commentaire: '',
+    createdAt: null,
+    updatedAt: null
+  },
+
+  INV_SETTINGS: {
+    id: null,
+    code: '',
+    categorie: 'SEUIL',                             // SEUIL | DELAI | REGLE | AFFICHAGE | WORKFLOW
+    libelle: '',
+    description: '',
+    valeurType: 'NUMBER',                           // NUMBER | STRING | BOOLEAN | JSON | DATE
+    valeurNumber: null,
+    valeurString: null,
+    valeurBoolean: null,
+    valeurJson: null,
+    unite: '',
+    valeurMin: null,
+    valeurMax: null,
+    modifiable: true,
+    actif: true,
     createdAt: null,
     updatedAt: null
   }

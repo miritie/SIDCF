@@ -23,11 +23,11 @@ export async function renderPortalHome() {
     {
       id: 'investissement',
       title: 'Module Investissement',
-      description: 'Programmation et suivi des investissements publics',
+      description: 'Suivi des Projets d\'Investissement Publics (PIP) : budget, transferts, exécution, GAR',
       icon: '💼',
       route: '/investissement/home',
       enabled: features.moduleInvestissement,
-      badge: 'Bientôt'
+      badge: null
     },
     {
       id: 'matiere',
