@@ -122,7 +122,11 @@ export function createInvFilters(currentFilters = {}, onFilterChange, options = 
     }
   };
 
-  return el('div', { id: filterId, className: `inv-filters ${compact ? 'inv-filters-compact' : ''}` }, [
+  // Check if any filters are active (other than year and visionPluriannuelle)
+  const hasActiveFilters = filters.typeProjet || filters.typeEntite || filters.bailleur ||
+    filters.secteur || filters.ope || filters.search || filters.perimetreDcf;
+
+  return el('div', { id: filterId, className: `inv-filters ${compact ? 'inv-filters-compact' : ''} ${hasActiveFilters ? 'has-active-filters' : ''}` }, [
     // Ligne 1: Toggle vision + Année + Recherche
     el('div', { className: 'inv-filters-row inv-filters-main' }, [
       // Toggle Vision Année/Pluriannuel
@@ -445,11 +449,51 @@ export function injectFilterStyles() {
       cursor: pointer;
       color: var(--color-text-muted);
       transition: all 0.2s;
+      align-self: flex-end;
     }
 
     .inv-filter-reset:hover {
       background: var(--color-hover);
       color: var(--color-text);
+      border-color: var(--color-primary);
+    }
+
+    /* Active filters indicator */
+    .inv-filters.has-active-filters {
+      border-color: var(--color-primary);
+      border-width: 2px;
+    }
+
+    .inv-filters-summary {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--color-border);
+    }
+
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      background: var(--color-primary);
+      color: white;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .filter-tag-remove {
+      cursor: pointer;
+      font-weight: 700;
+      margin-left: 0.25rem;
+      opacity: 0.8;
+    }
+
+    .filter-tag-remove:hover {
+      opacity: 1;
     }
 
     /* Toggle Vision Année/Pluriannuel */

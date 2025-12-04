@@ -9,6 +9,7 @@ import { money, percent, abbreviate } from '../../../lib/format.js';
 import router from '../../../router.js';
 import logger from '../../../lib/logger.js';
 import { INV_SIDEBAR_MENU, getCurrentYear, getAvailableYears, createSidebarMenuItems, getMenuIcon } from '../inv-constants.js';
+import { createInvFilters, applyInvFilters, injectFilterStyles, DEFAULT_FILTERS } from '../components/inv-filters.js';
 
 // Aliases pour compatibilité
 const formatMontant = (amount, short = false) => short ? abbreviate(amount) : money(amount);
@@ -34,15 +35,7 @@ const MOCK_PROJETS = [
 let state = {
   projets: [...MOCK_PROJETS],
   filteredProjets: [...MOCK_PROJETS],
-  filters: {
-    annee: getCurrentYear(),
-    type: '',
-    typeEntite: '',
-    bailleur: '',
-    statut: '',
-    ope: '',
-    search: ''
-  },
+  filters: { ...DEFAULT_FILTERS },
   pagination: {
     page: 1,
     perPage: 10
@@ -72,26 +65,17 @@ function renderInvSidebar(activeRoute) {
 }
 
 /**
- * Apply filters
+ * Apply filters using the shared filter function
  */
-function applyFilters() {
-  state.filteredProjets = state.projets.filter(p => {
-    if (state.filters.type && p.type !== state.filters.type) return false;
-    if (state.filters.typeEntite && p.typeEntite !== state.filters.typeEntite) return false;
-    if (state.filters.bailleur && p.bailleur !== state.filters.bailleur) return false;
-    if (state.filters.statut && p.statut !== state.filters.statut) return false;
-    if (state.filters.ope === 'oui' && !p.isOpe) return false;
-    if (state.filters.ope === 'non' && p.isOpe) return false;
-    if (state.filters.search) {
-      const search = state.filters.search.toLowerCase();
-      if (!p.code.toLowerCase().includes(search) &&
-          !p.nom.toLowerCase().includes(search) &&
-          !p.entite.toLowerCase().includes(search)) {
-        return false;
-      }
-    }
-    return true;
-  });
+function applyFiltersAndSort() {
+  // Use the shared applyInvFilters function with adapted field names
+  const adaptedProjets = state.projets.map(p => ({
+    ...p,
+    typeProjet: p.type, // Map 'type' to 'typeProjet' for applyInvFilters
+    secteurCode: p.secteur
+  }));
+
+  state.filteredProjets = applyInvFilters(adaptedProjets, state.filters);
 
   // Apply sort
   state.filteredProjets.sort((a, b) => {
@@ -117,136 +101,33 @@ function getPaginatedData() {
 }
 
 /**
- * Render filters panel
+ * Handle filter change callback
  */
-function renderFilters() {
-  return el('div', { className: 'filters-panel' }, [
-    // Search
-    el('div', { className: 'filter-group filter-search' }, [
-      el('input', {
-        type: 'text',
-        className: 'form-input',
-        placeholder: 'Rechercher par code, nom ou entité...',
-        value: state.filters.search,
-        oninput: (e) => {
-          state.filters.search = e.target.value;
-          applyFilters();
-          updateTable();
-        }
-      })
-    ]),
+function handleFilterChange(newFilters) {
+  state.filters = newFilters;
+  applyFiltersAndSort();
+  updateTable();
+  updateFiltersUI();
+}
 
-    // Year
-    el('div', { className: 'filter-group' }, [
-      el('label', {}, 'Année'),
-      el('select', {
-        className: 'form-select',
-        value: state.filters.annee,
-        onchange: (e) => {
-          state.filters.annee = parseInt(e.target.value);
-          applyFilters();
-          updateTable();
-        }
-      }, getAvailableYears().map(y => el('option', { value: y }, String(y))))
-    ]),
-
-    // Type projet
-    el('div', { className: 'filter-group' }, [
-      el('label', {}, 'Type projet'),
-      el('select', {
-        className: 'form-select',
-        value: state.filters.type,
-        onchange: (e) => {
-          state.filters.type = e.target.value;
-          applyFilters();
-          updateTable();
-        }
-      }, [
-        el('option', { value: '' }, 'Tous'),
-        el('option', { value: 'SIGOBE' }, 'SIGOBE'),
-        el('option', { value: 'TRANSFERT' }, 'Transfert'),
-        el('option', { value: 'HORS_SIGOBE' }, 'Hors SIGOBE')
-      ])
-    ]),
-
-    // Type entité
-    el('div', { className: 'filter-group' }, [
-      el('label', {}, 'Type entité'),
-      el('select', {
-        className: 'form-select',
-        value: state.filters.typeEntite,
-        onchange: (e) => {
-          state.filters.typeEntite = e.target.value;
-          applyFilters();
-          updateTable();
-        }
-      }, [
-        el('option', { value: '' }, 'Tous'),
-        el('option', { value: 'UCP' }, 'UCP'),
-        el('option', { value: 'EPN' }, 'EPN'),
-        el('option', { value: 'COLLECTIVITE' }, 'Collectivité'),
-        el('option', { value: 'ADMIN' }, 'Admin. centrale')
-      ])
-    ]),
-
-    // Bailleur
-    el('div', { className: 'filter-group' }, [
-      el('label', {}, 'Bailleur'),
-      el('select', {
-        className: 'form-select',
-        value: state.filters.bailleur,
-        onchange: (e) => {
-          state.filters.bailleur = e.target.value;
-          applyFilters();
-          updateTable();
-        }
-      }, [
-        el('option', { value: '' }, 'Tous'),
-        el('option', { value: 'BM' }, 'Banque Mondiale'),
-        el('option', { value: 'BAD' }, 'BAD'),
-        el('option', { value: 'AFD' }, 'AFD'),
-        el('option', { value: 'UE' }, 'Union Européenne'),
-        el('option', { value: 'BID' }, 'BID'),
-        el('option', { value: 'BADEA' }, 'BADEA')
-      ])
-    ]),
-
-    // OPE
-    el('div', { className: 'filter-group' }, [
-      el('label', {}, 'OPE'),
-      el('select', {
-        className: 'form-select',
-        value: state.filters.ope,
-        onchange: (e) => {
-          state.filters.ope = e.target.value;
-          applyFilters();
-          updateTable();
-        }
-      }, [
-        el('option', { value: '' }, 'Tous'),
-        el('option', { value: 'oui' }, 'Oui'),
-        el('option', { value: 'non' }, 'Non')
-      ])
-    ]),
-
-    // Reset
-    el('button', {
-      className: 'btn btn-ghost',
-      onclick: () => {
-        state.filters = {
-          annee: getCurrentYear(),
-          type: '',
-          typeEntite: '',
-          bailleur: '',
-          statut: '',
-          ope: '',
-          search: ''
-        };
-        applyFilters();
-        renderInvProjetsList();
-      }
-    }, 'Réinitialiser')
-  ]);
+/**
+ * Update filters UI
+ */
+function updateFiltersUI() {
+  const filtersContainer = qs('#inv-filters-container');
+  if (filtersContainer) {
+    const newFilters = createInvFilters(state.filters, handleFilterChange, {
+      showSearch: true,
+      showVisionToggle: false,
+      showTypeProjet: true,
+      showTypeEntite: true,
+      showBailleur: true,
+      showSecteur: true,
+      showOpe: true,
+      filterId: 'inv-filters-container'
+    });
+    filtersContainer.replaceWith(newFilters);
+  }
 }
 
 /**
@@ -293,7 +174,7 @@ function handleSort(field) {
     state.sort.field = field;
     state.sort.direction = 'asc';
   }
-  applyFilters();
+  applyFiltersAndSort();
   updateTable();
 }
 
@@ -447,7 +328,8 @@ export async function renderInvProjetsList() {
   logger.info('[Investissement] Rendering Projects List...');
 
   // Reset state
-  applyFilters();
+  state.filters = { ...DEFAULT_FILTERS };
+  applyFiltersAndSort();
 
   const page = el('div', { className: 'page-layout inv-layout' }, [
     renderInvSidebar('/investissement/projets'),
@@ -461,8 +343,17 @@ export async function renderInvProjetsList() {
         ])
       ]),
 
-      // Filters
-      renderFilters(),
+      // Filters - Using shared component
+      createInvFilters(state.filters, handleFilterChange, {
+        showSearch: true,
+        showVisionToggle: false,
+        showTypeProjet: true,
+        showTypeEntite: true,
+        showBailleur: true,
+        showSecteur: true,
+        showOpe: true,
+        filterId: 'inv-filters-container'
+      }),
 
       // Content
       el('div', { className: 'page-content' }, [
@@ -481,7 +372,8 @@ export async function renderInvProjetsList() {
 
   mount('#app', page);
 
-  // Inject additional styles
+  // Inject styles
+  injectFilterStyles();
   injectListStyles();
 
   logger.info('[Investissement] Projects List rendered');
@@ -492,45 +384,6 @@ function injectListStyles() {
   if (document.getElementById(styleId)) return;
 
   const styles = `
-    .filters-panel {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      padding: 1rem;
-      background: var(--color-surface);
-      border-radius: 0.5rem;
-      margin-bottom: 1.5rem;
-      border: 1px solid var(--color-border);
-    }
-
-    .filter-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .filter-group label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--color-text-muted);
-    }
-
-    .filter-search {
-      flex: 1;
-      min-width: 250px;
-    }
-
-    .filter-search .form-input {
-      width: 100%;
-    }
-
-    .form-input {
-      padding: 0.5rem 0.75rem;
-      border: 1px solid var(--color-border);
-      border-radius: 0.375rem;
-      font-size: 0.875rem;
-    }
-
     .table-responsive {
       overflow-x: auto;
     }
