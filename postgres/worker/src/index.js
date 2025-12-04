@@ -19,6 +19,7 @@ const CORS_HEADERS = {
 
 // Mapping des noms d'entités vers les tables PostgreSQL
 const ENTITY_TABLE_MAP = {
+  // Module Marché
   'PPM_PLAN': 'ppm_plan',
   'OPERATION': 'operation',
   'BUDGET_LINE': 'budget_line',
@@ -39,7 +40,34 @@ const ENTITY_TABLE_MAP = {
   'CLOTURE': 'cloture',
   'DOCUMENT': 'document',
   'DECOMPTE': 'decompte',
-  'DIFFICULTE': 'difficulte'
+  'DIFFICULTE': 'difficulte',
+
+  // Module Investissement
+  'INV_PROJECT': 'inv_project',
+  'INV_BUDGET': 'inv_budget',
+  'INV_BUDGET_BREAKDOWN': 'inv_budget_breakdown',
+  'INV_TRANSFER': 'inv_transfer',
+  'INV_ADVANCE_LETTER': 'inv_advance_letter',
+  'INV_COMPONENT': 'inv_component',
+  'INV_ACTIVITY': 'inv_activity',
+  'INV_PHYSICAL_TRACKING': 'inv_physical_tracking',
+  'INV_FINANCIAL_STATUS': 'inv_financial_status',
+  'INV_GLIDE': 'inv_glide',
+  'INV_GAR_INDICATOR': 'inv_gar_indicator',
+  'INV_EVALUATION': 'inv_evaluation',
+  'INV_ALERT': 'inv_alert',
+  'INV_DOCUMENT': 'inv_document',
+  // Module Investissement - Enrichissement V2
+  'INV_PIP_HISTORY': 'inv_pip_history',
+  'INV_OPE_CRITERIA': 'inv_ope_criteria',
+  'INV_PROVISIONAL_OP': 'inv_provisional_op',
+  'INV_IMPREST': 'inv_imprest',
+  'INV_IMPREST_MOVEMENT': 'inv_imprest_movement',
+  'INV_QUARTERLY_TRACKING': 'inv_quarterly_tracking',
+  'INV_GAR_VALUES': 'inv_gar_values',
+  'INV_DOC_MATRIX': 'inv_doc_matrix',
+  'INV_DECISION': 'inv_decision',
+  'INV_SETTINGS': 'inv_settings'
 };
 
 // ============================================

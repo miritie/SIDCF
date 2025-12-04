@@ -273,79 +273,160 @@ function renderTabContent(projet) {
 // ============================================
 function renderSignaletique(projet) {
   return el('div', { className: 'tab-content' }, [
-    // Identification
-    el('div', { className: 'section' }, [
-      el('h3', { className: 'section-title' }, 'Identification'),
-      el('div', { className: 'info-grid' }, [
-        renderInfoItem('Code', projet.code),
-        renderInfoItem('Type', projet.typeProjet),
-        renderInfoItem('Nature', projet.natureProjet),
-        renderInfoItem('OPE', projet.isOpe ? 'Oui' : 'Non'),
-        renderInfoItem('Prioritaire', projet.isPrioritaire ? 'Oui' : 'Non'),
-        renderInfoItem('Statut', projet.statut),
-        renderInfoItem('Phase', projet.phase)
+    // Identification - Card avec icône
+    el('div', { className: 'section-card' }, [
+      el('div', { className: 'section-card-header' }, [
+        el('span', { className: 'section-icon' }, '📋'),
+        el('h3', { className: 'section-card-title' }, 'Identification du Projet')
+      ]),
+      el('div', { className: 'section-card-body' }, [
+        el('div', { className: 'info-grid info-grid-4' }, [
+          renderInfoItem('Code Projet', projet.code, 'code'),
+          renderInfoItem('Type', projet.typeProjet, 'badge'),
+          renderInfoItem('Nature', projet.natureProjet),
+          renderInfoItem('Statut', projet.statut, 'status'),
+          renderInfoItem('Phase', projet.phase, 'phase'),
+          renderInfoItem('OPE', projet.isOpe ? 'Oui' : 'Non', projet.isOpe ? 'yes' : 'no'),
+          renderInfoItem('Prioritaire', projet.isPrioritaire ? 'Oui' : 'Non', projet.isPrioritaire ? 'yes' : 'no')
+        ])
       ])
     ]),
 
     // Cadre institutionnel
-    el('div', { className: 'section' }, [
-      el('h3', { className: 'section-title' }, 'Cadre institutionnel'),
-      el('div', { className: 'info-grid' }, [
-        renderInfoItem('Ministère', projet.ministere),
-        renderInfoItem('Secteur', projet.secteur),
-        renderInfoItem('Domaine', projet.domaine)
+    el('div', { className: 'section-card' }, [
+      el('div', { className: 'section-card-header' }, [
+        el('span', { className: 'section-icon' }, '🏛️'),
+        el('h3', { className: 'section-card-title' }, 'Cadre Institutionnel')
+      ]),
+      el('div', { className: 'section-card-body' }, [
+        el('div', { className: 'info-grid info-grid-3' }, [
+          renderInfoItem('Ministère de tutelle', projet.ministere),
+          renderInfoItem('Secteur d\'activité', projet.secteur),
+          renderInfoItem('Domaine d\'intervention', projet.domaine)
+        ])
       ])
     ]),
 
     // Entité exécutante
-    el('div', { className: 'section' }, [
-      el('h3', { className: 'section-title' }, 'Entité exécutante'),
-      el('div', { className: 'info-grid' }, [
-        renderInfoItem('Type', projet.typeEntite),
-        renderInfoItem('Nom', projet.entiteExecutante),
-        renderInfoItem('Code', projet.entiteCode)
+    el('div', { className: 'section-card' }, [
+      el('div', { className: 'section-card-header' }, [
+        el('span', { className: 'section-icon' }, '🏢'),
+        el('h3', { className: 'section-card-title' }, 'Entité Exécutante')
+      ]),
+      el('div', { className: 'section-card-body' }, [
+        el('div', { className: 'info-grid info-grid-3' }, [
+          renderInfoItem('Type d\'entité', projet.typeEntite, 'badge'),
+          renderInfoItem('Nom de l\'entité', projet.entiteExecutante),
+          renderInfoItem('Code entité', projet.entiteCode, 'code')
+        ])
       ])
     ]),
 
     // Localisation
-    el('div', { className: 'section' }, [
-      el('h3', { className: 'section-title' }, 'Localisation'),
-      el('div', { className: 'info-grid' }, [
-        renderInfoItem('District', projet.district),
-        renderInfoItem('Région', projet.region),
-        renderInfoItem('Département', projet.departement),
-        renderInfoItem('Commune', projet.commune)
+    el('div', { className: 'section-card' }, [
+      el('div', { className: 'section-card-header' }, [
+        el('span', { className: 'section-icon' }, '📍'),
+        el('h3', { className: 'section-card-title' }, 'Localisation Géographique')
+      ]),
+      el('div', { className: 'section-card-body' }, [
+        el('div', { className: 'location-breadcrumb' }, [
+          el('span', { className: 'location-item' }, projet.district || '-'),
+          el('span', { className: 'location-sep' }, '→'),
+          el('span', { className: 'location-item' }, projet.region || '-'),
+          el('span', { className: 'location-sep' }, '→'),
+          el('span', { className: 'location-item' }, projet.departement || '-'),
+          el('span', { className: 'location-sep' }, '→'),
+          el('span', { className: 'location-item location-current' }, projet.commune || '-')
+        ])
       ])
     ]),
 
-    // Acteurs
-    el('div', { className: 'section' }, [
-      el('h3', { className: 'section-title' }, 'Acteurs'),
-      el('div', { className: 'info-grid' }, [
-        renderInfoItem('Contrôleur Financier', projet.controleurFinancier),
-        renderInfoItem('Coordonnateur', projet.coordonnateur),
-        renderInfoItem('Responsable Financier', projet.responsableFinancier),
-        renderInfoItem('Spécialiste Marché', projet.specialisteMarche)
+    // Acteurs clés
+    el('div', { className: 'section-card' }, [
+      el('div', { className: 'section-card-header' }, [
+        el('span', { className: 'section-icon' }, '👥'),
+        el('h3', { className: 'section-card-title' }, 'Acteurs Clés du Projet')
+      ]),
+      el('div', { className: 'section-card-body' }, [
+        el('div', { className: 'actors-grid' }, [
+          renderActorCard('CF', 'Contrôleur Financier', projet.controleurFinancier),
+          renderActorCard('COORD', 'Coordonnateur', projet.coordonnateur),
+          renderActorCard('RAF', 'Responsable Financier', projet.responsableFinancier),
+          renderActorCard('SPM', 'Spécialiste Marché', projet.specialisteMarche)
+        ])
       ])
     ]),
 
     // Financement
-    el('div', { className: 'section' }, [
-      el('h3', { className: 'section-title' }, 'Sources de financement'),
-      el('div', { className: 'info-grid' }, [
-        renderInfoItem('Coût total', formatMontant(projet.coutTotal)),
-        renderInfoItem('Part État', formatMontant(projet.partEtat)),
-        renderInfoItem('Part Bailleur(s)', formatMontant(projet.partBailleur)),
-        renderInfoItem('Contrepartie', formatMontant(projet.partContrepartie))
+    el('div', { className: 'section-card section-card-highlight' }, [
+      el('div', { className: 'section-card-header' }, [
+        el('span', { className: 'section-icon' }, '💰'),
+        el('h3', { className: 'section-card-title' }, 'Plan de Financement')
       ]),
-      el('div', { className: 'bailleurs-list' }, [
-        el('h4', {}, 'Bailleurs'),
-        el('ul', {},
-          projet.bailleurs.map(b =>
-            el('li', {}, `${b.nom} (${b.code}): ${formatMontant(b.montant)}`)
+      el('div', { className: 'section-card-body' }, [
+        // Montant total en évidence
+        el('div', { className: 'total-amount-display' }, [
+          el('div', { className: 'total-label' }, 'Coût Total du Projet'),
+          el('div', { className: 'total-value' }, formatMontant(projet.coutTotal))
+        ]),
+
+        // Répartition par source
+        el('div', { className: 'funding-breakdown' }, [
+          el('div', { className: 'funding-item funding-etat' }, [
+            el('div', { className: 'funding-header' }, [
+              el('span', { className: 'funding-icon' }, '🏛️'),
+              el('span', { className: 'funding-label' }, 'Part État (Trésor)')
+            ]),
+            el('div', { className: 'funding-value' }, formatMontant(projet.partEtat)),
+            el('div', { className: 'funding-percent' }, `${((projet.partEtat / projet.coutTotal) * 100).toFixed(1)}%`)
+          ]),
+          el('div', { className: 'funding-item funding-bailleur' }, [
+            el('div', { className: 'funding-header' }, [
+              el('span', { className: 'funding-icon' }, '🌍'),
+              el('span', { className: 'funding-label' }, 'Part Bailleur(s)')
+            ]),
+            el('div', { className: 'funding-value' }, formatMontant(projet.partBailleur)),
+            el('div', { className: 'funding-percent' }, `${((projet.partBailleur / projet.coutTotal) * 100).toFixed(1)}%`)
+          ]),
+          el('div', { className: 'funding-item funding-contrepartie' }, [
+            el('div', { className: 'funding-header' }, [
+              el('span', { className: 'funding-icon' }, '🤝'),
+              el('span', { className: 'funding-label' }, 'Contrepartie')
+            ]),
+            el('div', { className: 'funding-value' }, formatMontant(projet.partContrepartie)),
+            el('div', { className: 'funding-percent' }, `${((projet.partContrepartie / projet.coutTotal) * 100).toFixed(1)}%`)
+          ])
+        ]),
+
+        // Liste des bailleurs détaillée
+        projet.bailleurs.length > 0 && el('div', { className: 'bailleurs-detail' }, [
+          el('h4', { className: 'bailleurs-title' }, 'Détail des Bailleurs'),
+          el('div', { className: 'bailleurs-list-new' },
+            projet.bailleurs.map(b =>
+              el('div', { className: 'bailleur-item' }, [
+                el('div', { className: 'bailleur-info' }, [
+                  el('span', { className: 'bailleur-code' }, b.code),
+                  el('span', { className: 'bailleur-nom' }, b.nom)
+                ]),
+                el('div', { className: 'bailleur-montant' }, formatMontant(b.montant))
+              ])
+            )
           )
-        )
+        ])
       ])
+    ])
+  ]);
+}
+
+/**
+ * Render actor card
+ */
+function renderActorCard(code, role, name) {
+  return el('div', { className: 'actor-card' }, [
+    el('div', { className: 'actor-code' }, code),
+    el('div', { className: 'actor-info' }, [
+      el('div', { className: 'actor-role' }, role),
+      el('div', { className: 'actor-name' }, name || '-')
     ])
   ]);
 }
@@ -856,10 +937,36 @@ function renderDocuments(projet) {
 // ============================================
 // Helper functions
 // ============================================
-function renderInfoItem(label, value) {
+function renderInfoItem(label, value, type = null) {
+  let valueEl;
+  const displayValue = value || '-';
+
+  switch (type) {
+    case 'code':
+      valueEl = el('span', { className: 'info-value-code' }, displayValue);
+      break;
+    case 'badge':
+      valueEl = el('span', { className: 'info-value-badge' }, displayValue);
+      break;
+    case 'status':
+      valueEl = el('span', { className: `info-value-status status-${(displayValue || '').toLowerCase().replace(/_/g, '-')}` }, displayValue);
+      break;
+    case 'phase':
+      valueEl = el('span', { className: `info-value-phase phase-${(displayValue || '').toLowerCase()}` }, displayValue);
+      break;
+    case 'yes':
+      valueEl = el('span', { className: 'info-value-yes' }, displayValue);
+      break;
+    case 'no':
+      valueEl = el('span', { className: 'info-value-no' }, displayValue);
+      break;
+    default:
+      valueEl = el('span', { className: 'info-value-text' }, displayValue);
+  }
+
   return el('div', { className: 'info-item' }, [
     el('div', { className: 'info-label' }, label),
-    el('div', { className: 'info-value' }, value || '-')
+    el('div', { className: 'info-value' }, [valueEl])
   ]);
 }
 
@@ -1418,6 +1525,381 @@ function injectFicheStyles() {
 
     .bailleurs-list li {
       font-size: 0.875rem;
+    }
+
+    /* =========================================
+       Section Cards - New IHM
+       ========================================= */
+    .section-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 0.75rem;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .section-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      background: linear-gradient(135deg, var(--color-surface-alt) 0%, var(--color-surface) 100%);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .section-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .section-card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    .section-card-body {
+      padding: 1.25rem;
+    }
+
+    .section-card-highlight {
+      border-color: var(--color-primary);
+      border-width: 2px;
+    }
+
+    .section-card-highlight .section-card-header {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+    }
+
+    /* Info Grid improvements */
+    .info-grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .info-grid-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 768px) {
+      .info-grid-3,
+      .info-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .info-grid-3,
+      .info-grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Info value types */
+    .info-value-code {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .info-value-badge {
+      display: inline-block;
+      background: var(--color-primary);
+      color: white;
+      padding: 0.25rem 0.625rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .info-value-status {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-en-cours { background: #dbeafe; color: #1e40af; }
+    .status-planifie { background: #e0e7ff; color: #3730a3; }
+    .status-suspendu { background: #fef3c7; color: #92400e; }
+    .status-termine { background: #d1fae5; color: #065f46; }
+    .status-abandonne { background: #fee2e2; color: #991b1b; }
+
+    .info-value-phase {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .phase-notifie { background: #e0e7ff; color: #3730a3; }
+    .phase-transfere { background: #fef3c7; color: #92400e; }
+    .phase-eclate { background: #dbeafe; color: #1e40af; }
+    .phase-execute { background: #d1fae5; color: #065f46; }
+
+    .info-value-yes {
+      color: var(--color-success);
+      font-weight: 600;
+    }
+
+    .info-value-yes::before {
+      content: '✓ ';
+    }
+
+    .info-value-no {
+      color: var(--color-text-muted);
+    }
+
+    /* Location Breadcrumb */
+    .location-breadcrumb {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: linear-gradient(90deg, #f0fdf4 0%, #ecfdf5 50%, #f0fdfa 100%);
+      border-radius: 0.5rem;
+    }
+
+    .location-item {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.375rem 0.75rem;
+      background: white;
+      border: 1px solid #d1fae5;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      color: #047857;
+    }
+
+    .location-sep {
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    .location-current {
+      background: #059669;
+      color: white;
+      border-color: #059669;
+      font-weight: 600;
+    }
+
+    /* Actors Grid */
+    .actors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .actor-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--color-surface-alt);
+      border-radius: 0.5rem;
+      border: 1px solid var(--color-border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .actor-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .actor-code {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, var(--color-primary) 0%, #4f46e5 100%);
+      color: white;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+
+    .actor-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .actor-role {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .actor-name {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Funding Breakdown */
+    .total-amount-display {
+      text-align: center;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      border-radius: 0.75rem;
+      color: white;
+      margin-bottom: 1.5rem;
+    }
+
+    .total-label {
+      font-size: 0.875rem;
+      opacity: 0.9;
+      margin-bottom: 0.25rem;
+    }
+
+    .total-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .funding-breakdown {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .funding-breakdown {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .funding-item {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+
+    .funding-item:hover {
+      transform: translateY(-2px);
+    }
+
+    .funding-etat {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #f59e0b;
+    }
+
+    .funding-bailleur {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border: 1px solid #3b82f6;
+    }
+
+    .funding-contrepartie {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      border: 1px solid #10b981;
+    }
+
+    .funding-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .funding-icon {
+      font-size: 1.25rem;
+    }
+
+    .funding-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    .funding-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .funding-percent {
+      font-size: 0.875rem;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    /* Bailleurs Detail */
+    .bailleurs-detail {
+      background: var(--color-surface-alt);
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    .bailleurs-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin: 0 0 0.75rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .bailleurs-list-new {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .bailleur-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: white;
+      border-radius: 0.375rem;
+      border: 1px solid var(--color-border);
+    }
+
+    .bailleur-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .bailleur-code {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 3rem;
+      padding: 0.25rem 0.5rem;
+      background: var(--color-primary);
+      color: white;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .bailleur-nom {
+      font-weight: 500;
+    }
+
+    .bailleur-montant {
+      font-weight: 700;
+      color: var(--color-primary);
     }
   `;
 
