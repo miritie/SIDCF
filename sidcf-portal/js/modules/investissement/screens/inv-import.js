@@ -1,160 +1,111 @@
 /* ============================================
    Import de Données - Module Investissement
    ============================================
-   Écran d'import des données conformes aux Annexes officielles:
-   - Annexe 1: Fiche de Collecte des Données par Projet d'Investissement Public
-   - Annexe 2: Analyse de la Soutenabilité du Projet
-   - Annexe 3: Cadre de Résultats du Projet (GAR)
-   - Annexe 4: Fiche d'Identification des Acteurs Clés
+   Interface simplifiée pour import CSV/Excel
+   Workflow en 3 étapes: Sélection → Aperçu → Import
    ============================================ */
 
 import { el, mount, qs } from '../../../lib/dom.js';
 import router from '../../../router.js';
 import logger from '../../../lib/logger.js';
-import { INV_SIDEBAR_MENU, getCurrentYear, createSidebarMenuItems, getMenuIcon, injectInvSidebarStyles } from '../inv-constants.js';
+import { createSidebarMenuItems, injectInvSidebarStyles } from '../inv-constants.js';
 
 /**
- * Configuration des zones d'import par type d'annexe
+ * Types d'import disponibles
  */
-const IMPORT_ZONES = [
+const IMPORT_TYPES = [
   {
-    id: 'annexe1-identification',
-    annexe: '1',
-    section: 'Identification du Projet',
-    description: 'Section, Code, Titre, Ordonnateur Principal des Crédits (OPE), Mode de gestion',
-    icon: '📋',
-    fields: [
-      'Section', 'Code Projet', 'Titre du Projet', 'OPE', 'Mode Gestion',
-      'Date Début', 'Date Fin Prévue', 'Durée (mois)'
-    ],
-    templateName: 'template_annexe1_identification.xlsx',
-    required: true
+    id: 'projets',
+    label: 'Projets d\'Investissement',
+    icon: '📁',
+    description: 'Import des fiches projets avec identification, localisation et financement',
+    color: '#3b82f6',
+    templateFields: [
+      'Code Projet', 'Titre', 'Section', 'OPE', 'Mode Gestion',
+      'District', 'Région', 'Département', 'Commune',
+      'Coût Total', 'Part Trésor', 'Bailleur', 'Type Financement',
+      'Date Début', 'Date Fin', 'Statut'
+    ]
   },
   {
-    id: 'annexe1-localisation',
-    annexe: '1',
-    section: 'Localisation Géographique',
-    description: 'Hiérarchie: District → Région → Département → Sous-préfecture → Commune → Village + GPS',
-    icon: '📍',
-    fields: [
-      'District', 'Région', 'Département', 'Sous-préfecture', 'Commune', 'Village/Localité',
-      'Latitude', 'Longitude'
-    ],
-    templateName: 'template_annexe1_localisation.xlsx',
-    required: true
-  },
-  {
-    id: 'annexe1-financement',
-    annexe: '1',
-    section: 'Sources de Financement',
-    description: 'Trésor + Bailleurs multiples (Emprunt/Don) avec montants par source',
-    icon: '💰',
-    fields: [
-      'Coût Global', 'Part Trésor', 'Bailleur 1 Code', 'Bailleur 1 Montant', 'Bailleur 1 Type',
-      'Bailleur 2 Code', 'Bailleur 2 Montant', 'Bailleur 2 Type', 'Autres Sources'
-    ],
-    templateName: 'template_annexe1_financement.xlsx',
-    required: true
-  },
-  {
-    id: 'annexe1-composantes',
-    annexe: '1',
-    section: 'Composantes & Marchés',
-    description: 'Composantes du projet avec marchés associés (lien vers module Marché)',
+    id: 'composantes',
+    label: 'Composantes & Marchés',
     icon: '🔗',
-    fields: [
-      'Code Composante', 'Libellé Composante', 'Montant Prévu', 'Zone Intervention',
-      'Code Marché 1', 'Code Marché 2', 'Code Marché 3'
-    ],
-    templateName: 'template_annexe1_composantes.xlsx',
-    required: false,
-    linkToMarche: true
+    description: 'Composantes des projets avec liens vers les marchés',
+    color: '#8b5cf6',
+    templateFields: [
+      'Code Projet', 'Code Composante', 'Libellé', 'Montant Prévu',
+      'Zone Intervention', 'Code Marché 1', 'Code Marché 2'
+    ]
   },
   {
-    id: 'annexe1-livrables',
-    annexe: '1',
-    section: 'Livrables Attendus',
-    description: 'Liste des livrables par composante avec quantités et échéances',
-    icon: '📦',
-    fields: [
-      'Code Composante', 'Type Livrable', 'Description', 'Quantité Prévue', 'Unité',
-      'Date Prévue', 'Localisation'
-    ],
-    templateName: 'template_annexe1_livrables.xlsx',
-    required: false
-  },
-  {
-    id: 'annexe1-execution',
-    annexe: '1',
-    section: 'Suivi d\'Exécution',
-    description: 'Taux d\'exécution physique et financière par période',
+    id: 'execution',
+    label: 'Suivi d\'Exécution',
     icon: '📊',
-    fields: [
-      'Code Projet', 'Année', 'Trimestre', 'Montant Prévu', 'Montant Exécuté',
-      'Taux Physique', 'Taux Financier', 'Observations'
-    ],
-    templateName: 'template_annexe1_execution.xlsx',
-    required: false
+    description: 'Données d\'exécution physique et financière par période',
+    color: '#10b981',
+    templateFields: [
+      'Code Projet', 'Année', 'Trimestre',
+      'Montant Prévu', 'Montant Exécuté',
+      'Taux Physique (%)', 'Taux Financier (%)', 'Observations'
+    ]
   },
   {
-    id: 'annexe2-soutenabilite',
-    annexe: '2',
-    section: 'Soutenabilité & Pluriannualité',
-    description: 'Analyse sur N+1, N+2, N+3 avec PTBA vs Budget inscrit',
+    id: 'soutenabilite',
+    label: 'Soutenabilité',
     icon: '📅',
-    fields: [
-      'Code Projet', 'Année N+1 PTBA', 'Année N+1 Budget', 'Année N+1 Écart',
-      'Année N+2 PTBA', 'Année N+2 Budget', 'Année N+2 Écart',
-      'Année N+3 PTBA', 'Année N+3 Budget', 'Année N+3 Écart',
-      'Observations Soutenabilité'
-    ],
-    templateName: 'template_annexe2_soutenabilite.xlsx',
-    required: false
+    description: 'Analyse pluriannuelle PTBA vs Budget (N+1, N+2, N+3)',
+    color: '#f59e0b',
+    templateFields: [
+      'Code Projet',
+      'N+1 PTBA', 'N+1 Budget',
+      'N+2 PTBA', 'N+2 Budget',
+      'N+3 PTBA', 'N+3 Budget',
+      'Observations'
+    ]
   },
   {
-    id: 'annexe3-resultats',
-    annexe: '3',
-    section: 'Cadre de Résultats (GAR)',
-    description: 'Indicateurs IMPACT → EFFETS → EXTRANTS avec baseline et cibles',
+    id: 'indicateurs',
+    label: 'Indicateurs GAR',
     icon: '🎯',
-    fields: [
-      'Code Projet', 'Niveau Indicateur', 'Code Indicateur', 'Libellé Indicateur',
-      'Unité', 'Baseline', 'Année Baseline', 'Cible Année 1', 'Cible Année 2',
-      'Cible Finale', 'Source Vérification', 'Fréquence Mesure'
-    ],
-    templateName: 'template_annexe3_resultats.xlsx',
-    required: false
+    description: 'Cadre de résultats: Impact, Effets, Extrants',
+    color: '#ef4444',
+    templateFields: [
+      'Code Projet', 'Niveau', 'Code Indicateur', 'Libellé',
+      'Unité', 'Baseline', 'Cible Année 1', 'Cible Année 2', 'Cible Finale',
+      'Source Vérification'
+    ]
   },
   {
-    id: 'annexe4-acteurs',
-    annexe: '4',
-    section: 'Acteurs Clés du Projet',
-    description: 'CF, Coordonnateur, RAF, SPM avec contacts et dates de nomination',
+    id: 'acteurs',
+    label: 'Acteurs Clés',
     icon: '👥',
-    fields: [
-      'Code Projet', 'Fonction', 'Nom Prénom', 'Téléphone', 'Email',
-      'Date Nomination', 'Décision/Arrêté Ref'
-    ],
-    templateName: 'template_annexe4_acteurs.xlsx',
-    required: false
+    description: 'CF, Coordonnateur, RAF, SPM avec contacts',
+    color: '#06b6d4',
+    templateFields: [
+      'Code Projet', 'Fonction', 'Nom', 'Prénom',
+      'Téléphone', 'Email', 'Date Nomination'
+    ]
   }
 ];
 
 /**
- * État de l'import
+ * État de l'application
  */
-let importState = {
-  files: {},           // { zoneId: File }
-  previews: {},        // { zoneId: { headers: [], rows: [] } }
-  validations: {},     // { zoneId: { valid: bool, errors: [], warnings: [] } }
+let state = {
+  step: 1,                    // 1: Sélection, 2: Aperçu, 3: Résultat
+  selectedType: null,
+  file: null,
+  preview: null,
+  validation: null,
   importing: false,
-  progress: 0
+  result: null
 };
 
 /**
  * Render sidebar
  */
-function renderInvSidebar(activeRoute) {
+function renderSidebar(activeRoute) {
   return el('aside', { className: 'sidebar inv-sidebar' }, [
     el('div', { className: 'sidebar-header' }, [
       el('h2', { className: 'sidebar-title' }, 'Investissement'),
@@ -170,328 +121,252 @@ function renderInvSidebar(activeRoute) {
 }
 
 /**
- * Render zone d'import individuelle
+ * Render Step 1: Sélection du type d'import
  */
-function renderImportZone(zone) {
-  const hasFile = importState.files[zone.id];
-  const preview = importState.previews[zone.id];
-  const validation = importState.validations[zone.id];
-
-  return el('div', {
-    className: `import-zone ${hasFile ? 'has-file' : ''} ${validation?.valid === false ? 'has-errors' : ''} ${zone.required ? 'required' : ''}`,
-    id: `zone-${zone.id}`
-  }, [
-    // Header de la zone
-    el('div', { className: 'import-zone-header' }, [
-      el('div', { className: 'import-zone-icon' }, zone.icon),
-      el('div', { className: 'import-zone-info' }, [
-        el('div', { className: 'import-zone-title' }, [
-          el('span', { className: 'annexe-badge' }, `Annexe ${zone.annexe}`),
-          el('span', {}, zone.section),
-          zone.required && el('span', { className: 'required-badge' }, '*')
-        ]),
-        el('div', { className: 'import-zone-desc' }, zone.description)
-      ]),
-      el('div', { className: 'import-zone-actions' }, [
-        el('a', {
-          className: 'btn btn-sm btn-ghost',
-          href: `#`,
-          onclick: (e) => {
-            e.preventDefault();
-            downloadTemplate(zone);
-          },
-          title: 'Télécharger le modèle'
-        }, '📥 Modèle'),
-        zone.linkToMarche && el('a', {
-          className: 'btn btn-sm btn-ghost',
-          href: '#/marches/ppm',
-          title: 'Accéder au module Marché'
-        }, '🔗 Marchés')
+function renderStep1() {
+  return el('div', { className: 'import-step step-1' }, [
+    el('div', { className: 'step-header' }, [
+      el('div', { className: 'step-number active' }, '1'),
+      el('div', { className: 'step-info' }, [
+        el('h2', {}, 'Que souhaitez-vous importer ?'),
+        el('p', {}, 'Sélectionnez le type de données à charger')
       ])
     ]),
 
-    // Zone de drop
-    el('div', {
-      className: `import-dropzone ${hasFile ? 'has-file' : ''}`,
-      ondragover: (e) => handleDragOver(e, zone.id),
-      ondragleave: (e) => handleDragLeave(e, zone.id),
-      ondrop: (e) => handleDrop(e, zone.id)
-    }, [
-      hasFile ? [
-        el('div', { className: 'file-info' }, [
-          el('span', { className: 'file-icon' }, '📄'),
-          el('span', { className: 'file-name' }, importState.files[zone.id].name),
-          el('span', { className: 'file-size' }, formatFileSize(importState.files[zone.id].size)),
-          el('button', {
-            className: 'btn btn-sm btn-ghost btn-remove',
-            onclick: () => removeFile(zone.id)
-          }, '✕')
-        ])
-      ] : [
-        el('div', { className: 'dropzone-content' }, [
-          el('div', { className: 'dropzone-icon' }, '📂'),
-          el('div', { className: 'dropzone-text' }, [
-            el('span', {}, 'Glissez un fichier CSV/Excel ici ou '),
-            el('label', { className: 'file-input-label' }, [
-              'parcourir',
-              el('input', {
-                type: 'file',
-                accept: '.csv,.xlsx,.xls',
-                className: 'file-input-hidden',
-                onchange: (e) => handleFileSelect(e, zone.id)
-              })
-            ])
+    el('div', { className: 'import-types-grid' },
+      IMPORT_TYPES.map(type =>
+        el('button', {
+          className: `import-type-card ${state.selectedType === type.id ? 'selected' : ''}`,
+          style: `--card-color: ${type.color}`,
+          onclick: () => selectType(type.id)
+        }, [
+          el('div', { className: 'type-icon' }, type.icon),
+          el('div', { className: 'type-content' }, [
+            el('div', { className: 'type-label' }, type.label),
+            el('div', { className: 'type-desc' }, type.description)
           ]),
-          el('div', { className: 'dropzone-formats' }, 'Formats: CSV, Excel (.xlsx, .xls)')
+          state.selectedType === type.id && el('div', { className: 'type-check' }, '✓')
         ])
-      ]
-    ]),
-
-    // Liste des champs attendus
-    el('div', { className: 'import-zone-fields' }, [
-      el('div', { className: 'fields-label' }, 'Colonnes attendues:'),
-      el('div', { className: 'fields-list' },
-        zone.fields.map(field =>
-          el('span', { className: 'field-tag' }, field)
-        )
       )
-    ]),
+    ),
 
-    // Prévisualisation des données
-    preview && renderPreview(zone.id, preview),
-
-    // Messages de validation
-    validation && renderValidation(zone.id, validation)
+    state.selectedType && el('div', { className: 'step-actions' }, [
+      el('button', {
+        className: 'btn btn-ghost',
+        onclick: () => downloadTemplate(state.selectedType)
+      }, [
+        el('span', {}, '📥'),
+        ' Télécharger le modèle CSV'
+      ]),
+      el('label', { className: 'btn btn-primary file-label' }, [
+        el('span', {}, '📂'),
+        ' Sélectionner un fichier',
+        el('input', {
+          type: 'file',
+          accept: '.csv,.xlsx,.xls',
+          className: 'file-input-hidden',
+          onchange: handleFileSelect
+        })
+      ])
+    ])
   ]);
 }
 
 /**
- * Render prévisualisation des données
+ * Render Step 2: Aperçu et validation
  */
-function renderPreview(zoneId, preview) {
-  if (!preview.rows || preview.rows.length === 0) {
-    return el('div', { className: 'import-preview empty' }, [
-      el('span', {}, 'Aucune donnée à prévisualiser')
-    ]);
-  }
+function renderStep2() {
+  const type = IMPORT_TYPES.find(t => t.id === state.selectedType);
 
-  const maxRows = 5;
-  const displayRows = preview.rows.slice(0, maxRows);
-
-  return el('div', { className: 'import-preview' }, [
-    el('div', { className: 'preview-header' }, [
-      el('span', { className: 'preview-title' }, `Aperçu (${preview.rows.length} lignes)`),
-      preview.rows.length > maxRows && el('span', { className: 'preview-more' }, `+ ${preview.rows.length - maxRows} autres`)
+  return el('div', { className: 'import-step step-2' }, [
+    el('div', { className: 'step-header' }, [
+      el('button', {
+        className: 'btn btn-ghost btn-back',
+        onclick: goBack
+      }, '← Retour'),
+      el('div', { className: 'step-number active' }, '2'),
+      el('div', { className: 'step-info' }, [
+        el('h2', {}, 'Vérifiez vos données'),
+        el('p', {}, [
+          el('span', { className: 'file-badge' }, [
+            el('span', {}, '📄'),
+            state.file.name
+          ]),
+          ` • ${state.preview.rows.length} lignes détectées`
+        ])
+      ])
     ]),
-    el('div', { className: 'preview-table-wrapper' }, [
-      el('table', { className: 'preview-table' }, [
-        el('thead', {}, [
-          el('tr', {},
-            preview.headers.map(h => el('th', {}, h))
-          )
-        ]),
-        el('tbody', {},
-          displayRows.map(row =>
+
+    // Résumé de validation
+    renderValidationSummary(),
+
+    // Tableau de prévisualisation
+    el('div', { className: 'preview-card' }, [
+      el('div', { className: 'preview-header' }, [
+        el('h3', {}, 'Aperçu des données'),
+        el('span', { className: 'preview-info' },
+          `${Math.min(10, state.preview.rows.length)} premières lignes sur ${state.preview.rows.length}`
+        )
+      ]),
+      el('div', { className: 'preview-table-wrapper' }, [
+        el('table', { className: 'preview-table' }, [
+          el('thead', {}, [
             el('tr', {},
-              preview.headers.map((h, i) =>
-                el('td', {}, String(row[i] || ''))
+              state.preview.headers.map((h, i) =>
+                el('th', {
+                  className: state.validation?.columnStatus?.[i] === 'error' ? 'col-error' : ''
+                }, h)
+              )
+            )
+          ]),
+          el('tbody', {},
+            state.preview.rows.slice(0, 10).map((row, rowIdx) =>
+              el('tr', { className: state.validation?.rowErrors?.[rowIdx] ? 'row-error' : '' },
+                state.preview.headers.map((_, colIdx) =>
+                  el('td', {}, String(row[colIdx] || ''))
+                )
               )
             )
           )
-        )
-      ])
-    ])
-  ]);
-}
-
-/**
- * Render messages de validation
- */
-function renderValidation(zoneId, validation) {
-  const messages = [];
-
-  if (validation.errors && validation.errors.length > 0) {
-    messages.push(
-      el('div', { className: 'validation-errors' }, [
-        el('div', { className: 'validation-title error' }, `❌ ${validation.errors.length} erreur(s)`),
-        el('ul', { className: 'validation-list' },
-          validation.errors.slice(0, 5).map(err =>
-            el('li', {}, err)
-          )
-        ),
-        validation.errors.length > 5 && el('div', { className: 'validation-more' }, `+ ${validation.errors.length - 5} autres erreurs`)
-      ])
-    );
-  }
-
-  if (validation.warnings && validation.warnings.length > 0) {
-    messages.push(
-      el('div', { className: 'validation-warnings' }, [
-        el('div', { className: 'validation-title warning' }, `⚠️ ${validation.warnings.length} avertissement(s)`),
-        el('ul', { className: 'validation-list' },
-          validation.warnings.slice(0, 3).map(warn =>
-            el('li', {}, warn)
-          )
-        )
-      ])
-    );
-  }
-
-  if (validation.valid) {
-    messages.push(
-      el('div', { className: 'validation-success' }, [
-        el('span', {}, '✅ Fichier valide et prêt pour import')
-      ])
-    );
-  }
-
-  return el('div', { className: 'import-validation' }, messages);
-}
-
-/**
- * Render barre de progression de l'import
- */
-function renderImportProgress() {
-  if (!importState.importing) return null;
-
-  return el('div', { className: 'import-progress-overlay' }, [
-    el('div', { className: 'import-progress-card' }, [
-      el('div', { className: 'progress-title' }, 'Import en cours...'),
-      el('div', { className: 'progress-bar-container' }, [
-        el('div', {
-          className: 'progress-bar',
-          style: `width: ${importState.progress}%`
-        })
-      ]),
-      el('div', { className: 'progress-text' }, `${importState.progress}%`)
-    ])
-  ]);
-}
-
-/**
- * Render section récapitulative et actions
- */
-function renderImportActions() {
-  const filesCount = Object.keys(importState.files).length;
-  const validFilesCount = Object.values(importState.validations).filter(v => v.valid).length;
-  const hasErrors = Object.values(importState.validations).some(v => v.valid === false);
-  const requiredZones = IMPORT_ZONES.filter(z => z.required);
-  const requiredMissing = requiredZones.filter(z => !importState.files[z.id]);
-
-  return el('div', { className: 'import-actions-panel' }, [
-    // Récapitulatif
-    el('div', { className: 'import-summary' }, [
-      el('div', { className: 'summary-item' }, [
-        el('span', { className: 'summary-value' }, String(filesCount)),
-        el('span', { className: 'summary-label' }, 'fichier(s) chargé(s)')
-      ]),
-      el('div', { className: 'summary-item success' }, [
-        el('span', { className: 'summary-value' }, String(validFilesCount)),
-        el('span', { className: 'summary-label' }, 'validé(s)')
-      ]),
-      hasErrors && el('div', { className: 'summary-item error' }, [
-        el('span', { className: 'summary-value' }, String(filesCount - validFilesCount)),
-        el('span', { className: 'summary-label' }, 'avec erreurs')
-      ]),
-      requiredMissing.length > 0 && el('div', { className: 'summary-item warning' }, [
-        el('span', { className: 'summary-value' }, String(requiredMissing.length)),
-        el('span', { className: 'summary-label' }, 'obligatoire(s) manquant(s)')
+        ])
       ])
     ]),
 
     // Actions
-    el('div', { className: 'import-buttons' }, [
+    el('div', { className: 'step-actions' }, [
       el('button', {
         className: 'btn btn-ghost',
-        onclick: resetImport
-      }, '🔄 Réinitialiser'),
+        onclick: goBack
+      }, 'Annuler'),
       el('button', {
-        className: 'btn btn-primary',
-        disabled: filesCount === 0 || hasErrors || requiredMissing.length > 0,
+        className: 'btn btn-primary btn-lg',
+        disabled: state.validation && !state.validation.canImport,
         onclick: startImport
       }, [
         el('span', {}, '📥'),
-        el('span', {}, ' Importer les données')
+        ` Importer ${state.preview.rows.length} lignes`
       ])
     ])
   ]);
 }
 
 /**
- * Handlers pour le drag & drop
+ * Render validation summary
  */
-function handleDragOver(e, zoneId) {
-  e.preventDefault();
-  e.stopPropagation();
-  const zone = e.currentTarget;
-  zone.classList.add('dragover');
-}
+function renderValidationSummary() {
+  if (!state.validation) return null;
 
-function handleDragLeave(e, zoneId) {
-  e.preventDefault();
-  e.stopPropagation();
-  const zone = e.currentTarget;
-  zone.classList.remove('dragover');
-}
+  const { errors, warnings, canImport } = state.validation;
 
-function handleDrop(e, zoneId) {
-  e.preventDefault();
-  e.stopPropagation();
-  const zone = e.currentTarget;
-  zone.classList.remove('dragover');
+  return el('div', { className: 'validation-summary' }, [
+    // Statut global
+    el('div', { className: `validation-status ${canImport ? 'status-ok' : 'status-error'}` }, [
+      el('span', { className: 'status-icon' }, canImport ? '✅' : '❌'),
+      el('span', { className: 'status-text' },
+        canImport
+          ? 'Fichier valide, prêt pour l\'import'
+          : 'Erreurs détectées, veuillez corriger le fichier'
+      )
+    ]),
 
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    processFile(zoneId, files[0]);
-  }
-}
+    // Erreurs
+    errors.length > 0 && el('div', { className: 'validation-errors' }, [
+      el('div', { className: 'validation-title' }, `${errors.length} erreur(s)`),
+      el('ul', {},
+        errors.slice(0, 5).map(err => el('li', {}, err))
+      ),
+      errors.length > 5 && el('div', { className: 'more-items' }, `+ ${errors.length - 5} autres erreurs`)
+    ]),
 
-function handleFileSelect(e, zoneId) {
-  const files = e.target.files;
-  if (files.length > 0) {
-    processFile(zoneId, files[0]);
-  }
+    // Avertissements
+    warnings.length > 0 && el('div', { className: 'validation-warnings' }, [
+      el('div', { className: 'validation-title' }, `${warnings.length} avertissement(s)`),
+      el('ul', {},
+        warnings.slice(0, 3).map(warn => el('li', {}, warn))
+      )
+    ])
+  ]);
 }
 
 /**
- * Traitement du fichier uploadé
+ * Render Step 3: Résultat de l'import
  */
-async function processFile(zoneId, file) {
-  logger.info(`[Import] Processing file for zone ${zoneId}: ${file.name}`);
+function renderStep3() {
+  const success = state.result?.success;
 
-  // Vérifier le type de fichier
-  const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-  const validExtensions = ['.csv', '.xls', '.xlsx'];
-  const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  return el('div', { className: 'import-step step-3' }, [
+    el('div', { className: `result-card ${success ? 'result-success' : 'result-error'}` }, [
+      el('div', { className: 'result-icon' }, success ? '✅' : '❌'),
+      el('h2', {}, success ? 'Import réussi !' : 'Échec de l\'import'),
+      el('p', { className: 'result-message' }, state.result?.message),
 
-  if (!validExtensions.includes(ext)) {
-    showNotification('Format de fichier non supporté. Utilisez CSV ou Excel.', 'error');
-    return;
-  }
+      success && el('div', { className: 'result-stats' }, [
+        el('div', { className: 'stat' }, [
+          el('div', { className: 'stat-value' }, String(state.result.imported || 0)),
+          el('div', { className: 'stat-label' }, 'lignes importées')
+        ]),
+        state.result.updated > 0 && el('div', { className: 'stat' }, [
+          el('div', { className: 'stat-value' }, String(state.result.updated)),
+          el('div', { className: 'stat-label' }, 'mises à jour')
+        ]),
+        state.result.skipped > 0 && el('div', { className: 'stat' }, [
+          el('div', { className: 'stat-value' }, String(state.result.skipped)),
+          el('div', { className: 'stat-label' }, 'ignorées')
+        ])
+      ]),
 
-  // Stocker le fichier
-  importState.files[zoneId] = file;
+      el('div', { className: 'result-actions' }, [
+        el('button', {
+          className: 'btn btn-ghost',
+          onclick: resetImport
+        }, 'Nouvel import'),
+        el('a', {
+          className: 'btn btn-primary',
+          href: '#/investissement/projets'
+        }, 'Voir les projets →')
+      ])
+    ])
+  ]);
+}
 
-  // Parser et prévisualiser
+/**
+ * Render loading state
+ */
+function renderLoading() {
+  return el('div', { className: 'import-loading' }, [
+    el('div', { className: 'loader' }),
+    el('p', {}, 'Import en cours...'),
+    el('p', { className: 'loader-hint' }, 'Veuillez patienter')
+  ]);
+}
+
+/**
+ * Sélectionner un type d'import
+ */
+function selectType(typeId) {
+  state.selectedType = typeId;
+  refresh();
+}
+
+/**
+ * Gérer la sélection de fichier
+ */
+async function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  state.file = file;
+
   try {
-    const preview = await parseFile(file);
-    importState.previews[zoneId] = preview;
-
-    // Valider les données
-    const zone = IMPORT_ZONES.find(z => z.id === zoneId);
-    importState.validations[zoneId] = validateData(zone, preview);
-
-    // Re-render la page
-    refreshUI();
+    state.preview = await parseFile(file);
+    state.validation = validateData(state.selectedType, state.preview);
+    state.step = 2;
   } catch (error) {
-    logger.error(`[Import] Error processing file: ${error.message}`);
-    importState.validations[zoneId] = {
-      valid: false,
-      errors: [`Erreur de lecture du fichier: ${error.message}`],
-      warnings: []
-    };
-    refreshUI();
+    logger.error('[Import] Parse error:', error);
+    alert(`Erreur de lecture du fichier: ${error.message}`);
   }
+
+  refresh();
 }
 
 /**
@@ -511,29 +386,18 @@ async function parseFile(file) {
           return;
         }
 
-        // Détecter le séparateur (virgule ou point-virgule)
         const separator = lines[0].includes(';') ? ';' : ',';
-
         const headers = parseCSVLine(lines[0], separator);
         const rows = lines.slice(1).map(line => parseCSVLine(line, separator));
 
-        resolve({ headers, rows });
+        resolve({ headers, rows, separator });
       } catch (error) {
         reject(error);
       }
     };
 
     reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
-
-    if (file.name.endsWith('.csv')) {
-      reader.readAsText(file, 'UTF-8');
-    } else {
-      // Pour Excel, on simule une structure de base (en prod, utiliser une lib comme SheetJS)
-      resolve({
-        headers: ['Données Excel détectées'],
-        rows: [['Prévisualisation Excel non disponible - Import fonctionnel']]
-      });
-    }
+    reader.readAsText(file, 'UTF-8');
   });
 }
 
@@ -547,7 +411,6 @@ function parseCSVLine(line, separator = ',') {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === separator && !inQuotes) {
@@ -558,57 +421,54 @@ function parseCSVLine(line, separator = ',') {
     }
   }
   result.push(current.trim());
-
   return result;
 }
 
 /**
- * Valider les données par rapport au schéma attendu
+ * Valider les données
  */
-function validateData(zone, preview) {
+function validateData(typeId, preview) {
+  const type = IMPORT_TYPES.find(t => t.id === typeId);
   const errors = [];
   const warnings = [];
+  const columnStatus = [];
+  const rowErrors = {};
 
-  if (!preview.headers || preview.headers.length === 0) {
-    errors.push('Aucun en-tête détecté dans le fichier');
-    return { valid: false, errors, warnings };
-  }
+  // Vérifier les colonnes attendues
+  const expectedFields = type.templateFields.map(f => normalizeHeader(f));
+  const actualFields = preview.headers.map(h => normalizeHeader(h));
 
-  // Vérifier que les colonnes obligatoires sont présentes
-  const normalizedHeaders = preview.headers.map(h => normalizeHeader(h));
-  const missingFields = [];
-
-  zone.fields.slice(0, 3).forEach(field => {
-    const normalizedField = normalizeHeader(field);
-    if (!normalizedHeaders.some(h => h.includes(normalizedField) || normalizedField.includes(h))) {
-      missingFields.push(field);
+  // Marquer les colonnes manquantes
+  type.templateFields.forEach((field, idx) => {
+    const found = actualFields.some(h => h.includes(expectedFields[idx]) || expectedFields[idx].includes(h));
+    if (!found && idx < 3) { // Les 3 premières colonnes sont critiques
+      errors.push(`Colonne manquante: "${field}"`);
     }
   });
 
-  if (missingFields.length > 0) {
-    warnings.push(`Colonnes potentiellement manquantes: ${missingFields.join(', ')}`);
-  }
-
-  // Vérifier qu'il y a des données
-  if (!preview.rows || preview.rows.length === 0) {
-    errors.push('Aucune donnée trouvée dans le fichier');
-  }
-
   // Vérifier les lignes vides
-  const emptyRows = preview.rows.filter(row => row.every(cell => !cell || cell.trim() === '')).length;
+  const emptyRows = preview.rows.filter(row => row.every(cell => !cell)).length;
   if (emptyRows > 0) {
-    warnings.push(`${emptyRows} ligne(s) vide(s) détectée(s) - elles seront ignorées`);
+    warnings.push(`${emptyRows} ligne(s) vide(s) seront ignorées`);
+  }
+
+  // Vérifier la première colonne (généralement le code projet)
+  const firstColEmpty = preview.rows.filter(row => !row[0] || !row[0].trim()).length;
+  if (firstColEmpty > 0 && firstColEmpty < preview.rows.length) {
+    warnings.push(`${firstColEmpty} ligne(s) sans code dans la première colonne`);
   }
 
   return {
-    valid: errors.length === 0,
     errors,
-    warnings
+    warnings,
+    columnStatus,
+    rowErrors,
+    canImport: errors.length === 0
   };
 }
 
 /**
- * Normaliser un en-tête pour comparaison
+ * Normaliser un en-tête
  */
 function normalizeHeader(header) {
   return header
@@ -619,126 +479,92 @@ function normalizeHeader(header) {
 }
 
 /**
- * Supprimer un fichier
+ * Télécharger le modèle CSV
  */
-function removeFile(zoneId) {
-  delete importState.files[zoneId];
-  delete importState.previews[zoneId];
-  delete importState.validations[zoneId];
-  refreshUI();
-}
+function downloadTemplate(typeId) {
+  const type = IMPORT_TYPES.find(t => t.id === typeId);
+  if (!type) return;
 
-/**
- * Réinitialiser l'import
- */
-function resetImport() {
-  importState = {
-    files: {},
-    previews: {},
-    validations: {},
-    importing: false,
-    progress: 0
-  };
-  refreshUI();
-}
-
-/**
- * Démarrer l'import
- */
-async function startImport() {
-  logger.info('[Import] Starting import process...');
-  importState.importing = true;
-  importState.progress = 0;
-  refreshUI();
-
-  const zones = Object.keys(importState.files);
-  const total = zones.length;
-
-  for (let i = 0; i < zones.length; i++) {
-    const zoneId = zones[i];
-    const zone = IMPORT_ZONES.find(z => z.id === zoneId);
-    const preview = importState.previews[zoneId];
-
-    try {
-      await importZoneData(zone, preview);
-      importState.progress = Math.round(((i + 1) / total) * 100);
-      refreshUI();
-    } catch (error) {
-      logger.error(`[Import] Error importing zone ${zoneId}: ${error.message}`);
-      importState.validations[zoneId] = {
-        valid: false,
-        errors: [`Erreur d'import: ${error.message}`],
-        warnings: []
-      };
-    }
-  }
-
-  importState.importing = false;
-  importState.progress = 100;
-
-  showNotification(`Import terminé: ${zones.length} fichier(s) traité(s)`, 'success');
-  refreshUI();
-}
-
-/**
- * Importer les données d'une zone
- */
-async function importZoneData(zone, preview) {
-  // Simulation d'import (à remplacer par dataService)
-  return new Promise(resolve => setTimeout(resolve, 500));
-}
-
-/**
- * Télécharger le modèle Excel
- */
-function downloadTemplate(zone) {
-  // Créer un CSV avec les en-têtes
-  const headers = zone.fields.join(';');
-  const exampleRow = zone.fields.map(() => '').join(';');
+  const headers = type.templateFields.join(';');
+  const exampleRow = type.templateFields.map(() => '').join(';');
   const content = `${headers}\n${exampleRow}`;
 
   const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = zone.templateName.replace('.xlsx', '.csv');
+  a.download = `modele_${type.id}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-
-  showNotification(`Modèle téléchargé: ${zone.templateName}`, 'success');
 }
 
 /**
- * Formater la taille d'un fichier
+ * Retour à l'étape précédente
  */
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+function goBack() {
+  if (state.step === 2) {
+    state.step = 1;
+    state.file = null;
+    state.preview = null;
+    state.validation = null;
+  }
+  refresh();
 }
 
 /**
- * Afficher une notification
+ * Réinitialiser l'import
  */
-function showNotification(message, type = 'info') {
-  // Simple notification via console pour l'instant
-  logger.info(`[Notification] ${type}: ${message}`);
+function resetImport() {
+  state = {
+    step: 1,
+    selectedType: null,
+    file: null,
+    preview: null,
+    validation: null,
+    importing: false,
+    result: null
+  };
+  refresh();
+}
 
-  // TODO: Implémenter un système de toast/notification UI
+/**
+ * Lancer l'import
+ */
+async function startImport() {
+  state.importing = true;
+  refresh();
+
+  try {
+    // Simulation d'import (remplacer par appel dataService)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    state.result = {
+      success: true,
+      message: `${state.preview.rows.length} enregistrements importés avec succès`,
+      imported: state.preview.rows.length,
+      updated: 0,
+      skipped: 0
+    };
+    state.step = 3;
+  } catch (error) {
+    state.result = {
+      success: false,
+      message: `Erreur: ${error.message}`
+    };
+    state.step = 3;
+  }
+
+  state.importing = false;
+  refresh();
 }
 
 /**
  * Rafraîchir l'UI
  */
-function refreshUI() {
-  const app = qs('#app');
-  if (app) {
-    renderInvImport();
-  }
+function refresh() {
+  renderInvImport();
 }
 
 /**
@@ -746,85 +572,48 @@ function refreshUI() {
  */
 export async function renderInvImport() {
   logger.info('[Investissement] Rendering Import screen...');
-
   injectInvSidebarStyles();
 
-  // Grouper les zones par annexe
-  const annexe1Zones = IMPORT_ZONES.filter(z => z.annexe === '1');
-  const annexe2Zones = IMPORT_ZONES.filter(z => z.annexe === '2');
-  const annexe3Zones = IMPORT_ZONES.filter(z => z.annexe === '3');
-  const annexe4Zones = IMPORT_ZONES.filter(z => z.annexe === '4');
+  let content;
+  if (state.importing) {
+    content = renderLoading();
+  } else {
+    switch (state.step) {
+      case 1:
+        content = renderStep1();
+        break;
+      case 2:
+        content = renderStep2();
+        break;
+      case 3:
+        content = renderStep3();
+        break;
+    }
+  }
 
   const page = el('div', { className: 'page-layout inv-layout' }, [
-    renderInvSidebar('/investissement/import'),
+    renderSidebar('/investissement/import'),
 
-    el('main', { className: 'page-main' }, [
-      // Header
-      el('div', { className: 'page-header' }, [
-        el('div', { className: 'page-header-content' }, [
-          el('h1', { className: 'page-title' }, 'Import de Données'),
-          el('p', { className: 'page-subtitle' }, 'Chargement des tableaux conformes aux Annexes de collecte (Groupe Syn@pse)')
+    el('main', { className: 'page-main import-main' }, [
+      // Progress bar
+      el('div', { className: 'import-progress' }, [
+        el('div', { className: `progress-step ${state.step >= 1 ? 'active' : ''} ${state.step > 1 ? 'done' : ''}` }, [
+          el('div', { className: 'progress-dot' }, state.step > 1 ? '✓' : '1'),
+          el('div', { className: 'progress-label' }, 'Sélection')
         ]),
-        el('div', { className: 'page-header-actions' }, [
-          el('a', {
-            className: 'btn btn-ghost',
-            href: '#/investissement/projets'
-          }, '← Retour aux projets')
+        el('div', { className: 'progress-line' }),
+        el('div', { className: `progress-step ${state.step >= 2 ? 'active' : ''} ${state.step > 2 ? 'done' : ''}` }, [
+          el('div', { className: 'progress-dot' }, state.step > 2 ? '✓' : '2'),
+          el('div', { className: 'progress-label' }, 'Vérification')
+        ]),
+        el('div', { className: 'progress-line' }),
+        el('div', { className: `progress-step ${state.step >= 3 ? 'active' : ''}` }, [
+          el('div', { className: 'progress-dot' }, '3'),
+          el('div', { className: 'progress-label' }, 'Résultat')
         ])
       ]),
 
-      // Panel d'actions global
-      renderImportActions(),
-
-      // Content - Zones d'import par annexe
-      el('div', { className: 'page-content import-content' }, [
-        // Annexe 1 - Données Projet
-        el('div', { className: 'annexe-section' }, [
-          el('h2', { className: 'annexe-title' }, [
-            el('span', { className: 'annexe-number' }, '1'),
-            'Fiche de Collecte des Données par Projet'
-          ]),
-          el('div', { className: 'import-zones-grid' },
-            annexe1Zones.map(zone => renderImportZone(zone))
-          )
-        ]),
-
-        // Annexe 2 - Soutenabilité
-        el('div', { className: 'annexe-section' }, [
-          el('h2', { className: 'annexe-title' }, [
-            el('span', { className: 'annexe-number' }, '2'),
-            'Analyse de la Soutenabilité du Projet'
-          ]),
-          el('div', { className: 'import-zones-grid' },
-            annexe2Zones.map(zone => renderImportZone(zone))
-          )
-        ]),
-
-        // Annexe 3 - Résultats GAR
-        el('div', { className: 'annexe-section' }, [
-          el('h2', { className: 'annexe-title' }, [
-            el('span', { className: 'annexe-number' }, '3'),
-            'Cadre de Résultats du Projet (GAR)'
-          ]),
-          el('div', { className: 'import-zones-grid' },
-            annexe3Zones.map(zone => renderImportZone(zone))
-          )
-        ]),
-
-        // Annexe 4 - Acteurs
-        el('div', { className: 'annexe-section' }, [
-          el('h2', { className: 'annexe-title' }, [
-            el('span', { className: 'annexe-number' }, '4'),
-            'Identification des Acteurs Clés'
-          ]),
-          el('div', { className: 'import-zones-grid' },
-            annexe4Zones.map(zone => renderImportZone(zone))
-          )
-        ])
-      ]),
-
-      // Overlay de progression
-      renderImportProgress()
+      content
     ])
   ]);
 
@@ -835,461 +624,454 @@ export async function renderInvImport() {
 }
 
 /**
- * Inject CSS styles for import screen
+ * Inject CSS
  */
 function injectImportStyles() {
   const styleId = 'inv-import-styles';
   if (document.getElementById(styleId)) return;
 
   const styles = `
-    /* Import Content Layout */
-    .import-content {
-      max-width: 1400px;
+    .import-main {
+      background: var(--color-surface-alt, #f9fafb);
+      min-height: 100vh;
     }
 
-    /* Actions Panel */
-    .import-actions-panel {
+    /* Progress Bar */
+    .import-progress {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 1rem 1.5rem;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 0.75rem;
-      margin-bottom: 1.5rem;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      justify-content: center;
+      padding: 2rem;
+      background: white;
+      border-bottom: 1px solid var(--color-border);
+      gap: 0;
     }
 
-    .import-summary {
-      display: flex;
-      gap: 2rem;
-    }
-
-    .summary-item {
+    .progress-step {
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 0.5rem;
     }
 
-    .summary-value {
-      font-size: 1.5rem;
-      font-weight: 700;
+    .progress-dot {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      background: #e5e7eb;
+      color: #9ca3af;
+      transition: all 0.3s;
+    }
+
+    .progress-step.active .progress-dot {
+      background: var(--color-primary, #3b82f6);
+      color: white;
+    }
+
+    .progress-step.done .progress-dot {
+      background: #10b981;
+      color: white;
+    }
+
+    .progress-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+
+    .progress-step.active .progress-label {
       color: var(--color-text);
     }
 
-    .summary-item.success .summary-value { color: #16a34a; }
-    .summary-item.error .summary-value { color: #dc2626; }
-    .summary-item.warning .summary-value { color: #f59e0b; }
-
-    .summary-label {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
+    .progress-line {
+      width: 80px;
+      height: 2px;
+      background: #e5e7eb;
+      margin: 0 0.5rem;
+      margin-bottom: 1.5rem;
     }
 
-    .import-buttons {
+    /* Step Content */
+    .import-step {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .step-header {
       display: flex;
-      gap: 0.75rem;
-    }
-
-    /* Annexe Sections */
-    .annexe-section {
+      align-items: center;
+      gap: 1rem;
       margin-bottom: 2rem;
     }
 
-    .annexe-title {
+    .step-number {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--color-text);
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid var(--color-border);
-    }
-
-    .annexe-number {
-      display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 2rem;
-      height: 2rem;
-      background: var(--color-primary);
-      color: white;
+      font-size: 1.25rem;
       font-weight: 700;
-      border-radius: 50%;
+      background: #e5e7eb;
+      color: #9ca3af;
+      flex-shrink: 0;
     }
 
-    /* Import Zones Grid */
-    .import-zones-grid {
+    .step-number.active {
+      background: var(--color-primary, #3b82f6);
+      color: white;
+    }
+
+    .step-info h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0 0 0.25rem;
+      color: var(--color-text);
+    }
+
+    .step-info p {
+      margin: 0;
+      color: var(--color-text-muted);
+    }
+
+    .btn-back {
+      margin-right: auto;
+    }
+
+    /* Type Selection Grid */
+    .import-types-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1rem;
+      margin-bottom: 2rem;
     }
 
-    /* Import Zone Card */
-    .import-zone {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 0.75rem;
-      overflow: hidden;
-      transition: all 0.2s;
-    }
-
-    .import-zone.required {
-      border-left: 4px solid var(--color-primary);
-    }
-
-    .import-zone.has-file {
-      border-color: #16a34a;
-    }
-
-    .import-zone.has-errors {
-      border-color: #dc2626;
-    }
-
-    .import-zone-header {
+    .import-type-card {
       display: flex;
+      align-items: flex-start;
       gap: 1rem;
-      padding: 1rem;
-      background: var(--color-surface-alt);
-      border-bottom: 1px solid var(--color-border);
+      padding: 1.25rem;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
     }
 
-    .import-zone-icon {
+    .import-type-card:hover {
+      border-color: var(--card-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .import-type-card.selected {
+      border-color: var(--card-color);
+      background: linear-gradient(135deg, white 0%, color-mix(in srgb, var(--card-color) 5%, white) 100%);
+    }
+
+    .type-icon {
       font-size: 2rem;
       flex-shrink: 0;
     }
 
-    .import-zone-info {
+    .type-content {
       flex: 1;
       min-width: 0;
     }
 
-    .import-zone-title {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    .type-label {
       font-weight: 600;
       color: var(--color-text);
-      flex-wrap: wrap;
+      margin-bottom: 0.25rem;
     }
 
-    .annexe-badge {
-      font-size: 0.625rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 0.125rem 0.5rem;
-      background: var(--color-primary);
-      color: white;
-      border-radius: 0.25rem;
-    }
-
-    .required-badge {
-      color: #dc2626;
-      font-weight: 700;
-    }
-
-    .import-zone-desc {
-      font-size: 0.75rem;
+    .type-desc {
+      font-size: 0.8rem;
       color: var(--color-text-muted);
-      margin-top: 0.25rem;
+      line-height: 1.4;
     }
 
-    .import-zone-actions {
+    .type-check {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background: var(--card-color);
+      color: white;
       display: flex;
-      gap: 0.5rem;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 700;
       flex-shrink: 0;
     }
 
-    /* Dropzone */
-    .import-dropzone {
-      padding: 1.5rem;
-      border: 2px dashed var(--color-border);
-      border-radius: 0.5rem;
-      margin: 1rem;
-      text-align: center;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-
-    .import-dropzone:hover,
-    .import-dropzone.dragover {
-      border-color: var(--color-primary);
-      background: rgba(59, 130, 246, 0.05);
-    }
-
-    .import-dropzone.has-file {
-      border-style: solid;
-      border-color: #16a34a;
-      background: rgba(22, 163, 74, 0.05);
-    }
-
-    .dropzone-content {
+    /* Step Actions */
+    .step-actions {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
+      gap: 1rem;
+      justify-content: center;
+      padding-top: 1rem;
     }
 
-    .dropzone-icon {
-      font-size: 2rem;
-      opacity: 0.5;
-    }
-
-    .dropzone-text {
-      font-size: 0.875rem;
-      color: var(--color-text-muted);
-    }
-
-    .file-input-label {
-      color: var(--color-primary);
+    .file-label {
       cursor: pointer;
-      text-decoration: underline;
     }
 
     .file-input-hidden {
       display: none;
     }
 
-    .dropzone-formats {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-      opacity: 0.7;
-    }
-
-    /* File Info */
-    .file-info {
-      display: flex;
+    .file-badge {
+      display: inline-flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem;
-      background: rgba(22, 163, 74, 0.1);
-      border-radius: 0.375rem;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      background: #e5e7eb;
+      border-radius: 1rem;
+      font-size: 0.875rem;
     }
 
-    .file-icon {
-      font-size: 1.5rem;
-    }
-
-    .file-name {
-      flex: 1;
-      font-weight: 500;
-      color: var(--color-text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .file-size {
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
-    }
-
-    .btn-remove {
-      color: var(--color-text-muted);
-    }
-
-    .btn-remove:hover {
-      color: #dc2626;
-    }
-
-    /* Fields List */
-    .import-zone-fields {
-      padding: 0.75rem 1rem;
-      background: var(--color-surface-alt);
-      border-top: 1px solid var(--color-border);
-    }
-
-    .fields-label {
-      font-size: 0.625rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: var(--color-text-muted);
-      margin-bottom: 0.5rem;
-    }
-
-    .fields-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.25rem;
-    }
-
-    .field-tag {
-      font-size: 0.625rem;
-      padding: 0.125rem 0.375rem;
-      background: var(--color-surface);
+    /* Preview */
+    .preview-card {
+      background: white;
+      border-radius: 0.75rem;
       border: 1px solid var(--color-border);
-      border-radius: 0.25rem;
-      color: var(--color-text-muted);
-    }
-
-    /* Preview Table */
-    .import-preview {
-      padding: 1rem;
-      border-top: 1px solid var(--color-border);
+      overflow: hidden;
+      margin-bottom: 2rem;
     }
 
     .preview-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 0.75rem;
+      padding: 1rem 1.5rem;
+      background: var(--color-surface-alt);
+      border-bottom: 1px solid var(--color-border);
     }
 
-    .preview-title {
-      font-size: 0.75rem;
+    .preview-header h3 {
+      margin: 0;
+      font-size: 1rem;
       font-weight: 600;
-      color: var(--color-text);
     }
 
-    .preview-more {
-      font-size: 0.625rem;
+    .preview-info {
+      font-size: 0.75rem;
       color: var(--color-text-muted);
     }
 
     .preview-table-wrapper {
       overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
     }
 
     .preview-table {
       width: 100%;
-      font-size: 0.75rem;
       border-collapse: collapse;
+      font-size: 0.8rem;
     }
 
     .preview-table th,
     .preview-table td {
-      padding: 0.375rem 0.5rem;
-      border: 1px solid var(--color-border);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--color-border);
       text-align: left;
       white-space: nowrap;
-      max-width: 150px;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .preview-table th {
-      background: var(--color-surface-alt);
+      background: #f9fafb;
       font-weight: 600;
+      position: sticky;
+      top: 0;
     }
 
-    /* Validation Messages */
-    .import-validation {
-      padding: 0.75rem 1rem;
-      border-top: 1px solid var(--color-border);
+    .preview-table th.col-error {
+      background: #fef2f2;
+      color: #dc2626;
     }
 
-    .validation-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
+    .preview-table tr.row-error {
+      background: #fef2f2;
     }
 
-    .validation-title.error { color: #dc2626; }
-    .validation-title.warning { color: #f59e0b; }
-
-    .validation-list {
-      margin: 0;
-      padding-left: 1.25rem;
-      font-size: 0.75rem;
-      color: var(--color-text-muted);
+    /* Validation */
+    .validation-summary {
+      margin-bottom: 1.5rem;
     }
 
-    .validation-list li {
-      margin-bottom: 0.25rem;
-    }
-
-    .validation-more {
-      font-size: 0.625rem;
-      color: var(--color-text-muted);
-      margin-top: 0.25rem;
-    }
-
-    .validation-success {
+    .validation-status {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 0.75rem;
-      color: #16a34a;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .validation-status.status-ok {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+    }
+
+    .validation-status.status-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+    }
+
+    .status-icon {
+      font-size: 1.25rem;
+    }
+
+    .status-text {
+      font-weight: 500;
+    }
+
+    .validation-errors,
+    .validation-warnings {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .validation-errors {
       background: #fef2f2;
-      padding: 0.75rem;
-      border-radius: 0.375rem;
-      margin-bottom: 0.5rem;
     }
 
     .validation-warnings {
       background: #fffbeb;
-      padding: 0.75rem;
-      border-radius: 0.375rem;
     }
 
-    /* Progress Overlay */
-    .import-progress-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .import-progress-card {
-      background: white;
-      padding: 2rem 3rem;
-      border-radius: 1rem;
-      text-align: center;
-      min-width: 300px;
-    }
-
-    .progress-title {
-      font-size: 1.125rem;
+    .validation-title {
       font-weight: 600;
-      margin-bottom: 1rem;
-    }
-
-    .progress-bar-container {
-      height: 8px;
-      background: var(--color-border);
-      border-radius: 4px;
-      overflow: hidden;
+      font-size: 0.875rem;
       margin-bottom: 0.5rem;
     }
 
-    .progress-bar {
-      height: 100%;
-      background: var(--color-primary);
-      transition: width 0.3s;
+    .validation-errors .validation-title {
+      color: #dc2626;
     }
 
-    .progress-text {
+    .validation-warnings .validation-title {
+      color: #d97706;
+    }
+
+    .validation-summary ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    .more-items {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* Result */
+    .result-card {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: white;
+      border-radius: 1rem;
+      border: 1px solid var(--color-border);
+    }
+
+    .result-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .result-card h2 {
+      font-size: 1.5rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .result-message {
+      color: var(--color-text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .result-stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    /* Loading */
+    .import-loading {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loader-hint {
       font-size: 0.875rem;
       color: var(--color-text-muted);
     }
 
+    /* Buttons */
+    .btn-lg {
+      padding: 0.875rem 2rem;
+      font-size: 1rem;
+    }
+
     /* Responsive */
-    @media (max-width: 1024px) {
-      .import-zones-grid {
+    @media (max-width: 768px) {
+      .import-types-grid {
         grid-template-columns: 1fr;
       }
 
-      .import-actions-panel {
-        flex-direction: column;
-        gap: 1rem;
+      .step-header {
+        flex-wrap: wrap;
       }
 
-      .import-summary {
-        width: 100%;
-        justify-content: space-around;
+      .result-stats {
+        flex-direction: column;
+        gap: 1rem;
       }
     }
   `;
