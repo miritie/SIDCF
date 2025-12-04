@@ -68,6 +68,13 @@ export const INV_SIDEBAR_MENU = [
   },
   { type: 'separator', label: 'Outils' },
   {
+    id: 'inv-import',
+    label: 'Import Données',
+    icon: 'upload',
+    route: '/investissement/import',
+    description: 'Import des tableaux de collecte (Annexes 1-4)'
+  },
+  {
     id: 'inv-alertes',
     label: 'Alertes',
     icon: 'bell',
@@ -107,7 +114,8 @@ export const MENU_ICONS = {
   'clipboard-check': '📋',
   'scale': '⚖️',
   'target': '🎯',
-  'document-text': '📄'
+  'document-text': '📄',
+  'upload': '📤'
 };
 
 /**

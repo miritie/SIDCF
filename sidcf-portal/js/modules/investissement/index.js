@@ -25,6 +25,9 @@ import { renderInvPhysicoFinancier } from './screens/inv-physico-financier.js';
 import { renderInvResultats } from './screens/inv-resultats.js';
 import { renderInvGouvernance } from './screens/inv-gouvernance.js';
 
+// Import de l'écran d'import de données
+import { renderInvImport } from './screens/inv-import.js';
+
 /**
  * Register all Investissement module routes
  */
@@ -65,6 +68,9 @@ export function registerInvestissementRoutes() {
 
   // Axe 6: Gouvernance & Documentation
   router.register('/investissement/gouvernance', renderInvGouvernance);
+
+  // Import de données (Annexes 1-4)
+  router.register('/investissement/import', renderInvImport);
 
   // Aliases pour compatibilité
   router.alias('/inv-dashboard', '/investissement/dashboard');

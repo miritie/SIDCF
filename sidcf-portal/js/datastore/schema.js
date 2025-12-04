@@ -54,7 +54,14 @@ export const ENTITIES = {
   INV_GAR_VALUES: 'INV_GAR_VALUES',
   INV_DOC_MATRIX: 'INV_DOC_MATRIX',
   INV_DECISION: 'INV_DECISION',
-  INV_SETTINGS: 'INV_SETTINGS'
+  INV_SETTINGS: 'INV_SETTINGS',
+
+  // Module Investissement - Entités Import Annexes
+  INV_FINANCING_SOURCE: 'INV_FINANCING_SOURCE',
+  INV_LIVRABLE: 'INV_LIVRABLE',
+  INV_STAKEHOLDER: 'INV_STAKEHOLDER',
+  INV_SUSTAINABILITY: 'INV_SUSTAINABILITY',
+  INV_IMPORT_LOG: 'INV_IMPORT_LOG'
 };
 
 /**
@@ -616,14 +623,23 @@ export const SCHEMAS = {
   INV_PROJECT: {
     id: null,
     code: '',                               // Code SIGOBE ou interne
-    nom: '',                                // Nom du projet
+    nom: '',                                // Nom du projet (Titre)
     description: '',
 
-    // Classification
+    // Classification (Annexe 1 - Section)
+    section: '',                            // Section budgétaire
+    sectionCode: '',
     typeProjet: 'SIGOBE',                   // SIGOBE | TRANSFERT | HORS_SIGOBE
     natureProjet: 'NOUVEAU',                // NOUVEAU | RECURRENT | NOUVELLE_PHASE
     isOpe: false,                           // Opération Prioritaire de l'État
     isPrioritaire: false,
+
+    // OPE - Ordonnateur Principal des Crédits (Annexe 1)
+    ope: '',                                // Nom de l'OPE
+    opeCode: '',
+
+    // Mode de gestion (Annexe 1)
+    modeGestion: 'SIGOBE',                  // SIGOBE | TRANSFERT | DIRECT | DELEGUE
 
     // Entité exécutante
     typeEntite: 'ADMIN',                    // UCP | EPN | COLLECTIVITE | ADMIN
@@ -637,37 +653,77 @@ export const SCHEMAS = {
     secteurCode: '',
     domaine: '',                            // Construction d'école, etc.
 
-    // Localisation
+    // Localisation géographique complète (Annexe 1 - hiérarchie)
     district: '',
+    districtCode: '',
     region: '',
+    regionCode: '',
     departement: '',
+    departementCode: '',
+    sousPrefecture: '',
+    sousPrefectureCode: '',
     commune: '',
+    communeCode: '',
+    village: '',
+    localite: '',
     localisationDetail: '',
     latitude: null,
     longitude: null,
+    coordsValidees: false,
 
-    // Financier global
+    // Financier global (Annexe 1)
     coutTotal: 0,
+    coutInitial: 0,                         // Coût initial avant révisions
     devise: 'XOF',
     dureePrevueMois: 12,
     dateDebutPrevue: null,
     dateFinPrevue: null,
+    dateDebutReelle: null,
+    dateFinReelle: null,
 
-    // Sources de financement
-    partEtat: 0,
-    partBailleur: 0,
-    partContrepartie: 0,
-    bailleurs: [],                          // [{code, nom, montant, devise}]
+    // Sources de financement synthèse
+    partEtat: 0,                            // Montant Trésor
+    partBailleur: 0,                        // Montant total bailleurs
+    partContrepartie: 0,                    // Contrepartie nationale
+    bailleurs: [],                          // [{code, nom, montant, devise, type: 'DON'|'EMPRUNT'}]
+    nbBailleurs: 0,
 
-    // Acteurs
+    // Acteurs clés (Annexe 4 - références)
     controleurFinancier: '',
+    controleurFinancierId: null,
     coordonnateur: '',
+    coordonnateurId: null,
     responsableFinancier: '',
+    responsableFinancierId: null,
     specialisteMarche: '',
+    specialisteMarcheId: null,
+
+    // Composantes
+    nbComposantes: 0,
+    composantesIds: [],
+
+    // Marchés associés (lien module Marché)
+    nbMarches: 0,
+    marchesIds: [],
+
+    // Indicateurs GAR synthèse (Annexe 3)
+    nbIndicateursImpact: 0,
+    nbIndicateursEffet: 0,
+    nbIndicateursExtrant: 0,
+
+    // Exécution synthèse
+    tauxExecutionPhysique: 0,
+    tauxExecutionFinancier: 0,
+    montantExecute: 0,
+    derniereMiseAJour: null,
 
     // Statut
     statut: 'PLANIFIE',                     // PLANIFIE | EN_COURS | SUSPENDU | TERMINE | ABANDONNE
     phase: 'NOTIFIE',                       // NOTIFIE | TRANSFERE | ECLATE | EXECUTE
+
+    // Import
+    importSource: null,                     // MANUEL | IMPORT_CSV | IMPORT_EXCEL
+    importLogId: null,
 
     createdAt: null,
     updatedAt: null
@@ -1217,6 +1273,251 @@ export const SCHEMAS = {
     valeurMax: null,
     modifiable: true,
     actif: true,
+    createdAt: null,
+    updatedAt: null
+  },
+
+  // ============================================
+  // MODULE INVESTISSEMENT - Entités Import Annexes
+  // Conformes aux formulaires officiels (Groupe Syn@pse)
+  // ============================================
+
+  /**
+   * INV_FINANCING_SOURCE - Sources de financement multiples (Annexe 1)
+   * Structure Trésor + Bailleurs multiples (Emprunt/Don)
+   */
+  INV_FINANCING_SOURCE: {
+    id: null,
+    projectId: null,
+
+    // Type de source
+    sourceType: 'TRESOR',                           // TRESOR | BAILLEUR | CONTREPARTIE | AUTRE
+    bailleurCode: '',                               // Code bailleur (BM, AFD, BADEA, UE, etc.)
+    bailleurNom: '',                                // Nom complet du bailleur
+
+    // Type de financement (pour bailleurs)
+    typeFinancement: 'DON',                         // DON | EMPRUNT | MIXTE
+
+    // Montants par année
+    montantTotal: 0,
+    montantAnneeN: 0,                               // Budget année en cours
+    montantAnneeNPlus1: 0,
+    montantAnneeNPlus2: 0,
+    montantAnneeNPlus3: 0,
+
+    // Décaissement
+    montantDecaisse: 0,
+    tauxDecaissement: 0,
+
+    // Conditions spécifiques
+    accordFinancementRef: '',                       // Référence convention/accord
+    dateSignature: null,
+    dateEffet: null,
+    dateExpiration: null,
+
+    // Devise et conversion
+    devise: 'XOF',
+    tauxChange: 1,
+    montantDeviseOrigine: 0,
+
+    pourcentageTotal: 0,                            // % du coût total projet
+    ordre: 1,
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  /**
+   * INV_LIVRABLE - Livrables attendus par composante (Annexe 1)
+   * Avec localisation géographique complète
+   */
+  INV_LIVRABLE: {
+    id: null,
+    projectId: null,
+    componentId: null,
+
+    // Identification
+    code: '',
+    type: '',                                       // INFRASTRUCTURE | EQUIPEMENT | FORMATION | SERVICE | ETUDE | AUTRE
+    libelle: '',
+    description: '',
+
+    // Quantification
+    quantitePrevue: 0,
+    quantiteRealisee: 0,
+    unite: '',                                      // km, m², unité, personne, etc.
+
+    // Localisation géographique (hiérarchie complète Annexe 1)
+    district: '',
+    districtCode: '',
+    region: '',
+    regionCode: '',
+    departement: '',
+    departementCode: '',
+    sousPrefecture: '',
+    sousPrefectureCode: '',
+    commune: '',
+    communeCode: '',
+    village: '',
+    localite: '',
+    latitude: null,
+    longitude: null,
+    coordsValidees: false,
+
+    // Planning
+    dateDebutPrevue: null,
+    dateFinPrevue: null,
+    dateDebutReelle: null,
+    dateFinReelle: null,
+
+    // Lien avec marchés (module Marché)
+    marcheId: null,                                 // ID opération dans module Marché
+    marcheCode: '',
+
+    // Suivi
+    tauxAvancement: 0,
+    statut: 'PLANIFIE',                             // PLANIFIE | EN_COURS | LIVRE | REPORTE | ANNULE
+    observations: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  /**
+   * INV_STAKEHOLDER - Acteurs clés du projet (Annexe 4)
+   * CF, Coordonnateur, RAF, SPM avec contacts
+   */
+  INV_STAKEHOLDER: {
+    id: null,
+    projectId: null,
+
+    // Fonction
+    fonction: '',                                   // CF | COORDONNATEUR | RAF | SPM | COMPTABLE | AUDITEUR | AUTRE
+    fonctionAutre: '',                              // Si AUTRE
+
+    // Identité
+    civilite: '',                                   // M. | Mme | Dr | Pr
+    nom: '',
+    prenom: '',
+    nomComplet: '',
+
+    // Contacts
+    telephone: '',
+    telephoneSecondaire: '',
+    email: '',
+    emailSecondaire: '',
+
+    // Affectation
+    dateNomination: null,
+    datePriseFonction: null,
+    dateFinFonction: null,
+
+    // Documents
+    decisionRef: '',                                // Référence arrêté/décision de nomination
+    decisionDoc: null,
+
+    // Structure de rattachement
+    structureRattachement: '',
+    ministere: '',
+
+    // État
+    actif: true,
+    isCurrentHolder: true,                          // Titulaire actuel du poste
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  /**
+   * INV_SUSTAINABILITY - Analyse de soutenabilité (Annexe 2)
+   * Comparaison PTBA vs Budget inscrit sur N+1, N+2, N+3
+   */
+  INV_SUSTAINABILITY: {
+    id: null,
+    projectId: null,
+    anneeReference: new Date().getFullYear(),       // Année N de référence
+
+    // Année N+1
+    anneeNPlus1: {
+      annee: null,
+      montantPTBA: 0,                               // Montant prévu dans le PTBA
+      montantBudgetInscrit: 0,                      // Montant inscrit au budget
+      ecart: 0,
+      ecartPourcentage: 0,
+      couvert: false,                               // Budget >= PTBA
+      observations: ''
+    },
+
+    // Année N+2
+    anneeNPlus2: {
+      annee: null,
+      montantPTBA: 0,
+      montantBudgetInscrit: 0,
+      ecart: 0,
+      ecartPourcentage: 0,
+      couvert: false,
+      observations: ''
+    },
+
+    // Année N+3
+    anneeNPlus3: {
+      annee: null,
+      montantPTBA: 0,
+      montantBudgetInscrit: 0,
+      ecart: 0,
+      ecartPourcentage: 0,
+      couvert: false,
+      observations: ''
+    },
+
+    // Synthèse
+    soutenabiliteGlobale: 'A_EVALUER',              // SOUTENABLE | PARTIELLEMENT_SOUTENABLE | NON_SOUTENABLE | A_EVALUER
+    ecartCumule: 0,
+    ecartCumulePourcentage: 0,
+    risqueFinancement: 'FAIBLE',                    // FAIBLE | MOYEN | ELEVE | CRITIQUE
+    recommandations: '',
+
+    // Validation
+    validePar: '',
+    dateValidation: null,
+    validateurFonction: '',
+
+    createdAt: null,
+    updatedAt: null
+  },
+
+  /**
+   * INV_IMPORT_LOG - Journal des imports de données
+   * Traçabilité des chargements de fichiers
+   */
+  INV_IMPORT_LOG: {
+    id: null,
+
+    // Fichier source
+    annexeType: '',                                 // ANNEXE1_IDENTIFICATION | ANNEXE1_LOCALISATION | etc.
+    zoneId: '',
+    fichierNom: '',
+    fichierTaille: 0,
+    fichierHash: '',                                // Hash MD5/SHA pour détecter doublons
+
+    // Résultat import
+    dateImport: null,
+    importePar: '',
+    nbLignesTotal: 0,
+    nbLignesImportees: 0,
+    nbLignesErreur: 0,
+    nbLignesIgnorees: 0,
+
+    // Détail des erreurs
+    erreurs: [],                                    // [{ligne, colonne, message}]
+    avertissements: [],
+
+    // Statut
+    statut: 'EN_COURS',                             // EN_COURS | TERMINE | ERREUR | ANNULE
+
+    // Projets affectés
+    projetsAffectes: [],                            // IDs des projets créés/modifiés
+
     createdAt: null,
     updatedAt: null
   }
