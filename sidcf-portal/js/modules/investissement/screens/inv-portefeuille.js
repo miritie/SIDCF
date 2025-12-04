@@ -705,6 +705,19 @@ function injectPortefeuilleStyles() {
       text-overflow: ellipsis;
     }
 
+    .table th {
+      text-align: center;
+    }
+
+    .table td {
+      text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+      text-align: left;
+    }
+
     .table tbody tr {
       cursor: pointer;
       transition: background 0.15s;

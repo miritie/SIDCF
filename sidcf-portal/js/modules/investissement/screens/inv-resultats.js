@@ -929,6 +929,20 @@ function injectGarStyles() {
       border-left: 4px solid #f59e0b;
     }
 
+    /* Table styles */
+    .table th {
+      text-align: center;
+    }
+
+    .table td {
+      text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+      text-align: left;
+    }
+
     /* Taux classes */
     .taux-good { color: #16a34a; }
     .taux-medium { color: #ca8a04; }

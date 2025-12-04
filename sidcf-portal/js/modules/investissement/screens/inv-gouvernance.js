@@ -946,6 +946,20 @@ function injectGouvernanceStyles() {
       border-left: 4px solid #dc2626;
     }
 
+    /* Table styles */
+    .table th {
+      text-align: center;
+    }
+
+    .table td {
+      text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+      text-align: left;
+    }
+
     /* Taux */
     .taux-good { color: #16a34a; }
     .taux-medium { color: #ca8a04; }

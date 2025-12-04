@@ -690,7 +690,6 @@ function injectInvStyles() {
     .inv-table th,
     .inv-table td {
       padding: 0.75rem 1rem;
-      text-align: left;
       border-bottom: 1px solid var(--color-border);
     }
 
@@ -701,6 +700,25 @@ function injectInvStyles() {
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--color-text-muted);
+      text-align: center;
+    }
+
+    .inv-table td {
+      text-align: center;
+    }
+
+    /* Colonnes avec alignement spécifique */
+    .inv-table td.text-left,
+    .inv-table th.text-left {
+      text-align: left;
+    }
+
+    .inv-table td:first-child {
+      text-align: left;
+    }
+
+    .inv-table th:first-child {
+      text-align: left;
     }
 
     .inv-table tbody tr {

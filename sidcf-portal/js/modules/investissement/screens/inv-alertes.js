@@ -655,6 +655,21 @@ function injectAlertesStyles() {
       width: 100%;
     }
 
+    .alertes-table th {
+      text-align: center;
+    }
+
+    .alertes-table td {
+      text-align: center;
+    }
+
+    .alertes-table td:nth-child(2),
+    .alertes-table th:nth-child(2),
+    .alertes-table td:nth-child(3),
+    .alertes-table th:nth-child(3) {
+      text-align: left;
+    }
+
     .alerte-row {
       transition: background 0.15s;
     }

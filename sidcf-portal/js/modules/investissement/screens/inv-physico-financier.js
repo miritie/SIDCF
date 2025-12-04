@@ -661,6 +661,16 @@ function injectPfStyles() {
 
     .pf-table th {
       vertical-align: bottom;
+      text-align: center;
+    }
+
+    .pf-table td {
+      text-align: center;
+    }
+
+    .pf-table td:first-child,
+    .pf-table th:first-child {
+      text-align: left;
     }
 
     .th-subtitle {

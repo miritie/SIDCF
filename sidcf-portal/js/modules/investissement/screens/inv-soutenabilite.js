@@ -775,6 +775,19 @@ function injectSoutenabiliteStyles() {
     .legend-glisse { background: #f59e0b; }
 
     /* Table styles */
+    .table th {
+      text-align: center;
+    }
+
+    .table td {
+      text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+      text-align: left;
+    }
+
     .observations {
       font-size: 0.75rem;
       color: var(--color-text-muted);

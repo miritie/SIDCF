@@ -1360,7 +1360,7 @@ function injectFicheStyles() {
     .table td {
       padding: 0.75rem;
       border-bottom: 1px solid var(--color-border);
-      text-align: left;
+      text-align: center;
     }
 
     .table th {
@@ -1368,6 +1368,12 @@ function injectFicheStyles() {
       font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
+      text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+      text-align: left;
     }
 
     .table-sm th,

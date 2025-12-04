@@ -146,16 +146,7 @@ export function createInvFilters(currentFilters = {}, onFilterChange, options = 
       ]),
 
       // Année
-      el('div', { className: 'inv-filter-group' }, [
-        el('label', { className: 'inv-filter-label' }, 'Année'),
-        el('select', {
-          className: 'inv-filter-select',
-          value: filters.annee,
-          onchange: (e) => handleChange('annee', parseInt(e.target.value))
-        }, getAvailableYears().map(y =>
-          el('option', { value: y, selected: y === filters.annee }, String(y))
-        ))
-      ]),
+      createYearFilter(filters.annee, handleChange),
 
       // Recherche
       showSearch && el('div', { className: 'inv-filter-group inv-filter-search' }, [
@@ -205,18 +196,42 @@ export function createInvFilters(currentFilters = {}, onFilterChange, options = 
 }
 
 /**
+ * Créer le filtre année
+ */
+function createYearFilter(currentYear, onChange) {
+  const selectEl = el('select', {
+    className: 'inv-filter-select',
+    onchange: (e) => onChange('annee', parseInt(e.target.value))
+  }, getAvailableYears().map(y =>
+    el('option', { value: y }, String(y))
+  ));
+
+  // Set value after creation
+  selectEl.value = currentYear;
+
+  return el('div', { className: 'inv-filter-group' }, [
+    el('label', { className: 'inv-filter-label' }, 'Année'),
+    selectEl
+  ]);
+}
+
+/**
  * Créer un filtre select
  */
-function createSelectFilter(field, label, value, options, onChange) {
+function createSelectFilter(field, label, currentValue, options, onChange) {
+  const selectEl = el('select', {
+    className: 'inv-filter-select',
+    onchange: (e) => onChange(field, e.target.value)
+  }, options.map(opt =>
+    el('option', { value: opt.value }, opt.label)
+  ));
+
+  // Set value after creation to ensure it's properly selected
+  selectEl.value = currentValue || '';
+
   return el('div', { className: 'inv-filter-group' }, [
     el('label', { className: 'inv-filter-label' }, label),
-    el('select', {
-      className: 'inv-filter-select',
-      value: value || '',
-      onchange: (e) => onChange(field, e.target.value)
-    }, options.map(opt =>
-      el('option', { value: opt.value, selected: opt.value === value }, opt.label)
-    ))
+    selectEl
   ]);
 }
 
@@ -336,6 +351,7 @@ export function injectFilterStyles() {
       flex-wrap: wrap;
       gap: 1rem;
       align-items: flex-end;
+      justify-content: flex-start;
     }
 
     .inv-filters-main {
