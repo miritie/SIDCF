@@ -153,8 +153,20 @@ async function getEntities(entityType, filter, env) {
 
   let sql = `SELECT * FROM ${tableName}`;
 
-  // TODO: Implémenter un système de filtrage sécurisé avec prepared statements
-  // Pour l'instant, on retourne tout
+  // Implémenter le filtrage
+  if (filter && typeof filter === 'object' && Object.keys(filter).length > 0) {
+    const conditions = [];
+    for (const [key, value] of Object.entries(filter)) {
+      // Convertir camelCase en snake_case pour les noms de colonnes
+      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      // Échapper les valeurs pour éviter l'injection SQL
+      const escapedValue = String(value).replace(/'/g, "''");
+      conditions.push(`${snakeKey} = '${escapedValue}'`);
+    }
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`;
+    }
+  }
 
   sql += ' ORDER BY created_at DESC';
 

@@ -68,15 +68,29 @@ export async function renderExecutionOS(params) {
   const osDemarrage = ordresService && ordresService.length > 0 ? ordresService[0] : null;
   const hasOSDemarrage = !!osDemarrage;
 
-  // Helper pour vérifier si l'attribution est complète (supporte les deux structures)
+  // Helper pour vérifier si l'attribution est complète (supporte les différentes structures)
   const isAttributionComplete = (attr) => {
     if (!attr) return false;
-    // Nouvelle structure JSONB (PostgreSQL)
-    const hasAttributaire = attr.attributaire?.nom || attr.attributaire?.entrepriseId;
-    const hasMontant = attr.montants?.attribue > 0 || attr.montants?.ttc > 0;
-    if (hasAttributaire && hasMontant) return true;
-    // Ancienne structure
-    if (attr.titulaire && attr.montantAttribue > 0) return true;
+
+    // Vérifier le montant (plusieurs sources possibles)
+    const hasMontant = attr.montants?.ttc > 0 || attr.montants?.attribue > 0 || attr.montantAttribue > 0;
+    if (!hasMontant) return false;
+
+    // Vérifier l'attributaire - Structure avec entreprises[] (ECR03A)
+    if (attr.attributaire?.entreprises?.length > 0) {
+      const firstEntreprise = attr.attributaire.entreprises[0];
+      if (firstEntreprise.raisonSociale) return true;
+    }
+
+    // Structure avec nom direct
+    if (attr.attributaire?.nom) return true;
+
+    // Structure avec entrepriseId
+    if (attr.attributaire?.entrepriseId) return true;
+
+    // Ancienne structure avec titulaire
+    if (attr.titulaire) return true;
+
     return false;
   };
 

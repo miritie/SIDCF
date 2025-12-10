@@ -143,6 +143,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
   const montantTTC = existingAttr.montants?.ttc || (montantHT * 1.18);
 
   return el('div', { style: { display: 'flex', flexDirection: 'column', gap: '24px' } }, [
+    // Section Attributaire (NOUVELLE)
+    renderAttributaireSection(existingAttr.attributaire || {}, registries),
+
     // Section Montants
     renderMontantsSection(montantHT, montantTTC),
 
@@ -161,6 +164,209 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Échéancier
     renderEcheancierSection(montantTTC, operation.livrables || [], registries)
   ]);
+}
+
+/**
+ * Section Attributaire
+ */
+function renderAttributaireSection(attributaire, registries) {
+  // Extraire les données existantes
+  const singleOrGroup = attributaire.singleOrGroup || 'SIMPLE';
+  const existingEntreprises = attributaire.entreprises || [];
+
+  // Pour une entreprise simple, récupérer les infos
+  const entrepriseSimple = singleOrGroup === 'SIMPLE' && existingEntreprises.length > 0
+    ? existingEntreprises[0]
+    : { raisonSociale: '', ncc: '', adresse: '', telephone: '', email: '' };
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '🏢 Attributaire du marché')
+    ]),
+    el('div', { className: 'card-body' }, [
+      // Type d'attributaire
+      el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+        el('label', { className: 'form-label' }, 'Type d\'attributaire'),
+        el('div', { style: { display: 'flex', gap: '24px' } }, [
+          el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+            el('input', {
+              type: 'radio',
+              name: 'attr-type',
+              value: 'SIMPLE',
+              checked: singleOrGroup === 'SIMPLE',
+              onchange: () => toggleAttributaireType('SIMPLE')
+            }),
+            'Entreprise unique'
+          ]),
+          el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+            el('input', {
+              type: 'radio',
+              name: 'attr-type',
+              value: 'GROUPEMENT',
+              checked: singleOrGroup === 'GROUPEMENT',
+              onchange: () => toggleAttributaireType('GROUPEMENT')
+            }),
+            'Groupement d\'entreprises'
+          ])
+        ])
+      ]),
+
+      // Section Entreprise Unique
+      el('div', {
+        id: 'attr-entreprise-simple',
+        style: { display: singleOrGroup === 'SIMPLE' ? 'block' : 'none' }
+      }, [
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, [
+              'Raison sociale',
+              el('span', { className: 'required' }, '*')
+            ]),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'attr-raison-sociale',
+              value: entrepriseSimple.raisonSociale || '',
+              placeholder: 'Nom de l\'entreprise',
+              required: true
+            })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'N° Compte Contribuable (NCC)'),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'attr-ncc',
+              value: entrepriseSimple.ncc || '',
+              placeholder: 'Ex: CI-ABJ-2024-XXXXX'
+            })
+          ])
+        ]),
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Adresse'),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'attr-adresse',
+              value: entrepriseSimple.adresse || '',
+              placeholder: 'Adresse complète'
+            })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Téléphone'),
+            el('input', {
+              type: 'tel',
+              className: 'form-input',
+              id: 'attr-telephone',
+              value: entrepriseSimple.telephone || '',
+              placeholder: '+225 XX XX XX XX XX'
+            })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Email'),
+            el('input', {
+              type: 'email',
+              className: 'form-input',
+              id: 'attr-email',
+              value: entrepriseSimple.email || '',
+              placeholder: 'contact@entreprise.ci'
+            })
+          ])
+        ])
+      ]),
+
+      // Section Groupement (simplifié pour l'instant)
+      el('div', {
+        id: 'attr-groupement',
+        style: { display: singleOrGroup === 'GROUPEMENT' ? 'block' : 'none' }
+      }, [
+        el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+          el('div', { className: 'alert-icon' }, 'ℹ️'),
+          el('div', { className: 'alert-content' }, [
+            el('div', { className: 'alert-title' }, 'Groupement d\'entreprises'),
+            el('div', { className: 'alert-message' }, 'Saisissez les informations du mandataire du groupement.')
+          ])
+        ]),
+        el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+          el('label', { className: 'form-label' }, 'Type de groupement'),
+          el('select', { className: 'form-input', id: 'attr-group-type' }, [
+            el('option', { value: 'CONJOINT' }, 'Groupement conjoint'),
+            el('option', { value: 'SOLIDAIRE' }, 'Groupement solidaire')
+          ])
+        ]),
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, [
+              'Raison sociale (Mandataire)',
+              el('span', { className: 'required' }, '*')
+            ]),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'attr-mandataire-raison-sociale',
+              placeholder: 'Nom de l\'entreprise mandataire'
+            })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'N° Compte Contribuable'),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'attr-mandataire-ncc',
+              placeholder: 'NCC du mandataire'
+            })
+          ])
+        ]),
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Adresse'),
+            el('input', {
+              type: 'text',
+              className: 'form-input',
+              id: 'attr-mandataire-adresse',
+              placeholder: 'Adresse du mandataire'
+            })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Téléphone'),
+            el('input', {
+              type: 'tel',
+              className: 'form-input',
+              id: 'attr-mandataire-telephone',
+              placeholder: '+225 XX XX XX XX XX'
+            })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Email'),
+            el('input', {
+              type: 'email',
+              className: 'form-input',
+              id: 'attr-mandataire-email',
+              placeholder: 'contact@mandataire.ci'
+            })
+          ])
+        ]),
+        // Liste des membres du groupement (à implémenter plus tard)
+        el('div', { style: { marginTop: '16px', padding: '12px', backgroundColor: 'var(--color-gray-100)', borderRadius: '8px' } }, [
+          el('div', { className: 'text-small text-muted' }, 'Les autres membres du groupement pourront être ajoutés ultérieurement.')
+        ])
+      ])
+    ])
+  ]);
+}
+
+/**
+ * Toggle entre entreprise unique et groupement
+ */
+function toggleAttributaireType(type) {
+  const simpleDiv = document.getElementById('attr-entreprise-simple');
+  const groupDiv = document.getElementById('attr-groupement');
+
+  if (simpleDiv && groupDiv) {
+    simpleDiv.style.display = type === 'SIMPLE' ? 'block' : 'none';
+    groupDiv.style.display = type === 'GROUPEMENT' ? 'block' : 'none';
+  }
 }
 
 /**
@@ -700,7 +906,70 @@ function initializeWidgets(operation, registries) {
  */
 async function handleSave(idOperation, operation) {
   try {
-    // Collecte des données
+    // Collecte des données attributaire
+    const attrType = document.querySelector('input[name="attr-type"]:checked')?.value || 'SIMPLE';
+
+    // Collecte des données de l'attributaire selon le type
+    let attributaireData;
+    let raisonSocialeValidation;
+
+    if (attrType === 'SIMPLE') {
+      const raisonSociale = document.getElementById('attr-raison-sociale')?.value?.trim() || '';
+      const ncc = document.getElementById('attr-ncc')?.value?.trim() || '';
+      const adresse = document.getElementById('attr-adresse')?.value?.trim() || '';
+      const telephone = document.getElementById('attr-telephone')?.value?.trim() || '';
+      const email = document.getElementById('attr-email')?.value?.trim() || '';
+
+      raisonSocialeValidation = raisonSociale;
+
+      attributaireData = {
+        singleOrGroup: 'SIMPLE',
+        groupType: null,
+        entrepriseId: null,
+        groupementId: null,
+        entreprises: [{
+          role: 'TITULAIRE',
+          raisonSociale,
+          ncc,
+          adresse,
+          telephone,
+          email
+        }]
+      };
+    } else {
+      // Groupement
+      const groupType = document.getElementById('attr-group-type')?.value || 'CONJOINT';
+      const raisonSociale = document.getElementById('attr-mandataire-raison-sociale')?.value?.trim() || '';
+      const ncc = document.getElementById('attr-mandataire-ncc')?.value?.trim() || '';
+      const adresse = document.getElementById('attr-mandataire-adresse')?.value?.trim() || '';
+      const telephone = document.getElementById('attr-mandataire-telephone')?.value?.trim() || '';
+      const email = document.getElementById('attr-mandataire-email')?.value?.trim() || '';
+
+      raisonSocialeValidation = raisonSociale;
+
+      attributaireData = {
+        singleOrGroup: 'GROUPEMENT',
+        groupType,
+        entrepriseId: null,
+        groupementId: null,
+        entreprises: [{
+          role: 'MANDATAIRE',
+          raisonSociale,
+          ncc,
+          adresse,
+          telephone,
+          email
+        }]
+      };
+    }
+
+    // Validation de la raison sociale
+    if (!raisonSocialeValidation) {
+      alert('⚠️ Veuillez saisir la raison sociale de l\'attributaire');
+      return;
+    }
+
+    // Collecte des montants
     const montantHT = parseFloat(document.getElementById('attr-montant-ht').value);
     const montantTTC = parseFloat(document.getElementById('attr-montant-ttc').value);
 
@@ -712,18 +981,15 @@ async function handleSave(idOperation, operation) {
     // Garanties (simplifié pour l'instant - à enrichir plus tard)
     // Note: Les garanties seront gérées plus tard
 
-    // Données attribution simplifiées
-    const attributionId = `ATTR-${idOperation}`;
+    // Chercher si une attribution existe déjà pour cette opération
+    const existingAttrs = await dataService.query(ENTITIES.ATTRIBUTION, { operationId: idOperation });
+    const existingAttr = existingAttrs && existingAttrs.length > 0 ? existingAttrs[0] : null;
+
+    // Données attribution complètes (sans ID si création, le backend le génère)
+    // Données attribution - noms de colonnes en snake_case pour PostgreSQL
     const attributionData = {
-      id: attributionId,
-      operationId: idOperation,
-      attributaire: {
-        singleOrGroup: 'SIMPLE',
-        groupType: null,
-        entrepriseId: null,
-        groupementId: null,
-        entreprises: []
-      },
+      operation_id: idOperation,
+      attributaire: attributaireData,
       montants: {
         ht: montantHT,
         ttc: montantTTC,
@@ -733,27 +999,28 @@ async function handleSave(idOperation, operation) {
         signatureTitulaire: null,
         signatureAC: null,
         approbation: null,
-        decisionCF: null
+        delaiExecution: 0,
+        delaiUnite: 'MOIS'
       },
-      decisionCF: {
+      decision_cf: {
         etat: null,
         motifRef: null,
         commentaire: ''
       },
-      delaiExecution: 0,
-      delaiUnite: 'MOIS',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      garanties: {},
+      updated_at: new Date().toISOString()
     };
 
     // Sauvegarder attribution
-    const existingAttr = await dataService.get(ENTITIES.ATTRIBUTION, attributionId);
     let attrResult;
 
     if (existingAttr) {
-      attrResult = await dataService.update(ENTITIES.ATTRIBUTION, attributionId, attributionData);
-      logger.info('[ECR03A] Attribution mise à jour', attributionData);
+      // Mise à jour avec l'ID existant
+      attrResult = await dataService.update(ENTITIES.ATTRIBUTION, existingAttr.id, attributionData);
+      logger.info('[ECR03A] Attribution mise à jour', { id: existingAttr.id, ...attributionData });
     } else {
+      // Création - ajouter created_at
+      attributionData.created_at = new Date().toISOString();
       attrResult = await dataService.add(ENTITIES.ATTRIBUTION, attributionData);
       logger.info('[ECR03A] Attribution créée', attributionData);
     }
