@@ -697,7 +697,8 @@ export const SCHEMAS = {
       natureCode: '',      // code Nature économique (NATURE_ECO registry)
       ligneBudgetaire: '', // calculée : activiteCode + natureCode
       bailleur: '',        // legacy : 1er bailleur (back-compat lecture)
-      bailleurs: []        // multi-bailleurs (codes)
+      bailleurs: [],       // codes des bailleurs (déduit de financements[].bailleur)
+      financements: []     // [{ montant, typeFinancement, bailleur }] — multi-financement
     },
 
     // Localisation géographique

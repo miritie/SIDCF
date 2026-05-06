@@ -69,13 +69,33 @@ export async function renderPPMCreateLine(params) {
     logger.warn('[PPM Create] activiteIndex is empty — aucune UA n\'a de mapping explicite dans ua-activites.json');
   }
 
+  // Snapshots utilisés par l'indicateur de disponibilité budgétaire (modif #3)
+  let mpBudgetLines = [];
+  let mpOperations = [];
+  try {
+    [mpBudgetLines, mpOperations] = await Promise.all([
+      dataService.query(ENTITIES.MP_BUDGET_LINE),
+      dataService.query(ENTITIES.MP_OPERATION)
+    ]);
+    mpBudgetLines = mpBudgetLines || [];
+    mpOperations = mpOperations || [];
+  } catch (err) {
+    logger.warn('[PPM Create] Failed to load budget lines / operations for indicator', err);
+  }
+
   let livrablesList = [];
   let activiteWidget = null;
 
   async function handleSave(createAnother) {
-    const bailleurs = Array.from(document.querySelectorAll('.bailleur-select'))
-      .map(s => s.value)
-      .filter(v => v);
+    // Lignes de financement (multi : montant + type + bailleur)
+    const financements = Array.from(document.querySelectorAll('.financement-row')).map(row => ({
+      montant: Number(row.querySelector('.financement-montant')?.value) || 0,
+      typeFinancement: row.querySelector('.financement-type')?.value || '',
+      bailleur: row.querySelector('.financement-bailleur')?.value || ''
+    })).filter(f => f.montant > 0 && f.typeFinancement && f.bailleur);
+
+    const montantTotal = financements.reduce((sum, f) => sum + f.montant, 0);
+    const bailleurs = financements.map(f => f.bailleur);
 
     const activiteCode = document.getElementById('activite')?.value || '';
     const natureEcoCode = document.getElementById('natureEco')?.value || '';
@@ -92,10 +112,10 @@ export async function renderPPMCreateLine(params) {
       revue: document.getElementById('revue')?.value || null,
       naturePrix: document.getElementById('naturePrix')?.value,
 
-      montantPrevisionnel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
-      montantActuel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
-      typeFinancement: document.getElementById('typeFinancement')?.value,
-      sourceFinancement: bailleurs[0] || '',
+      montantPrevisionnel: montantTotal,
+      montantActuel: montantTotal,
+      typeFinancement: financements[0]?.typeFinancement || '', // legacy
+      sourceFinancement: financements[0]?.bailleur || '',      // legacy
 
       chaineBudgetaire: {
         section: getSelectLabel('section') || '',
@@ -107,8 +127,9 @@ export async function renderPPMCreateLine(params) {
         nature: getSelectLabel('natureEco') || '',
         natureCode: natureEcoCode,
         ligneBudgetaire,
-        bailleur: bailleurs[0] || '',
-        bailleurs
+        bailleur: financements[0]?.bailleur || '', // legacy
+        bailleurs,
+        financements
       },
 
       delaiExecution: Number(document.getElementById('delaiExecution')?.value) || 0,
@@ -143,12 +164,12 @@ export async function renderPPMCreateLine(params) {
       alert('⚠️ Veuillez sélectionner la Nature économique');
       return;
     }
-    if (bailleurs.length === 0) {
-      alert('⚠️ Veuillez sélectionner au moins un bailleur');
+    if (financements.length === 0) {
+      alert('⚠️ Veuillez compléter au moins une ligne de financement (montant > 0 + type + bailleur)');
       return;
     }
-    if (formData.montantPrevisionnel <= 0) {
-      alert('⚠️ Le montant prévisionnel doit être supérieur à 0');
+    if (montantTotal <= 0) {
+      alert('⚠️ Le montant total prévisionnel doit être supérieur à 0');
       return;
     }
 
@@ -185,8 +206,13 @@ export async function renderPPMCreateLine(params) {
       });
       const ligne = document.getElementById('ligneBudgetaire');
       if (ligne) ligne.value = '';
-      const bailleursList = document.getElementById('bailleurs-list');
-      if (bailleursList && bailleursList.__reset) bailleursList.__reset();
+      const financementsList = document.getElementById('financements-list');
+      if (financementsList && financementsList.__reset) financementsList.__reset();
+      // Refresh ops snapshot so the indicator reflects the just-saved op
+      try {
+        mpOperations = await dataService.query(ENTITIES.MP_OPERATION) || [];
+        if (financementsList && financementsList.__refresh) financementsList.__refresh();
+      } catch (_) { /* noop */ }
     } else {
       alert('✅ Opération créée avec succès');
       router.navigate('/mp/fiche-marche', { idOperation: newOperationId });
@@ -327,44 +353,28 @@ export async function renderPPMCreateLine(params) {
         ])
       ]),
 
-      // ---- Informations financières (multi-bailleurs) ----
+      // ---- Informations financières (multi-lignes : Montant + Type + Bailleur, indicateur de dispo) ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
-          el('h3', { className: 'card-title' }, '💰 Informations financières')
+          el('h3', { className: 'card-title' }, '💰 Informations financières'),
+          el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+            'Chaque ligne = un montant prévu pour un (Type de financement, Bailleur). L\'indicateur compare le programmé au montant initial de la ligne budgétaire.')
         ]),
         el('div', { className: 'card-body' }, [
-          el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Montant prévisionnel (XOF)', el('span', { className: 'required' }, '*')]),
-              el('input', {
-                type: 'number',
-                className: 'form-input',
-                id: 'montantPrevisionnel',
-                min: 0,
-                step: 1,
-                placeholder: '0',
-                required: true
-              })
-            ]),
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Type de financement', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'typeFinancement', required: true }, [
-                el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.TYPE_FINANCEMENT || []).map(t => el('option', { value: t.code }, t.label))
-              ])
-            ])
-          ]),
-
-          el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
-            el('label', { className: 'form-label' }, ['Bailleurs', el('span', { className: 'required' }, '*')]),
-            el('div', { id: 'bailleurs-list' }),
-            el('button', {
-              type: 'button',
-              className: 'btn btn-sm btn-accent',
-              id: 'add-bailleur-btn',
-              style: { marginTop: '4px' }
-            }, '+ Ajouter un bailleur')
-          ])
+          el('div', { id: 'financements-list' }),
+          el('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-accent',
+            id: 'add-financement-btn',
+            style: { marginTop: '8px' }
+          }, '+ Ajouter une ligne de financement'),
+          el('div', {
+            id: 'financements-total',
+            style: {
+              marginTop: '14px', padding: '10px 14px', background: '#f9fafb',
+              borderRadius: '6px', fontSize: '14px', borderLeft: '4px solid #6b7280'
+            }
+          })
         ])
       ]),
 
@@ -493,7 +503,7 @@ export async function renderPPMCreateLine(params) {
 
   setupActiviteReverseCascade(activiteIndex);
   setupNatureEcoLigneBudgetaire();
-  setupBailleursMulti(registries);
+  setupFinancementsMulti(registries, mpBudgetLines, mpOperations);
   setupLocalisationCascades(registries);
 
   const livrablesContainer = document.getElementById('livrables-container');
@@ -568,78 +578,253 @@ function setupNatureEcoLigneBudgetaire() {
 }
 
 /* ----------------------------------------------------------------------- */
-/* Multi-bailleurs : liste de selects + bouton "+ Ajouter un bailleur"     */
+/* Lignes de financement multi (Montant + Type + Bailleur) + indicateur    */
+/* de disponibilité budgétaire (Initial / Programmé / Disponible après).   */
 /* ----------------------------------------------------------------------- */
-function setupBailleursMulti(registries) {
-  const list = document.getElementById('bailleurs-list');
-  const addBtn = document.getElementById('add-bailleur-btn');
-  const typeFinancementSelect = document.getElementById('typeFinancement');
-  if (!list || !addBtn || !typeFinancementSelect) return;
+function findBudgetLine(activiteCode, typeFinancement, bailleur, mpBudgetLines) {
+  if (!activiteCode || !typeFinancement || !bailleur) return null;
+  return (mpBudgetLines || []).find(b =>
+    (b.activiteCode || '') === activiteCode &&
+    (b.typeFinancement || '') === typeFinancement &&
+    (b.sourceFinancement || '') === bailleur
+  ) || null;
+}
 
-  const getBailleurOptions = () => {
-    const typeFin = typeFinancementSelect.value;
-    if (!typeFin) return [];
-    if (typeFin === 'ETAT') {
-      return (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'ETAT');
+function computeBudgetUsageOther(activiteCode, typeFinancement, bailleur, mpOperations, excludeOperationId = null) {
+  let used = 0;
+  for (const op of (mpOperations || [])) {
+    if (excludeOperationId && op.id === excludeOperationId) continue;
+    const opActivite = op?.chaineBudgetaire?.activiteCode || '';
+    if (opActivite !== activiteCode) continue;
+
+    if (Array.isArray(op?.chaineBudgetaire?.financements) && op.chaineBudgetaire.financements.length > 0) {
+      for (const f of op.chaineBudgetaire.financements) {
+        if ((f.typeFinancement || '') === typeFinancement && (f.bailleur || '') === bailleur) {
+          used += Number(f.montant) || 0;
+        }
+      }
+    } else {
+      // legacy : 1 seul financement par opération
+      if ((op.typeFinancement || '') === typeFinancement && (op.sourceFinancement || '') === bailleur) {
+        used += Number(op.montantPrevisionnel) || 0;
+      }
     }
-    return (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'EXTERNE');
-  };
+  }
+  return used;
+}
 
-  const populateSelect = (select) => {
-    const previous = select.value;
-    const opts = getBailleurOptions();
-    select.innerHTML = '';
+function formatXOF(n) {
+  const v = Number(n) || 0;
+  return new Intl.NumberFormat('fr-FR').format(v) + ' XOF';
+}
+
+function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
+  const list = document.getElementById('financements-list');
+  const addBtn = document.getElementById('add-financement-btn');
+  const totalDiv = document.getElementById('financements-total');
+  if (!list || !addBtn) return;
+
+  const populateBailleurSelect = (typeSelect, bailleurSelect) => {
+    const previous = bailleurSelect.value;
+    const typeFin = typeSelect.value;
+    let opts = [];
+    if (typeFin === 'ETAT') {
+      opts = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'ETAT');
+    } else if (typeFin) {
+      opts = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'EXTERNE');
+    }
+    bailleurSelect.innerHTML = '';
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = opts.length === 0
-      ? '-- Sélectionner type financement d\'abord --'
-      : '-- Sélectionner un bailleur --';
-    select.appendChild(placeholder);
+    placeholder.textContent = opts.length === 0 ? '-- Type de financement d\'abord --' : '-- Sélectionner un bailleur --';
+    bailleurSelect.appendChild(placeholder);
     opts.forEach(b => {
       const o = document.createElement('option');
       o.value = b.code;
       o.textContent = b.label;
-      select.appendChild(o);
+      bailleurSelect.appendChild(o);
     });
-    if (previous && opts.find(b => b.code === previous)) select.value = previous;
+    if (previous && opts.find(b => b.code === previous)) bailleurSelect.value = previous;
   };
-
-  const refreshAll = () => list.querySelectorAll('.bailleur-select').forEach(populateSelect);
 
   const buildRow = (isFirst) => {
     const row = document.createElement('div');
-    row.className = 'bailleur-row';
-    Object.assign(row.style, { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' });
+    row.className = 'financement-row';
+    Object.assign(row.style, {
+      border: '1px solid #e5e7eb', borderRadius: '8px',
+      padding: '12px', marginBottom: '10px', background: 'white'
+    });
 
-    const select = document.createElement('select');
-    select.className = 'form-input bailleur-select';
-    select.style.flex = '1';
-    if (isFirst) select.required = true;
-    populateSelect(select);
-    row.appendChild(select);
+    const grid = document.createElement('div');
+    Object.assign(grid.style, {
+      display: 'grid',
+      gridTemplateColumns: 'minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(180px, 1.3fr) auto',
+      gap: '10px', alignItems: 'end'
+    });
+
+    const mkField = (labelText, control, required) => {
+      const wrap = document.createElement('div');
+      const lbl = document.createElement('label');
+      lbl.className = 'form-label';
+      lbl.textContent = labelText;
+      if (required) {
+        const star = document.createElement('span');
+        star.className = 'required';
+        star.textContent = '*';
+        lbl.appendChild(document.createTextNode(' '));
+        lbl.appendChild(star);
+      }
+      wrap.appendChild(lbl);
+      wrap.appendChild(control);
+      return wrap;
+    };
+
+    const montantInput = document.createElement('input');
+    montantInput.type = 'number';
+    montantInput.className = 'form-input financement-montant';
+    montantInput.min = '0';
+    montantInput.step = '1';
+    montantInput.placeholder = '0';
+    if (isFirst) montantInput.required = true;
+
+    const typeSelect = document.createElement('select');
+    typeSelect.className = 'form-input financement-type';
+    if (isFirst) typeSelect.required = true;
+    typeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+    (registries.TYPE_FINANCEMENT || []).forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.code;
+      o.textContent = t.label;
+      typeSelect.appendChild(o);
+    });
+
+    const bailleurSelect = document.createElement('select');
+    bailleurSelect.className = 'form-input financement-bailleur';
+    if (isFirst) bailleurSelect.required = true;
+    populateBailleurSelect(typeSelect, bailleurSelect);
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn btn-sm btn-secondary';
     removeBtn.textContent = '✕';
-    removeBtn.style.padding = '4px 10px';
-    removeBtn.title = 'Retirer ce bailleur';
+    removeBtn.title = 'Retirer cette ligne';
+    Object.assign(removeBtn.style, { padding: '6px 12px', alignSelf: 'end', marginBottom: '2px' });
     removeBtn.addEventListener('click', () => {
-      if (list.querySelectorAll('.bailleur-row').length > 1) row.remove();
+      if (list.querySelectorAll('.financement-row').length > 1) {
+        row.remove();
+        refreshAll();
+      }
     });
-    row.appendChild(removeBtn);
+
+    grid.appendChild(mkField('Montant prévisionnel (XOF)', montantInput, isFirst));
+    grid.appendChild(mkField('Type de financement', typeSelect, isFirst));
+    grid.appendChild(mkField('Bailleur', bailleurSelect, isFirst));
+    grid.appendChild(removeBtn);
+    row.appendChild(grid);
+
+    const indicator = document.createElement('div');
+    indicator.className = 'financement-indicator';
+    Object.assign(indicator.style, {
+      marginTop: '10px', padding: '8px 12px', borderRadius: '6px',
+      fontSize: '13px', background: '#f3f4f6', color: '#374151',
+      borderLeft: '4px solid #d1d5db'
+    });
+    indicator.textContent = '— Sélectionnez activité, type et bailleur pour voir la disponibilité —';
+    row.appendChild(indicator);
+
+    typeSelect.addEventListener('change', () => {
+      populateBailleurSelect(typeSelect, bailleurSelect);
+      refreshAll();
+    });
+    bailleurSelect.addEventListener('change', refreshAll);
+    montantInput.addEventListener('input', refreshAll);
+
     return row;
   };
 
-  // expose reset for handleSave's "Enregistrer et créer nouveau" branch
+  const refreshAll = () => {
+    const activiteCode = document.getElementById('activite')?.value || '';
+    let total = 0;
+    let anyOver = false;
+
+    list.querySelectorAll('.financement-row').forEach(row => {
+      const montant = Number(row.querySelector('.financement-montant')?.value) || 0;
+      const typeFin = row.querySelector('.financement-type')?.value || '';
+      const bailleur = row.querySelector('.financement-bailleur')?.value || '';
+      const indicator = row.querySelector('.financement-indicator');
+
+      total += montant;
+
+      if (!activiteCode) {
+        indicator.textContent = '⚠ Sélectionnez d\'abord une activité (chaîne programmatique) en haut du formulaire';
+        Object.assign(indicator.style, { background: '#fef3c7', color: '#92400e', borderLeftColor: '#f59e0b' });
+        row.style.borderColor = '#e5e7eb';
+        return;
+      }
+      if (!typeFin || !bailleur) {
+        indicator.textContent = '— Sélectionnez type et bailleur pour voir la disponibilité —';
+        Object.assign(indicator.style, { background: '#f3f4f6', color: '#374151', borderLeftColor: '#d1d5db' });
+        row.style.borderColor = '#e5e7eb';
+        return;
+      }
+
+      const line = findBudgetLine(activiteCode, typeFin, bailleur, mpBudgetLines);
+      if (!line) {
+        indicator.innerHTML = `⚠ Aucune ligne budgétaire enregistrée pour cette combinaison (activité <code>${activiteCode}</code> / ${typeFin} / ${bailleur})`;
+        Object.assign(indicator.style, { background: '#fef3c7', color: '#92400e', borderLeftColor: '#f59e0b' });
+        row.style.borderColor = '#e5e7eb';
+        return;
+      }
+
+      const initial = Number(line.ae) || 0;
+      const usedOther = computeBudgetUsageOther(activiteCode, typeFin, bailleur, mpOperations);
+      const usedTotal = usedOther + montant;
+      const available = initial - usedTotal;
+      const isOver = available < 0;
+      if (isOver) anyOver = true;
+
+      const sep = '<span style="margin: 0 8px; color: #d1d5db;">|</span>';
+      indicator.innerHTML =
+        `<span style="font-weight:600;">Initiale :</span> ${formatXOF(initial)}` + sep +
+        `<span style="font-weight:600;">Programmé (avec cette opération) :</span> ${formatXOF(usedTotal)}` + sep +
+        `<span style="font-weight:600;">${isOver ? 'DÉPASSEMENT' : 'Disponible après'} :</span> ` +
+        `<strong style="color:${isOver ? '#b91c1c' : '#059669'};">${formatXOF(Math.abs(available))}${isOver ? ' ⚠' : ''}</strong>`;
+      Object.assign(indicator.style, {
+        background: isOver ? '#fee2e2' : '#ecfdf5',
+        color: isOver ? '#7f1d1d' : '#064e3b',
+        borderLeftColor: isOver ? '#dc2626' : '#10b981'
+      });
+      row.style.borderColor = isOver ? '#fecaca' : '#d1fae5';
+    });
+
+    if (totalDiv) {
+      totalDiv.innerHTML =
+        `<strong>Montant total prévisionnel de l'opération :</strong> ` +
+        `<span style="font-size:1.05em; font-weight:700;">${formatXOF(total)}</span>` +
+        (anyOver ? ' <span style="margin-left:12px; color:#b91c1c; font-weight:600;">⚠ Au moins une ligne dépasse l\'enveloppe budgétaire</span>' : '');
+      totalDiv.style.borderLeftColor = anyOver ? '#dc2626' : '#6b7280';
+      totalDiv.style.background = anyOver ? '#fef2f2' : '#f9fafb';
+    }
+  };
+
   list.__reset = () => {
     list.innerHTML = '';
     list.appendChild(buildRow(true));
+    refreshAll();
   };
+  list.__refresh = refreshAll;
 
   list.appendChild(buildRow(true));
-  addBtn.addEventListener('click', () => list.appendChild(buildRow(false)));
-  typeFinancementSelect.addEventListener('change', refreshAll);
+  addBtn.addEventListener('click', () => {
+    list.appendChild(buildRow(false));
+    refreshAll();
+  });
+
+  // L'indicateur dépend de l'activité — on rafraîchit quand elle change.
+  const activiteHidden = document.getElementById('activite');
+  if (activiteHidden) activiteHidden.addEventListener('change', refreshAll);
+
+  refreshAll();
 }
 
 /* ----------------------------------------------------------------------- */
