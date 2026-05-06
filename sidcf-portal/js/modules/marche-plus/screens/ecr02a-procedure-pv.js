@@ -673,15 +673,17 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
         ])
       ]),
 
-      // Dates section (avec validation chronologique)
+      // Dates section (toutes optionnelles, avertissements non bloquants)
       el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
-        el('strong', {}, '📅 Dates chronologiques de la procédure')
+        el('strong', {}, '📅 Dates de la procédure'),
+        el('div', { className: 'text-small text-muted', style: { marginTop: '4px' } },
+          'Tous les champs sont optionnels. Les informations manquantes généreront un avertissement non bloquant.')
       ]),
 
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
         // Date ouverture
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date ouverture'),
+          el('label', { className: 'form-label' }, 'Date d\'ouverture'),
           el('input', {
             type: 'date',
             className: 'form-input',
@@ -690,40 +692,53 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           })
         ]),
 
-        // Date analyse
+        // Date analyse technique
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date analyse'),
+          el('label', { className: 'form-label' }, 'Date d\'analyse technique'),
           el('input', {
             type: 'date',
             className: 'form-input',
-            id: 'proc-date-analyse',
-            value: existingProc.dates?.analyse ? existingProc.dates.analyse.split('T')[0] : ''
-          }),
-          el('small', { className: 'text-muted' }, '≥ Date ouverture')
+            id: 'proc-date-analyse-tech',
+            value: existingProc.dates?.analyseTechnique
+              ? existingProc.dates.analyseTechnique.split('T')[0]
+              : (existingProc.dates?.analyse ? existingProc.dates.analyse.split('T')[0] : '')
+          })
+        ]),
+
+        // Date analyse financière
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Date d\'analyse financière'),
+          el('input', {
+            type: 'date',
+            className: 'form-input',
+            id: 'proc-date-analyse-fin',
+            value: existingProc.dates?.analyseFinanciere ? existingProc.dates.analyseFinanciere.split('T')[0] : ''
+          })
         ]),
 
         // Date jugement
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date jugement'),
+          el('label', { className: 'form-label' }, 'Date de jugement'),
           el('input', {
             type: 'date',
             className: 'form-input',
             id: 'proc-date-jugement',
             value: existingProc.dates?.jugement ? existingProc.dates.jugement.split('T')[0] : ''
-          }),
-          el('small', { className: 'text-muted' }, '≥ Date analyse')
+          })
         ])
       ]),
 
       // PV section
       el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
-        el('strong', {}, '📄 Procès-verbaux (PV)')
+        el('strong', {}, '📄 Procès-verbaux (PV)'),
+        el('div', { className: 'text-small text-muted', style: { marginTop: '4px' } },
+          'Le PV d\'analyse technique & financière combiné est une alternative aux deux PV séparés (utilisé quand les deux analyses se font ensemble).')
       ]),
 
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
         // PV Ouverture
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV Ouverture'),
+          el('label', { className: 'form-label' }, 'PV d\'ouverture'),
           el('input', {
             type: 'file',
             className: 'form-input',
@@ -733,21 +748,47 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           existingProc.pv?.ouverture ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.ouverture}`) : null
         ]),
 
-        // PV Analyse
+        // PV Analyse Technique
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV Analyse'),
+          el('label', { className: 'form-label' }, 'PV d\'analyse technique'),
           el('input', {
             type: 'file',
             className: 'form-input',
-            id: 'proc-pv-analyse',
+            id: 'proc-pv-analyse-tech',
             accept: '.pdf,.doc,.docx'
           }),
-          existingProc.pv?.analyse ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyse}`) : null
+          existingProc.pv?.analyseTechnique ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyseTechnique}`) : null
+        ]),
+
+        // PV Analyse Financière
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'PV d\'analyse financière'),
+          el('input', {
+            type: 'file',
+            className: 'form-input',
+            id: 'proc-pv-analyse-fin',
+            accept: '.pdf,.doc,.docx'
+          }),
+          existingProc.pv?.analyseFinanciere ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyseFinanciere}`) : null
+        ]),
+
+        // PV Analyse Technique & Financière (combiné)
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'PV analyse technique & financière (combiné)'),
+          el('input', {
+            type: 'file',
+            className: 'form-input',
+            id: 'proc-pv-analyse-tech-fin',
+            accept: '.pdf,.doc,.docx'
+          }),
+          (existingProc.pv?.analyseTechFin || existingProc.pv?.analyse)
+            ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyseTechFin || existingProc.pv.analyse}`)
+            : null
         ]),
 
         // PV Jugement
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV Jugement'),
+          el('label', { className: 'form-label' }, 'PV de jugement'),
           el('input', {
             type: 'file',
             className: 'form-input',
@@ -776,6 +817,10 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     alert('Veuillez sélectionner un mode de passation');
     return;
   }
+
+  // Pré-fetch de la procédure existante : on en a besoin pour suppress
+  // les faux warnings quand le fichier est déjà uploadé.
+  const existingProc = await dataService.getByField(ENTITIES.MP_PROCEDURE, 'operationId', idOperation);
 
   // Validate soumissionnaires if widget is active
   if (soumissionnairesWidget) {
@@ -869,86 +914,100 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
       noteSelection: document.getElementById('proc-note-selection')?.files?.[0] ? 'NOTE_SEL_' + Date.now() + '.pdf' : null
     };
   }
-  // PSL, PSO, AOO, PI - Full procedure with COJO
+  // PSL, PSO, AOO, PI - Full procedure with COJO/COPE
+  // Tous les champs sont optionnels : on n'interrompt jamais le save, on
+  // remonte juste un récap des manquants à la fin.
   else {
-    const commission = document.getElementById('proc-commission')?.value;
-    const categorie = document.getElementById('proc-categorie')?.value;
-
-    if (!commission || !categorie) {
-      alert('⚠️ Le type de commission et la catégorie sont obligatoires');
-      return;
-    }
+    const commission = document.getElementById('proc-commission')?.value || null;
+    const categorie = document.getElementById('proc-categorie')?.value || null;
 
     const typeDossierAppel = document.getElementById('proc-type-dossier')?.value || null;
     const nbOffresRecues = Number(document.getElementById('proc-nb-offres-recues')?.value) || 0;
     const nbOffresClassees = Number(document.getElementById('proc-nb-offres-classees')?.value) || 0;
 
-    // Dates (with chronological validation)
+    // 4 dates (toutes optionnelles)
     const dateOuverture = document.getElementById('proc-date-ouverture')?.value || null;
-    const dateAnalyse = document.getElementById('proc-date-analyse')?.value || null;
+    const dateAnalyseTech = document.getElementById('proc-date-analyse-tech')?.value || null;
+    const dateAnalyseFin = document.getElementById('proc-date-analyse-fin')?.value || null;
     const dateJugement = document.getElementById('proc-date-jugement')?.value || null;
 
-    // Validation chronologique
-    if (dateOuverture && dateAnalyse && new Date(dateAnalyse) < new Date(dateOuverture)) {
-      alert('⚠️ La date d\'analyse ne peut pas être antérieure à la date d\'ouverture');
-      return;
-    }
-
-    if (dateAnalyse && dateJugement && new Date(dateJugement) < new Date(dateAnalyse)) {
-      alert('⚠️ La date de jugement ne peut pas être antérieure à la date d\'analyse');
-      return;
-    }
-
-    // Documents (simulate upload)
+    // 5 PVs (tous optionnels)
     let dossierAppelDoc = null;
     let pvOuverture = null;
-    let pvAnalyse = null;
+    let pvAnalyseTech = null;
+    let pvAnalyseFin = null;
+    let pvAnalyseTechFin = null;
     let pvJugement = null;
 
     const dossierInput = document.getElementById('proc-dossier-doc');
-    const pvOuvertureInput = document.getElementById('proc-pv-ouverture');
-    const pvAnalyseInput = document.getElementById('proc-pv-analyse');
-    const pvJugementInput = document.getElementById('proc-pv-jugement');
-
     if (dossierInput?.files?.[0]) {
       dossierAppelDoc = 'DOSSIER_' + Date.now() + '.pdf';
       logger.info('[Procedure] Dossier d\'appel uploadé:', dossierAppelDoc);
     }
-
+    const pvOuvertureInput = document.getElementById('proc-pv-ouverture');
     if (pvOuvertureInput?.files?.[0]) {
       pvOuverture = 'PV_OUVERTURE_' + Date.now() + '.pdf';
-      logger.info('[Procedure] PV ouverture uploadé:', pvOuverture);
     }
-
-    if (pvAnalyseInput?.files?.[0]) {
-      pvAnalyse = 'PV_ANALYSE_' + Date.now() + '.pdf';
-      logger.info('[Procedure] PV analyse uploadé:', pvAnalyse);
+    const pvAnalyseTechInput = document.getElementById('proc-pv-analyse-tech');
+    if (pvAnalyseTechInput?.files?.[0]) {
+      pvAnalyseTech = 'PV_ANALYSE_TECH_' + Date.now() + '.pdf';
     }
-
+    const pvAnalyseFinInput = document.getElementById('proc-pv-analyse-fin');
+    if (pvAnalyseFinInput?.files?.[0]) {
+      pvAnalyseFin = 'PV_ANALYSE_FIN_' + Date.now() + '.pdf';
+    }
+    const pvAnalyseTechFinInput = document.getElementById('proc-pv-analyse-tech-fin');
+    if (pvAnalyseTechFinInput?.files?.[0]) {
+      pvAnalyseTechFin = 'PV_ANALYSE_TECHFIN_' + Date.now() + '.pdf';
+    }
+    const pvJugementInput = document.getElementById('proc-pv-jugement');
     if (pvJugementInput?.files?.[0]) {
       pvJugement = 'PV_JUGEMENT_' + Date.now() + '.pdf';
-      logger.info('[Procedure] PV jugement uploadé:', pvJugement);
     }
 
     procedureData = {
       ...procedureData,
-      commission: commission,
-      categorie: categorie,
+      commission,
+      categorie,
       typeDossierAppel,
       dossierAppelDoc,
       dates: {
         ouverture: dateOuverture,
-        analyse: dateAnalyse,
+        analyseTechnique: dateAnalyseTech,
+        analyseFinanciere: dateAnalyseFin,
         jugement: dateJugement
       },
       nbOffresRecues,
       nbOffresClassees,
       pv: {
         ouverture: pvOuverture,
-        analyse: pvAnalyse,
+        analyseTechnique: pvAnalyseTech,
+        analyseFinanciere: pvAnalyseFin,
+        analyseTechFin: pvAnalyseTechFin,
         jugement: pvJugement
       }
     };
+
+    // Avertissements non bloquants (chronologie + champs manquants)
+    const warnings = [];
+    if (!commission) warnings.push('Type de commission');
+    if (!categorie) warnings.push('Catégorie');
+    if (!dateOuverture) warnings.push('Date d\'ouverture');
+    if (!dateJugement) warnings.push('Date de jugement');
+    if (!pvOuverture && !existingProc?.pv?.ouverture) warnings.push('PV d\'ouverture');
+    if (!pvJugement && !existingProc?.pv?.jugement) warnings.push('PV de jugement');
+    if (dateOuverture && dateAnalyseTech && new Date(dateAnalyseTech) < new Date(dateOuverture)) {
+      warnings.push('Date d\'analyse technique antérieure à l\'ouverture');
+    }
+    if (dateAnalyseTech && dateJugement && new Date(dateJugement) < new Date(dateAnalyseTech)) {
+      warnings.push('Date de jugement antérieure à l\'analyse technique');
+    }
+    if (warnings.length > 0) {
+      // Stocker les warnings pour affichage post-save
+      window.__mpProcedureWarnings = warnings;
+    } else {
+      delete window.__mpProcedureWarnings;
+    }
   }
 
   // Update operation
@@ -976,8 +1035,8 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     return;
   }
 
-  // Create or update procedure
-  const existingProcedure = await dataService.getByField(ENTITIES.MP_PROCEDURE, 'operationId', idOperation);
+  // Create or update procedure (existingProc déjà pré-fetché plus haut)
+  const existingProcedure = existingProc;
 
   // Get soumissionnaires and lots data from widgets
   const soumissionnaires = soumissionnairesWidget ? soumissionnairesWidget.getData() : [];
@@ -1009,8 +1068,14 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
       if (procedureData.pv.ouverture === null && existingProcedure.pv?.ouverture) {
         procedureData.pv.ouverture = existingProcedure.pv.ouverture;
       }
-      if (procedureData.pv.analyse === null && existingProcedure.pv?.analyse) {
-        procedureData.pv.analyse = existingProcedure.pv.analyse;
+      if (procedureData.pv.analyseTechnique === null && existingProcedure.pv?.analyseTechnique) {
+        procedureData.pv.analyseTechnique = existingProcedure.pv.analyseTechnique;
+      }
+      if (procedureData.pv.analyseFinanciere === null && existingProcedure.pv?.analyseFinanciere) {
+        procedureData.pv.analyseFinanciere = existingProcedure.pv.analyseFinanciere;
+      }
+      if (procedureData.pv.analyseTechFin === null && (existingProcedure.pv?.analyseTechFin || existingProcedure.pv?.analyse)) {
+        procedureData.pv.analyseTechFin = existingProcedure.pv.analyseTechFin || existingProcedure.pv.analyse;
       }
       if (procedureData.pv.jugement === null && existingProcedure.pv?.jugement) {
         procedureData.pv.jugement = existingProcedure.pv.jugement;
@@ -1027,7 +1092,13 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
 
   if (procedureResult.success) {
     logger.info('[Procedure] Procédure enregistrée avec succès');
-    alert('✅ Procédure enregistrée' + (isDerogation ? ' (avec dérogation)' : ''));
+    let msg = '✅ Procédure enregistrée' + (isDerogation ? ' (avec dérogation)' : '');
+    const warnings = window.__mpProcedureWarnings;
+    if (Array.isArray(warnings) && warnings.length > 0) {
+      msg += '\n\n⚠️ Champs incomplets ou incohérents (non bloquants) :\n• ' + warnings.join('\n• ');
+      delete window.__mpProcedureWarnings;
+    }
+    alert(msg);
     router.navigate('/mp/fiche-marche', { idOperation });
   } else {
     alert('❌ Erreur lors de la sauvegarde de la procédure');
