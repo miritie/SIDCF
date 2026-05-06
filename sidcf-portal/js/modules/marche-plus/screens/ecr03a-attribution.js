@@ -22,6 +22,16 @@ import {
 import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
+import { loadBanques } from '../../../lib/mp-banques.js';
+import { renderMontantPourcentageInput } from '../../../ui/widgets/montant-pourcentage-input.js';
+import { validateTaux, getLabelContraintes } from '../../../lib/mp-garanties-rules.js';
+
+// Cache local pour éviter de recharger les banques à chaque render
+let _banquesCache = null;
+async function getBanques() {
+  if (!_banquesCache) _banquesCache = await loadBanques();
+  return _banquesCache;
+}
 
 // État global pour les widgets
 let cleRepartitionList = [];
@@ -145,6 +155,17 @@ export async function renderAttribution(params) {
     // Déclencher la détection sanctions sur les valeurs initiales (chargement d'un attributaire existant)
     setTimeout(() => triggerSanctionCheck(), 150);
 
+    // Marché+ : remplir les selects banques (entreprise simple + mandataire) en async
+    setTimeout(() => {
+      populateBanqueSelect('attr-banque');
+      populateBanqueSelect('attr-mandataire-banque');
+    }, 100);
+
+    // Marché+ : instancier les widgets montant/% pour les 3 garanties
+    setTimeout(() => {
+      ['avance', 'bonne-exec', 'cautionnement'].forEach(id => initGarantieWidget(id));
+    }, 120);
+
   } catch (err) {
     logger.error('[ECR03A] Erreur chargement', err);
     mount('#app', el('div', { className: 'page' }, [
@@ -194,8 +215,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Montants
     renderMontantsSection(montantHT, montantTTC),
 
-    // Section Garanties (contextuelle)
-    renderGarantiesSection(existingAttr.garanties || {}, modePassation),
+    // Section Garanties (contextuelle) — Marché+ : on passe aussi le montant
+    // attribué pour que le widget montant/% puisse calculer les pourcentages.
+    renderGarantiesSection(existingAttr.garanties || {}, modePassation, montantHT || montantTTC || 0),
 
     // Section Réserves CF
     renderReservesCFSection(existingAttr.decisionCF || {}),
@@ -222,7 +244,15 @@ function renderAttributaireSection(attributaire, registries) {
   // Pour une entreprise simple, récupérer les infos
   const entrepriseSimple = singleOrGroup === 'SIMPLE' && existingEntreprises.length > 0
     ? existingEntreprises[0]
-    : { raisonSociale: '', ncc: '', adresse: '', telephone: '', email: '' };
+    : { raisonSociale: '', ncc: '', adresse: '', telephone: '', email: '', coordonneesBancaires: {} };
+  // Coordonnées bancaires (peuvent être absentes sur les anciens enregistrements)
+  const cbSimple = entrepriseSimple.coordonneesBancaires || {};
+
+  // Mandataire pour le groupement (idem)
+  const mandataire = singleOrGroup === 'GROUPEMENT' && existingEntreprises.length > 0
+    ? existingEntreprises[0]
+    : {};
+  const cbMandataire = mandataire.coordonneesBancaires || {};
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
@@ -329,7 +359,10 @@ function renderAttributaireSection(attributaire, registries) {
               placeholder: 'contact@entreprise.ci'
             })
           ])
-        ])
+        ]),
+
+        // Coordonnées bancaires (Marché+ — modif #18)
+        renderCoordonneesBancairesSection('attr', cbSimple)
       ]),
 
       // Section Groupement (simplifié pour l'instant)
@@ -403,6 +436,10 @@ function renderAttributaireSection(attributaire, registries) {
             })
           ])
         ]),
+
+        // Coordonnées bancaires du mandataire (Marché+ — modif #18)
+        renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
+
         // Liste des membres du groupement (à implémenter plus tard)
         el('div', { style: { marginTop: '16px', padding: '12px', backgroundColor: 'var(--color-gray-100)', borderRadius: '8px' } }, [
           el('div', { className: 'text-small text-muted' }, 'Les autres membres du groupement pourront être ajoutés ultérieurement.')
@@ -611,7 +648,7 @@ function calculerMontants() {
 /**
  * Section Garanties (contextuelle)
  */
-function renderGarantiesSection(garanties, modePassation) {
+function renderGarantiesSection(garanties, modePassation, montantTotal = 0) {
   // Pour PI, masquer complètement la section garanties
   if (isFieldHidden('garantieAvance', modePassation, 'attribution') &&
       isFieldHidden('garantieBonneExecution', modePassation, 'attribution')) {
@@ -631,7 +668,7 @@ function renderGarantiesSection(garanties, modePassation) {
   // Garantie d'avance (si non cachée)
   if (!isFieldHidden('garantieAvance', modePassation, 'attribution')) {
     garantiesVisibles.push(
-      renderGarantieItem('avance', 'Garantie d\'avance' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire)
+      renderGarantieItem('avance', 'Garantie d\'avance' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire, montantTotal, 'avance')
     );
   }
 
@@ -641,7 +678,7 @@ function renderGarantiesSection(garanties, modePassation) {
       garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
     }
     garantiesVisibles.push(
-      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire)
+      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire, montantTotal, 'bonneExec')
     );
   }
 
@@ -650,7 +687,7 @@ function renderGarantiesSection(garanties, modePassation) {
     garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
   }
   garantiesVisibles.push(
-    renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false)
+    renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false, montantTotal, 'cautionnement')
   );
 
   return el('div', { className: 'card' }, [
@@ -664,13 +701,176 @@ function renderGarantiesSection(garanties, modePassation) {
 /**
  * Item de garantie
  */
-function renderGarantieItem(id, label, garantie, required = false) {
+/**
+ * Section Coordonnées bancaires (Marché+ — modif #18)
+ * idPrefix : 'attr' (entreprise simple) ou 'attr-mandataire' (mandataire de groupement)
+ * Le select banque est rempli en async après le mount via populateBanqueSelect.
+ */
+function renderCoordonneesBancairesSection(idPrefix, cb) {
+  const data = cb || {};
+  return el('div', {
+    style: {
+      marginTop: '20px',
+      paddingTop: '16px',
+      borderTop: '1px dashed #d1d5db'
+    }
+  }, [
+    el('h4', {
+      style: { margin: '0 0 12px 0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }
+    }, ['🏦 Coordonnées bancaires']),
+    el('p', { className: 'text-small text-muted', style: { marginBottom: '12px' } },
+      'Nécessaires pour l\'émission des paiements en exécution.'),
+
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Banque'),
+        // Select rempli après mount via populateBanqueSelect()
+        el('select', {
+          className: 'form-input',
+          id: `${idPrefix}-banque`,
+          'data-selected': data.banque || ''
+        }, [
+          el('option', { value: '' }, '-- Chargement... --')
+        ])
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Agence'),
+        el('input', {
+          type: 'text',
+          className: 'form-input',
+          id: `${idPrefix}-banque-agence`,
+          value: data.agence || '',
+          placeholder: 'Plateau, Cocody, etc.'
+        })
+      ])
+    ]),
+
+    el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
+      el('label', { className: 'form-label' }, 'Numéro de compte (RIB / IBAN)'),
+      el('input', {
+        type: 'text',
+        className: 'form-input',
+        id: `${idPrefix}-banque-numero`,
+        value: data.numeroCompte || '',
+        placeholder: 'Ex: CI05 BICI 01040 0011 4555 0048 7'
+      })
+    ]),
+
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' } }, [
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Intitulé du compte'),
+        el('input', {
+          type: 'text',
+          className: 'form-input',
+          id: `${idPrefix}-banque-intitule`,
+          value: data.intituleCompte || '',
+          placeholder: 'Si différent de la raison sociale'
+        })
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'SWIFT / BIC'),
+        el('input', {
+          type: 'text',
+          className: 'form-input',
+          id: `${idPrefix}-banque-swift`,
+          value: data.swiftBic || '',
+          placeholder: 'BICIIVCIA, SGCIIVCI, ...'
+        })
+      ])
+    ])
+  ]);
+}
+
+// API des widgets garanties (montant/%) — clé : id ('avance', 'bonne-exec', 'cautionnement')
+const _garantieWidgetApis = {};
+
+function initGarantieWidget(id) {
+  const host = document.getElementById(`garantie-${id}-montant-host`);
+  if (!host) return;
+  const initMontant = parseFloat(host.dataset.initMontant) || 0;
+  const initMode = host.dataset.initMode || 'MONTANT';
+  const total = parseFloat(host.dataset.total) || 0;
+  const regleType = host.dataset.regleType || null;
+
+  const widget = renderMontantPourcentageInput({
+    id: `garantie-${id}-montant`,
+    total,
+    value: initMontant,
+    mode: initMode,
+    onChange: (montant /* mode */) => {
+      // Mettre à jour le warning seuil
+      updateGarantieWarning(id, montant, total, regleType);
+    }
+  });
+  host.innerHTML = '';
+  host.appendChild(widget);
+  _garantieWidgetApis[id] = widget._mpInput;
+  // Premier calcul du warning
+  updateGarantieWarning(id, initMontant, total, regleType);
+}
+
+function updateGarantieWarning(id, montant, total, regleType) {
+  const warnHost = document.getElementById(`garantie-${id}-warning`);
+  if (!warnHost) return;
+  warnHost.innerHTML = '';
+  if (!regleType || total <= 0 || montant <= 0) return;
+
+  const taux = (montant / total) * 100;
+  const v = validateTaux(regleType, taux);
+  if (v.severity === 'warning') {
+    const banner = el('div', {
+      style: {
+        padding: '6px 10px',
+        background: '#fffbeb',
+        border: '1px solid #fde68a',
+        borderLeft: '3px solid #f59e0b',
+        borderRadius: '4px',
+        fontSize: '12px',
+        color: '#92400e'
+      }
+    }, v.message);
+    warnHost.appendChild(banner);
+  } else if (v.severity === 'ok' && v.tauxMin != null) {
+    const banner = el('div', {
+      style: {
+        padding: '4px 8px',
+        fontSize: '11px',
+        color: '#16a34a'
+      }
+    }, `✓ ${v.message}`);
+    warnHost.appendChild(banner);
+  }
+}
+
+/**
+ * Remplit un <select> banque en async après le mount.
+ */
+async function populateBanqueSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const banques = await getBanques();
+  const selected = sel.getAttribute('data-selected') || '';
+  sel.innerHTML = '';
+  const opt0 = document.createElement('option');
+  opt0.value = ''; opt0.textContent = '-- Sélectionner --';
+  sel.appendChild(opt0);
+  banques.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.code;
+    opt.textContent = b.label;
+    if (b.code === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function renderGarantieItem(id, label, garantie, required = false, montantTotal = 0, regleType = null) {
   // Par défaut décoché, sauf si existe=true dans les données
   const isChecked = garantie.existe === true;
+  const contraintes = regleType ? getLabelContraintes(regleType) : '';
 
   return el('div', { style: { marginBottom: '16px' } }, [
-    el('div', { style: { marginBottom: '12px' } }, [
-      el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+    el('div', { style: { marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } }, [
+      el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px', margin: 0 } }, [
         el('input', {
           type: 'checkbox',
           id: `garantie-${id}-existe`,
@@ -683,7 +883,19 @@ function renderGarantieItem(id, label, garantie, required = false) {
           }
         }),
         el('span', { style: { fontWeight: 'bold' } }, label)
-      ])
+      ]),
+      // Badge contraintes légales (à droite du titre)
+      contraintes ? el('span', {
+        style: {
+          fontSize: '11px',
+          fontWeight: '600',
+          padding: '3px 8px',
+          borderRadius: '12px',
+          background: '#dbeafe',
+          color: '#1e40af',
+          border: '1px solid #93c5fd'
+        }
+      }, `📐 ${contraintes}`) : null
     ]),
 
     el('div', {
@@ -695,16 +907,18 @@ function renderGarantieItem(id, label, garantie, required = false) {
         paddingLeft: '24px'
       }
     }, [
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Montant (XOF)'),
-        el('input', {
-          type: 'number',
-          className: 'form-input',
-          id: `garantie-${id}-montant`,
-          value: garantie.montant,
-          min: 0,
-          step: 0.01
-        })
+      el('div', { className: 'form-field', style: { gridColumn: 'span 1' } }, [
+        el('label', { className: 'form-label' }, 'Montant ou %'),
+        // Host pour le widget montant/% — instancié après mount via initGarantieWidget
+        el('div', {
+          id: `garantie-${id}-montant-host`,
+          'data-init-montant': String(garantie.montant || 0),
+          'data-init-mode': garantie.saisieMode || 'MONTANT',
+          'data-total': String(montantTotal),
+          'data-regle-type': regleType || ''
+        }),
+        // Bandeau warning (caché par défaut, alimenté par le listener du widget)
+        el('div', { id: `garantie-${id}-warning`, style: { marginTop: '4px' } })
       ]),
 
       el('div', { className: 'form-field' }, [
@@ -963,28 +1177,37 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     let attributaireData;
     let raisonSocialeValidation;
 
+    // Helper pour collecter les coordonnées bancaires
+    const collectCoordonneesBancaires = (prefix) => {
+      const banque = document.getElementById(`${prefix}-banque`)?.value?.trim() || '';
+      const agence = document.getElementById(`${prefix}-banque-agence`)?.value?.trim() || '';
+      const numeroCompte = document.getElementById(`${prefix}-banque-numero`)?.value?.trim() || '';
+      const intituleCompte = document.getElementById(`${prefix}-banque-intitule`)?.value?.trim() || '';
+      const swiftBic = document.getElementById(`${prefix}-banque-swift`)?.value?.trim() || '';
+      // Ne renvoyer un objet que si au moins un champ est saisi
+      if (!banque && !agence && !numeroCompte && !intituleCompte && !swiftBic) return undefined;
+      return { banque, agence, numeroCompte, intituleCompte, swiftBic };
+    };
+
     if (attrType === 'SIMPLE') {
       const raisonSociale = document.getElementById('attr-raison-sociale')?.value?.trim() || '';
       const ncc = document.getElementById('attr-ncc')?.value?.trim() || '';
       const adresse = document.getElementById('attr-adresse')?.value?.trim() || '';
       const telephone = document.getElementById('attr-telephone')?.value?.trim() || '';
       const email = document.getElementById('attr-email')?.value?.trim() || '';
+      const coordonneesBancaires = collectCoordonneesBancaires('attr');
 
       raisonSocialeValidation = raisonSociale;
+
+      const ent = { role: 'TITULAIRE', raisonSociale, ncc, adresse, telephone, email };
+      if (coordonneesBancaires) ent.coordonneesBancaires = coordonneesBancaires;
 
       attributaireData = {
         singleOrGroup: 'SIMPLE',
         groupType: null,
         entrepriseId: null,
         groupementId: null,
-        entreprises: [{
-          role: 'TITULAIRE',
-          raisonSociale,
-          ncc,
-          adresse,
-          telephone,
-          email
-        }]
+        entreprises: [ent]
       };
     } else {
       // Groupement
@@ -994,22 +1217,19 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       const adresse = document.getElementById('attr-mandataire-adresse')?.value?.trim() || '';
       const telephone = document.getElementById('attr-mandataire-telephone')?.value?.trim() || '';
       const email = document.getElementById('attr-mandataire-email')?.value?.trim() || '';
+      const coordonneesBancaires = collectCoordonneesBancaires('attr-mandataire');
 
       raisonSocialeValidation = raisonSociale;
+
+      const ent = { role: 'MANDATAIRE', raisonSociale, ncc, adresse, telephone, email };
+      if (coordonneesBancaires) ent.coordonneesBancaires = coordonneesBancaires;
 
       attributaireData = {
         singleOrGroup: 'GROUPEMENT',
         groupType,
         entrepriseId: null,
         groupementId: null,
-        entreprises: [{
-          role: 'MANDATAIRE',
-          raisonSociale,
-          ncc,
-          adresse,
-          telephone,
-          email
-        }]
+        entreprises: [ent]
       };
     }
 
@@ -1028,8 +1248,22 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       return;
     }
 
-    // Garanties (simplifié pour l'instant - à enrichir plus tard)
-    // Note: Les garanties seront gérées plus tard
+    // Garanties (Marché+ — modif #18 : montant via widget montant/%)
+    const collectGarantie = (id) => {
+      const existe = document.getElementById(`garantie-${id}-existe`)?.checked === true;
+      if (!existe) return { existe: false, montant: 0 };
+      const api = _garantieWidgetApis[id];
+      const montant = api ? api.getMontant() : 0;
+      const saisieMode = api ? api.getMode() : 'MONTANT';
+      const dateEmission = document.getElementById(`garantie-${id}-emission`)?.value || null;
+      const dateEcheance = document.getElementById(`garantie-${id}-echeance`)?.value || null;
+      return { existe: true, montant, saisieMode, dateEmission, dateEcheance };
+    };
+    const garantiesData = {
+      garantieAvance: collectGarantie('avance'),
+      garantieBonneExec: collectGarantie('bonne-exec'),
+      cautionnement: collectGarantie('cautionnement')
+    };
 
     // Chercher si une attribution existe déjà pour cette opération
     const existingAttrs = await dataService.query(ENTITIES.MP_ATTRIBUTION, { operationId: idOperation });
@@ -1055,7 +1289,7 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
         motifRef: null,
         commentaire: ''
       },
-      garanties: {}
+      garanties: garantiesData
     };
 
     // Construit le patch : si lotId, les champs vont sous parLot[lotId]

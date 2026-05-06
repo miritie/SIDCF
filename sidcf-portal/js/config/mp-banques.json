@@ -1,0 +1,18 @@
+{
+  "_doc": "Référentiel des principales banques commerciales en Côte d'Ivoire (Marché+). Source : APBEF-CI / liste BCEAO.",
+  "banques": [
+    { "code": "BICICI",       "label": "BICICI — Banque Internationale pour le Commerce et l'Industrie de Côte d'Ivoire" },
+    { "code": "SGCI",         "label": "SGCI — Société Générale Côte d'Ivoire" },
+    { "code": "ECOBANK",      "label": "Ecobank Côte d'Ivoire" },
+    { "code": "NSIA",         "label": "NSIA Banque Côte d'Ivoire" },
+    { "code": "BACI",         "label": "BACI — Banque Atlantique Côte d'Ivoire" },
+    { "code": "BHCI",         "label": "BHCI — Banque de l'Habitat de Côte d'Ivoire" },
+    { "code": "BSIC",         "label": "BSIC — Banque Sahélo-Saharienne pour l'Investissement et le Commerce" },
+    { "code": "UBA",          "label": "UBA — United Bank for Africa Côte d'Ivoire" },
+    { "code": "BDU",          "label": "BDU-CI — Banque de l'Union" },
+    { "code": "VERSUS",       "label": "Versus Bank" },
+    { "code": "CORIS",        "label": "Coris Bank International Côte d'Ivoire" },
+    { "code": "BNI",          "label": "BNI — Banque Nationale d'Investissement" },
+    { "code": "AUTRE",        "label": "Autre / Non listée (préciser dans agence)" }
+  ]
+}
