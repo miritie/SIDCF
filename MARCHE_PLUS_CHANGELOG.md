@@ -13,6 +13,18 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-06 — Désactivation du module Marché historique
+
+> **Modif #15** — Marché historique masqué pour éviter l'ambiguïté dans la sidebar.
+
+### Modif #15 — `moduleMarche: false` dans app-config.json
+- **Description** :
+  - L'utilisateur testait sur le module **Marché** historique au lieu de **Marché+** (sidebar montrait les deux entrées « PPM & Opérations » côte-à-côte) → toutes les modifs Marché+ étaient invisibles.
+  - On désactive le module Marché via le feature flag `moduleMarche: false` dans `app-config.json`. Les routes `/ppm-list`, `/fiche-marche`, etc. ne sont plus enregistrées ; la carte du portail et la section sidebar disparaissent. **Les tables `operation`, `procedure`, etc. en base restent intactes** — réversible à tout moment en remettant `true`.
+  - Marché+ devient désormais le seul module marché visible.
+- **Fichier** : `sidcf-portal/js/config/app-config.json`
+- **Réversibilité** : remettre `"moduleMarche": true` dans `app-config.json` + F5.
+
 ## 2026-05-06 — Multi-lot bout en bout : sélecteur de lot pour les phases en aval
 
 > **Point traité** : **Modif #13** — extension du multi-lot (modif #12) à toutes les phases en aval. Chaque écran aval affiche un sélecteur de lot quand l'opération en comporte plusieurs ; les données sont stockées per-lot (back-compat préservée pour le mono-lot).

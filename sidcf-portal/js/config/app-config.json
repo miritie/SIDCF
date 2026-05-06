@@ -4,7 +4,7 @@
   "defaultLanguage": "fr",
   "dataProvider": "postgres",
   "features": {
-    "moduleMarche": true,
+    "moduleMarche": false,
     "moduleMarchePlus": true,
     "moduleInvestissement": true,
     "moduleMatiere": false,
