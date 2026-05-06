@@ -15,6 +15,9 @@ Format :
 
 ## 2026-05-06
 
+> **Point traité** : **Activité dans la chaîne programmatique + Contrôle disponibilité budgétaire**
+> Couvre les modifs #1 → #4 ci-dessous : restructuration du bloc Identification autour de l'Activité, recherche filtrable, multi-financement par opération, indicateur de disponibilité budgétaire avec warning de dépassement, et alignement du seed `MP_BUDGET_LINE` sur le référentiel.
+
 ### Modif #4 — Alignement des MP_BUDGET_LINE sur ua-activites.json
 - **Type** : alignement de données (DB only, pas de code)
 - **Description** :
