@@ -13,19 +13,29 @@ function createButton(className, text, onClick) {
   return btn;
 }
 
-// État global des filtres
+// État global des filtres — Marché+ : multi-select (arrays), array vide = tous
 let activeFilters = {
   search: '',
-  typeMarche: 'ALL',
-  modePassation: 'ALL',
-  etat: 'ALL',
-  typeFinancement: 'ALL',
-  bailleur: 'ALL',
-  categoriePrestation: 'ALL',
-  region: 'ALL',
-  exercice: 'ALL',
-  unite: 'ALL'
+  typeMarche: [],
+  modePassation: [],
+  etat: [],
+  typeFinancement: [],
+  bailleur: [],
+  categoriePrestation: [],
+  region: [],
+  exercice: [],
+  unite: [],
+  activite: []  // nouveau filtre Marché+
 };
+
+// Mapping des phases (états) — utilisé pour les KPIs
+const PHASES = [
+  { key: 'planification',     label: 'Planification',     icon: '📅', color: 'var(--color-warning)', etats: ['PLANIFIE'] },
+  { key: 'contractualisation', label: 'Contractualisation', icon: '📝', color: 'var(--color-info)',    etats: ['EN_PROC'] },
+  { key: 'attribution',        label: 'Attribution',        icon: '✅', color: '#0d6efd',              etats: ['ATTRIBUE', 'VISE'] },
+  { key: 'execution',          label: 'Exécution',          icon: '⚙️', color: '#6f42c1',              etats: ['EN_EXEC'] },
+  { key: 'cloture',            label: 'Clôture',            icon: '🏁', color: 'var(--color-gray-500)', etats: ['CLOS'] }
+];
 
 // Opération sélectionnée pour modal détails
 let selectedOperation = null;
@@ -39,23 +49,26 @@ export async function renderPPMList() {
   const exercices = [...new Set(operations.map(op => op.exercice).filter(Boolean))].sort((a, b) => b - a);
   const regions = [...new Set(operations.map(op => op.localisation?.region).filter(Boolean))].sort();
   const unites = [...new Set(operations.map(op => op.unite).filter(Boolean))].sort();
+  const activites = [...new Set(operations.map(op => op.chaineBudgetaire?.activiteLib).filter(Boolean))].sort();
 
   // Apply filters
   const filteredOps = applyFilters(operations);
 
-  // Calculate stats
+  // Calculate stats : total + montant + 1 KPI par phase
   const stats = {
     totalOperations: filteredOps.length,
-    totalMontant: filteredOps.reduce((sum, op) => sum + op.montantPrevisionnel, 0),
-    enExecution: filteredOps.filter(op => op.etat === 'EN_EXEC').length,
-    planifies: filteredOps.filter(op => op.etat === 'PLANIFIE').length
+    totalMontant: filteredOps.reduce((sum, op) => sum + (op.montantPrevisionnel || 0), 0),
+    parPhase: PHASES.reduce((acc, p) => {
+      acc[p.key] = filteredOps.filter(op => p.etats.includes(op.etat)).length;
+      return acc;
+    }, {})
   };
 
   const page = el('div', { className: 'page' }, [
     // Header
     el('div', { className: 'page-header' }, [
-      el('h1', { className: 'page-title' }, '📋 PPM & Opérations'),
-      el('p', { className: 'page-subtitle' }, `${stats.totalOperations} opération(s) - ${money(stats.totalMontant)}`),
+      el('h1', { className: 'page-title' }, '📋 PPM & Marchés et contrats'),
+      el('p', { className: 'page-subtitle' }, `${stats.totalOperations} marché(s) et contrat(s) — ${money(stats.totalMontant, 'F CFA')}`),
       el('div', { className: 'page-actions', style: { display: 'flex', gap: '12px' } }, [
         createButton('btn btn-secondary', '📤 Importer PPM', () => router.navigate('/mp/ppm-import')),
         createButton('btn btn-primary', '➕ Créer ligne PPM', () => router.navigate('/mp/ppm-create-line')),
@@ -63,23 +76,27 @@ export async function renderPPMList() {
       ])
     ]),
 
-    // Stats KPIs
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' } }, [
-      renderKPI('Total Opérations', stats.totalOperations, 'var(--color-primary)', '📁'),
-      renderKPI('Montant Total', money(stats.totalMontant), 'var(--color-success)', '💰'),
-      renderKPI('En exécution', stats.enExecution, 'var(--color-info)', '▶️'),
-      renderKPI('Planifiées', stats.planifies, 'var(--color-warning)', '📅')
+    // Stats KPIs — total + montant (rangée 1) puis 5 phases (rangée 2)
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '12px' } }, [
+      renderKPI('Total marchés et contrats', stats.totalOperations, 'var(--color-primary)', '📁'),
+      renderKPI('Montant Total (F CFA)', money(stats.totalMontant, 'F CFA'), 'var(--color-success)', '💰')
     ]),
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' } },
+      PHASES.map(p => renderKPI(p.label, stats.parPhase[p.key], p.color, p.icon))
+    ),
 
-    // Filters
+    // Filters — Marché+ : multi-sélection (tenir Cmd/Ctrl pour cocher plusieurs valeurs)
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, '🔍 Filtres'),
-        createButton('btn btn-sm btn-secondary', 'Réinitialiser', () => resetFilters())
+        el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [
+          el('span', { className: 'text-small text-muted' }, 'Multi-sélection : maintiens Cmd/Ctrl pour choisir plusieurs valeurs'),
+          createButton('btn btn-sm btn-secondary', 'Réinitialiser', () => resetFilters())
+        ])
       ]),
       el('div', { className: 'card-body' }, [
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
-          // Search
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
+          // Search (texte libre)
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Recherche'),
             el('input', {
@@ -91,98 +108,85 @@ export async function renderPPMList() {
             })
           ]),
 
-          // Exercice
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Exercice'),
-            el('select', { className: 'form-input', id: 'filter-exercice', value: activeFilters.exercice }, [
-              el('option', { value: 'ALL' }, 'Tous'),
-              ...exercices.map(ex => el('option', { value: ex }, String(ex)))
-            ])
-          ]),
+          // Activité (multi)
+          renderMultiSelectFilter(
+            'activite',
+            'Activité',
+            activites.map(a => ({ code: a, label: a })),
+            activeFilters.activite
+          ),
 
-          // Type marché
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Type de marché'),
-            el('select', { className: 'form-input', id: 'filter-typeMarche', value: activeFilters.typeMarche }, [
-              el('option', { value: 'ALL' }, 'Tous'),
-              ...(registries.TYPE_MARCHE || []).map(t =>
-                el('option', { value: t.code }, t.label)
-              )
-            ])
-          ]),
+          // Type marché (multi)
+          renderMultiSelectFilter(
+            'typeMarche',
+            'Type de marché',
+            registries.TYPE_MARCHE || [],
+            activeFilters.typeMarche
+          ),
 
-          // Mode passation
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Mode de passation'),
-            el('select', { className: 'form-input', id: 'filter-modePassation', value: activeFilters.modePassation }, [
-              el('option', { value: 'ALL' }, 'Tous'),
-              ...(registries.MODE_PASSATION || []).map(m =>
-                el('option', { value: m.code }, m.label)
-              )
-            ])
-          ]),
+          // Mode passation (multi)
+          renderMultiSelectFilter(
+            'modePassation',
+            'Mode de passation',
+            registries.MODE_PASSATION || [],
+            activeFilters.modePassation
+          ),
 
-          // État
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'État'),
-            el('select', { className: 'form-input', id: 'filter-etat', value: activeFilters.etat }, [
-              el('option', { value: 'ALL' }, 'Tous'),
-              ...(registries.ETAT_MARCHE || []).map(e =>
-                el('option', { value: e.code }, e.label)
-              )
-            ])
-          ]),
+          // État (multi)
+          renderMultiSelectFilter(
+            'etat',
+            'État',
+            registries.ETAT_MARCHE || [],
+            activeFilters.etat
+          ),
 
-          // Type financement
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Type financement'),
-            el('select', { className: 'form-input', id: 'filter-typeFinancement', value: activeFilters.typeFinancement }, [
-              el('option', { value: 'ALL' }, 'Tous'),
-              ...(registries.TYPE_FINANCEMENT || []).map(t =>
-                el('option', { value: t.code }, t.label)
-              )
-            ])
-          ]),
+          // Type financement (multi)
+          renderMultiSelectFilter(
+            'typeFinancement',
+            'Type financement',
+            registries.TYPE_FINANCEMENT || [],
+            activeFilters.typeFinancement
+          ),
 
-          // Bailleur
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Bailleur'),
-            el('select', { className: 'form-input', id: 'filter-bailleur', value: activeFilters.bailleur }, [
-              el('option', { value: 'ALL' }, 'Tous'),
-              ...(registries.BAILLEUR || []).map(b =>
-                el('option', { value: b.code }, b.label)
-              )
-            ])
-          ]),
+          // Bailleur (multi)
+          renderMultiSelectFilter(
+            'bailleur',
+            'Bailleur',
+            registries.BAILLEUR || [],
+            activeFilters.bailleur
+          ),
 
-          // Catégorie prestation
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Catégorie prestation'),
-            el('select', { className: 'form-input', id: 'filter-categoriePrestation', value: activeFilters.categoriePrestation }, [
-              el('option', { value: 'ALL' }, 'Toutes'),
-              ...(registries.CATEGORIE_PRESTATION || []).map(c =>
-                el('option', { value: c.code }, c.label)
-              )
-            ])
-          ]),
+          // Catégorie prestation (multi)
+          renderMultiSelectFilter(
+            'categoriePrestation',
+            'Catégorie prestation',
+            registries.CATEGORIE_PRESTATION || [],
+            activeFilters.categoriePrestation
+          ),
 
-          // Région
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Région'),
-            el('select', { className: 'form-input', id: 'filter-region', value: activeFilters.region }, [
-              el('option', { value: 'ALL' }, 'Toutes'),
-              ...regions.map(r => el('option', { value: r }, r))
-            ])
-          ]),
+          // Région (multi)
+          renderMultiSelectFilter(
+            'region',
+            'Région',
+            regions.map(r => ({ code: r, label: r })),
+            activeFilters.region
+          ),
 
-          // Unité Administrative (UA)
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Unité Administrative'),
-            el('select', { className: 'form-input', id: 'filter-unite', value: activeFilters.unite }, [
-              el('option', { value: 'ALL' }, 'Toutes'),
-              ...unites.map(u => el('option', { value: u }, u))
-            ])
-          ])
+          // Unité Administrative (multi) — toujours dispo dans les filtres
+          renderMultiSelectFilter(
+            'unite',
+            'Unité Administrative',
+            unites.map(u => ({ code: u, label: u })),
+            activeFilters.unite
+          ),
+
+          // Exercice (multi)
+          renderMultiSelectFilter(
+            'exercice',
+            'Exercice',
+            exercices.map(ex => ({ code: String(ex), label: String(ex) })),
+            activeFilters.exercice.map(String)
+          )
         ])
       ])
     ]),
@@ -199,7 +203,7 @@ export async function renderPPMList() {
           : el('div', { className: 'alert alert-info' }, [
               el('div', { className: 'alert-icon' }, '📭'),
               el('div', { className: 'alert-content' }, [
-                el('div', { className: 'alert-title' }, 'Aucune opération trouvée'),
+                el('div', { className: 'alert-title' }, 'Aucun marché trouvé'),
                 el('div', { className: 'alert-message' }, 'Ajustez les filtres ou créez une nouvelle ligne PPM')
               ])
             ])
@@ -214,6 +218,36 @@ export async function renderPPMList() {
 
   // Attach event listeners
   setupFilterListeners();
+}
+
+/**
+ * Helper : champ filtre <select multiple> avec hauteur fixée pour voir 4-5 options.
+ * options : tableau d'objets { code, label }
+ * selected : array des valeurs cochées
+ */
+function renderMultiSelectFilter(name, label, options, selected) {
+  const sel = el('select', {
+    className: 'form-input',
+    id: `filter-${name}`,
+    multiple: true,
+    size: 4,
+    style: { minHeight: '90px' }
+  }, options.map(o => {
+    const attrs = { value: o.code };
+    if (selected && selected.includes(o.code)) attrs.selected = 'selected';
+    return el('option', attrs, o.label);
+  }));
+
+  const count = selected ? selected.length : 0;
+  return el('div', { className: 'form-field' }, [
+    el('label', { className: 'form-label' }, [
+      label,
+      count > 0
+        ? el('span', { style: { marginLeft: '6px', fontSize: '11px', background: '#0f5132', color: '#fff', padding: '1px 6px', borderRadius: '10px' } }, String(count))
+        : null
+    ]),
+    sel
+  ]);
 }
 
 function renderKPI(label, value, color, icon) {
@@ -233,18 +267,18 @@ function renderKPI(label, value, color, icon) {
   ]);
 }
 
-// NOUVEAU: Tableau simplifié (colonnes essentielles uniquement)
+// Tableau simplifié — Marché+ : Activité en avant (UA dans les détails),
+// pas de colonne Exercice (filtre multi-select dispo sinon)
 function renderSimpleTable(operations, registries) {
   const table = el('div', { style: { overflowX: 'auto' } }, [
     el('table', { className: 'data-table' }, [
       el('thead', {}, [
         el('tr', {}, [
-          el('th', { style: { minWidth: '80px' } }, 'Exercice'),
-          el('th', { style: { minWidth: '200px' } }, 'UA'),
+          el('th', { style: { minWidth: '180px' } }, 'Activité'),
           el('th', { style: { minWidth: '300px' } }, 'Objet'),
           el('th', { style: { minWidth: '120px' } }, 'Type'),
           el('th', { style: { minWidth: '100px' } }, 'Mode'),
-          el('th', { style: { minWidth: '120px', textAlign: 'right' } }, 'Montant (M)'),
+          el('th', { style: { minWidth: '140px', textAlign: 'right' } }, 'Montant (M F CFA)'),
           el('th', { style: { minWidth: '100px' } }, 'Étape'),
           el('th', { style: { minWidth: '180px' } }, 'Actions')
         ])
@@ -262,18 +296,17 @@ function renderSimpleRow(op, registries) {
   const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === op.typeMarche);
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === op.modePassation);
   const etat = registries.ETAT_MARCHE?.find(e => e.code === op.etat);
-  const categorie = registries.CATEGORIE_PRESTATION?.find(c => c.code === op.categoriePrestation);
+  const activite = op.chaineBudgetaire?.activiteLib || op.chaineBudgetaire?.activite || '-';
 
   return el('tr', {
     style: { cursor: 'pointer' },
     onclick: () => router.navigate('/mp/fiche-marche', { idOperation: op.id })
   }, [
-    el('td', {}, String(op.exercice || '-')),
-    el('td', { className: 'text-small', title: op.unite },
-      op.unite?.length > 30 ? op.unite.substring(0, 30) + '...' : (op.unite || '-')
+    el('td', { className: 'text-small', title: activite, style: { fontWeight: '500' } },
+      activite.length > 30 ? activite.substring(0, 30) + '...' : activite
     ),
     el('td', { style: { fontWeight: '500' }, title: op.objet },
-      op.objet.length > 60 ? op.objet.substring(0, 60) + '...' : op.objet
+      (op.objet || '').length > 60 ? op.objet.substring(0, 60) + '...' : (op.objet || '')
     ),
     el('td', {}, ((typeMarche?.label || op.typeMarche || '-') + '').toUpperCase()),
     el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
@@ -321,7 +354,7 @@ function showDetailModal(operation, registries) {
     }, [
       // Header
       el('div', { className: 'modal-header' }, [
-        el('h2', { className: 'modal-title' }, '📋 Détails de l\'opération'),
+        el('h2', { className: 'modal-title' }, '📋 Détails du marché / contrat'),
         createButton('btn-close', '×', closeDetailModal)
       ]),
 
@@ -538,83 +571,44 @@ function closeDetailModal() {
   selectedOperation = null;
 }
 
+// Helpers : un filtre multi-select matche si le tableau est vide (= pas de filtre) OU contient la valeur
+function _matchMulti(arr, value) {
+  if (!arr || arr.length === 0) return true;
+  return arr.includes(value);
+}
+
 function applyFilters(operations) {
   return operations.filter(op => {
-    // Search
+    // Search texte libre
     if (activeFilters.search) {
       const search = activeFilters.search.toLowerCase();
       const matchObjet = op.objet?.toLowerCase().includes(search);
       const matchBenef = op.beneficiaire?.toLowerCase().includes(search);
       const matchLocalite = op.localisation?.localite?.toLowerCase().includes(search);
-      if (!matchObjet && !matchBenef && !matchLocalite) return false;
+      const matchActivite = op.chaineBudgetaire?.activiteLib?.toLowerCase().includes(search);
+      if (!matchObjet && !matchBenef && !matchLocalite && !matchActivite) return false;
     }
 
-    // Exercice
-    if (activeFilters.exercice !== 'ALL' && op.exercice !== Number(activeFilters.exercice)) {
-      return false;
-    }
-
-    // Type marché
-    if (activeFilters.typeMarche !== 'ALL' && op.typeMarche !== activeFilters.typeMarche) {
-      return false;
-    }
-
-    // Mode passation
-    if (activeFilters.modePassation !== 'ALL' && op.modePassation !== activeFilters.modePassation) {
-      return false;
-    }
-
-    // État
-    if (activeFilters.etat !== 'ALL' && op.etat !== activeFilters.etat) {
-      return false;
-    }
-
-    // Type financement
-    if (activeFilters.typeFinancement !== 'ALL' && op.typeFinancement !== activeFilters.typeFinancement) {
-      return false;
-    }
-
-    // Bailleur
-    if (activeFilters.bailleur !== 'ALL' && op.sourceFinancement !== activeFilters.bailleur) {
-      return false;
-    }
-
-    // Catégorie prestation
-    if (activeFilters.categoriePrestation !== 'ALL' && op.categoriePrestation !== activeFilters.categoriePrestation) {
-      return false;
-    }
-
-    // Région
-    if (activeFilters.region !== 'ALL' && op.localisation?.region !== activeFilters.region) {
-      return false;
-    }
-
-    // Unité Administrative (UA)
-    if (activeFilters.unite !== 'ALL' && op.unite !== activeFilters.unite) {
-      return false;
-    }
+    // Filtres multi-select : array vide = aucune restriction
+    if (!_matchMulti(activeFilters.exercice.map(Number), op.exercice)) return false;
+    if (!_matchMulti(activeFilters.typeMarche, op.typeMarche)) return false;
+    if (!_matchMulti(activeFilters.modePassation, op.modePassation)) return false;
+    if (!_matchMulti(activeFilters.etat, op.etat)) return false;
+    if (!_matchMulti(activeFilters.typeFinancement, op.typeFinancement)) return false;
+    if (!_matchMulti(activeFilters.bailleur, op.sourceFinancement)) return false;
+    if (!_matchMulti(activeFilters.categoriePrestation, op.categoriePrestation)) return false;
+    if (!_matchMulti(activeFilters.region, op.localisation?.region)) return false;
+    if (!_matchMulti(activeFilters.unite, op.unite)) return false;
+    if (!_matchMulti(activeFilters.activite, op.chaineBudgetaire?.activiteLib)) return false;
 
     return true;
   });
 }
 
 function setupFilterListeners() {
-  const inputs = {
-    search: document.getElementById('filter-search'),
-    exercice: document.getElementById('filter-exercice'),
-    typeMarche: document.getElementById('filter-typeMarche'),
-    modePassation: document.getElementById('filter-modePassation'),
-    etat: document.getElementById('filter-etat'),
-    typeFinancement: document.getElementById('filter-typeFinancement'),
-    bailleur: document.getElementById('filter-bailleur'),
-    categoriePrestation: document.getElementById('filter-categoriePrestation'),
-    region: document.getElementById('filter-region'),
-    unite: document.getElementById('filter-unite')
-  };
-
-  // Search with debounce
+  const searchInput = document.getElementById('filter-search');
   let searchTimeout;
-  inputs.search?.addEventListener('input', (e) => {
+  searchInput?.addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       activeFilters.search = e.target.value;
@@ -622,40 +616,33 @@ function setupFilterListeners() {
     }, 300);
   });
 
-  // Select filters
-  Object.entries(inputs).forEach(([key, input]) => {
-    if (key !== 'search' && input) {
-      input.addEventListener('change', (e) => {
-        activeFilters[key] = e.target.value;
-
-        // Logique automatique: Type financement → Bailleur
-        if (key === 'typeFinancement') {
-          const typeFin = e.target.value;
-          if (typeFin === 'ETAT') {
-            activeFilters.bailleur = 'TRESOR';
-            const bailSelect = document.getElementById('filter-bailleur');
-            if (bailSelect) bailSelect.value = 'TRESOR';
-          }
-        }
-
-        renderPPMList();
-      });
-    }
-  });
+  // Tous les filtres multi-select
+  const multiKeys = ['exercice', 'typeMarche', 'modePassation', 'etat', 'typeFinancement',
+                     'bailleur', 'categoriePrestation', 'region', 'unite', 'activite'];
+  for (const key of multiKeys) {
+    const input = document.getElementById(`filter-${key}`);
+    if (!input) continue;
+    input.addEventListener('change', () => {
+      // Récupérer toutes les valeurs sélectionnées
+      activeFilters[key] = Array.from(input.selectedOptions).map(o => o.value);
+      renderPPMList();
+    });
+  }
 }
 
 function resetFilters() {
   activeFilters = {
     search: '',
-    typeMarche: 'ALL',
-    modePassation: 'ALL',
-    etat: 'ALL',
-    typeFinancement: 'ALL',
-    bailleur: 'ALL',
-    categoriePrestation: 'ALL',
-    region: 'ALL',
-    exercice: 'ALL',
-    unite: 'ALL'
+    typeMarche: [],
+    modePassation: [],
+    etat: [],
+    typeFinancement: [],
+    bailleur: [],
+    categoriePrestation: [],
+    region: [],
+    exercice: [],
+    unite: [],
+    activite: []
   };
   renderPPMList();
 }

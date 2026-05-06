@@ -55,7 +55,7 @@ export function renderSidebar() {
         el('nav', { className: 'sidebar-nav' }, [
           el('a', { href: '#/mp/ppm-list', className: 'nav-item' }, [
             el('span', { className: 'nav-item-icon' }, '✨'),
-            el('span', {}, 'PPM & Opérations')
+            el('span', {}, 'PPM & Marchés/Contrats')
           ]),
           el('a', { href: '#/mp/dashboard', className: 'nav-item' }, [
             el('span', { className: 'nav-item-icon' }, '📊'),

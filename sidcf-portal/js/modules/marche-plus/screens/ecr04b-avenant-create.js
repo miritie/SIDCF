@@ -21,7 +21,7 @@ export async function renderAvenantCreate(params) {
 
   if (!idOperation) {
     mount('#app', el('div', { className: 'page' }, [
-      el('div', { className: 'alert alert-error' }, 'ID opération manquant')
+      el('div', { className: 'alert alert-error' }, 'ID marché manquant')
     ]));
     return;
   }
@@ -47,7 +47,7 @@ export async function renderAvenantCreate(params) {
 
     if (!operation) {
       mount('#app', el('div', { className: 'page' }, [
-        el('div', { className: 'alert alert-error' }, 'Opération non trouvée')
+        el('div', { className: 'alert alert-error' }, 'Marché / contrat introuvable')
       ]));
       return;
     }

@@ -19,7 +19,7 @@ export async function renderRecours(params) {
 
   if (!idOperation) {
     mount('#app', el('div', { className: 'page' }, [
-      el('div', { className: 'alert alert-error' }, 'ID opération manquant')
+      el('div', { className: 'alert alert-error' }, 'ID marché manquant')
     ]));
     return;
   }
@@ -28,7 +28,7 @@ export async function renderRecours(params) {
   const fullData = await dataService.getMpOperationFull(idOperation);
   if (!fullData?.operation) {
     mount('#app', el('div', { className: 'page' }, [
-      el('div', { className: 'alert alert-error' }, 'Opération non trouvée')
+      el('div', { className: 'alert alert-error' }, 'Marché / contrat introuvable')
     ]));
     return;
   }
