@@ -1,15 +1,23 @@
 /**
- * ECR03C - Engagement (avec Visa CF optionnel)
- * Permet l'engagement budgétaire et le visa CF si requis selon le type de procédure
- * Le visa CF n'est pas obligatoire pour toutes les procédures
+ * ECR03C — Approbation du marché (Marché+)
+ *
+ * Modif #16 : la phase autrefois nommée « Visa CF » devient « Approbation ».
+ * Le code interne (entité MP_VISA_CF, route /mp/visa-cf) est conservé pour
+ * éviter une migration DB ; seule l'UI change.
+ *
+ * Champs saisis :
+ *   - Organe approbateur (liste filtrée selon scope institution + montant)
+ *   - Date d'approbation
+ *   - Document associé (facultatif)
  */
 
 import { el, mount } from '../../../lib/dom.js';
 import logger from '../../../lib/logger.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { getLotsFromProcedure, resolveCurrentLotId, getLotData } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { getOrganesApplicables, getInstitutionScope } from '../../../lib/mp-organes-approbation.js';
 
 export async function renderVisaCF(params) {
   const { idOperation } = params;
@@ -21,10 +29,9 @@ export async function renderVisaCF(params) {
     return;
   }
 
-  logger.info('[ECR03C] Chargement écran Visa CF', { idOperation });
+  logger.info('[ECR03C] Chargement écran Approbation', { idOperation });
 
   try {
-    // Charger les données
     const fullData = await dataService.getMpOperationFull(idOperation);
     if (!fullData?.operation) {
       mount('#app', el('div', { className: 'page' }, [
@@ -34,52 +41,50 @@ export async function renderVisaCF(params) {
     }
 
     const { operation, attribution, procedure } = fullData;
-    const registries = dataService.getAllRegistries();
 
-    // Marché+ multi-lot : résoudre le lot courant depuis la procédure
     const lots = getLotsFromProcedure(procedure);
     const currentLotId = resolveCurrentLotId(lots, params);
 
-    // Vérifier qu'il y a une attribution
     if (!attribution) {
       mount('#app', el('div', { className: 'page' }, [
         el('div', { className: 'alert alert-warning' }, [
           el('p', {}, '⚠️ Cette opération n\'a pas encore d\'attribution.'),
-          el('p', {}, 'L\'engagement ne peut être fait qu\'après la contractualisation.')
+          el('p', {}, 'L\'approbation ne peut être enregistrée qu\'après la contractualisation.')
         ])
       ]));
       return;
     }
 
-    // Déterminer si le visa CF est requis selon le mode de passation
-    const modePassation = operation.modePassation || 'PSD';
-    const visaRequired = ['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation);
-
-    // Attribution scopée au lot pour l'affichage
     const attributionForLot = getLotData(attribution, currentLotId);
 
-    // Visa CF existant : on cherche d'abord dans MP_VISA_CF (filtré par lot),
-    // sinon fallback sur attribution.decisionCF (back-compat)
-    const allVisas = await dataService.query(ENTITIES.MP_VISA_CF, { operationId: idOperation });
-    const visasForLot = currentLotId
-      ? allVisas.filter(v => !v.lotId || v.lotId === currentLotId)
-      : allVisas;
-    let visaCF = (visasForLot && visasForLot.length > 0)
-      ? visasForLot[visasForLot.length - 1]
-      : (attributionForLot?.decisionCF || null);
+    // Récupérer une éventuelle approbation existante
+    const allApprobations = await dataService.query(ENTITIES.MP_VISA_CF, { operationId: idOperation });
+    const approbationsForLot = currentLotId
+      ? allApprobations.filter(v => !v.lotId || v.lotId === currentLotId)
+      : allApprobations;
+    const approbation = (approbationsForLot && approbationsForLot.length > 0)
+      ? approbationsForLot[approbationsForLot.length - 1]
+      : null;
+
+    // Charger les organes filtrés selon le scope (institution) et le montant
+    const montantRef = (attributionForLot?.montants?.attribue
+                       || attributionForLot?.montants?.ttc
+                       || attributionForLot?.montants?.ht
+                       || operation.montantPrevisionnel
+                       || 0);
+    const scope = getInstitutionScope();
+    const organesApplicables = await getOrganesApplicables({ scope, montant: montantRef });
 
     const page = el('div', { className: 'page' }, [
-      // Header
       el('div', { className: 'page-header' }, [
         el('button', {
           className: 'btn btn-secondary btn-sm',
           onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
         }, '← Retour fiche'),
-        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '📝 Engagement'),
+        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '✅ Approbation du marché'),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
 
-      // Sélecteur de lot (visible si > 1 lot)
       renderLotSelector({
         lots,
         currentLotId,
@@ -87,30 +92,20 @@ export async function renderVisaCF(params) {
         routeParams: { idOperation }
       }),
 
-      // Alerte sur le visa CF
-      visaRequired
-        ? el('div', { className: 'alert alert-info', style: { marginBottom: '24px' } }, [
-            el('div', { className: 'alert-icon' }, 'ℹ️'),
-            el('div', { className: 'alert-content' }, [
-              el('div', { className: 'alert-title' }, 'Visa du Contrôleur Financier requis'),
-              el('div', { className: 'alert-message' }, `Pour les procédures ${modePassation}, le visa CF est obligatoire avant l'engagement.`)
-            ])
-          ])
-        : el('div', { className: 'alert alert-success', style: { marginBottom: '24px' } }, [
-            el('div', { className: 'alert-icon' }, '✅'),
-            el('div', { className: 'alert-content' }, [
-              el('div', { className: 'alert-title' }, 'Visa CF non requis'),
-              el('div', { className: 'alert-message' }, `Pour les procédures ${modePassation}, le visa CF n'est pas obligatoire. Vous pouvez procéder directement à l'engagement.`)
-            ])
-          ]),
+      // Bandeau d'info contextuelle
+      el('div', { className: 'alert alert-info', style: { marginBottom: '24px' } }, [
+        el('div', { className: 'alert-icon' }, 'ℹ️'),
+        el('div', { className: 'alert-content' }, [
+          el('div', { className: 'alert-title' }, `Contexte : ${labelScope(scope)}`),
+          el('div', { className: 'alert-message' },
+            `Montant de référence : ${montantRef.toLocaleString('fr-FR')} XOF — ${organesApplicables.length} organe(s) applicable(s).`)
+        ])
+      ]),
 
-      // Section Informations Attribution
-      renderAttributionInfo(attributionForLot, operation, registries),
+      renderAttributionInfo(attributionForLot, operation),
 
-      // Formulaire Visa CF (seulement si requis ou si on veut quand même le renseigner)
-      renderVisaForm(visaCF, registries, visaRequired),
+      renderApprobationForm(approbation, organesApplicables, scope),
 
-      // Actions
       el('div', { className: 'card' }, [
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
@@ -123,7 +118,7 @@ export async function renderVisaCF(params) {
               type: 'button',
               className: 'btn btn-primary',
               onclick: async () => await handleSave(idOperation, attribution.id, currentLotId)
-            }, visaCF ? '💾 Mettre à jour le visa' : '✅ Enregistrer le visa')
+            }, approbation ? '💾 Mettre à jour l\'approbation' : '✅ Enregistrer l\'approbation')
           ])
         ])
       ])
@@ -132,31 +127,34 @@ export async function renderVisaCF(params) {
     mount('#app', page);
 
   } catch (err) {
-    logger.error('[ECR04A] Erreur chargement', err);
+    logger.error('[ECR03C] Erreur chargement', err);
     mount('#app', el('div', { className: 'page' }, [
       el('div', { className: 'alert alert-error' }, `❌ Erreur : ${err.message}`)
     ]));
   }
 }
 
-/**
- * Rendu des informations d'attribution
- * Compatible avec la structure JSONB (attributaire.nom, montants.attribue)
- */
-function renderAttributionInfo(attribution, operation, registries) {
-  // Support pour les deux structures (ancienne et nouvelle JSONB)
+function labelScope(scope) {
+  const map = {
+    'ADMIN_CENTRALE': 'Administration centrale',
+    'DECONCENTRE': 'Marché déconcentré',
+    'COLLECTIVITE_TERRITORIALE': 'Collectivité territoriale',
+    'SODE_SPFME': 'Société d\'État / SPFME',
+    'PROJET_COFINANCE': 'Projet cofinancé'
+  };
+  return map[scope] || scope;
+}
+
+function renderAttributionInfo(attribution, operation) {
   const attributaire = attribution.attributaire || {};
   const montants = attribution.montants || {};
-  const dates = attribution.dates || {};
 
-  // Nom de l'attributaire (nouvelle structure: nom, ancienne: entrepriseId)
-  const entrepriseInfo = attributaire.nom || attributaire.entrepriseId || 'Non renseigné';
+  const entrepriseInfo = attributaire.nom
+    || (attributaire.entreprises?.[0]?.raisonSociale)
+    || attributaire.entrepriseId
+    || 'Non renseigné';
 
-  // Montant (nouvelle structure: attribue, ancienne: ht/ttc)
   const montantPrincipal = montants.attribue || montants.ttc || montants.ht || 0;
-  const montantFormatted = typeof montantPrincipal === 'number'
-    ? montantPrincipal.toLocaleString('fr-FR')
-    : String(montantPrincipal);
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
@@ -169,331 +167,143 @@ function renderAttributionInfo(attribution, operation, registries) {
           el('div', { style: { fontWeight: 'bold' } }, entrepriseInfo)
         ]),
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'NIF'),
-          el('div', { style: { fontWeight: 'bold' } }, attributaire.nif || '-')
+          el('div', { className: 'text-small text-muted' }, 'NIF / NCC'),
+          el('div', { style: { fontWeight: 'bold' } }, attributaire.nif || attributaire.ncc || '-')
         ]),
         el('div', {}, [
           el('div', { className: 'text-small text-muted' }, 'Montant attribué'),
-          el('div', { style: { fontWeight: 'bold', color: '#0066cc' } }, `${montantFormatted} ${montants.devise || 'XOF'}`)
-        ])
-      ]),
-
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' } }, [
-        el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Référence contrat'),
-          el('div', {}, montants.referenceContrat || el('span', { className: 'text-muted' }, 'Non renseignée'))
-        ]),
-        el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Date attribution'),
-          el('div', {}, dates.attribution
-            ? new Date(dates.attribution).toLocaleDateString('fr-FR')
-            : el('span', { className: 'text-muted' }, 'Non renseignée'))
-        ]),
-        el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Délai exécution'),
-          el('div', {}, dates.delaiExecution ? `${dates.delaiExecution} jours` : el('span', { className: 'text-muted' }, 'Non renseigné'))
-        ])
-      ]),
-
-      // Adresse et contact
-      (attributaire.adresse || attributaire.contact) ? el('div', { style: { marginTop: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' } }, [
-        attributaire.adresse ? el('div', { className: 'text-small' }, `📍 ${attributaire.adresse}`) : null,
-        attributaire.contact ? el('div', { className: 'text-small', style: { marginTop: '4px' } }, `📞 ${attributaire.contact}`) : null
-      ]) : null,
-
-      // Réserves CF (si attribution contient déjà des réserves)
-      attribution.decisionCF?.aReserves
-        ? el('div', { style: { marginTop: '16px', padding: '12px', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffc107' } }, [
-            el('div', { style: { fontWeight: 'bold', marginBottom: '8px' } }, '⚠️ Réserves CF lors de l\'attribution :'),
-            el('div', { className: 'text-small' }, attribution.decisionCF.motifReserve || 'Non renseignées')
-          ])
-        : null
-    ])
-  ]);
-}
-
-/**
- * Rendu du formulaire de visa
- */
-function renderVisaForm(visaCF, registries, visaRequired = true) {
-  const existingVisa = visaCF || {};
-
-  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-    el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, visaRequired ? '✅ Décision du Contrôleur Financier' : '📋 Visa CF (optionnel)')
-    ]),
-    el('div', { className: 'card-body' }, [
-      // Décision
-      el('div', { className: 'form-field', style: { marginBottom: '24px' } }, [
-        el('label', { className: 'form-label' }, ['Décision', el('span', { className: 'required' }, '*')]),
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' } },
-          (registries.DECISION_CF || []).filter(d => d.code !== 'EN_ATTENTE').map(decision => {
-            const isSelected = existingVisa.decision === decision.code;
-            return el('label', {
-              className: 'form-label',
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px',
-                border: isSelected ? `2px solid ${getColorForDecision(decision.code)}` : '1px solid #dee2e6',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                backgroundColor: isSelected ? `${getColorForDecision(decision.code)}15` : '#fff'
-              }
-            }, [
-              el('input', {
-                type: 'radio',
-                name: 'visa-decision',
-                value: decision.code,
-                checked: isSelected,
-                required: true,
-                onchange: (e) => {
-                  // Afficher/masquer les sections conditionnelles
-                  const reservesSection = document.getElementById('visa-reserves-section');
-                  const refusSection = document.getElementById('visa-refus-section');
-
-                  if (reservesSection) reservesSection.style.display = e.target.value === 'VISA_RESERVE' ? 'block' : 'none';
-                  if (refusSection) refusSection.style.display = e.target.value === 'REFUS' ? 'block' : 'none';
-                }
-              }),
-              el('span', { style: { fontWeight: 'bold' } }, decision.label)
-            ]);
-          })
-        )
-      ]),
-
-      // Date de décision
-      el('div', { className: 'form-field', style: { marginBottom: '24px' } }, [
-        el('label', { className: 'form-label' }, ['Date de décision', el('span', { className: 'required' }, '*')]),
-        el('input', {
-          type: 'date',
-          className: 'form-input',
-          id: 'visa-date-decision',
-          value: existingVisa.dateDecision || new Date().toISOString().split('T')[0],
-          required: true,
-          max: new Date().toISOString().split('T')[0]
-        })
-      ]),
-
-      // Documents
-      el('h4', { style: { marginBottom: '16px', fontSize: '16px', fontWeight: 'bold' } }, '📎 Documents à joindre'),
-
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } }, [
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Contrat numéroté'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'visa-contrat-doc',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingVisa.contratDoc
-            ? el('small', { className: 'text-muted' }, `✓ Fichier existant : ${existingVisa.contratDoc}`)
-            : null
-        ]),
-
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Lettre de marché'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'visa-lettre-marche',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingVisa.lettreMarche
-            ? el('small', { className: 'text-muted' }, `✓ Fichier existant : ${existingVisa.lettreMarche}`)
-            : null
-        ]),
-
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Formulaire de sélection'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'visa-formulaire-selection',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingVisa.formulaireSelection
-            ? el('small', { className: 'text-muted' }, `✓ Fichier existant : ${existingVisa.formulaireSelection}`)
-            : null
-        ])
-      ]),
-
-      // Section réserves (conditionnelle)
-      el('div', {
-        id: 'visa-reserves-section',
-        style: {
-          display: existingVisa.decision === 'VISA_RESERVE' ? 'block' : 'none',
-          padding: '16px',
-          backgroundColor: '#fff3cd',
-          borderRadius: '4px',
-          marginBottom: '16px'
-        }
-      }, [
-        el('h4', { style: { marginBottom: '12px', fontSize: '16px', fontWeight: 'bold' } }, '⚠️ Réserves du CF'),
-
-        el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
-          el('label', { className: 'form-label' }, 'Type de réserve'),
-          el('select', {
-            className: 'form-input',
-            id: 'visa-type-reserve'
-          }, [
-            el('option', { value: '' }, '-- Sélectionner --'),
-            ...(registries.MOTIF_RESERVE || []).map(m =>
-              el('option', { value: m.code, selected: m.code === existingVisa.typeReserve }, m.label)
-            )
-          ])
-        ]),
-
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Motif détaillé'),
-          el('textarea', {
-            className: 'form-input',
-            id: 'visa-motif-reserve',
-            rows: 4,
-            placeholder: 'Décrire précisément les réserves émises...'
-          }, existingVisa.motifReserve || '')
-        ])
-      ]),
-
-      // Section refus (conditionnelle)
-      el('div', {
-        id: 'visa-refus-section',
-        style: {
-          display: existingVisa.decision === 'REFUS' ? 'block' : 'none',
-          padding: '16px',
-          backgroundColor: '#f8d7da',
-          borderRadius: '4px'
-        }
-      }, [
-        el('h4', { style: { marginBottom: '12px', fontSize: '16px', fontWeight: 'bold', color: '#721c24' } }, '❌ Motif du refus'),
-
-        el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
-          el('label', { className: 'form-label' }, 'Motif principal'),
-          el('select', {
-            className: 'form-input',
-            id: 'visa-motif-refus'
-          }, [
-            el('option', { value: '' }, '-- Sélectionner --'),
-            ...(registries.MOTIF_REFUS_CF || []).map(m =>
-              el('option', { value: m.code, selected: m.code === existingVisa.motifRefus }, m.label)
-            )
-          ])
-        ]),
-
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Commentaire détaillé'),
-          el('textarea', {
-            className: 'form-input',
-            id: 'visa-commentaire-refus',
-            rows: 4,
-            placeholder: 'Décrire les raisons du refus et les actions correctives attendues...'
-          }, existingVisa.commentaireRefus || '')
+          el('div', { style: { fontWeight: 'bold', color: '#0066cc' } },
+            `${(typeof montantPrincipal === 'number' ? montantPrincipal.toLocaleString('fr-FR') : montantPrincipal)} ${montants.devise || 'XOF'}`)
         ])
       ])
     ])
   ]);
 }
 
-/**
- * Sauvegarde du visa CF
- *
- * Marché+ multi-lot : si lotId est fourni, on l'enregistre sur le record
- * (chaque visa est rattaché à un lot précis ; null pour les opérations
- * mono-lot ou héritées).
- */
+function renderApprobationForm(approbation, organes, scope) {
+  const existing = approbation || {};
+  const today = new Date().toISOString().split('T')[0];
+
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '✅ Approbation')
+    ]),
+    el('div', { className: 'card-body' }, [
+      // Organe approbateur
+      el('div', { className: 'form-field', style: { marginBottom: '20px' } }, [
+        el('label', { className: 'form-label' }, [
+          'Organe approbateur',
+          el('span', { className: 'required' }, '*')
+        ]),
+        el('select', {
+          className: 'form-input',
+          id: 'app-organe',
+          required: true
+        }, [
+          el('option', { value: '' }, '-- Sélectionner --'),
+          ...organes.map(o => el('option', {
+            value: o.code,
+            selected: o.code === existing.organeApprobateur
+          }, formatOrganeOption(o)))
+        ]),
+        el('small', { className: 'text-muted', style: { marginTop: '4px', display: 'block' } },
+          `Liste filtrée selon le périmètre « ${labelScope(scope)} » et le montant du marché. ` +
+          `Sélectionnez « Autre / Non listé » si l'organe approbateur ne figure pas dans la liste.`)
+      ]),
+
+      // Date d'approbation
+      el('div', { className: 'form-field', style: { marginBottom: '20px' } }, [
+        el('label', { className: 'form-label' }, [
+          'Date d\'approbation',
+          el('span', { className: 'required' }, '*')
+        ]),
+        el('input', {
+          type: 'date',
+          className: 'form-input',
+          id: 'app-date',
+          value: existing.dateApprobation || existing.dateDecision || today,
+          required: true,
+          max: today
+        })
+      ]),
+
+      // Document associé (facultatif)
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Document d\'approbation (facultatif)'),
+        el('input', {
+          type: 'file',
+          className: 'form-input',
+          id: 'app-document',
+          accept: '.pdf,.doc,.docx,.png,.jpg,.jpeg'
+        }),
+        existing.documentApprobation
+          ? el('small', { className: 'text-muted' }, `✓ Fichier existant : ${existing.documentApprobation}`)
+          : el('small', { className: 'text-muted' }, 'Arrêté, décision, PV ou tout autre document justificatif')
+      ])
+    ])
+  ]);
+}
+
+function formatOrganeOption(o) {
+  let label = o.label;
+  if (o.delegation && o.delegataireDe) {
+    label += ' (par délégation)';
+  }
+  if (o.seuilMin != null || o.seuilMax != null) {
+    const min = o.seuilMin != null ? `${(o.seuilMin / 1_000_000).toFixed(0)}M` : '0';
+    const max = o.seuilMax != null ? `${(o.seuilMax / 1_000_000).toFixed(0)}M` : '∞';
+    label += ` — seuil ${min} – ${max} XOF`;
+  }
+  return label;
+}
+
 async function handleSave(idOperation, attributionId, lotId = null) {
   try {
-    const decision = document.querySelector('input[name="visa-decision"]:checked')?.value;
-    if (!decision) {
-      alert('⚠️ Veuillez sélectionner une décision');
+    const organeApprobateur = document.getElementById('app-organe')?.value;
+    if (!organeApprobateur) {
+      alert('⚠️ Veuillez sélectionner un organe approbateur');
+      return;
+    }
+    const dateApprobation = document.getElementById('app-date')?.value;
+    if (!dateApprobation) {
+      alert('⚠️ Veuillez saisir la date d\'approbation');
       return;
     }
 
-    const dateDecision = document.getElementById('visa-date-decision').value;
-    if (!dateDecision) {
-      alert('⚠️ Veuillez saisir la date de décision');
-      return;
-    }
+    // Document : pour l'instant on stocke juste le nom de fichier (upload R2 fait par l'écran avenant-create — on pourra brancher pareil ici plus tard)
+    const fileInput = document.getElementById('app-document');
+    const documentApprobation = fileInput?.files?.[0]?.name || null;
 
-    // Créer un enregistrement dans la table visa_cf
-    const visaCFData = {
+    const payload = {
       operationId: idOperation,
       attributionId: attributionId,
       lotId: lotId || null,
-      decision: decision === 'VISA_RESERVE' ? 'VISE_RESERVE' : decision === 'VISA' ? 'VISE' : decision,
-      dateDecision: dateDecision,
+      organeApprobateur,
+      dateApprobation,
+      documentApprobation,
+      // Rétro-compat schéma : la phase reste « approuvée » par défaut côté Marché+
+      decision: 'APPROUVE',
+      dateDecision: dateApprobation,
       createdAt: new Date().toISOString()
     };
 
-    // Réserves si VISA_RESERVE
-    if (decision === 'VISA_RESERVE') {
-      const motifReserve = document.getElementById('visa-motif-reserve').value || '';
-      if (!motifReserve.trim()) {
-        alert('⚠️ Veuillez préciser le motif des réserves');
-        return;
-      }
-      visaCFData.typeReserve = 'AUTRE';
-      visaCFData.motifReserve = motifReserve;
-    }
-
-    // Refus si REFUS
-    if (decision === 'REFUS') {
-      const motifRefus = document.getElementById('visa-motif-refus').value || null;
-      if (!motifRefus) {
-        alert('⚠️ Veuillez sélectionner un motif de refus');
-        return;
-      }
-      visaCFData.motifRefus = motifRefus;
-      visaCFData.commentaireRefus = document.getElementById('visa-commentaire-refus').value || '';
-    }
-
-    // Créer le visa CF
-    const visaResult = await dataService.add(ENTITIES.MP_VISA_CF, visaCFData);
-
-    if (!visaResult.success) {
-      alert('❌ Erreur lors de la sauvegarde du visa CF');
+    const result = await dataService.add(ENTITIES.MP_VISA_CF, payload);
+    if (!result.success) {
+      alert('❌ Erreur lors de la sauvegarde de l\'approbation');
       return;
     }
 
-    // Mettre à jour l'état de l'opération
-    const operation = await dataService.get(ENTITIES.MP_OPERATION, idOperation);
-    const updateOp = {
+    // L'opération passe à l'état VISE (rétro-compat — équivalent à « approuvée » côté Marché+)
+    await dataService.update(ENTITIES.MP_OPERATION, idOperation, {
+      etat: 'VISE',
       updatedAt: new Date().toISOString()
-    };
+    });
 
-    if (decision === 'VISA' || decision === 'VISA_RESERVE') {
-      updateOp.etat = 'VISE';
-    } else if (decision === 'REFUS') {
-      updateOp.etat = 'REFUSE';
-    }
-
-    const opResult = await dataService.update(ENTITIES.MP_OPERATION, idOperation, updateOp);
-
-    if (opResult.success) {
-      const icon = decision === 'VISA' ? '✅' : decision.includes('RESERVE') ? '⚠️' : '🚫';
-      alert(`${icon} Visa CF enregistré: ${decision}`);
-      router.navigate('/mp/fiche-marche', { idOperation });
-    } else {
-      alert('❌ Erreur lors de la mise à jour de l\'opération');
-    }
-
+    alert('✅ Approbation enregistrée');
+    router.navigate('/mp/fiche-marche', { idOperation });
   } catch (err) {
-    logger.error('[ECR04A] Erreur sauvegarde', err);
+    logger.error('[ECR03C] Erreur sauvegarde', err);
     alert(`❌ Erreur lors de la sauvegarde : ${err.message}`);
-  }
-}
-
-/**
- * Obtenir la couleur selon la décision
- */
-function getColorForDecision(code) {
-  switch (code) {
-    case 'VISA': return '#28a745';
-    case 'VISA_RESERVE': return '#ffc107';
-    case 'REFUS': return '#dc3545';
-    default: return '#6c757d';
   }
 }
 

@@ -69,7 +69,7 @@ export async function renderGaranties(params) {
       el('div', { className: 'alert alert-warning' }, [
         el('div', { className: 'alert-icon' }, '⚠️'),
         el('div', { className: 'alert-content' }, [
-          el('div', { className: 'alert-title' }, 'Visa CF non accordé'),
+          el('div', { className: 'alert-title' }, 'Approbation non accordée'),
           el('div', { className: 'alert-message' }, 'Les garanties ne sont requises qu\'après l\'obtention du visa CF.')
         ])
       ]),

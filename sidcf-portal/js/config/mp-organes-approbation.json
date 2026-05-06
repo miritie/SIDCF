@@ -1,0 +1,97 @@
+{
+  "_doc": "Référentiel des organes d'approbation des marchés publics — Côte d'Ivoire. Source : Décret 2021-909 + Arrêté 728/MPMB/DGBF/DMP + DISPOSITIF JURIDIQUE 2019.",
+  "_doc_filtrage": "scope = type d'institution applicable. seuilMin/seuilMax en FCFA (null = pas de borne). delegation = oui si organe par délégation d'une autorité supérieure.",
+  "organes": [
+    {
+      "code": "MINISTRE_TECHNIQUE",
+      "label": "Ministre Technique",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 100000000,
+      "seuilMax": 299999999,
+      "delegation": false
+    },
+    {
+      "code": "MINISTRE_MARCHES_PUBLICS",
+      "label": "Ministre en charge des Marchés Publics",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 300000000,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "DIR_MARCHES_PUBLICS",
+      "label": "Directeur des Marchés Publics (DMP)",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 300000000,
+      "seuilMax": 499999999,
+      "delegation": true,
+      "delegataireDe": "MINISTRE_MARCHES_PUBLICS"
+    },
+    {
+      "code": "DIR_CAB_ADJOINT_MMP",
+      "label": "Directeur de Cabinet Adjoint du Ministre des Marchés Publics",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 500000000,
+      "seuilMax": 999999999,
+      "delegation": true,
+      "delegataireDe": "MINISTRE_MARCHES_PUBLICS"
+    },
+    {
+      "code": "PREFET_DEPARTEMENT",
+      "label": "Préfet du Département",
+      "scope": "DECONCENTRE",
+      "seuilMin": 100000000,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "ORGANE_EXECUTIF_CT",
+      "label": "Organe exécutif de la collectivité territoriale",
+      "scope": "COLLECTIVITE_TERRITORIALE",
+      "seuilMin": 30000000,
+      "seuilMax": 100000000,
+      "delegation": false
+    },
+    {
+      "code": "CA_SODE_SPFME",
+      "label": "Conseil d'Administration (SODE / SPFME)",
+      "scope": "SODE_SPFME",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "DG_DELEGATION",
+      "label": "Directeur Général (par délégation du CA)",
+      "scope": "SODE_SPFME",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": true,
+      "delegataireDe": "CA_SODE_SPFME"
+    },
+    {
+      "code": "COORDONNATEUR_PROJET",
+      "label": "Coordonnateur du Projet",
+      "scope": "PROJET_COFINANCE",
+      "seuilMin": null,
+      "seuilMax": 1000000000,
+      "delegation": false
+    },
+    {
+      "code": "MINISTRE_MP_PROJET_GT_1MD",
+      "label": "Ministre des Marchés Publics (projets > 1 milliard)",
+      "scope": "PROJET_COFINANCE",
+      "seuilMin": 1000000000,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "AUTRE",
+      "label": "Autre / Non listé (préciser en commentaire)",
+      "scope": "*",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    }
+  ]
+}

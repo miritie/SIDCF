@@ -8,7 +8,7 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderStepsAsync } from '../../../ui/widgets/steps.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
-import { getPhasesAsync } from '../../../lib/phase-helper.js';
+import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);

@@ -146,7 +146,7 @@ export async function renderExecutionOS(params) {
       el('div', { className: 'alert alert-warning' }, [
         el('div', { className: 'alert-icon' }, '⚠️'),
         el('div', { className: 'alert-content' }, [
-          el('div', { className: 'alert-title' }, 'Visa CF non accordé'),
+          el('div', { className: 'alert-title' }, 'Approbation non accordée'),
           el('div', { className: 'alert-message' }, 'L\'exécution ne peut commencer que si le Contrôle Financier a accordé son visa favorable.')
         ])
       ]),

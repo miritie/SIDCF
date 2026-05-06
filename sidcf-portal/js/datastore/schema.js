@@ -892,25 +892,29 @@ export const SCHEMAS = {
   },
 
   MP_VISA_CF: {
+    // Marché+ — modif #16 : phase APPROBATION
+    // Le nom interne reste MP_VISA_CF (pas de migration DB), mais l'UI parle d'« Approbation ».
+    // Nouveau champ organeApprobateur (code du référentiel mp-organes-approbation.json).
+    // Les anciens champs (decision, motifReserve, etc.) restent pour rétro-compat
+    // mais ne sont plus saisis dans le formulaire Marché+.
     id: null,
     operationId: null,
     attributionId: null, // Lien avec l'attribution
 
-    // Décision du CF
-    decision: null, // VISA | VISA_RESERVE | REFUS (code from DECISION_CF registry)
-    dateDecision: null,
+    // Approbation (Marché+)
+    organeApprobateur: null,    // Code from mp-organes-approbation.json (ex: 'MINISTRE_TECHNIQUE')
+    dateApprobation: null,       // Date d'approbation (ISO)
+    documentApprobation: null,   // Document associé — facultatif (URL R2 ou nom de fichier)
 
-    // Documents
-    contratDoc: null, // Contrat numéroté, approuvé, enregistré
+    // === Champs hérités (rétro-compat avec Marché classique, non saisis en MP) ===
+    decision: 'APPROUVE',        // Toujours 'APPROUVE' côté Marché+ (la phase n'a plus 3 issues)
+    dateDecision: null,          // Conservé en miroir de dateApprobation
+    contratDoc: null,
     lettreMarche: null,
     formulaireSelection: null,
-
-    // Réserves (si VISA_RESERVE)
-    typeReserve: null, // code from MOTIF_RESERVE
-    motifReserve: '', // Texte libre
-
-    // Refus (si REFUS)
-    motifRefus: null, // code from MOTIF_REFUS
+    typeReserve: null,
+    motifReserve: '',
+    motifRefus: null,
     commentaireRefus: '',
 
     createdAt: null,
