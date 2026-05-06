@@ -734,16 +734,6 @@ function renderReservesCFSection(decisionCF) {
           })
         ]),
 
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Motif détaillé'),
-          el('textarea', {
-            className: 'form-input',
-            id: 'cf-motif-reserve',
-            rows: 3,
-            placeholder: 'Décrire les réserves émises par le CF...'
-          }, decisionCF.motifReserve || '')
-        ]),
-
         el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
           el('label', { className: 'form-label' }, 'Commentaire'),
           el('textarea', {
