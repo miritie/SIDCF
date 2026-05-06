@@ -685,15 +685,19 @@ export const SCHEMAS = {
     beneficiaire: '',
     livrables: [],
 
-    // Chaîne budgétaire complète
+    // Chaîne budgétaire complète (auto-déduite depuis activité + nature éco saisies)
     chaineBudgetaire: {
       section: '',
+      sectionCode: '',
       programme: '',
+      programmeCode: '',
       activite: '',
       activiteCode: '',
-      nature: '',
-      ligneBudgetaire: '',
-      bailleur: ''
+      nature: '',          // libellé Nature économique
+      natureCode: '',      // code Nature économique (NATURE_ECO registry)
+      ligneBudgetaire: '', // calculée : activiteCode + natureCode
+      bailleur: '',        // legacy : 1er bailleur (back-compat lecture)
+      bailleurs: []        // multi-bailleurs (codes)
     },
 
     // Localisation géographique

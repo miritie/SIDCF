@@ -1,5 +1,5 @@
 /* ============================================
-   ECR01D - Créer Ligne PPM
+   ECR01D - Créer Ligne PPM (Marché+)
    ============================================ */
 
 import { el, mount } from '../../../lib/dom.js';
@@ -15,9 +15,6 @@ function createButton(className, text, onClick) {
   return btn;
 }
 
-/**
- * Get selected option label from a select element
- */
 function getSelectLabel(selectId) {
   const select = document.getElementById(selectId);
   if (!select) return '';
@@ -25,11 +22,39 @@ function getSelectLabel(selectId) {
   return selectedOption?.textContent || '';
 }
 
+// Build a flat index: each entry = { activité } + UA + Programme + Section.
+// Drives the reverse cascade (pick activité → fills UA/Programme/Section).
+// _DEFAULT mappings are excluded — they'd be ambiguous (same activité in many UAs).
+function buildActiviteIndex(uaActivitesConfig, sections) {
+  const index = [];
+  for (const section of sections || []) {
+    for (const programme of section.programmes || []) {
+      for (const ua of programme.unites || []) {
+        const acts = uaActivitesConfig[ua.code];
+        if (!Array.isArray(acts)) continue;
+        for (const act of acts) {
+          index.push({
+            code: act.code,
+            libelle: act.libelle,
+            categorie: act.categorie,
+            uaCode: ua.code,
+            uaLabel: ua.label,
+            programmeCode: programme.code,
+            programmeLabel: programme.label,
+            sectionCode: section.code,
+            sectionLabel: section.label
+          });
+        }
+      }
+    }
+  }
+  return index;
+}
+
 export async function renderPPMCreateLine(params) {
   const registries = dataService.getAllRegistries();
   const currentYear = new Date().getFullYear();
 
-  // Load UA → Activités config
   let uaActivitesConfig = {};
   try {
     const response = await fetch('/js/config/ua-activites.json');
@@ -38,52 +63,58 @@ export async function renderPPMCreateLine(params) {
     logger.warn('[PPM Create] Could not load UA-Activités config', err);
   }
 
-  // State for livrables
+  const activiteIndex = buildActiviteIndex(uaActivitesConfig, registries.CHAINE_BUDGETAIRE?.sections);
+  if (activiteIndex.length === 0) {
+    logger.warn('[PPM Create] activiteIndex is empty — aucune UA n\'a de mapping explicite dans ua-activites.json');
+  }
+
   let livrablesList = [];
 
-  // Define handleSave function BEFORE creating the page
   async function handleSave(createAnother) {
-    // Collect form data
+    const bailleurs = Array.from(document.querySelectorAll('.bailleur-select'))
+      .map(s => s.value)
+      .filter(v => v);
+
+    const activiteCode = document.getElementById('activite')?.value || '';
+    const natureEcoCode = document.getElementById('natureEco')?.value || '';
+    const ligneBudgetaire = activiteCode && natureEcoCode ? `${activiteCode}${natureEcoCode}` : '';
+
     const formData = {
-      // Identification
       exercice: Number(document.getElementById('exercice')?.value),
-      unite: getSelectLabel('unite') || '', // UA label
-      uniteCode: document.getElementById('unite')?.value || '', // UA code
+      unite: getSelectLabel('unite') || '',
+      uniteCode: document.getElementById('unite')?.value || '',
       objet: document.getElementById('objet')?.value?.trim(),
 
-      // Classification
       typeMarche: document.getElementById('typeMarche')?.value,
       modePassation: document.getElementById('modePassation')?.value,
       revue: document.getElementById('revue')?.value || null,
       naturePrix: document.getElementById('naturePrix')?.value,
 
-      // Financier
       montantPrevisionnel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
       montantActuel: Number(document.getElementById('montantPrevisionnel')?.value) || 0,
       typeFinancement: document.getElementById('typeFinancement')?.value,
-      sourceFinancement: document.getElementById('sourceFinancement')?.value?.trim() || '',
+      sourceFinancement: bailleurs[0] || '',
 
-      // Chaîne budgétaire (avec cascades Section→Programme→UA)
       chaineBudgetaire: {
         section: getSelectLabel('section') || '',
         sectionCode: document.getElementById('section')?.value || '',
         programme: getSelectLabel('programme') || '',
         programmeCode: document.getElementById('programme')?.value || '',
         activite: getSelectLabel('activite') || '',
-        activiteCode: document.getElementById('activite')?.value || '',
-        ligneBudgetaire: document.getElementById('ligneBudgetaire')?.value?.trim() || '',
-        nature: '',
-        bailleur: document.getElementById('sourceFinancement')?.value || ''
+        activiteCode,
+        nature: getSelectLabel('natureEco') || '',
+        natureCode: natureEcoCode,
+        ligneBudgetaire,
+        bailleur: bailleurs[0] || '',
+        bailleurs
       },
 
-      // Technique
       delaiExecution: Number(document.getElementById('delaiExecution')?.value) || 0,
       dureePrevisionnelle: Number(document.getElementById('delaiExecution')?.value) || 0,
       categoriePrestation: document.getElementById('categoriePrestation')?.value || '',
       beneficiaire: document.getElementById('beneficiaire')?.value?.trim() || '',
-      livrables: livrablesList, // utilisation de la liste gérée par le widget
+      livrables: livrablesList,
 
-      // Localisation (cascading selects)
       localisation: {
         region: getSelectLabel('region') || '',
         regionCode: document.getElementById('region')?.value || '',
@@ -98,22 +129,31 @@ export async function renderPPMCreateLine(params) {
       }
     };
 
-    // Validation
-    if (!formData.objet || !formData.unite || !formData.typeMarche || !formData.modePassation) {
+    if (!formData.objet || !formData.uniteCode || !formData.typeMarche || !formData.modePassation) {
       alert('⚠️ Veuillez remplir tous les champs obligatoires');
       return;
     }
-
+    if (!activiteCode) {
+      alert('⚠️ Veuillez sélectionner une Activité (chaîne programmatique)');
+      return;
+    }
+    if (!natureEcoCode) {
+      alert('⚠️ Veuillez sélectionner la Nature économique');
+      return;
+    }
+    if (bailleurs.length === 0) {
+      alert('⚠️ Veuillez sélectionner au moins un bailleur');
+      return;
+    }
     if (formData.montantPrevisionnel <= 0) {
       alert('⚠️ Le montant prévisionnel doit être supérieur à 0');
       return;
     }
 
-    // Create operation
     const newOperationId = operationId();
     const operation = {
       id: newOperationId,
-      planId: null, // Unitaire, pas lié à un plan importé
+      planId: null,
       budgetLineId: null,
       ...formData,
       devise: 'XOF',
@@ -134,9 +174,16 @@ export async function renderPPMCreateLine(params) {
 
     if (createAnother) {
       alert('✅ Opération créée avec succès');
-      // Reset form
       document.getElementById('form-ppm-line')?.reset();
       document.getElementById('exercice').value = new Date().getFullYear();
+      ['unite', 'programme', 'section'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel) sel.innerHTML = '<option value="">-- Auto (selon activité) --</option>';
+      });
+      const ligne = document.getElementById('ligneBudgetaire');
+      if (ligne) ligne.value = '';
+      const bailleursList = document.getElementById('bailleurs-list');
+      if (bailleursList && bailleursList.__reset) bailleursList.__reset();
     } else {
       alert('✅ Opération créée avec succès');
       router.navigate('/mp/fiche-marche', { idOperation: newOperationId });
@@ -144,65 +191,96 @@ export async function renderPPMCreateLine(params) {
   }
 
   const page = el('div', { className: 'page' }, [
-    // Header
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour liste PPM', () => router.navigate('/mp/ppm-list')),
       el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '➕ Créer une nouvelle ligne PPM'),
       el('p', { className: 'page-subtitle' }, 'Saisie manuelle d\'une opération au Plan de Passation des Marchés')
     ]),
 
-    // Form
     el('form', { id: 'form-ppm-line', onsubmit: (e) => e.preventDefault() }, [
 
-      // Section: Identification
+      // ---- Identification : Activité = 1ʳᵉ saisie, déclenche les auto-sélections ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '📋 Identification')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Exercice
+
+            // Exercice (info fixe et globale, lecture seule)
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Exercice', el('span', { className: 'required' }, '*')]),
+              el('label', { className: 'form-label' }, 'Exercice'),
               el('input', {
                 type: 'number',
                 className: 'form-input',
                 id: 'exercice',
                 value: currentYear,
-                min: currentYear - 5,
-                max: currentYear + 5,
-                required: true
+                readonly: 'readonly',
+                style: { background: '#f3f4f6', cursor: 'not-allowed' }
               })
             ]),
 
-            // Section (Ministère)
+            // Activité (chaîne programmatique) — full width
+            el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
+              el('label', { className: 'form-label' }, ['Activité (chaîne programmatique)', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'activite', required: true },
+                [el('option', { value: '' }, '-- Sélectionner une activité --')]
+                  .concat(activiteIndex.map(a =>
+                    el('option', {
+                      value: a.code,
+                      'data-uacode': a.uaCode, 'data-ualabel': a.uaLabel,
+                      'data-progcode': a.programmeCode, 'data-proglabel': a.programmeLabel,
+                      'data-seccode': a.sectionCode, 'data-seclabel': a.sectionLabel
+                    }, `${a.libelle} — ${a.uaLabel}`)
+                  ))
+              )
+            ]),
+
+            // UA, Programme, Section : auto-remplis depuis Activité
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Section (Ministère)', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'section', required: true }, [
-                el('option', { value: '' }, '-- Sélectionner une section --'),
-                ...(registries.CHAINE_BUDGETAIRE?.sections || []).map(s =>
-                  el('option', { value: s.code, 'data-label': s.label }, s.label)
-                )
+              el('label', { className: 'form-label' }, 'Unité Administrative (UA)'),
+              el('select', { className: 'form-input', id: 'unite', disabled: 'disabled' }, [
+                el('option', { value: '' }, '-- Auto (selon activité) --')
+              ])
+            ]),
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, 'Programme'),
+              el('select', { className: 'form-input', id: 'programme', disabled: 'disabled' }, [
+                el('option', { value: '' }, '-- Auto (selon activité) --')
+              ])
+            ]),
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, 'Section (Ministère)'),
+              el('select', { className: 'form-input', id: 'section', disabled: 'disabled' }, [
+                el('option', { value: '' }, '-- Auto (selon activité) --')
               ])
             ]),
 
-            // Programme
+            // Nature économique (sélection explicite)
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Programme', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'programme', disabled: true, required: true }, [
-                el('option', { value: '' }, '-- Sélectionner une section d\'abord --')
-              ])
+              el('label', { className: 'form-label' }, ['Nature économique', el('span', { className: 'required' }, '*')]),
+              el('select', { className: 'form-input', id: 'natureEco', required: true },
+                [el('option', { value: '' }, '-- Sélectionner --')]
+                  .concat((registries.NATURE_ECO || []).map(n =>
+                    el('option', { value: n.code, 'data-label': n.label }, n.label)
+                  ))
+              )
             ]),
 
-            // Unité Administrative (UA)
+            // Ligne budgétaire calculée (activité + nature éco)
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Unité Administrative (UA)', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'unite', disabled: true, required: true }, [
-                el('option', { value: '' }, '-- Sélectionner un programme d\'abord --')
-              ])
+              el('label', { className: 'form-label' }, 'Ligne budgétaire (calculée)'),
+              el('input', {
+                type: 'text',
+                className: 'form-input',
+                id: 'ligneBudgetaire',
+                readonly: 'readonly',
+                placeholder: '— activité + nature économique —',
+                style: { background: '#f3f4f6', cursor: 'not-allowed' }
+              })
             ]),
 
-            // Objet marché
+            // Objet du marché (full width)
             el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
               el('label', { className: 'form-label' }, ['Objet du marché', el('span', { className: 'required' }, '*')]),
               el('textarea', {
@@ -217,68 +295,52 @@ export async function renderPPMCreateLine(params) {
         ])
       ]),
 
-      // Section: Classification
+      // ---- Classification du marché ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '🏷️ Classification du marché')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Type marché
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, ['Type de marché', el('span', { className: 'required' }, '*')]),
               el('select', { className: 'form-input', id: 'typeMarche', required: true }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.TYPE_MARCHE || []).map(t =>
-                  el('option', { value: t.code }, t.label)
-                )
+                ...(registries.TYPE_MARCHE || []).map(t => el('option', { value: t.code }, t.label))
               ])
             ]),
-
-            // Mode passation
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, ['Mode de passation', el('span', { className: 'required' }, '*')]),
               el('select', { className: 'form-input', id: 'modePassation', required: true }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.MODE_PASSATION || []).map(m =>
-                  el('option', { value: m.code }, m.label)
-                )
+                ...(registries.MODE_PASSATION || []).map(m => el('option', { value: m.code }, m.label))
               ])
             ]),
-
-            // Revue
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Revue'),
               el('select', { className: 'form-input', id: 'revue' }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.TYPE_REVUE || []).map(r =>
-                  el('option', { value: r.code }, r.label)
-                )
+                ...(registries.TYPE_REVUE || []).map(r => el('option', { value: r.code }, r.label))
               ])
             ]),
-
-            // Nature prix
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, ['Nature des prix', el('span', { className: 'required' }, '*')]),
               el('select', { className: 'form-input', id: 'naturePrix', required: true }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.NATURE_PRIX || []).map(n =>
-                  el('option', { value: n.code }, n.label)
-                )
+                ...(registries.NATURE_PRIX || []).map(n => el('option', { value: n.code }, n.label))
               ])
             ])
           ])
         ])
       ]),
 
-      // Section: Financier
+      // ---- Informations financières (multi-bailleurs) ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '💰 Informations financières')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Montant prévisionnel
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, ['Montant prévisionnel (XOF)', el('span', { className: 'required' }, '*')]),
               el('input', {
@@ -291,66 +353,35 @@ export async function renderPPMCreateLine(params) {
                 required: true
               })
             ]),
-
-            // Type financement
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, ['Type de financement', el('span', { className: 'required' }, '*')]),
               el('select', { className: 'form-input', id: 'typeFinancement', required: true }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.TYPE_FINANCEMENT || []).map(t =>
-                  el('option', { value: t.code }, t.label)
-                )
-              ])
-            ]),
-
-            // Bailleur (Source financement)
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, ['Bailleur', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'sourceFinancement', disabled: true, required: true }, [
-                el('option', { value: '' }, '-- Sélectionner type financement d\'abord --')
+                ...(registries.TYPE_FINANCEMENT || []).map(t => el('option', { value: t.code }, t.label))
               ])
             ])
+          ]),
+
+          el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
+            el('label', { className: 'form-label' }, ['Bailleurs', el('span', { className: 'required' }, '*')]),
+            el('div', { id: 'bailleurs-list' }),
+            el('button', {
+              type: 'button',
+              className: 'btn btn-sm btn-accent',
+              id: 'add-bailleur-btn',
+              style: { marginTop: '4px' }
+            }, '+ Ajouter un bailleur')
           ])
         ])
       ]),
 
-      // Section: Chaîne budgétaire
-      el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-        el('div', { className: 'card-header' }, [
-          el('h3', { className: 'card-title' }, '🔗 Chaîne budgétaire')
-        ]),
-        el('div', { className: 'card-body' }, [
-          el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Activité (sélection basée sur UA)
-            el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
-              el('label', { className: 'form-label' }, ['Activité', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'activite', disabled: true, required: true }, [
-                el('option', { value: '' }, '-- Sélectionner une UA d\'abord --')
-              ])
-            ]),
-
-            // Ligne budgétaire
-            el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Ligne budgétaire'),
-              el('input', {
-                type: 'text',
-                className: 'form-input',
-                id: 'ligneBudgetaire',
-                placeholder: 'Ex: 62200000'
-              })
-            ])
-          ])
-        ])
-      ]),
-
-      // Section: Technique
+      // ---- Informations techniques ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '⚙️ Informations techniques')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Délai exécution
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Délai d\'exécution (jours)'),
               el('input', {
@@ -361,19 +392,13 @@ export async function renderPPMCreateLine(params) {
                 placeholder: '30'
               })
             ]),
-
-            // Catégorie prestation
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Catégorie de prestation'),
               el('select', { className: 'form-input', id: 'categoriePrestation' }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                ...(registries.CATEGORIE_PRESTATION || []).map(c =>
-                  el('option', { value: c.code }, c.label)
-                )
+                ...(registries.CATEGORIE_PRESTATION || []).map(c => el('option', { value: c.code }, c.label))
               ])
             ]),
-
-            // Bénéficiaire
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Bénéficiaire'),
               el('input', {
@@ -387,7 +412,7 @@ export async function renderPPMCreateLine(params) {
         ])
       ]),
 
-      // Section: Livrables
+      // ---- Livrables ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '📦 Livrables')
@@ -395,76 +420,51 @@ export async function renderPPMCreateLine(params) {
         el('div', { className: 'card-body', id: 'livrables-container' })
       ]),
 
-      // Section: Localisation géographique (Cascading)
+      // ---- Localisation géographique (cascade région→dpt→SP→localité, inchangée) ----
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '📍 Localisation géographique')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-            // Région (cascading root)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Région'),
               el('select', { className: 'form-input', id: 'region' }, [
                 el('option', { value: '' }, '-- Sélectionner une région --'),
-                ...(registries.LOCALITE_CI?.regions || []).map(r =>
-                  el('option', { value: r.code, 'data-label': r.label }, r.label)
-                )
+                ...(registries.LOCALITE_CI?.regions || []).map(r => el('option', { value: r.code, 'data-label': r.label }, r.label))
               ])
             ]),
-
-            // Département (cascading level 2)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Département'),
               el('select', { className: 'form-input', id: 'departement', disabled: true }, [
                 el('option', { value: '' }, '-- Sélectionner une région d\'abord --')
               ])
             ]),
-
-            // Sous-préfecture (cascading level 3)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Sous-préfecture'),
               el('select', { className: 'form-input', id: 'sousPrefecture', disabled: true }, [
                 el('option', { value: '' }, '-- Sélectionner un département d\'abord --')
               ])
             ]),
-
-            // Localité (cascading level 4)
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Localité'),
               el('select', { className: 'form-input', id: 'localite', disabled: true }, [
                 el('option', { value: '' }, '-- Sélectionner une sous-préfecture d\'abord --')
               ])
             ]),
-
-            // Longitude
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Longitude'),
-              el('input', {
-                type: 'number',
-                className: 'form-input',
-                id: 'longitude',
-                step: '0.000001',
-                placeholder: 'Ex: -4.02290'
-              })
+              el('input', { type: 'number', className: 'form-input', id: 'longitude', step: '0.000001', placeholder: 'Ex: -4.02290' })
             ]),
-
-            // Latitude
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Latitude'),
-              el('input', {
-                type: 'number',
-                className: 'form-input',
-                id: 'latitude',
-                step: '0.000001',
-                placeholder: 'Ex: 5.33255'
-              })
+              el('input', { type: 'number', className: 'form-input', id: 'latitude', step: '0.000001', placeholder: 'Ex: 5.33255' })
             ])
           ])
         ])
       ]),
 
-      // Actions
+      // ---- Actions ----
       el('div', { className: 'card' }, [
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'space-between' } }, [
@@ -481,15 +481,11 @@ export async function renderPPMCreateLine(params) {
 
   mount('#app', page);
 
-  // Setup cascading dropdowns
-  setupChaineBudgetaireCascades(registries);
+  setupActiviteReverseCascade(activiteIndex);
+  setupNatureEcoLigneBudgetaire();
+  setupBailleursMulti(registries);
   setupLocalisationCascades(registries);
-  setupBailleurLogic(registries);
 
-  // Setup UA → Activités cascade
-  setupActiviteCascade(uaActivitesConfig);
-
-  // Render livrable manager
   const livrablesContainer = document.getElementById('livrables-container');
   if (livrablesContainer) {
     const livrableWidget = renderLivrableManager(livrablesList, registries, (updatedList) => {
@@ -499,173 +495,162 @@ export async function renderPPMCreateLine(params) {
   }
 }
 
-/**
- * Setup UA → Activités cascade
- */
-function setupActiviteCascade(uaActivitesConfig) {
-  const uniteSelect = document.getElementById('unite');
+/* ----------------------------------------------------------------------- */
+/* Reverse cascade : Activité → UA, Programme, Section (auto-rempli)        */
+/* ----------------------------------------------------------------------- */
+function setupActiviteReverseCascade(activiteIndex) {
   const activiteSelect = document.getElementById('activite');
-
-  if (!uniteSelect || !activiteSelect) return;
-
-  // Listen to UA selection changes
-  uniteSelect.addEventListener('change', (e) => {
-    const uaCode = e.target.value;
-
-    // Reset activité select
-    activiteSelect.innerHTML = '<option value="">-- Sélectionner une activité --</option>';
-    activiteSelect.disabled = !uaCode;
-
-    if (!uaCode) return;
-
-    // Get activités for this UA (or use _DEFAULT if not found)
-    const activites = uaActivitesConfig[uaCode] || uaActivitesConfig['_DEFAULT'] || [];
-
-    activites.forEach(act => {
-      const option = document.createElement('option');
-      option.value = act.code;
-      option.textContent = `${act.libelle} (${act.categorie})`;
-      option.dataset.libelle = act.libelle;
-      option.dataset.code = act.code;
-      option.dataset.categorie = act.categorie;
-      activiteSelect.appendChild(option);
-    });
-
-    activiteSelect.disabled = false;
-  });
-}
-
-/**
- * Setup cascading budget chain dropdowns (Section → Programme → UA)
- */
-function setupChaineBudgetaireCascades(registries) {
-  const sectionSelect = document.getElementById('section');
-  const programmeSelect = document.getElementById('programme');
   const uniteSelect = document.getElementById('unite');
+  const programmeSelect = document.getElementById('programme');
+  const sectionSelect = document.getElementById('section');
+  if (!activiteSelect || !uniteSelect || !programmeSelect || !sectionSelect) return;
 
-  if (!sectionSelect || !programmeSelect || !uniteSelect) return;
+  const resetTo = (select, placeholder) => {
+    select.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = placeholder;
+    select.appendChild(opt);
+  };
 
-  // Section change → populate Programme
-  sectionSelect.addEventListener('change', (e) => {
-    const sectionCode = e.target.value;
+  const fillSingle = (select, code, label) => {
+    select.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = label;
+    select.appendChild(opt);
+    select.value = code;
+  };
 
-    // Reset downstream selects
-    programmeSelect.innerHTML = '<option value="">-- Sélectionner un programme --</option>';
-    programmeSelect.disabled = !sectionCode;
-    uniteSelect.innerHTML = '<option value="">-- Sélectionner un programme d\'abord --</option>';
-    uniteSelect.disabled = true;
-
-    if (!sectionCode) return;
-
-    // Find section and populate programmes
-    const section = registries.CHAINE_BUDGETAIRE?.sections?.find(s => s.code === sectionCode);
-    if (section?.programmes) {
-      section.programmes.forEach(prog => {
-        const option = document.createElement('option');
-        option.value = prog.code;
-        option.textContent = prog.label;
-        option.dataset.label = prog.label;
-        programmeSelect.appendChild(option);
-      });
-      programmeSelect.disabled = false;
+  activiteSelect.addEventListener('change', (e) => {
+    const code = e.target.value;
+    if (!code) {
+      resetTo(uniteSelect, '-- Auto (selon activité) --');
+      resetTo(programmeSelect, '-- Auto (selon activité) --');
+      resetTo(sectionSelect, '-- Auto (selon activité) --');
+      computeLigneBudgetaire();
+      return;
     }
-  });
-
-  // Programme change → populate UA
-  programmeSelect.addEventListener('change', (e) => {
-    const sectionCode = sectionSelect.value;
-    const progCode = e.target.value;
-
-    // Reset downstream select
-    uniteSelect.innerHTML = '<option value="">-- Sélectionner une unité administrative --</option>';
-    uniteSelect.disabled = !progCode;
-
-    if (!progCode) return;
-
-    // Find programme and populate UAs
-    const section = registries.CHAINE_BUDGETAIRE?.sections?.find(s => s.code === sectionCode);
-    const programme = section?.programmes?.find(p => p.code === progCode);
-    if (programme?.unites && Array.isArray(programme.unites)) {
-      programme.unites.forEach(ua => {
-        const option = document.createElement('option');
-        option.value = ua.code;
-        option.textContent = ua.label;
-        option.dataset.label = ua.label;
-        option.dataset.zone = ua.zone;
-        uniteSelect.appendChild(option);
-      });
-      uniteSelect.disabled = false;
+    const entry = activiteIndex.find(a => a.code === code);
+    if (!entry) {
+      logger.warn('[PPM Create] Activité sans entrée dans activiteIndex :', code);
+      return;
     }
+    fillSingle(uniteSelect, entry.uaCode, entry.uaLabel);
+    fillSingle(programmeSelect, entry.programmeCode, entry.programmeLabel);
+    fillSingle(sectionSelect, entry.sectionCode, entry.sectionLabel);
+    computeLigneBudgetaire();
   });
 }
 
-/**
- * Setup bailleur logic based on type de financement
- */
-function setupBailleurLogic(registries) {
+function computeLigneBudgetaire() {
+  const actCode = document.getElementById('activite')?.value || '';
+  const natCode = document.getElementById('natureEco')?.value || '';
+  const input = document.getElementById('ligneBudgetaire');
+  if (!input) return;
+  input.value = actCode && natCode ? `${actCode}${natCode}` : '';
+}
+
+function setupNatureEcoLigneBudgetaire() {
+  const natureEcoSelect = document.getElementById('natureEco');
+  if (!natureEcoSelect) return;
+  natureEcoSelect.addEventListener('change', computeLigneBudgetaire);
+}
+
+/* ----------------------------------------------------------------------- */
+/* Multi-bailleurs : liste de selects + bouton "+ Ajouter un bailleur"     */
+/* ----------------------------------------------------------------------- */
+function setupBailleursMulti(registries) {
+  const list = document.getElementById('bailleurs-list');
+  const addBtn = document.getElementById('add-bailleur-btn');
   const typeFinancementSelect = document.getElementById('typeFinancement');
-  const sourceFinancementSelect = document.getElementById('sourceFinancement');
+  if (!list || !addBtn || !typeFinancementSelect) return;
 
-  if (!typeFinancementSelect || !sourceFinancementSelect) return;
-
-  typeFinancementSelect.addEventListener('change', (e) => {
-    const typeFin = e.target.value;
-
-    // Clear current selection
-    sourceFinancementSelect.innerHTML = '<option value="">-- Sélectionner un bailleur --</option>';
-
-    if (!typeFin) return;
-
-    // Filter bailleurs based on type financement
-    let bailleurs = [];
+  const getBailleurOptions = () => {
+    const typeFin = typeFinancementSelect.value;
+    if (!typeFin) return [];
     if (typeFin === 'ETAT') {
-      // Only Trésor for Budget de l'État
-      bailleurs = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'ETAT');
-    } else {
-      // All external bailleurs for Emprunt/Don
-      bailleurs = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'EXTERNE');
+      return (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'ETAT');
     }
+    return (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'EXTERNE');
+  };
 
-    bailleurs.forEach(b => {
-      const option = document.createElement('option');
-      option.value = b.code;
-      option.textContent = b.label;
-      sourceFinancementSelect.appendChild(option);
+  const populateSelect = (select) => {
+    const previous = select.value;
+    const opts = getBailleurOptions();
+    select.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = opts.length === 0
+      ? '-- Sélectionner type financement d\'abord --'
+      : '-- Sélectionner un bailleur --';
+    select.appendChild(placeholder);
+    opts.forEach(b => {
+      const o = document.createElement('option');
+      o.value = b.code;
+      o.textContent = b.label;
+      select.appendChild(o);
     });
+    if (previous && opts.find(b => b.code === previous)) select.value = previous;
+  };
 
-    // Auto-select if only one option
-    if (bailleurs.length === 1) {
-      sourceFinancementSelect.value = bailleurs[0].code;
-    }
-  });
+  const refreshAll = () => list.querySelectorAll('.bailleur-select').forEach(populateSelect);
+
+  const buildRow = (isFirst) => {
+    const row = document.createElement('div');
+    row.className = 'bailleur-row';
+    Object.assign(row.style, { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' });
+
+    const select = document.createElement('select');
+    select.className = 'form-input bailleur-select';
+    select.style.flex = '1';
+    if (isFirst) select.required = true;
+    populateSelect(select);
+    row.appendChild(select);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-sm btn-secondary';
+    removeBtn.textContent = '✕';
+    removeBtn.style.padding = '4px 10px';
+    removeBtn.title = 'Retirer ce bailleur';
+    removeBtn.addEventListener('click', () => {
+      if (list.querySelectorAll('.bailleur-row').length > 1) row.remove();
+    });
+    row.appendChild(removeBtn);
+    return row;
+  };
+
+  // expose reset for handleSave's "Enregistrer et créer nouveau" branch
+  list.__reset = () => {
+    list.innerHTML = '';
+    list.appendChild(buildRow(true));
+  };
+
+  list.appendChild(buildRow(true));
+  addBtn.addEventListener('click', () => list.appendChild(buildRow(false)));
+  typeFinancementSelect.addEventListener('change', refreshAll);
 }
 
-/**
- * Setup cascading location dropdowns
- */
+/* ----------------------------------------------------------------------- */
+/* Localisation cascade (région→département→sous-préf→localité)            */
+/* ----------------------------------------------------------------------- */
 function setupLocalisationCascades(registries) {
   const regionSelect = document.getElementById('region');
   const deptSelect = document.getElementById('departement');
   const spSelect = document.getElementById('sousPrefecture');
   const localiteSelect = document.getElementById('localite');
-
   if (!regionSelect || !deptSelect || !spSelect || !localiteSelect) return;
 
-  // Région change → populate Département
   regionSelect.addEventListener('change', (e) => {
     const regionCode = e.target.value;
-
-    // Reset downstream selects
     deptSelect.innerHTML = '<option value="">-- Sélectionner un département --</option>';
     deptSelect.disabled = !regionCode;
     spSelect.innerHTML = '<option value="">-- Sélectionner un département d\'abord --</option>';
     spSelect.disabled = true;
     localiteSelect.innerHTML = '<option value="">-- Sélectionner une sous-préfecture d\'abord --</option>';
     localiteSelect.disabled = true;
-
     if (!regionCode) return;
-
-    // Find region and populate départements
     const region = registries.LOCALITE_CI?.regions?.find(r => r.code === regionCode);
     if (region?.departements) {
       region.departements.forEach(dept => {
@@ -679,20 +664,14 @@ function setupLocalisationCascades(registries) {
     }
   });
 
-  // Département change → populate Sous-préfecture
   deptSelect.addEventListener('change', (e) => {
     const regionCode = regionSelect.value;
     const deptCode = e.target.value;
-
-    // Reset downstream selects
     spSelect.innerHTML = '<option value="">-- Sélectionner une sous-préfecture --</option>';
     spSelect.disabled = !deptCode;
     localiteSelect.innerHTML = '<option value="">-- Sélectionner une sous-préfecture d\'abord --</option>';
     localiteSelect.disabled = true;
-
     if (!deptCode) return;
-
-    // Find département and populate sous-préfectures
     const region = registries.LOCALITE_CI?.regions?.find(r => r.code === regionCode);
     const dept = region?.departements?.find(d => d.code === deptCode);
     if (dept?.sousPrefectures) {
@@ -707,19 +686,13 @@ function setupLocalisationCascades(registries) {
     }
   });
 
-  // Sous-préfecture change → populate Localité
   spSelect.addEventListener('change', (e) => {
     const regionCode = regionSelect.value;
     const deptCode = deptSelect.value;
     const spCode = e.target.value;
-
-    // Reset downstream select
     localiteSelect.innerHTML = '<option value="">-- Sélectionner une localité --</option>';
     localiteSelect.disabled = !spCode;
-
     if (!spCode) return;
-
-    // Find sous-préfecture and populate localités
     const region = registries.LOCALITE_CI?.regions?.find(r => r.code === regionCode);
     const dept = region?.departements?.find(d => d.code === deptCode);
     const sp = dept?.sousPrefectures?.find(s => s.code === spCode);
