@@ -245,8 +245,7 @@ function renderSimpleTable(operations, registries) {
           el('th', { style: { minWidth: '120px' } }, 'Type'),
           el('th', { style: { minWidth: '100px' } }, 'Mode'),
           el('th', { style: { minWidth: '120px', textAlign: 'right' } }, 'Montant (M)'),
-          el('th', { style: { minWidth: '120px', textAlign: 'center' } }, 'Bailleur'),
-          el('th', { style: { minWidth: '100px' } }, 'État'),
+          el('th', { style: { minWidth: '100px' } }, 'Étape'),
           el('th', { style: { minWidth: '180px' } }, 'Actions')
         ])
       ]),
@@ -264,7 +263,6 @@ function renderSimpleRow(op, registries) {
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === op.modePassation);
   const etat = registries.ETAT_MARCHE?.find(e => e.code === op.etat);
   const categorie = registries.CATEGORIE_PRESTATION?.find(c => c.code === op.categoriePrestation);
-  const bailleur = registries.BAILLEUR?.find(b => b.code === op.sourceFinancement);
 
   return el('tr', {
     style: { cursor: 'pointer' },
@@ -280,9 +278,6 @@ function renderSimpleRow(op, registries) {
     el('td', {}, typeMarche?.label || op.typeMarche || '-'),
     el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
     el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
-    el('td', { className: 'text-small', style: { textAlign: 'center' }, title: bailleur?.label },
-      bailleur?.code || op.sourceFinancement || '-'
-    ),
     el('td', {},
       el('span', {
         className: `badge badge-${etat?.color || 'gray'}`,

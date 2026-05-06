@@ -13,7 +13,20 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
-## 2026-05-06
+## 2026-05-06 — Ajustement Liste PPM
+
+> **Point traité** : **Ajustement Liste PPM**
+> Couvre la modif #5 ci-dessous.
+
+### Modif #5 — Liste PPM : « État » → « Étape » + retrait colonne Bailleur
+- **Écran touché** : `/mp/ppm-list` (`ecr01b-ppm-unitaire.js`)
+- **Description** :
+  - Le libellé de la colonne **« État »** est renommé en **« Étape »** (correspond mieux à la sémantique : étape du workflow PPM, pas un état arbitraire).
+  - La colonne **« Bailleur »** est retirée du tableau. Avec le multi-financement (modif #3), une opération peut avoir plusieurs bailleurs — afficher juste le premier en colonne devient trompeur. L'information bailleur reste accessible dans les écrans de détail (fiche marché, etc.).
+  - Le filtre « Bailleur » du bloc Filtres est conservé (filtre sur `sourceFinancement` legacy = 1er bailleur), à revoir lors d'une future modif si on veut un filtrage multi-bailleur intelligent.
+- **Fichier** :
+  - `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` (en-tête `<th>` et cellule `<td>` Bailleur retirées, libellé colonne État → Étape)
+- **Impact** : UI uniquement. Pas de changement de données ni de Worker.
 
 > **Point traité** : **Activité dans la chaîne programmatique + Contrôle disponibilité budgétaire**
 > Couvre les modifs #1 → #4 ci-dessous : restructuration du bloc Identification autour de l'Activité, recherche filtrable, multi-financement par opération, indicateur de disponibilité budgétaire avec warning de dépassement, et alignement du seed `MP_BUDGET_LINE` sur le référentiel.
