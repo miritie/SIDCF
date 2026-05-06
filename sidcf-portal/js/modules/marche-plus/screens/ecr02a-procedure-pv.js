@@ -237,8 +237,13 @@ export async function renderProcedurePV(params) {
     }
 
     // Lots & procédure par lot (Marché+ multi-lot)
+    // On l'active pour TOUS les modes sauf PSD (Procédure Simplifiée d'Entente
+    // Directe — par nature mono-fournisseur, pas de notion de lot).
+    // Couvre ainsi PSC/PSL/PSO/AOO/PI (config explicite) ET CI/AOR/DEM/
+    // ENTENTE_DIRECTE qui n'ont pas info_lots configuré dans rules-config.
     const lotsContainer = document.getElementById('lots-container');
-    if (hasLotsManagement(mode)) {
+    const shouldShowLots = mode && mode !== 'PSD';
+    if (shouldShowLots) {
       lotsContainer.innerHTML = '';
 
       // Migration : si pas de lots, mais on a des dates/pv/nbOffres legacy
