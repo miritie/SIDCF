@@ -58,8 +58,11 @@ async function boot() {
     // Portal
     router.register('/portal', renderPortalHome);
 
-    // Modules
-    registerMarcheRoutes();
+    // Modules — chaque module conditionnel sur son flag (sinon ses routes
+    // restent accessibles par URL directe même si la carte/sidebar est masquée)
+    if (dataService.getConfig()?.features?.moduleMarche) {
+      registerMarcheRoutes();
+    }
     if (dataService.getConfig()?.features?.moduleMarchePlus) {
       registerMarchePlusRoutes();
     }
