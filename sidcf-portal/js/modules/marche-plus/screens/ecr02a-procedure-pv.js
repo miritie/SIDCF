@@ -16,7 +16,7 @@ import {
   createProcedureInfoAlert
 } from '../../../lib/procedure-context.js';
 import { SoumissionnairesWidget } from '../../../widgets/soumissionnaires-widget.js';
-import { LotsWidget } from '../../../widgets/lots-widget.js';
+import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -60,7 +60,8 @@ export async function renderProcedurePV(params) {
 
   // Widgets instances
   let soumissionnairesWidget = null;
-  let lotsWidget = null;
+  // Marché+ : multi-lot procedure — lots[] avec libellé + nb offres + dates + PVs
+  let lotsState = [];
 
   const page = el('div', { className: 'page' }, [
     // Timeline
@@ -147,7 +148,7 @@ export async function renderProcedurePV(params) {
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
           createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/fiche-marche', { idOperation })),
           createButton('btn btn-primary', 'Enregistrer & Continuer', async () => {
-            await handleSave(idOperation, selectedMode, derogationJustif, derogationComment, suggestedCodes, soumissionnairesWidget, lotsWidget);
+            await handleSave(idOperation, selectedMode, derogationJustif, derogationComment, suggestedCodes, soumissionnairesWidget, lotsState);
           })
         ])
       ])
@@ -223,10 +224,6 @@ export async function renderProcedurePV(params) {
         showSanctionStatus: true,
         onChange: (soumissionnaires) => {
           logger.info('[Procedure] Soumissionnaires updated:', soumissionnaires);
-          // Update lots widget with new soumissionnaires
-          if (lotsWidget) {
-            lotsWidget.setSoumissionnaires(soumissionnaires);
-          }
         }
       });
 
@@ -239,14 +236,31 @@ export async function renderProcedurePV(params) {
       soumissionnairesWidget = null;
     }
 
-    // Lots management
+    // Lots & procédure par lot (Marché+ multi-lot)
     const lotsContainer = document.getElementById('lots-container');
     if (hasLotsManagement(mode)) {
       lotsContainer.innerHTML = '';
 
+      // Migration : si pas de lots, mais on a des dates/pv/nbOffres legacy
+      // au niveau procedure → on construit un lot 1 unique depuis ces valeurs.
+      let initialLots = procedureData?.lots && procedureData.lots.length > 0
+        ? procedureData.lots
+        : null;
+      if (!initialLots && procedureData && (procedureData.dates || procedureData.pv || procedureData.nbOffresRecues)) {
+        initialLots = [{
+          id: undefined,
+          numero: 1,
+          libelle: operation.objet || '',
+          nbOffresRecues: procedureData.nbOffresRecues || 0,
+          nbOffresClassees: procedureData.nbOffresClassees || 0,
+          dates: procedureData.dates || {},
+          pv: procedureData.pv || {}
+        }];
+      }
+
       const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
-          el('h3', { className: 'card-title' }, '📦 Gestion des lots')
+          el('h3', { className: 'card-title' }, '📦 Lots & procédure par lot')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { id: 'lots-widget-root' })
@@ -255,26 +269,19 @@ export async function renderProcedurePV(params) {
 
       lotsContainer.appendChild(card);
 
-      // Initialize widget
-      lotsWidget = new LotsWidget('lots-widget-root', {
-        allowAdd: true,
-        allowEdit: true,
-        allowDelete: true,
-        showLivrables: true,
-        showSoumissionnaires: true,
-        soumissionnaires: soumissionnairesWidget ? soumissionnairesWidget.getData() : [],
-        onChange: (lots) => {
-          logger.info('[Procedure] Lots updated:', lots);
-        }
-      });
-
-      // Load existing data if available
-      if (procedureData?.lots) {
-        lotsWidget.loadData(procedureData.lots);
-      }
+      const widget = renderLotsProcedureMP(
+        initialLots || [],
+        { defaultLibelle: operation.objet || '' },
+        (updated) => { lotsState = updated; }
+      );
+      document.getElementById('lots-widget-root').appendChild(widget);
+      // Initialise lotsState avec la valeur courante (le widget le settera aussi via onChange dès la 1ʳᵉ interaction)
+      lotsState = initialLots && initialLots.length > 0
+        ? initialLots
+        : [{ numero: 1, libelle: operation.objet || '', nbOffresRecues: 0, nbOffresClassees: 0, dates: {}, pv: {} }];
     } else {
       lotsContainer.innerHTML = '';
-      lotsWidget = null;
+      lotsState = [];
     }
   }
 }
@@ -648,155 +655,15 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           existingProc.dossierAppelDoc ? el('small', { className: 'text-success' }, `✓ ${existingProc.dossierAppelDoc}`) : null
         ]),
 
-        // Nombre d'offres reçues
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Nombre d\'offres reçues'),
-          el('input', {
-            type: 'number',
-            className: 'form-input',
-            id: 'proc-nb-offres-recues',
-            min: 0,
-            value: existingProc.nbOffresRecues || 0
-          })
-        ]),
-
-        // Nombre d'offres classées
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Nombre d\'offres classées'),
-          el('input', {
-            type: 'number',
-            className: 'form-input',
-            id: 'proc-nb-offres-classees',
-            min: 0,
-            value: existingProc.nbOffresClassees || 0
-          })
-        ])
       ]),
 
-      // Dates section (toutes optionnelles, avertissements non bloquants)
-      el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
-        el('strong', {}, '📅 Dates de la procédure'),
-        el('div', { className: 'text-small text-muted', style: { marginTop: '4px' } },
-          'Tous les champs sont optionnels. Les informations manquantes généreront un avertissement non bloquant.')
-      ]),
-
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
-        // Date ouverture
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date d\'ouverture'),
-          el('input', {
-            type: 'date',
-            className: 'form-input',
-            id: 'proc-date-ouverture',
-            value: existingProc.dates?.ouverture ? existingProc.dates.ouverture.split('T')[0] : ''
-          })
-        ]),
-
-        // Date analyse technique
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date d\'analyse technique'),
-          el('input', {
-            type: 'date',
-            className: 'form-input',
-            id: 'proc-date-analyse-tech',
-            value: existingProc.dates?.analyseTechnique
-              ? existingProc.dates.analyseTechnique.split('T')[0]
-              : (existingProc.dates?.analyse ? existingProc.dates.analyse.split('T')[0] : '')
-          })
-        ]),
-
-        // Date analyse financière
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date d\'analyse financière'),
-          el('input', {
-            type: 'date',
-            className: 'form-input',
-            id: 'proc-date-analyse-fin',
-            value: existingProc.dates?.analyseFinanciere ? existingProc.dates.analyseFinanciere.split('T')[0] : ''
-          })
-        ]),
-
-        // Date jugement
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date de jugement'),
-          el('input', {
-            type: 'date',
-            className: 'form-input',
-            id: 'proc-date-jugement',
-            value: existingProc.dates?.jugement ? existingProc.dates.jugement.split('T')[0] : ''
-          })
-        ])
-      ]),
-
-      // PV section
-      el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
-        el('strong', {}, '📄 Procès-verbaux (PV)'),
-        el('div', { className: 'text-small text-muted', style: { marginTop: '4px' } },
-          'Le PV d\'analyse technique & financière combiné est une alternative aux deux PV séparés (utilisé quand les deux analyses se font ensemble).')
-      ]),
-
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
-        // PV Ouverture
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV d\'ouverture'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'proc-pv-ouverture',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingProc.pv?.ouverture ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.ouverture}`) : null
-        ]),
-
-        // PV Analyse Technique
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV d\'analyse technique'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'proc-pv-analyse-tech',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingProc.pv?.analyseTechnique ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyseTechnique}`) : null
-        ]),
-
-        // PV Analyse Financière
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV d\'analyse financière'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'proc-pv-analyse-fin',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingProc.pv?.analyseFinanciere ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyseFinanciere}`) : null
-        ]),
-
-        // PV Analyse Technique & Financière (combiné)
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV analyse technique & financière (combiné)'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'proc-pv-analyse-tech-fin',
-            accept: '.pdf,.doc,.docx'
-          }),
-          (existingProc.pv?.analyseTechFin || existingProc.pv?.analyse)
-            ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.analyseTechFin || existingProc.pv.analyse}`)
-            : null
-        ]),
-
-        // PV Jugement
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'PV de jugement'),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'proc-pv-jugement',
-            accept: '.pdf,.doc,.docx'
-          }),
-          existingProc.pv?.jugement ? el('small', { className: 'text-success' }, `✓ ${existingProc.pv.jugement}`) : null
-        ])
+      el('div', {
+        className: 'alert alert-info',
+        style: { marginTop: '12px', fontSize: '13px' }
+      }, [
+        el('div', { className: 'alert-icon' }, 'ℹ️'),
+        el('div', { className: 'alert-content' },
+          'Le détail de la procédure (nombre d\'offres, dates et PVs) est désormais saisi dans la section « Lots & procédure par lot » ci-dessous, pour permettre une gestion par lot quand le marché en comporte plusieurs.')
       ])
     ])
   ]);
@@ -812,7 +679,7 @@ function renderField(label, value) {
 /**
  * Handle save
  */
-async function handleSave(idOperation, selectedMode, derogationJustif, derogationComment, suggestedCodes, soumissionnairesWidget, lotsWidget) {
+async function handleSave(idOperation, selectedMode, derogationJustif, derogationComment, suggestedCodes, soumissionnairesWidget, lotsState) {
   if (!selectedMode) {
     alert('Veuillez sélectionner un mode de passation');
     return;
@@ -831,14 +698,8 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     }
   }
 
-  // Validate lots if widget is active
-  if (lotsWidget) {
-    const lotsValidation = lotsWidget.validate();
-    if (!lotsValidation.valid) {
-      alert('⚠️ Validation lots:\n\n' + lotsValidation.errors.join('\n'));
-      return;
-    }
-  }
+  // Marché+ multi-lot : lotsState est déjà un Array via onChange du widget.
+  // Pas de validation bloquante ici (les champs sont optionnels par design).
 
   const isDerogation = !suggestedCodes.includes(selectedMode);
 
@@ -917,52 +778,18 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
   // PSL, PSO, AOO, PI - Full procedure with COJO/COPE
   // Tous les champs sont optionnels : on n'interrompt jamais le save, on
   // remonte juste un récap des manquants à la fin.
+  // Le détail (nb offres / dates / PVs) est désormais PER LOT et provient
+  // de lotsState (renseigné via le widget renderLotsProcedureMP).
   else {
     const commission = document.getElementById('proc-commission')?.value || null;
     const categorie = document.getElementById('proc-categorie')?.value || null;
-
     const typeDossierAppel = document.getElementById('proc-type-dossier')?.value || null;
-    const nbOffresRecues = Number(document.getElementById('proc-nb-offres-recues')?.value) || 0;
-    const nbOffresClassees = Number(document.getElementById('proc-nb-offres-classees')?.value) || 0;
 
-    // 4 dates (toutes optionnelles)
-    const dateOuverture = document.getElementById('proc-date-ouverture')?.value || null;
-    const dateAnalyseTech = document.getElementById('proc-date-analyse-tech')?.value || null;
-    const dateAnalyseFin = document.getElementById('proc-date-analyse-fin')?.value || null;
-    const dateJugement = document.getElementById('proc-date-jugement')?.value || null;
-
-    // 5 PVs (tous optionnels)
     let dossierAppelDoc = null;
-    let pvOuverture = null;
-    let pvAnalyseTech = null;
-    let pvAnalyseFin = null;
-    let pvAnalyseTechFin = null;
-    let pvJugement = null;
-
     const dossierInput = document.getElementById('proc-dossier-doc');
     if (dossierInput?.files?.[0]) {
       dossierAppelDoc = 'DOSSIER_' + Date.now() + '.pdf';
       logger.info('[Procedure] Dossier d\'appel uploadé:', dossierAppelDoc);
-    }
-    const pvOuvertureInput = document.getElementById('proc-pv-ouverture');
-    if (pvOuvertureInput?.files?.[0]) {
-      pvOuverture = 'PV_OUVERTURE_' + Date.now() + '.pdf';
-    }
-    const pvAnalyseTechInput = document.getElementById('proc-pv-analyse-tech');
-    if (pvAnalyseTechInput?.files?.[0]) {
-      pvAnalyseTech = 'PV_ANALYSE_TECH_' + Date.now() + '.pdf';
-    }
-    const pvAnalyseFinInput = document.getElementById('proc-pv-analyse-fin');
-    if (pvAnalyseFinInput?.files?.[0]) {
-      pvAnalyseFin = 'PV_ANALYSE_FIN_' + Date.now() + '.pdf';
-    }
-    const pvAnalyseTechFinInput = document.getElementById('proc-pv-analyse-tech-fin');
-    if (pvAnalyseTechFinInput?.files?.[0]) {
-      pvAnalyseTechFin = 'PV_ANALYSE_TECHFIN_' + Date.now() + '.pdf';
-    }
-    const pvJugementInput = document.getElementById('proc-pv-jugement');
-    if (pvJugementInput?.files?.[0]) {
-      pvJugement = 'PV_JUGEMENT_' + Date.now() + '.pdf';
     }
 
     procedureData = {
@@ -970,40 +797,40 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
       commission,
       categorie,
       typeDossierAppel,
-      dossierAppelDoc,
-      dates: {
-        ouverture: dateOuverture,
-        analyseTechnique: dateAnalyseTech,
-        analyseFinanciere: dateAnalyseFin,
-        jugement: dateJugement
-      },
-      nbOffresRecues,
-      nbOffresClassees,
-      pv: {
-        ouverture: pvOuverture,
-        analyseTechnique: pvAnalyseTech,
-        analyseFinanciere: pvAnalyseFin,
-        analyseTechFin: pvAnalyseTechFin,
-        jugement: pvJugement
-      }
+      dossierAppelDoc
     };
 
-    // Avertissements non bloquants (chronologie + champs manquants)
+    // Avertissements non bloquants
     const warnings = [];
     if (!commission) warnings.push('Type de commission');
     if (!categorie) warnings.push('Catégorie');
-    if (!dateOuverture) warnings.push('Date d\'ouverture');
-    if (!dateJugement) warnings.push('Date de jugement');
-    if (!pvOuverture && !existingProc?.pv?.ouverture) warnings.push('PV d\'ouverture');
-    if (!pvJugement && !existingProc?.pv?.jugement) warnings.push('PV de jugement');
-    if (dateOuverture && dateAnalyseTech && new Date(dateAnalyseTech) < new Date(dateOuverture)) {
-      warnings.push('Date d\'analyse technique antérieure à l\'ouverture');
-    }
-    if (dateAnalyseTech && dateJugement && new Date(dateJugement) < new Date(dateAnalyseTech)) {
-      warnings.push('Date de jugement antérieure à l\'analyse technique');
+
+    const lots = Array.isArray(lotsState) ? lotsState : [];
+    if (lots.length === 0) {
+      warnings.push('Aucun lot défini (au moins 1 lot attendu)');
+    } else {
+      lots.forEach((lot, i) => {
+        const tag = `Lot ${lot.numero || i + 1}`;
+        if (!lot.libelle) warnings.push(`${tag} : libellé manquant`);
+        if (!lot.dates?.ouverture) warnings.push(`${tag} : date d'ouverture manquante`);
+        if (!lot.dates?.jugement) warnings.push(`${tag} : date de jugement manquante`);
+        const hasAnyPvOuv = lot.pv?.ouverture;
+        if (!hasAnyPvOuv) warnings.push(`${tag} : PV d'ouverture manquant`);
+        const hasAnyPvJug = lot.pv?.jugement;
+        if (!hasAnyPvJug) warnings.push(`${tag} : PV de jugement manquant`);
+        // Chronologie
+        const dOuv = lot.dates?.ouverture;
+        const dAnaT = lot.dates?.analyseTechnique;
+        const dJug = lot.dates?.jugement;
+        if (dOuv && dAnaT && new Date(dAnaT) < new Date(dOuv)) {
+          warnings.push(`${tag} : date d'analyse technique antérieure à l'ouverture`);
+        }
+        if (dAnaT && dJug && new Date(dJug) < new Date(dAnaT)) {
+          warnings.push(`${tag} : date de jugement antérieure à l'analyse technique`);
+        }
+      });
     }
     if (warnings.length > 0) {
-      // Stocker les warnings pour affichage post-save
       window.__mpProcedureWarnings = warnings;
     } else {
       delete window.__mpProcedureWarnings;
@@ -1038,17 +865,18 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
   // Create or update procedure (existingProc déjà pré-fetché plus haut)
   const existingProcedure = existingProc;
 
-  // Get soumissionnaires and lots data from widgets
+  // Get soumissionnaires from widget; lots from lotsState (Marché+ multi-lot)
   const soumissionnaires = soumissionnairesWidget ? soumissionnairesWidget.getData() : [];
-  const lots = lotsWidget ? lotsWidget.getData() : [];
+  const lots = Array.isArray(lotsState) ? lotsState : [];
 
-  // Add soumissionnaires and lots to procedureData
   procedureData.soumissionnaires = soumissionnaires;
   procedureData.lots = lots;
 
-  // Merge with existing data if updating
+  // Merge with existing data if updating (préserve documents PSD/PSC/dossier
+  // si non ré-uploadés). La logique per-lot pour les PVs/dates est gérée par
+  // le widget renderLotsProcedureMP côté UI (chaque PV file est conservé tant
+  // qu'il n'est pas explicitement remplacé).
   if (existingProcedure) {
-    // Preserve existing documents if not re-uploaded
     if (procedureData.docDevis === null && existingProcedure.docDevis) {
       procedureData.docDevis = existingProcedure.docDevis;
     }
@@ -1063,23 +891,6 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     }
     if (procedureData.dossierAppelDoc === null && existingProcedure.dossierAppelDoc) {
       procedureData.dossierAppelDoc = existingProcedure.dossierAppelDoc;
-    }
-    if (procedureData.pv) {
-      if (procedureData.pv.ouverture === null && existingProcedure.pv?.ouverture) {
-        procedureData.pv.ouverture = existingProcedure.pv.ouverture;
-      }
-      if (procedureData.pv.analyseTechnique === null && existingProcedure.pv?.analyseTechnique) {
-        procedureData.pv.analyseTechnique = existingProcedure.pv.analyseTechnique;
-      }
-      if (procedureData.pv.analyseFinanciere === null && existingProcedure.pv?.analyseFinanciere) {
-        procedureData.pv.analyseFinanciere = existingProcedure.pv.analyseFinanciere;
-      }
-      if (procedureData.pv.analyseTechFin === null && (existingProcedure.pv?.analyseTechFin || existingProcedure.pv?.analyse)) {
-        procedureData.pv.analyseTechFin = existingProcedure.pv.analyseTechFin || existingProcedure.pv.analyse;
-      }
-      if (procedureData.pv.jugement === null && existingProcedure.pv?.jugement) {
-        procedureData.pv.jugement = existingProcedure.pv.jugement;
-      }
     }
   }
 
