@@ -7,7 +7,7 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { operationId } from '../../../lib/uid.js';
 import logger from '../../../lib/logger.js';
-import { renderLivrableManager } from '../../../ui/widgets/livrable-manager.js';
+import { renderLivrableManagerMP } from '../../../ui/widgets/livrable-manager-mp.js';
 import { renderSearchableSelect } from '../../../ui/widgets/searchable-select.js';
 
 function createButton(className, text, onClick) {
@@ -508,7 +508,7 @@ export async function renderPPMCreateLine(params) {
 
   const livrablesContainer = document.getElementById('livrables-container');
   if (livrablesContainer) {
-    const livrableWidget = renderLivrableManager(livrablesList, registries, (updatedList) => {
+    const livrableWidget = renderLivrableManagerMP(livrablesList, registries, (updatedList) => {
       livrablesList = updatedList;
     });
     livrablesContainer.appendChild(livrableWidget);

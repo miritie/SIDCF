@@ -13,10 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
-## 2026-05-06 — Ajustement Liste PPM
+## 2026-05-06 — Ajustement Liste PPM + rattrapage Livrables
 
-> **Point traité** : **Ajustement Liste PPM**
-> Couvre la modif #5 ci-dessous.
+> **Points traités** : **Ajustement Liste PPM** (modif #5) et **Rattrapage bloc Livrables** (modif #6).
+
+### Modif #6 — Bloc Livrables : édition inline + génération en lot + champs optionnels
+- **Écran touché** : `/mp/ppm-create-line` (et tout futur écran Marché+ qui utilise le widget)
+- **Description** :
+  - Création d'un nouveau widget **`renderLivrableManagerMP`** (`sidcf-portal/js/ui/widgets/livrable-manager-mp.js`) dédié à Marché+. L'ancien widget `livrable-manager.js` (encore utilisé par le module Marché) reste intouché.
+  - **Édition inline** : chaque livrable apparaît comme une **card éditable directement** (Type, Libellé, Région → Département → Sous-préfecture → Localité, Latitude, Longitude). Plus de modal pour éditer.
+  - **Génération en lot** : champ « Générer N » + bouton → ajoute N cards vides d'un coup. Permet de définir le nombre de livrables dès le départ et de remplir au fur et à mesure.
+  - **Bouton « + Ajouter un livrable »** conservé pour ajouter un livrable à la fois.
+  - **Tous les champs sont optionnels** : aucune validation bloquante, l'utilisateur peut sauvegarder un livrable même partiellement renseigné (au minimum vide).
+  - **✕ par card** pour retirer un livrable.
+  - L'écran `ecr01d-ppm-create-line.js` importe désormais `renderLivrableManagerMP` au lieu de `renderLivrableManager`.
+- **Fichiers** :
+  - `sidcf-portal/js/ui/widgets/livrable-manager-mp.js` (nouveau, ~340 lignes)
+  - `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` (changement d'import et d'appel)
+- **Impact** : UI uniquement. Format de stockage des livrables identique (compatible avec l'ancien widget).
 
 ### Modif #5 — Liste PPM : « État » → « Étape » + retrait colonne Bailleur
 - **Écran touché** : `/mp/ppm-list` (`ecr01b-ppm-unitaire.js`)
