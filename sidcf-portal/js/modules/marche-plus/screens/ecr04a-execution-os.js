@@ -6,7 +6,7 @@
 import { el, mount } from '../../../lib/dom.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { renderSteps } from '../../../ui/widgets/steps.js';
+import { renderSteps } from '../../../ui/widgets/steps-mp.js';
 import { money } from '../../../lib/format.js';
 import logger from '../../../lib/logger.js';
 import { getLotData, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';

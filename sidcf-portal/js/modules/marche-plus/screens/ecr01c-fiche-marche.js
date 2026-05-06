@@ -6,7 +6,7 @@ import { el, mount } from '../../../lib/dom.js';
 import { money, date } from '../../../lib/format.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { renderStepsAsync } from '../../../ui/widgets/steps.js';
+import { renderStepsAsync } from '../../../ui/widgets/steps-mp.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
 import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
 
