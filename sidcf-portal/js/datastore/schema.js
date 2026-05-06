@@ -50,6 +50,7 @@ export const ENTITIES = {
   MP_DOCUMENT: 'MP_DOCUMENT',
   MP_DECOMPTE: 'MP_DECOMPTE',
   MP_DIFFICULTE: 'MP_DIFFICULTE',
+  MP_ENTREPRISE_SANCTION: 'MP_ENTREPRISE_SANCTION',
 
   // Module Investissement
   INV_PROJECT: 'INV_PROJECT',
@@ -1193,6 +1194,31 @@ export const SCHEMAS = {
     montant: 0,
     montantTVAEtat: 0, // Si etatSupporteTVA=true, 18% du TTC
     pourcentage: 0 // % par rapport au montant total du marché
+  },
+
+  // Module Marché+ - Liste des entreprises sanctionnées (informatif)
+  // Détection au moment de la saisie d'attributaire dans /mp/attribution.
+  // Affichage en bandeau warning sous le champ — pas de blocage.
+  MP_ENTREPRISE_SANCTION: {
+    id: null,
+    raisonSociale: '',                  // Nom de l'entreprise (matching fuzzy fallback)
+    ncc: '',                            // N° Compte Contribuable / IFU (matching prioritaire)
+    rccm: '',                           // RCCM (Registre Commerce, matching prioritaire)
+    typeSanction: 'BLACKLIST',          // BLACKLIST | SUSPENSION | AVERTISSEMENT
+    gravite: 'BLOQUANTE',               // BLOQUANTE | AVERTISSEMENT (informatif uniquement pour l'instant)
+    motif: '',                          // Description du motif
+    source: '',                         // DGMP | BAD | BANQUE_MONDIALE | UE | AFD | INTERNE
+    decisionRef: '',                    // Référence de la décision (n° arrêté, etc.)
+    decisionUrl: '',                    // URL/lien externe vers la décision
+    dateDebut: null,                    // ISO date de début de sanction
+    dateFin: null,                      // ISO date de fin (null = sans terme)
+    paysApplicable: 'CI',               // Pays où la sanction s'applique
+    secteursApplicables: [],            // Secteurs concernés (vide = tous)
+    actif: true,                        // false = archivée (gardée pour historique)
+    commentaire: '',
+    createdBy: null,
+    createdAt: null,
+    updatedAt: null
   },
 
   // ============================================

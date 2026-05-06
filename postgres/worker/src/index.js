@@ -64,6 +64,7 @@ const ENTITY_TABLE_MAP = {
   'MP_DOCUMENT': 'mp_document',
   'MP_DECOMPTE': 'mp_decompte',
   'MP_DIFFICULTE': 'mp_difficulte',
+  'MP_ENTREPRISE_SANCTION': 'mp_entreprise_sanction',
 
   // Module Investissement
   'INV_PROJECT': 'inv_project',

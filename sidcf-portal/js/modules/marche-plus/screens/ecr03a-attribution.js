@@ -21,12 +21,37 @@ import {
 } from '../../../lib/procedure-context.js';
 import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
 
 // État global pour les widgets
 let cleRepartitionList = [];
 let echeancierData = null;
 // Marché+ multi-lot : lot courant pour cet écran
 let currentLotId = null;
+
+// Debounce simple pour la détection sanctions (évite un appel à chaque touche)
+let sanctionCheckTimer = null;
+function triggerSanctionCheck() {
+  clearTimeout(sanctionCheckTimer);
+  sanctionCheckTimer = setTimeout(async () => {
+    const banner = document.getElementById('attr-sanction-banner');
+    if (!banner) return;
+    const raisonSociale = (document.getElementById('attr-raison-sociale')?.value || '').trim();
+    const ncc = (document.getElementById('attr-ncc')?.value || '').trim();
+    if (!raisonSociale && !ncc) {
+      banner.innerHTML = '';
+      return;
+    }
+    const sanction = await checkSanction({ raisonSociale, ncc });
+    banner.innerHTML = '';
+    if (sanction) {
+      const node = renderSanctionBanner(sanction);
+      if (node) banner.appendChild(node);
+    }
+  }, 300);
+}
+// Exposer pour usage depuis les onload après mount (cf. fin de renderAttribution)
+window.__mpTriggerSanctionCheck = triggerSanctionCheck;
 
 export async function renderAttribution(params) {
   const { idOperation } = params;
@@ -116,6 +141,9 @@ export async function renderAttribution(params) {
 
     // Initialiser les widgets après montage
     setTimeout(() => initializeWidgets(operation, registries), 100);
+
+    // Déclencher la détection sanctions sur les valeurs initiales (chargement d'un attributaire existant)
+    setTimeout(() => triggerSanctionCheck(), 150);
 
   } catch (err) {
     logger.error('[ECR03A] Erreur chargement', err);
@@ -233,6 +261,14 @@ function renderAttributaireSection(attributaire, registries) {
         id: 'attr-entreprise-simple',
         style: { display: singleOrGroup === 'SIMPLE' ? 'block' : 'none' }
       }, [
+        // Bouton de gestion des sanctions (drawer)
+        el('div', { style: { textAlign: 'right', marginBottom: '8px' } }, [
+          el('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-secondary',
+            onclick: (e) => { e.preventDefault(); openSanctionsDrawer(); }
+          }, '🚫 Gérer la liste des entreprises sanctionnées')
+        ]),
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, [
@@ -245,8 +281,10 @@ function renderAttributaireSection(attributaire, registries) {
               id: 'attr-raison-sociale',
               value: entrepriseSimple.raisonSociale || '',
               placeholder: 'Nom de l\'entreprise',
-              required: true
-            })
+              required: true,
+              oninput: (e) => triggerSanctionCheck()
+            }),
+            el('div', { id: 'attr-sanction-banner' }) // bandeau d'alerte
           ]),
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'N° Compte Contribuable (NCC)'),
@@ -255,7 +293,8 @@ function renderAttributaireSection(attributaire, registries) {
               className: 'form-input',
               id: 'attr-ncc',
               value: entrepriseSimple.ncc || '',
-              placeholder: 'Ex: CI-ABJ-2024-XXXXX'
+              placeholder: 'Ex: CI-ABJ-2024-XXXXX',
+              oninput: (e) => triggerSanctionCheck()
             })
           ])
         ]),
