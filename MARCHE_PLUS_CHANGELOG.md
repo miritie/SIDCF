@@ -13,6 +13,44 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-06 — Procédure-PV + Attribution + Rules engine
+
+> **Points traités** : commissions limitées (#8), multi-PV avec champs optionnels (#9), retrait du « Motif détaillé » sur Attribution (#10), correction du moteur de règles (#11).
+
+### Modif #11 — Rules engine : matching corrigé (`natureCode` + lenient)
+- **Fichier** : `sidcf-portal/js/datastore/rules-engine.js`
+- **Description** :
+  - Sur l'écran `/mp/procedure`, le bandeau **« Aucune règle trouvée »** s'affichait systématiquement et par conséquent **« DÉROGATION DÉTECTÉE »** se déclenchait sur n'importe quel mode. Cause double :
+    1. Le moteur de règles lisait `chaineBudgetaire.nature` (le **libellé** depuis modif #1, ex: `« 221 - Fonctionnement courant »`) alors que les matrices `rules-config.json` contiennent des **codes** (`"221"`, `"232"`, …). Le matching échouait silencieusement.
+    2. Pour les opérations héritées (sans `natureCode`), `natureEco.includes('')` retourne `false` → exclusion systématique.
+  - **Fix** :
+    - Lire **`natureCode` en priorité**, fallback sur `nature` (legacy).
+    - **Matching lenient** : si `natureCode` / `typeMarche` ne sont pas renseignés sur l'opération, on ne filtre pas dessus (suggestions établies sur le montant uniquement).
+    - Conversion explicite du montant en `Number()` (évite les `NaN`).
+    - Lire aussi `typeInstitution` (utilisé par l'UI) en plus de `institutionType`.
+- **Effet** : les « Procédures admissibles » s'affichent réellement, et « DÉROGATION DÉTECTÉE » ne se déclenche que quand le mode choisi sort véritablement de la matrice.
+
+### Modif #10 — Attribution : retrait du champ « Motif détaillé » (Réserves CF)
+- **Écran** : `/mp/attribution`
+- **Fichier** : `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js`
+- **Description** : dans la section « Réserves du Contrôleur Financier », le champ `<textarea>` **« Motif détaillé »** est retiré. Les champs « Type de réserve » et « Commentaire » sont conservés.
+- **Modèle de données** : le champ `decisionCF.motifReserve` n'est plus alimenté par l'écran Attribution, mais reste dans le modèle (toujours utilisé par l'écran Visa CF qui a sa propre saisie).
+
+### Modif #9 — Procédure-PV : multi-PV (analyse tech / fin / combiné) + champs optionnels
+- **Écran** : `/mp/procedure` (mode AOO, PSO, PSL, PI)
+- **Fichier** : `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js`
+- **Description** :
+  - **PVs (5 emplacements)** : PV d'ouverture, PV d'analyse technique, PV d'analyse financière, **PV d'analyse technique & financière (combiné — alternative aux 2 précédents)**, PV de jugement.
+  - **Dates (4)** : Date d'ouverture, Date d'analyse technique, Date d'analyse financière, Date de jugement.
+  - **Tous les champs sont optionnels**. Plus aucun blocage à la sauvegarde si commission, catégorie, dates ou PVs sont vides ; les incohérences chronologiques (analyse antérieure à l'ouverture, etc.) ne bloquent plus non plus.
+  - **Warnings non bloquants** : à la fin de la sauvegarde, l'alerte de succès liste les champs manquants ou incohérences sous forme de bullets.
+  - **Back-compat** : `pv.analyse` legacy mappé sur `pv.analyseTechFin` à la lecture, `dates.analyse` legacy mappé sur `dates.analyseTechnique`.
+
+### Modif #8 — Limiter `TYPE_COMMISSION` à COJO + COPE
+- **Fichier** : `sidcf-portal/js/config/registries.json`
+- **Description** : retire l'entrée `TECH` (« Commission Technique ») du registre. Sur l'écran Procédure & Mode de Passation, seules **COJO** et **COPE** apparaissent désormais dans le sélecteur « Type de commission ».
+- **Portée** : registre partagé → l'effet s'applique aussi au module Marché.
+
 ## 2026-05-06 — Ajustement Liste PPM + rattrapage Livrables + Type uniforme
 
 > **Points traités** : **Ajustement Liste PPM** (modifs #5 et #7), **Rattrapage bloc Livrables** (modif #6).
