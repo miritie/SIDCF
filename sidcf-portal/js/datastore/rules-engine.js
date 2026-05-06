@@ -323,30 +323,45 @@ export class RulesEngine {
   }
 
   /**
-   * Get suggested procedures for operation
+   * Get suggested procedures for operation.
+   *
+   * Stratégie de matching :
+   * - Montant : strict (doit être dans [min, max])
+   * - Nature économique : on lit `natureCode` (NEW) avec fallback sur
+   *   `nature` (legacy / label). Si l'opération n'a pas de natureCode
+   *   renseigné, on ne filtre pas dessus (on suggère par montant).
+   * - Type marché : si l'opération n'a pas de typeMarche, on ne filtre
+   *   pas. Sinon, match exact OU "all" dans la matrice.
    */
   getSuggestedProcedures(operation) {
-    const institutionType = operation.institutionType || 'ADMIN_CENTRALE';
+    const institutionType = operation.typeInstitution || operation.institutionType || 'ADMIN_CENTRALE';
     const matrice = this.rules.matrices_procedures[institutionType];
 
     if (!matrice) return [];
 
-    const operationNature = operation.chaineBudgetaire?.nature || '';
+    // NEW : on préfère natureCode (code 221, 232, ...). Fallback sur
+    // `nature` qui peut contenir le code (legacy) OU le label (post modif #1).
+    const operationNature = operation.chaineBudgetaire?.natureCode
+      || operation.chaineBudgetaire?.nature
+      || '';
 
     return matrice.seuils_montants.filter(seuil => {
+      const montant = Number(operation.montantPrevisionnel) || 0;
       const montantOK =
-        (seuil.min === null || operation.montantPrevisionnel >= seuil.min) &&
-        (seuil.max === null || operation.montantPrevisionnel <= seuil.max);
+        (seuil.min === null || seuil.min === undefined || montant >= seuil.min) &&
+        (seuil.max === null || seuil.max === undefined || montant <= seuil.max);
 
-      // Match par préfixe : si la nature est "22", elle matche "221", "222", "223"
-      // ou si la règle contient "22", elle matche une opération avec "221"
+      // Nature : lenient si non renseigné. Sinon match strict ou par préfixe.
       const natureOK =
+        !operationNature ||
         seuil.natureEco.includes('all') ||
         seuil.natureEco.includes(operationNature) ||
         seuil.natureEco.some(code => code.startsWith(operationNature)) ||
         seuil.natureEco.some(code => operationNature.startsWith(code));
 
+      // Type : lenient si non renseigné.
       const typeOK =
+        !operation.typeMarche ||
         seuil.typeMarche.includes('all') ||
         seuil.typeMarche.includes(operation.typeMarche);
 
