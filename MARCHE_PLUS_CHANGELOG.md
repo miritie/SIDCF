@@ -15,6 +15,20 @@ Format :
 
 ## 2026-05-06
 
+### Modif #2 — Recherche filtrable sur le champ Activité
+- **Écran touché** : `/mp/ppm/create-line`
+- **Description** :
+  - Le `<select>` Activité est remplacé par un combobox filtrable (champ de saisie + panneau déroulant).
+  - Recherche intelligente : la requête match sur le libellé de l'activité, le code/libellé de l'UA, le libellé du programme et le code de l'activité — l'utilisateur peut donc filtrer par UA naturellement (taper « 13030 » ou « Direction des Marchés » ramène les activités de cette UA).
+  - Les options sont groupées par **Section (Ministère)** dans le panneau pour structurer la liste.
+  - Navigation clavier : ↑ / ↓ / Enter / Esc.
+  - Bouton ✕ intégré pour effacer la sélection.
+- **Fichiers** :
+  - `sidcf-portal/js/ui/widgets/searchable-select.js` (nouveau widget réutilisable)
+  - `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` (intégration)
+- **Impact** : UI uniquement. Le widget crée un `<input type="hidden" id="activite">` qui porte le code → tout le code aval (cascade, handleSave) reste compatible sans changement de signature.
+- **Réutilisation** : `renderSearchableSelect()` est générique et pourra équiper d'autres champs filtrables dans les modifs suivantes.
+
 ### Modif #1 — Activité dans la chaîne programmatique
 - **Écran touché** : `/mp/ppm/create-line` (création manuelle d'une ligne PPM)
 - **Description** :

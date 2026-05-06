@@ -8,6 +8,7 @@ import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { operationId } from '../../../lib/uid.js';
 import logger from '../../../lib/logger.js';
 import { renderLivrableManager } from '../../../ui/widgets/livrable-manager.js';
+import { renderSearchableSelect } from '../../../ui/widgets/searchable-select.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -69,6 +70,7 @@ export async function renderPPMCreateLine(params) {
   }
 
   let livrablesList = [];
+  let activiteWidget = null;
 
   async function handleSave(createAnother) {
     const bailleurs = Array.from(document.querySelectorAll('.bailleur-select'))
@@ -100,7 +102,7 @@ export async function renderPPMCreateLine(params) {
         sectionCode: document.getElementById('section')?.value || '',
         programme: getSelectLabel('programme') || '',
         programmeCode: document.getElementById('programme')?.value || '',
-        activite: getSelectLabel('activite') || '',
+        activite: document.getElementById('activite')?.dataset?.label || '',
         activiteCode,
         nature: getSelectLabel('natureEco') || '',
         natureCode: natureEcoCode,
@@ -176,6 +178,7 @@ export async function renderPPMCreateLine(params) {
       alert('✅ Opération créée avec succès');
       document.getElementById('form-ppm-line')?.reset();
       document.getElementById('exercice').value = new Date().getFullYear();
+      activiteWidget?.reset();
       ['unite', 'programme', 'section'].forEach(id => {
         const sel = document.getElementById(id);
         if (sel) sel.innerHTML = '<option value="">-- Auto (selon activité) --</option>';
@@ -220,20 +223,10 @@ export async function renderPPMCreateLine(params) {
               })
             ]),
 
-            // Activité (chaîne programmatique) — full width
+            // Activité (chaîne programmatique) — combobox filtrable, full width
             el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
               el('label', { className: 'form-label' }, ['Activité (chaîne programmatique)', el('span', { className: 'required' }, '*')]),
-              el('select', { className: 'form-input', id: 'activite', required: true },
-                [el('option', { value: '' }, '-- Sélectionner une activité --')]
-                  .concat(activiteIndex.map(a =>
-                    el('option', {
-                      value: a.code,
-                      'data-uacode': a.uaCode, 'data-ualabel': a.uaLabel,
-                      'data-progcode': a.programmeCode, 'data-proglabel': a.programmeLabel,
-                      'data-seccode': a.sectionCode, 'data-seclabel': a.sectionLabel
-                    }, `${a.libelle} — ${a.uaLabel}`)
-                  ))
-              )
+              el('div', { id: 'activite-search-container' })
             ]),
 
             // UA, Programme, Section : auto-remplis depuis Activité
@@ -480,6 +473,23 @@ export async function renderPPMCreateLine(params) {
   ]);
 
   mount('#app', page);
+
+  // Init searchable activité combobox (must precede the cascade setup, since
+  // the cascade listens to the hidden #activite input that the widget creates)
+  const activiteContainer = document.getElementById('activite-search-container');
+  if (activiteContainer) {
+    activiteWidget = renderSearchableSelect(activiteContainer, {
+      id: 'activite',
+      placeholder: 'Rechercher par libellé d\'activité, UA, programme ou code…',
+      required: true,
+      options: activiteIndex.map(a => ({
+        value: a.code,
+        label: a.libelle,
+        secondary: `UA ${a.uaCode} — ${a.uaLabel} · ${a.programmeLabel}`,
+        group: a.sectionLabel
+      }))
+    });
+  }
 
   setupActiviteReverseCascade(activiteIndex);
   setupNatureEcoLigneBudgetaire();
