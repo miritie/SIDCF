@@ -117,7 +117,18 @@ function snakeToCamel(obj) {
   if (Array.isArray(obj)) {
     return obj.map(snakeToCamel);
   }
+  // Bug fix : les dates (Date JS ou objets datelike du driver Neon) étaient
+  // traitées comme des objets génériques et sérialisées en {}. On les convertit
+  // en string ISO côté serveur pour que le frontend reçoive une valeur
+  // utilisable (input type=date, comparaisons, .toLocaleString…).
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
   if (obj !== null && typeof obj === 'object') {
+    // Si l'objet a une méthode toISOString (ex: certains wrappers de date) on l'utilise
+    if (typeof obj.toISOString === 'function') {
+      try { return obj.toISOString(); } catch (_) { /* fallback to generic */ }
+    }
     return Object.keys(obj).reduce((acc, key) => {
       const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
       let value = obj[key];

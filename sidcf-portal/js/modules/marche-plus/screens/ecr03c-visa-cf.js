@@ -18,6 +18,7 @@ import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { getLotsFromProcedure, resolveCurrentLotId, getLotData } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { getOrganesApplicables, getInstitutionScope } from '../../../lib/mp-organes-approbation.js';
+import { uploadDocument } from '../../../lib/r2-storage-mp.js';
 
 export async function renderVisaCF(params) {
   const { idOperation } = params;
@@ -57,13 +58,19 @@ export async function renderVisaCF(params) {
 
     const attributionForLot = getLotData(attribution, currentLotId);
 
-    // Récupérer une éventuelle approbation existante
+    // Récupérer une éventuelle approbation existante (la plus récente)
     const allApprobations = await dataService.query(ENTITIES.MP_VISA_CF, { operationId: idOperation });
     const approbationsForLot = currentLotId
       ? allApprobations.filter(v => !v.lotId || v.lotId === currentLotId)
       : allApprobations;
+    // Tri par createdAt décroissant : on veut la plus récente en premier
+    approbationsForLot.sort((a, b) => {
+      const da = new Date(a.createdAt || a.dateDecision || 0).getTime();
+      const db = new Date(b.createdAt || b.dateDecision || 0).getTime();
+      return db - da;
+    });
     const approbation = (approbationsForLot && approbationsForLot.length > 0)
-      ? approbationsForLot[approbationsForLot.length - 1]
+      ? approbationsForLot[0]
       : null;
 
     // Charger les organes filtrés selon le scope (institution) et le montant
@@ -117,7 +124,7 @@ export async function renderVisaCF(params) {
             el('button', {
               type: 'button',
               className: 'btn btn-primary',
-              onclick: async () => await handleSave(idOperation, attribution.id, currentLotId)
+              onclick: async () => await handleSave(idOperation, attribution.id, currentLotId, approbation)
             }, approbation ? '💾 Mettre à jour l\'approbation' : '✅ Enregistrer l\'approbation')
           ])
         ])
@@ -201,10 +208,11 @@ function renderApprobationForm(approbation, organes, scope) {
           required: true
         }, [
           el('option', { value: '' }, '-- Sélectionner --'),
-          ...organes.map(o => el('option', {
-            value: o.code,
-            selected: o.code === existing.organeApprobateur
-          }, formatOrganeOption(o)))
+          ...organes.map(o => {
+            const attrs = { value: o.code };
+            if (o.code === existing.organeApprobateur) attrs.selected = 'selected';
+            return el('option', attrs, formatOrganeOption(o));
+          })
         ]),
         el('small', { className: 'text-muted', style: { marginTop: '4px', display: 'block' } },
           `Liste filtrée selon le périmètre « ${labelScope(scope)} » et le montant du marché. ` +
@@ -221,7 +229,8 @@ function renderApprobationForm(approbation, organes, scope) {
           type: 'date',
           className: 'form-input',
           id: 'app-date',
-          value: existing.dateApprobation || existing.dateDecision || today,
+          // Slicer la date ISO en YYYY-MM-DD (input type=date n'accepte pas le format ISO complet)
+          value: toDateInputValue(existing.dateApprobation || existing.dateDecision || today),
           required: true,
           max: today
         })
@@ -237,7 +246,13 @@ function renderApprobationForm(approbation, organes, scope) {
           accept: '.pdf,.doc,.docx,.png,.jpg,.jpeg'
         }),
         existing.documentApprobation
-          ? el('small', { className: 'text-muted' }, `✓ Fichier existant : ${existing.documentApprobation}`)
+          ? el('div', { style: { marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' } }, [
+              el('small', { className: 'text-muted' }, '✓ Document déjà uploadé :'),
+              isUrl(existing.documentApprobation)
+                ? el('a', { href: existing.documentApprobation, target: '_blank', rel: 'noopener', style: { fontSize: '12px' } }, '📎 Ouvrir le document')
+                : el('small', { className: 'text-muted' }, existing.documentApprobation),
+              el('small', { className: 'text-muted', style: { fontStyle: 'italic' } }, '(sélectionner un nouveau fichier pour le remplacer)')
+            ])
           : el('small', { className: 'text-muted' }, 'Arrêté, décision, PV ou tout autre document justificatif')
       ])
     ])
@@ -257,7 +272,25 @@ function formatOrganeOption(o) {
   return label;
 }
 
-async function handleSave(idOperation, attributionId, lotId = null) {
+function isUrl(s) {
+  return typeof s === 'string' && /^https?:\/\//i.test(s);
+}
+
+// Normalise une date (ISO complet, YYYY-MM-DD ou Date) → YYYY-MM-DD pour input type=date
+function toDateInputValue(v) {
+  if (!v) return '';
+  if (typeof v === 'string') {
+    // déjà au format YYYY-MM-DD ?
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    // ISO complet → on slice
+    return v.slice(0, 10);
+  }
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return '';
+}
+
+async function handleSave(idOperation, attributionId, lotId = null, existingApprobation = null) {
+  const saveBtn = document.querySelector('.btn-primary');
   try {
     const organeApprobateur = document.getElementById('app-organe')?.value;
     if (!organeApprobateur) {
@@ -270,26 +303,63 @@ async function handleSave(idOperation, attributionId, lotId = null) {
       return;
     }
 
-    // Document : pour l'instant on stocke juste le nom de fichier (upload R2 fait par l'écran avenant-create — on pourra brancher pareil ici plus tard)
+    // Document : si un fichier est sélectionné, upload R2 ; sinon on garde l'existant
+    let documentApprobation = existingApprobation?.documentApprobation || null;
     const fileInput = document.getElementById('app-document');
-    const documentApprobation = fileInput?.files?.[0]?.name || null;
+    const newFile = fileInput?.files?.[0];
+
+    if (newFile) {
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Upload du document...'; }
+      try {
+        const upRes = await uploadDocument(newFile, {
+          phase: 'APPROBATION',
+          typeDocument: 'DOC_APPROBATION',
+          entityType: 'MP_VISA_CF',
+          entityId: existingApprobation?.id || null,
+          operationId: idOperation
+        });
+        documentApprobation = upRes.url;
+        logger.info('[ECR03C] Document uploadé sur R2 :', upRes.url);
+      } catch (uploadErr) {
+        logger.error('[ECR03C] Échec upload R2', uploadErr);
+        if (!confirm(`⚠️ Échec de l'upload du document : ${uploadErr.message}\n\nEnregistrer l'approbation sans le document ?`)) {
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = existingApprobation ? '💾 Mettre à jour l\'approbation' : '✅ Enregistrer l\'approbation'; }
+          return;
+        }
+      }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '⏳ Enregistrement...'; }
+    }
 
     const payload = {
-      operationId: idOperation,
-      attributionId: attributionId,
-      lotId: lotId || null,
       organeApprobateur,
       dateApprobation,
       documentApprobation,
       // Rétro-compat schéma : la phase reste « approuvée » par défaut côté Marché+
       decision: 'APPROUVE',
       dateDecision: dateApprobation,
-      createdAt: new Date().toISOString()
+      updatedAt: new Date().toISOString()
     };
 
-    const result = await dataService.add(ENTITIES.MP_VISA_CF, payload);
-    if (!result.success) {
+    let ok = false;
+    if (existingApprobation && existingApprobation.id) {
+      const upd = await dataService.update(ENTITIES.MP_VISA_CF, existingApprobation.id, payload);
+      ok = upd?.success;
+      if (ok) logger.info('[ECR03C] Approbation mise à jour :', existingApprobation.id);
+    } else {
+      const created = await dataService.add(ENTITIES.MP_VISA_CF, {
+        ...payload,
+        operationId: idOperation,
+        attributionId: attributionId,
+        lotId: lotId || null,
+        createdAt: new Date().toISOString()
+      });
+      ok = created?.success;
+      if (ok) logger.info('[ECR03C] Approbation créée');
+    }
+
+    if (!ok) {
       alert('❌ Erreur lors de la sauvegarde de l\'approbation');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = existingApprobation ? '💾 Mettre à jour l\'approbation' : '✅ Enregistrer l\'approbation'; }
       return;
     }
 
@@ -299,7 +369,7 @@ async function handleSave(idOperation, attributionId, lotId = null) {
       updatedAt: new Date().toISOString()
     });
 
-    alert('✅ Approbation enregistrée');
+    alert(existingApprobation ? '💾 Approbation mise à jour' : '✅ Approbation enregistrée');
     router.navigate('/mp/fiche-marche', { idOperation });
   } catch (err) {
     logger.error('[ECR03C] Erreur sauvegarde', err);
