@@ -676,9 +676,9 @@ function renderRecentActivity(metrics, colors) {
 
 function renderQuickActions(colors) {
   const actions = [
-    { icon: '📋', label: 'Liste PPM', route: '/ppm-list', color: colors.primary },
-    { icon: '➕', label: 'Nouvelle opération', route: '/ppm-create', color: '#198754' },
-    { icon: '📊', label: 'Dashboard principal', route: '/dashboard', color: '#0d6efd' },
+    { icon: '📋', label: 'Liste PPM', route: '/mp/ppm-list', color: colors.primary },
+    { icon: '➕', label: 'Nouvelle opération', route: '/mp/ppm-create', color: '#198754' },
+    { icon: '📊', label: 'Dashboard principal', route: '/mp/dashboard', color: '#0d6efd' },
     { icon: '⚙️', label: 'Configuration', route: '/admin/config-etapes', color: '#6f42c1' }
   ];
 

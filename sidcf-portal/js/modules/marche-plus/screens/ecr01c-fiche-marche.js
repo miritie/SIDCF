@@ -60,12 +60,12 @@ export async function renderFicheMarche(params) {
   // Mapping des routes pour chaque phase
   const phaseRoutes = {
     'PLANIF': null, // On reste sur cette page
-    'PROCEDURE': '/procedure',
-    'ATTRIBUTION': '/attribution',
-    'VISA_CF': '/visa-cf',
-    'EXECUTION': '/execution',
-    'AVENANTS': '/avenants',
-    'CLOTURE': '/cloture'
+    'PROCEDURE': '/mp/procedure',
+    'ATTRIBUTION': '/mp/attribution',
+    'VISA_CF': '/mp/visa-cf',
+    'EXECUTION': '/mp/execution',
+    'AVENANTS': '/mp/avenants',
+    'CLOTURE': '/mp/cloture'
   };
 
   // Créer les boutons de navigation dynamiques
