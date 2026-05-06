@@ -11,6 +11,7 @@ import renderPortalHome from './portal/portal-home.js';
 
 // Module imports
 import { registerMarcheRoutes } from './modules/marche/index.js';
+import { registerMarchePlusRoutes } from './modules/marche-plus/index.js';
 import { registerInvestissementRoutes } from './modules/investissement/index.js';
 import { registerMatiereRoutes } from './modules/matiere/index.js';
 
@@ -59,6 +60,9 @@ async function boot() {
 
     // Modules
     registerMarcheRoutes();
+    if (dataService.getConfig()?.features?.moduleMarchePlus) {
+      registerMarchePlusRoutes();
+    }
     registerInvestissementRoutes();
     registerMatiereRoutes();
 

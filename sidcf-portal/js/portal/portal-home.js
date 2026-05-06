@@ -21,6 +21,15 @@ export async function renderPortalHome() {
       badge: null
     },
     {
+      id: 'marche-plus',
+      title: 'Module Marché+',
+      description: 'Évolution expérimentale du module Marché — données séparées (MP_*), itérations indépendantes',
+      icon: '✨',
+      route: '/mp/ppm-list',
+      enabled: features.moduleMarchePlus,
+      badge: 'Nouveau'
+    },
+    {
       id: 'investissement',
       title: 'Module Investissement',
       description: 'Suivi des Projets d\'Investissement Publics (PIP) : budget, transferts, exécution, GAR',

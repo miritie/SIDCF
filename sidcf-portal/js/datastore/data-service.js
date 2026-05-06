@@ -90,6 +90,11 @@ class DataService {
         await this.loadSeedData();
       }
 
+      // Init Marché+ : cloner les données Marché si MP_* est vide (idempotent)
+      if (this.config?.features?.moduleMarchePlus) {
+        await this.ensureMarchePlusSeed();
+      }
+
       this.initialized = true;
       logger.info('[DataService] Initialization complete');
 
@@ -140,6 +145,43 @@ class DataService {
       }
     } catch (error) {
       logger.warn('[DataService] Failed to load seed data:', error.message);
+    }
+  }
+
+  /**
+   * Cloner les entités du module Marché vers Marché+ (MP_*) si vide.
+   * Idempotent : ne s'exécute que si toutes les MP_* sont vides.
+   */
+  async ensureMarchePlusSeed() {
+    try {
+      const MARCHE_TO_MP = [
+        'PPM_PLAN', 'OPERATION', 'BUDGET_LINE', 'PROCEDURE', 'RECOURS',
+        'ATTRIBUTION', 'ECHEANCIER', 'CLE_REPARTITION', 'VISA_CF',
+        'ORDRE_SERVICE', 'AVENANT', 'RESILIATION', 'GARANTIE', 'CLOTURE',
+        'ENTREPRISE', 'GROUPEMENT', 'ANO', 'DOCUMENT', 'DECOMPTE', 'DIFFICULTE'
+      ];
+
+      // Vérifier si déjà initialisé : si MP_OPERATION a déjà des données, on ne touche pas
+      const existingMpOps = await this.adapter.query('MP_OPERATION');
+      if (existingMpOps && existingMpOps.length > 0) {
+        logger.info('[Marché+] Seed déjà présent (' + existingMpOps.length + ' MP_OPERATION), skip init');
+        return;
+      }
+
+      let total = 0;
+      for (const name of MARCHE_TO_MP) {
+        const items = await this.adapter.query(name);
+        if (!items || items.length === 0) continue;
+        for (const it of items) {
+          // deep clone pour éviter de partager des références entre Marché et Marché+
+          const clone = JSON.parse(JSON.stringify(it));
+          await this.adapter.add('MP_' + name, clone);
+          total++;
+        }
+      }
+      logger.info('[Marché+] Seed cloné depuis le module Marché : ' + total + ' entités');
+    } catch (error) {
+      logger.warn('[Marché+] Échec init seed :', error.message);
     }
   }
 
@@ -269,6 +311,52 @@ class DataService {
       this.query(ENTITIES.AVENANT, { operationId }),
       this.query(ENTITIES.GARANTIE, { operationId }),
       this.query(ENTITIES.CLOTURE, { operationId }).then(r => r[0] || null)
+    ]);
+
+    return {
+      operation,
+      procedure,
+      recours,
+      attribution,
+      echeancier,
+      cleRepartition,
+      visasCF,
+      ordresService,
+      avenants,
+      garanties,
+      cloture
+    };
+  }
+
+  /**
+   * Get operation with related entities — Marché+ (entités MP_*)
+   */
+  async getMpOperationFull(operationId) {
+    const operation = await this.get(ENTITIES.MP_OPERATION, operationId);
+    if (!operation) return null;
+
+    const [
+      procedure,
+      recours,
+      attribution,
+      echeancier,
+      cleRepartition,
+      visasCF,
+      ordresService,
+      avenants,
+      garanties,
+      cloture
+    ] = await Promise.all([
+      this.query(ENTITIES.MP_PROCEDURE, { operationId }).then(r => r[0] || null),
+      this.query(ENTITIES.MP_RECOURS, { operationId }),
+      this.query(ENTITIES.MP_ATTRIBUTION, { operationId }).then(r => r[0] || null),
+      this.query(ENTITIES.MP_ECHEANCIER, { operationId }).then(r => r[0] || null),
+      this.query(ENTITIES.MP_CLE_REPARTITION, { operationId }).then(r => r[0] || null),
+      this.query(ENTITIES.MP_VISA_CF, { operationId }),
+      this.query(ENTITIES.MP_ORDRE_SERVICE, { operationId }),
+      this.query(ENTITIES.MP_AVENANT, { operationId }),
+      this.query(ENTITIES.MP_GARANTIE, { operationId }),
+      this.query(ENTITIES.MP_CLOTURE, { operationId }).then(r => r[0] || null)
     ]);
 
     return {

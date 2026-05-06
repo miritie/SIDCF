@@ -48,6 +48,24 @@ export function renderSidebar() {
     );
   }
 
+  if (features.moduleMarchePlus) {
+    navSections.push(
+      el('div', { className: 'sidebar-section' }, [
+        el('div', { className: 'sidebar-section-title' }, 'Module Marché+'),
+        el('nav', { className: 'sidebar-nav' }, [
+          el('a', { href: '#/mp/ppm-list', className: 'nav-item' }, [
+            el('span', { className: 'nav-item-icon' }, '✨'),
+            el('span', {}, 'PPM & Opérations')
+          ]),
+          el('a', { href: '#/mp/dashboard', className: 'nav-item' }, [
+            el('span', { className: 'nav-item-icon' }, '📊'),
+            el('span', {}, 'Dashboard')
+          ])
+        ])
+      ])
+    );
+  }
+
   // Admin section
   if (features.adminAccess) {
     navSections.push(

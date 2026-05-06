@@ -5,6 +5,7 @@
   "dataProvider": "postgres",
   "features": {
     "moduleMarche": true,
+    "moduleMarchePlus": true,
     "moduleInvestissement": true,
     "moduleMatiere": false,
     "adminAccess": true,

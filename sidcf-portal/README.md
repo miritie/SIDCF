@@ -1,5 +1,7 @@
 # SIDCF Portal - Système Intégré de la Dépense et du Contrôle Financier
 
+> 📘 **Architecture des modules** (Marché, Marché+, Investissement, Matière) : voir [`../MODULES.md`](../MODULES.md) — comment masquer / renommer / ajouter un module, où vivent les données, recettes pratiques.
+
 ## 📋 Vue d'ensemble
 
 SIDCF Portal est une application web vanilla (HTML + JavaScript ES modules + CSS) conçue pour la gestion des marchés publics, investissements et matières dans le cadre du contrôle financier en Côte d'Ivoire.
