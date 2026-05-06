@@ -33,8 +33,7 @@
   ],
   "TYPE_COMMISSION": [
     { "code": "COJO", "label": "Commission de Jugement des Offres (COJO)" },
-    { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" },
-    { "code": "TECH", "label": "Commission Technique" }
+    { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" }
   ],
   "TYPE_DOSSIER_APPEL": [
     { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOR"] },
