@@ -11,8 +11,8 @@ import { el, mount } from '../../../lib/dom.js';
 import logger from '../../../lib/logger.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { renderCleRepartitionManager } from '../../../ui/widgets/cle-repartition-manager.js';
-import { renderEcheancierManager } from '../../../ui/widgets/echeancier-manager.js';
+import { renderCleRepartitionManager } from '../../../ui/widgets/cle-repartition-manager-mp.js';
+import { renderEcheancierManager } from '../../../ui/widgets/echeancier-manager-mp.js';
 import {
   isFieldRequired,
   isFieldOptional,
