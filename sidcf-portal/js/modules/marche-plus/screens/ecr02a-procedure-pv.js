@@ -17,6 +17,25 @@ import {
 } from '../../../lib/procedure-context.js';
 import { SoumissionnairesWidget } from '../../../widgets/soumissionnaires-widget.js';
 import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js';
+import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
+
+// Debounce simple pour la détection sanctions (évite un appel à chaque touche)
+let _procSanctionTimer = null;
+function _procTriggerSanctionCheck() {
+  clearTimeout(_procSanctionTimer);
+  _procSanctionTimer = setTimeout(async () => {
+    const banner = document.getElementById('proc-sanction-banner');
+    if (!banner) return;
+    const raisonSociale = (document.getElementById('proc-fournisseur-retenu')?.value || '').trim();
+    if (!raisonSociale) { banner.innerHTML = ''; return; }
+    const sanction = await checkSanction({ raisonSociale });
+    banner.innerHTML = '';
+    if (sanction) {
+      const node = renderSanctionBanner(sanction);
+      if (node) banner.appendChild(node);
+    }
+  }, 300);
+}
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -156,6 +175,9 @@ export async function renderProcedurePV(params) {
   ]);
 
   mount('#app', page);
+
+  // Marché+ : check sanctions sur le fournisseur retenu pré-rempli (s'il y en a un)
+  setTimeout(() => _procTriggerSanctionCheck(), 150);
 
   // Initial derogation check and contextual sections
   if (selectedMode) {
@@ -562,12 +584,17 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
         ]),
 
         // Note de sélection
-        el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
-          el('strong', {}, '📄 Note de sélection')
+        el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+          el('strong', {}, '📄 Note de sélection'),
+          el('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-secondary',
+            onclick: (e) => { e.preventDefault(); openSanctionsDrawer(); }
+          }, '🚫 Gérer la liste des entreprises sanctionnées')
         ]),
 
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-          // Fournisseur retenu
+          // Fournisseur retenu (avec détection sanctions live)
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, ['Fournisseur retenu', el('span', { className: 'required' }, '*')]),
             el('input', {
@@ -575,8 +602,10 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
               className: 'form-input',
               id: 'proc-fournisseur-retenu',
               placeholder: 'Nom du fournisseur sélectionné',
-              value: existingProc.fournisseurRetenu || ''
-            })
+              value: existingProc.fournisseurRetenu || '',
+              oninput: () => _procTriggerSanctionCheck()
+            }),
+            el('div', { id: 'proc-sanction-banner' })
           ]),
 
           // Motif de sélection
