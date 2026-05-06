@@ -6,11 +6,11 @@
     { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" }
   ],
   "TYPE_MARCHE": [
-    { "code": "TRAVAUX", "label": "Travaux" },
-    { "code": "FOURNITURES", "label": "Fournitures" },
-    { "code": "SERVICES_COURANTS", "label": "Services Courants" },
-    { "code": "SERVICES_INTELLECTUELS", "label": "Services Intellectuels" },
-    { "code": "DELEGATION_SERVICE_PUBLIC", "label": "Délégation de Service Public" }
+    { "code": "TRAVAUX", "label": "TRAVAUX" },
+    { "code": "FOURNITURES", "label": "FOURNITURES" },
+    { "code": "SERVICES_COURANTS", "label": "SERVICES COURANTS" },
+    { "code": "SERVICES_INTELLECTUELS", "label": "SERVICES INTELLECTUELS" },
+    { "code": "DELEGATION_SERVICE_PUBLIC", "label": "DÉLÉGATION DE SERVICE PUBLIC" }
   ],
   "MODE_PASSATION": [
     { "code": "PSC", "label": "Procédure Simplifiée sur Consultation (PSC)", "seuil": true },

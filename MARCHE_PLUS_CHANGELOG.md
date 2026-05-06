@@ -13,9 +13,23 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
-## 2026-05-06 — Ajustement Liste PPM + rattrapage Livrables
+## 2026-05-06 — Ajustement Liste PPM + rattrapage Livrables + Type uniforme
 
-> **Points traités** : **Ajustement Liste PPM** (modif #5) et **Rattrapage bloc Livrables** (modif #6).
+> **Points traités** : **Ajustement Liste PPM** (modifs #5 et #7), **Rattrapage bloc Livrables** (modif #6).
+
+### Modif #7 — Libellés `TYPE_MARCHE` en MAJUSCULES (uniformisation)
+- **Description** : sur la liste PPM, certains types s'affichaient en majuscules (`SERVICES`) et d'autres en casse mixte (`Travaux`, `Fournitures`) selon la source du libellé. Uniformisation : tous les libellés `TYPE_MARCHE` du registre passent en MAJUSCULES.
+  - `Travaux` → `TRAVAUX`
+  - `Fournitures` → `FOURNITURES`
+  - `Services Courants` → `SERVICES COURANTS`
+  - `Services Intellectuels` → `SERVICES INTELLECTUELS`
+  - `Délégation de Service Public` → `DÉLÉGATION DE SERVICE PUBLIC`
+- **Sécurité** : `.toUpperCase()` ajouté à l'affichage de la cellule Type dans le tableau de la liste PPM, pour forcer la majuscule même sur les anciennes opérations dont le code stocké ne match pas le registre (ex: `op.typeMarche === 'Travaux'`).
+- **Fichiers** :
+  - `sidcf-portal/js/config/registries.json` (registre `TYPE_MARCHE`)
+  - `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` (affichage cellule Type)
+- **Portée** : le registre étant partagé, tous les écrans qui affichent `TYPE_MARCHE.label` (Marché et Marché+, filtres, fiches, dropdowns) bénéficient automatiquement.
+- **Cache localStorage** : les registres sont rechargés depuis `registries.json` à chaque boot, donc un F5 suffit. Si un utilisateur a un cache `localStorage` (`sidcf_registries`) avec les anciens labels, il peut le purger via la console (`localStorage.removeItem('sidcf_registries')`) ou attendre la prochaine MàJ via l'admin.
 
 ### Modif #6 — Bloc Livrables : édition inline + génération en lot + champs optionnels
 - **Écran touché** : `/mp/ppm-create-line` (et tout futur écran Marché+ qui utilise le widget)

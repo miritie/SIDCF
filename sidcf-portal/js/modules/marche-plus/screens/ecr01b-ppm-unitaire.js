@@ -275,7 +275,7 @@ function renderSimpleRow(op, registries) {
     el('td', { style: { fontWeight: '500' }, title: op.objet },
       op.objet.length > 60 ? op.objet.substring(0, 60) + '...' : op.objet
     ),
-    el('td', {}, typeMarche?.label || op.typeMarche || '-'),
+    el('td', {}, ((typeMarche?.label || op.typeMarche || '-') + '').toUpperCase()),
     el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
     el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
     el('td', {},
