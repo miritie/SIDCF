@@ -8,6 +8,8 @@ import { el, mount } from '../../../lib/dom.js';
 import logger from '../../../lib/logger.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
+import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 export async function renderVisaCF(params) {
   const { idOperation } = params;
@@ -31,8 +33,12 @@ export async function renderVisaCF(params) {
       return;
     }
 
-    const { operation, attribution } = fullData;
+    const { operation, attribution, procedure } = fullData;
     const registries = dataService.getAllRegistries();
+
+    // Marché+ multi-lot : résoudre le lot courant depuis la procédure
+    const lots = getLotsFromProcedure(procedure);
+    const currentLotId = resolveCurrentLotId(lots, params);
 
     // Vérifier qu'il y a une attribution
     if (!attribution) {
@@ -49,8 +55,18 @@ export async function renderVisaCF(params) {
     const modePassation = operation.modePassation || 'PSD';
     const visaRequired = ['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation);
 
-    // Le visa CF sera stocké dans l'attribution pour l'instant
-    let visaCF = attribution?.decisionCF || null;
+    // Attribution scopée au lot pour l'affichage
+    const attributionForLot = getLotData(attribution, currentLotId);
+
+    // Visa CF existant : on cherche d'abord dans MP_VISA_CF (filtré par lot),
+    // sinon fallback sur attribution.decisionCF (back-compat)
+    const allVisas = await dataService.query(ENTITIES.MP_VISA_CF, { operationId: idOperation });
+    const visasForLot = currentLotId
+      ? allVisas.filter(v => !v.lotId || v.lotId === currentLotId)
+      : allVisas;
+    let visaCF = (visasForLot && visasForLot.length > 0)
+      ? visasForLot[visasForLot.length - 1]
+      : (attributionForLot?.decisionCF || null);
 
     const page = el('div', { className: 'page' }, [
       // Header
@@ -62,6 +78,14 @@ export async function renderVisaCF(params) {
         el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '📝 Engagement'),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
+
+      // Sélecteur de lot (visible si > 1 lot)
+      renderLotSelector({
+        lots,
+        currentLotId,
+        route: '/mp/visa-cf',
+        routeParams: { idOperation }
+      }),
 
       // Alerte sur le visa CF
       visaRequired
@@ -81,7 +105,7 @@ export async function renderVisaCF(params) {
           ]),
 
       // Section Informations Attribution
-      renderAttributionInfo(attribution, operation, registries),
+      renderAttributionInfo(attributionForLot, operation, registries),
 
       // Formulaire Visa CF (seulement si requis ou si on veut quand même le renseigner)
       renderVisaForm(visaCF, registries, visaRequired),
@@ -98,7 +122,7 @@ export async function renderVisaCF(params) {
             el('button', {
               type: 'button',
               className: 'btn btn-primary',
-              onclick: async () => await handleSave(idOperation, attribution.id)
+              onclick: async () => await handleSave(idOperation, attribution.id, currentLotId)
             }, visaCF ? '💾 Mettre à jour le visa' : '✅ Enregistrer le visa')
           ])
         ])
@@ -374,8 +398,12 @@ function renderVisaForm(visaCF, registries, visaRequired = true) {
 
 /**
  * Sauvegarde du visa CF
+ *
+ * Marché+ multi-lot : si lotId est fourni, on l'enregistre sur le record
+ * (chaque visa est rattaché à un lot précis ; null pour les opérations
+ * mono-lot ou héritées).
  */
-async function handleSave(idOperation, attributionId) {
+async function handleSave(idOperation, attributionId, lotId = null) {
   try {
     const decision = document.querySelector('input[name="visa-decision"]:checked')?.value;
     if (!decision) {
@@ -393,6 +421,7 @@ async function handleSave(idOperation, attributionId) {
     const visaCFData = {
       operationId: idOperation,
       attributionId: attributionId,
+      lotId: lotId || null,
       decision: decision === 'VISA_RESERVE' ? 'VISE_RESERVE' : decision === 'VISA' ? 'VISE' : decision,
       dateDecision: dateDecision,
       createdAt: new Date().toISOString()

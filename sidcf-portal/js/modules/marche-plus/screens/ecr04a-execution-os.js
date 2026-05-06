@@ -9,6 +9,8 @@ import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderSteps } from '../../../ui/widgets/steps.js';
 import { money } from '../../../lib/format.js';
 import logger from '../../../lib/logger.js';
+import { getLotData, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -60,12 +62,30 @@ export async function renderExecutionOS(params) {
     return;
   }
 
-  const { operation, attribution, ordresService, visasCF, avenants } = fullData;
+  const { operation, attribution, ordresService, visasCF, avenants, procedure } = fullData;
   const registries = dataService.getAllRegistries();
 
-  // Vérifier si l'OS de démarrage existe déjà
+  // Marché+ multi-lot : résoudre le lot courant depuis la procédure
+  const lots = getLotsFromProcedure(procedure);
+  const currentLotId = resolveCurrentLotId(lots, params);
+
+  // Filtrer les arrays au lot courant (back-compat : si aucun lotId sur record, inclure)
+  const ordresServiceForLot = currentLotId
+    ? (ordresService || []).filter(os => !os.lotId || os.lotId === currentLotId)
+    : (ordresService || []);
+  const visasCFForLot = currentLotId
+    ? (visasCF || []).filter(v => !v.lotId || v.lotId === currentLotId)
+    : (visasCF || []);
+  const avenantsForLot = currentLotId
+    ? (avenants || []).filter(av => !av.lotId || av.lotId === currentLotId)
+    : (avenants || []);
+
+  // Attribution scopée au lot pour les calculs/affichage
+  const attributionForLot = getLotData(attribution, currentLotId);
+
+  // Vérifier si l'OS de démarrage existe déjà (pour ce lot)
   // Le premier OS créé est considéré comme l'OS de démarrage
-  const osDemarrage = ordresService && ordresService.length > 0 ? ordresService[0] : null;
+  const osDemarrage = ordresServiceForLot && ordresServiceForLot.length > 0 ? ordresServiceForLot[0] : null;
   const hasOSDemarrage = !!osDemarrage;
 
   // Helper pour vérifier si l'attribution est complète (supporte les différentes structures)
@@ -94,8 +114,8 @@ export async function renderExecutionOS(params) {
     return false;
   };
 
-  // Check if attribution is complete
-  if (!isAttributionComplete(attribution)) {
+  // Check if attribution is complete (au niveau du lot courant)
+  if (!isAttributionComplete(attributionForLot)) {
     mount('#app', el('div', { className: 'page' }, [
       renderSteps(fullData, idOperation),
       el('div', { className: 'alert alert-warning' }, [
@@ -116,9 +136,9 @@ export async function renderExecutionOS(params) {
   const modePassation = operation.modePassation || 'PSD';
   const visaRequired = ['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation);
 
-  // Check if visa CF granted (si requis)
-  const visaFavorable = visasCF && visasCF.length > 0 &&
-    visasCF.some(v => ['VISA', 'FAVORABLE', 'VISE', 'VISE_RESERVE'].includes(v.decision));
+  // Check if visa CF granted (si requis) — scopé au lot courant
+  const visaFavorable = visasCFForLot && visasCFForLot.length > 0 &&
+    visasCFForLot.some(v => ['VISA', 'FAVORABLE', 'VISE', 'VISE_RESERVE'].includes(v.decision));
 
   if (visaRequired && !visaFavorable && operation.etat !== 'EN_EXEC' && operation.etat !== 'CLOS') {
     mount('#app', el('div', { className: 'page' }, [
@@ -138,12 +158,12 @@ export async function renderExecutionOS(params) {
     return;
   }
 
-  // Check delay alert (OS > 30 days after visa)
-  const delayAlert = checkDelayAlert(operation, ordresService);
+  // Check delay alert (OS > 30 days after visa) — scopé au lot
+  const delayAlert = checkDelayAlert(operation, ordresServiceForLot);
 
-  // Calcul des KPIs pour les avenants
-  const montantInitial = attribution?.montants?.ttc || attribution?.montants?.attribue || operation?.montantPrevisionnel || 0;
-  const totalAvenants = avenants?.reduce((sum, av) => sum + (av.variationMontant || 0), 0) || 0;
+  // Calcul des KPIs pour les avenants (sur le lot courant)
+  const montantInitial = attributionForLot?.montants?.ttc || attributionForLot?.montants?.attribue || operation?.montantPrevisionnel || 0;
+  const totalAvenants = avenantsForLot?.reduce((sum, av) => sum + (av.variationMontant || 0), 0) || 0;
   const montantActuel = montantInitial + totalAvenants;
   const pourcentageAvenants = montantInitial > 0 ? (totalAvenants / montantInitial) * 100 : 0;
 
@@ -158,11 +178,19 @@ export async function renderExecutionOS(params) {
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 
+    // Sélecteur de lot (visible si > 1 lot)
+    renderLotSelector({
+      lots,
+      currentLotId,
+      route: '/mp/execution',
+      routeParams: { idOperation }
+    }),
+
     // Delay alert (if applicable)
     delayAlert ? delayAlert : null,
 
-    // Attribution summary
-    renderAttributionSummary(attribution),
+    // Attribution summary (scopée au lot)
+    renderAttributionSummary(attributionForLot),
 
     // =========================================
     // SECTION 1: Ordre de Service de Démarrage
@@ -286,7 +314,7 @@ export async function renderExecutionOS(params) {
 
               el('div', { style: { marginTop: '16px', display: 'flex', justifyContent: 'flex-end' } }, [
                 createButton('btn btn-primary', '🚀 Émettre l\'OS de démarrage', async () => {
-                  await handleAddOSDemarrage(idOperation);
+                  await handleAddOSDemarrage(idOperation, currentLotId);
                 })
               ])
             ])
@@ -299,10 +327,10 @@ export async function renderExecutionOS(params) {
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
         el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
-          el('h3', { className: 'card-title' }, `📑 Avenants au marché (${avenants?.length || 0})`),
+          el('h3', { className: 'card-title' }, `📑 Avenants au marché (${avenantsForLot?.length || 0})`),
           hasOSDemarrage
             ? createButton('btn btn-sm btn-primary', '➕ Nouvel avenant', () => {
-                router.navigate('/mp/avenant-create', { idOperation });
+                router.navigate('/mp/avenant-create', { idOperation, lotId: currentLotId });
               })
             : null
         ])
@@ -316,7 +344,7 @@ export async function renderExecutionOS(params) {
                 el('div', { className: 'alert-message' }, 'Les avenants ne peuvent être enregistrés qu\'après l\'émission de l\'OS de démarrage.')
               ])
             ])
-          : avenants && avenants.length > 0
+          : avenantsForLot && avenantsForLot.length > 0
             ? el('div', {}, [
                 // Résumé des avenants
                 el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' } }, [
@@ -352,7 +380,7 @@ export async function renderExecutionOS(params) {
                       ])
                     ]),
                     el('tbody', {},
-                      avenants.map(av => el('tr', {}, [
+                      avenantsForLot.map(av => el('tr', {}, [
                         el('td', { style: { fontWeight: '500' } }, av.numero || '-'),
                         el('td', {}, av.type || av.typeRef || '-'),
                         el('td', { style: { color: (av.variationMontant || 0) >= 0 ? 'var(--color-success)' : 'var(--color-error)' } },
@@ -366,7 +394,7 @@ export async function renderExecutionOS(params) {
                 // Lien vers l'écran complet
                 el('div', { style: { marginTop: '16px', textAlign: 'right' } }, [
                   createButton('btn btn-sm btn-secondary', 'Voir tous les avenants →', () => {
-                    router.navigate('/mp/avenants', { idOperation });
+                    router.navigate('/mp/avenants', { idOperation, lotId: currentLotId });
                   })
                 ])
               ])
@@ -385,11 +413,11 @@ export async function renderExecutionOS(params) {
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'space-between', alignItems: 'center' } }, [
           el('div', { className: 'text-small text-muted' },
             hasOSDemarrage
-              ? `Travaux démarrés le ${formatDate(osDemarrage.dateEmission)} • ${avenants?.length || 0} avenant(s)`
+              ? `Travaux démarrés le ${formatDate(osDemarrage.dateEmission)} • ${avenantsForLot?.length || 0} avenant(s)`
               : 'Travaux non démarrés'),
           el('div', { style: { display: 'flex', gap: '8px' } }, [
             hasOSDemarrage
-              ? createButton('btn btn-secondary', 'Avenants & Résiliation', () => router.navigate('/mp/avenants', { idOperation }))
+              ? createButton('btn btn-secondary', 'Avenants & Résiliation', () => router.navigate('/mp/avenants', { idOperation, lotId: currentLotId }))
               : null,
             createButton('btn btn-secondary', '← Retour', () => router.navigate('/mp/fiche-marche', { idOperation }))
           ])
@@ -572,8 +600,11 @@ function renderField(label, value) {
 
 /**
  * Handle add OS de démarrage
+ *
+ * Marché+ multi-lot : si lotId est fourni, on l'enregistre sur le record
+ * (chaque OS est rattaché à un lot précis ; null pour mono-lot).
  */
-async function handleAddOSDemarrage(idOperation) {
+async function handleAddOSDemarrage(idOperation, lotId = null) {
   // Collect form data
   const numero = document.getElementById('os-numero')?.value;
   const date = document.getElementById('os-date')?.value;
@@ -627,6 +658,7 @@ async function handleAddOSDemarrage(idOperation) {
   // Note: Le schéma PostgreSQL n'a pas de colonne 'type', on utilise l'objet pour identifier le type
   const osEntity = {
     operationId: idOperation,
+    lotId: lotId || null,
     numero,
     dateEmission: date,
     objet: objet || 'Ordre de service de démarrage des travaux',

@@ -7,6 +7,8 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderSteps } from '../../../ui/widgets/steps.js';
 import logger from '../../../lib/logger.js';
+import { getLotData, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -33,8 +35,12 @@ export async function renderGaranties(params) {
     return;
   }
 
-  const { operation, attribution } = fullData;
+  const { operation, attribution, procedure } = fullData;
   const rulesConfig = dataService.getRulesConfig();
+
+  // Marché+ multi-lot : résoudre le lot courant
+  const lots = getLotsFromProcedure(procedure);
+  const currentLotId = resolveCurrentLotId(lots, params);
 
   // Check if market is terminated (resiliée)
   const isResilie = operation.etat === 'RESILIE';
@@ -74,9 +80,15 @@ export async function renderGaranties(params) {
     return;
   }
 
-  // Load garanties
-  const garanties = await dataService.query(ENTITIES.MP_GARANTIE, { operationId: idOperation });
-  const montantMarche = attribution?.montants?.ttc || operation.montantPrevisionnel || 0;
+  // Load garanties (filtrées au lot courant ; back-compat : si pas de lotId, inclure)
+  const garantiesRaw = await dataService.query(ENTITIES.MP_GARANTIE, { operationId: idOperation });
+  const garanties = currentLotId
+    ? garantiesRaw.filter(g => !g.lotId || g.lotId === currentLotId)
+    : garantiesRaw;
+
+  // Attribution scopée au lot pour le montant
+  const attributionForLot = getLotData(attribution, currentLotId);
+  const montantMarche = attributionForLot?.montants?.ttc || operation.montantPrevisionnel || 0;
 
   const page = el('div', { className: 'page' }, [
     // Timeline
@@ -88,6 +100,14 @@ export async function renderGaranties(params) {
       el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Gestion des Garanties'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
+
+    // Sélecteur de lot (visible si > 1 lot)
+    renderLotSelector({
+      lots,
+      currentLotId,
+      route: '/mp/garanties',
+      routeParams: { idOperation }
+    }),
 
     // Summary
     renderGarantiesSummary(garanties, montantMarche, rulesConfig),
@@ -196,7 +216,7 @@ export async function renderGaranties(params) {
 
         el('div', { style: { display: 'flex', justifyContent: 'flex-end' } }, [
           createButton('btn btn-primary', 'Enregistrer la garantie', async () => {
-            await handleAddGarantie(idOperation, montantMarche);
+            await handleAddGarantie(idOperation, montantMarche, currentLotId);
           })
         ])
       ])
@@ -403,8 +423,11 @@ function renderEtatBadge(etat) {
 
 /**
  * Handle add garantie
+ *
+ * Marché+ multi-lot : si lotId est fourni, on l'enregistre sur le record
+ * (chaque garantie est rattachée à un lot précis ; null pour mono-lot).
  */
-async function handleAddGarantie(idOperation, montantMarche) {
+async function handleAddGarantie(idOperation, montantMarche, lotId = null) {
   const type = document.getElementById('garantie-type')?.value;
   const taux = parseFloat(document.getElementById('garantie-taux')?.value);
   const montant = parseFloat(document.getElementById('garantie-montant')?.value);
@@ -430,6 +453,7 @@ async function handleAddGarantie(idOperation, montantMarche) {
   const garantieData = {
     id: garantieId,
     operationId: idOperation,
+    lotId: lotId || null,
     type,
     taux,
     montant,
@@ -453,7 +477,7 @@ async function handleAddGarantie(idOperation, montantMarche) {
   alert('✅ Garantie enregistrée avec succès');
 
   // Reload
-  router.navigate('/mp/garanties', { idOperation });
+  router.navigate('/mp/garanties', { idOperation, lotId });
 }
 
 /**

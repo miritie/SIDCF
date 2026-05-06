@@ -7,6 +7,8 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderSteps } from '../../../ui/widgets/steps.js';
 import logger from '../../../lib/logger.js';
+import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -33,9 +35,13 @@ export async function renderEcheancierCle(params) {
     return;
   }
 
-  const { operation, attribution, budgetLine } = fullData;
+  const { operation, attribution, budgetLine, procedure } = fullData;
   const registries = dataService.getAllRegistries();
   const rulesConfig = dataService.getRulesConfig();
+
+  // Marché+ multi-lot : résoudre le lot courant depuis la procédure
+  const lots = getLotsFromProcedure(procedure);
+  const currentLotId = resolveCurrentLotId(lots, params);
 
   // Check prerequisites
   if (!operation.timeline.includes('ATTR')) {
@@ -55,11 +61,17 @@ export async function renderEcheancierCle(params) {
     return;
   }
 
-  // Load existing écheancier + clé
-  let echeancier = await dataService.get(ENTITIES.MP_ECHEANCIER, `ECH-${idOperation}`);
-  let cleRepartition = await dataService.get(ENTITIES.MP_CLE_REPARTITION, `CLE-${idOperation}`);
+  // Load existing écheancier + clé (raw, sans scope lot)
+  const rawEcheancier = await dataService.get(ENTITIES.MP_ECHEANCIER, `ECH-${idOperation}`);
+  const rawCleRepartition = await dataService.get(ENTITIES.MP_CLE_REPARTITION, `CLE-${idOperation}`);
 
-  const montantMarche = attribution?.montants?.ttc || operation.montantPrevisionnel || 0;
+  // Vue scopée au lot courant (merge root + parLot[lotId])
+  const echeancier = getLotData(rawEcheancier, currentLotId);
+  const cleRepartition = getLotData(rawCleRepartition, currentLotId);
+
+  // Attribution scopée au lot pour le montant marché
+  const attributionForLot = getLotData(attribution, currentLotId);
+  const montantMarche = attributionForLot?.montants?.ttc || operation.montantPrevisionnel || 0;
 
   // State
   let echeancierItems = echeancier?.items || [];
@@ -76,8 +88,16 @@ export async function renderEcheancierCle(params) {
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 
+    // Sélecteur de lot (visible si > 1 lot)
+    renderLotSelector({
+      lots,
+      currentLotId,
+      route: '/mp/echeancier',
+      routeParams: { idOperation }
+    }),
+
     // KPI Summary
-    renderKPISummary(montantMarche, attribution),
+    renderKPISummary(montantMarche, attributionForLot),
 
     // Clé de répartition
     el('div', { className: 'card', style: { marginBottom: '24px' }, id: 'cle-card' }, [
@@ -123,7 +143,7 @@ export async function renderEcheancierCle(params) {
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
           createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/fiche-marche', { idOperation })),
           createButton('btn btn-primary', 'Enregistrer', async () => {
-            await handleSave(idOperation, echeancierItems, cleLines, montantMarche);
+            await handleSave(idOperation, echeancierItems, cleLines, montantMarche, currentLotId, rawEcheancier, rawCleRepartition);
           })
         ])
       ])
@@ -500,8 +520,11 @@ function recalculateEcheancier() {
 
 /**
  * Handle save
+ *
+ * Marché+ multi-lot : si lotId est fourni, les champs métier vont sous
+ * `entity.parLot[lotId]` plutôt qu'à la racine (back-compat single-lot).
  */
-async function handleSave(idOperation, echeancierItems, cleLines, montantMarche) {
+async function handleSave(idOperation, echeancierItems, cleLines, montantMarche, lotId = null, rawEcheancier = null, rawCleRepartition = null) {
   // Validation
   let totalMontant = 0;
   let totalPourcent = 0;
@@ -519,23 +542,31 @@ async function handleSave(idOperation, echeancierItems, cleLines, montantMarche)
     return;
   }
 
-  // Save clé
+  // Save clé (per-lot ou racine selon lotId)
   const cleId = `CLE-${idOperation}`;
-  const cleData = {
-    id: cleId,
-    operationId: idOperation,
+  const cleLotFields = {
     lignes: cleLines,
     total: totalMontant,
-    sumPourcent: totalPourcent,
-    updatedAt: new Date().toISOString()
+    sumPourcent: totalPourcent
   };
+  const clePatch = buildLotPatch(lotId, cleLotFields, rawCleRepartition);
 
-  const existingCle = await dataService.get(ENTITIES.MP_CLE_REPARTITION, cleId);
+  const existingCle = rawCleRepartition || await dataService.get(ENTITIES.MP_CLE_REPARTITION, cleId);
   let cleResult;
   if (existingCle) {
-    cleResult = await dataService.update(ENTITIES.MP_CLE_REPARTITION, cleId, cleData);
+    cleResult = await dataService.update(ENTITIES.MP_CLE_REPARTITION, cleId, {
+      ...clePatch,
+      operationId: idOperation,
+      updatedAt: new Date().toISOString()
+    });
   } else {
-    cleResult = await dataService.add(ENTITIES.MP_CLE_REPARTITION, cleData);
+    cleResult = await dataService.add(ENTITIES.MP_CLE_REPARTITION, {
+      ...clePatch,
+      id: cleId,
+      operationId: idOperation,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
   }
 
   if (!cleResult.success) {
@@ -543,9 +574,31 @@ async function handleSave(idOperation, echeancierItems, cleLines, montantMarche)
     return;
   }
 
-  // Save échéancier (similar)
+  // Save échéancier (per-lot ou racine selon lotId)
+  const echId = `ECH-${idOperation}`;
+  const echLotFields = {
+    items: echeancierItems
+  };
+  const echPatch = buildLotPatch(lotId, echLotFields, rawEcheancier);
 
-  logger.info('[Écheancier-Clé] Enregistrement réussi');
+  const existingEch = rawEcheancier || await dataService.get(ENTITIES.MP_ECHEANCIER, echId);
+  if (existingEch) {
+    await dataService.update(ENTITIES.MP_ECHEANCIER, echId, {
+      ...echPatch,
+      operationId: idOperation,
+      updatedAt: new Date().toISOString()
+    });
+  } else {
+    await dataService.add(ENTITIES.MP_ECHEANCIER, {
+      ...echPatch,
+      id: echId,
+      operationId: idOperation,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  logger.info('[Écheancier-Clé] Enregistrement réussi', { lotId });
   alert('✅ Échéancier et clé de répartition enregistrés');
   router.navigate('/mp/fiche-marche', { idOperation });
 }

@@ -8,6 +8,8 @@ import { kpiGrid } from '../../../ui/widgets/kpis.js';
 import { dataTable } from '../../../ui/widgets/table.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
+import { getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -19,9 +21,21 @@ export async function renderAvenants(params) {
   const { idOperation } = params;
 
   const operation = await dataService.get(ENTITIES.MP_OPERATION, idOperation);
-  const avenants = await dataService.query(ENTITIES.MP_AVENANT, { operationId: idOperation });
+  const avenantsRaw = await dataService.query(ENTITIES.MP_AVENANT, { operationId: idOperation });
   const resiliations = await dataService.query(ENTITIES.MP_RESILIATION, { operationId: idOperation });
   const registries = dataService.getAllRegistries();
+
+  // Marché+ multi-lot : on récupère les lots via la fiche d'opération full
+  // (pour avoir la procédure liée)
+  const fullData = await dataService.getMpOperationFull(idOperation);
+  const procedure = fullData?.procedure;
+  const lots = getLotsFromProcedure(procedure);
+  const currentLotId = resolveCurrentLotId(lots, params);
+
+  // Filtrer les avenants au lot courant (back-compat : si pas de lotId, inclure)
+  const avenants = currentLotId
+    ? avenantsRaw.filter(av => !av.lotId || av.lotId === currentLotId)
+    : avenantsRaw;
 
   // Check if market is already terminated (resiliée)
   const isResilie = resiliations && resiliations.length > 0;
@@ -41,6 +55,14 @@ export async function renderAvenants(params) {
       el('h1', { className: 'page-title' }, 'Avenants & Résiliation'),
       el('p', { className: 'page-subtitle' }, operation?.objet || idOperation)
     ]),
+
+    // Sélecteur de lot (visible si > 1 lot)
+    renderLotSelector({
+      lots,
+      currentLotId,
+      route: '/mp/avenants',
+      routeParams: { idOperation }
+    }),
 
     // Alert si marché résilié
     isResilie ? el('div', { className: 'alert alert-error', style: { marginBottom: '24px' } }, [
@@ -78,7 +100,7 @@ export async function renderAvenants(params) {
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, `📑 Liste des avenants (${avenants.length})`),
         !isResilie ? createButton('btn btn-sm btn-primary', '➕ Nouvel avenant', () => {
-          router.navigate('/mp/avenant-create', { idOperation });
+          router.navigate('/mp/avenant-create', { idOperation, lotId: currentLotId });
         }) : null
       ]),
       el('div', { className: 'card-body' }, [

@@ -19,10 +19,14 @@ import {
   isFieldHidden,
   getContextualConfig
 } from '../../../lib/procedure-context.js';
+import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 // État global pour les widgets
 let cleRepartitionList = [];
 let echeancierData = null;
+// Marché+ multi-lot : lot courant pour cet écran
+let currentLotId = null;
 
 export async function renderAttribution(params) {
   const { idOperation } = params;
@@ -46,14 +50,19 @@ export async function renderAttribution(params) {
       return;
     }
 
-    const { operation, attribution } = fullData;
+    const { operation, procedure, attribution } = fullData;
     const registries = dataService.getAllRegistries();
 
     // Get mode de passation for contextual behavior
     const modePassation = operation.modePassation || 'PSD';
 
-    // Charger attribution existante (si elle existe déjà)
-    let existingAttribution = attribution;
+    // Marché+ multi-lot : résoudre le lot courant depuis la procédure
+    const lots = getLotsFromProcedure(procedure);
+    currentLotId = resolveCurrentLotId(lots, params);
+
+    // Charger attribution existante (si elle existe déjà), scopée au lot courant
+    const rawAttribution = attribution;
+    const existingAttribution = getLotData(rawAttribution, currentLotId);
 
     // Initialiser l'état
     cleRepartitionList = [];
@@ -70,10 +79,18 @@ export async function renderAttribution(params) {
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
 
+      // Sélecteur de lot (visible si > 1 lot)
+      renderLotSelector({
+        lots,
+        currentLotId,
+        route: '/mp/attribution',
+        routeParams: { idOperation }
+      }),
+
       // Alerte contextuelle
       renderContextualAlert(modePassation),
 
-      // Formulaire
+      // Formulaire (scopé au lot courant)
       renderAttributionForm(existingAttribution, operation, registries, modePassation),
 
       // Actions
@@ -88,8 +105,8 @@ export async function renderAttribution(params) {
             el('button', {
               type: 'button',
               className: 'btn btn-primary',
-              onclick: async () => await handleSave(idOperation, operation)
-            }, existingAttribution ? '💾 Mettre à jour' : '✅ Enregistrer l\'attribution')
+              onclick: async () => await handleSave(idOperation, operation, rawAttribution, currentLotId)
+            }, (rawAttribution && (currentLotId ? rawAttribution.parLot?.[currentLotId] : true)) ? '💾 Mettre à jour' : '✅ Enregistrer l\'attribution')
           ])
         ])
       ])
@@ -893,8 +910,12 @@ function initializeWidgets(operation, registries) {
 
 /**
  * Sauvegarde de l'attribution
+ *
+ * Marché+ multi-lot : si lotId est fourni, on écrit dans
+ * `entity.parLot[lotId]` plutôt qu'à la racine. Comportement transparent
+ * pour les opérations à 1 lot ou héritées (lotId = null).
  */
-async function handleSave(idOperation, operation) {
+async function handleSave(idOperation, operation, rawAttribution = null, lotId = null) {
   try {
     // Collecte des données attributaire
     const attrType = document.querySelector('input[name="attr-type"]:checked')?.value || 'SIMPLE';
@@ -973,12 +994,10 @@ async function handleSave(idOperation, operation) {
 
     // Chercher si une attribution existe déjà pour cette opération
     const existingAttrs = await dataService.query(ENTITIES.MP_ATTRIBUTION, { operationId: idOperation });
-    const existingAttr = existingAttrs && existingAttrs.length > 0 ? existingAttrs[0] : null;
+    const existingAttr = (existingAttrs && existingAttrs.length > 0) ? existingAttrs[0] : (rawAttribution || null);
 
-    // Données attribution complètes (sans ID si création, le backend le génère)
-    // Données attribution - noms de colonnes en snake_case pour PostgreSQL
-    const attributionData = {
-      operation_id: idOperation,
+    // Champs métier (per-lot ou racine selon lotId)
+    const lotFields = {
       attributaire: attributaireData,
       montants: {
         ht: montantHT,
@@ -997,22 +1016,34 @@ async function handleSave(idOperation, operation) {
         motifRef: null,
         commentaire: ''
       },
-      garanties: {},
-      updated_at: new Date().toISOString()
+      garanties: {}
     };
+
+    // Construit le patch : si lotId, les champs vont sous parLot[lotId]
+    const lotPatch = buildLotPatch(lotId, lotFields, existingAttr);
 
     // Sauvegarder attribution
     let attrResult;
 
-    if (existingAttr) {
-      // Mise à jour avec l'ID existant
-      attrResult = await dataService.update(ENTITIES.MP_ATTRIBUTION, existingAttr.id, attributionData);
-      logger.info('[ECR03A] Attribution mise à jour', { id: existingAttr.id, ...attributionData });
+    if (existingAttr && existingAttr.id) {
+      // Mise à jour
+      const updateData = {
+        ...lotPatch,
+        operation_id: idOperation,
+        updated_at: new Date().toISOString()
+      };
+      attrResult = await dataService.update(ENTITIES.MP_ATTRIBUTION, existingAttr.id, updateData);
+      logger.info('[ECR03A] Attribution mise à jour', { id: existingAttr.id, lotId });
     } else {
-      // Création - ajouter created_at
-      attributionData.created_at = new Date().toISOString();
-      attrResult = await dataService.add(ENTITIES.MP_ATTRIBUTION, attributionData);
-      logger.info('[ECR03A] Attribution créée', attributionData);
+      // Création
+      const createData = {
+        ...lotPatch,
+        operation_id: idOperation,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      attrResult = await dataService.add(ENTITIES.MP_ATTRIBUTION, createData);
+      logger.info('[ECR03A] Attribution créée', { lotId });
     }
 
     if (!attrResult.success) {

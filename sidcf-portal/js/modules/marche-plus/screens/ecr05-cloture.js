@@ -13,6 +13,8 @@ import {
   isFieldHidden,
   getContextualConfig
 } from '../../../lib/procedure-context.js';
+import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -38,10 +40,14 @@ export async function renderCloture(params) {
     return;
   }
 
-  const { operation } = fullData;
+  const { operation, procedure } = fullData;
 
   // Get mode de passation for contextual behavior
   const modePassation = operation.modePassation || 'PSD';
+
+  // Marché+ multi-lot : résoudre le lot courant
+  const lots = getLotsFromProcedure(procedure);
+  const currentLotId = resolveCurrentLotId(lots, params);
 
   // Check if market is terminated (resiliée)
   const isResilie = operation.etat === 'RESILIE';
@@ -92,8 +98,15 @@ export async function renderCloture(params) {
 
   // Load cloture by operationId (compatible avec PostgreSQL UUIDs)
   const clotures = await dataService.query(ENTITIES.MP_CLOTURE, { operationId: idOperation });
-  let cloture = clotures && clotures.length > 0 ? clotures[0] : null;
-  const garanties = await dataService.query(ENTITIES.MP_GARANTIE, { operationId: idOperation });
+  const rawCloture = clotures && clotures.length > 0 ? clotures[0] : null;
+  // Vue scopée au lot courant (merge root + parLot[lotId])
+  const cloture = getLotData(rawCloture, currentLotId);
+
+  // Garanties : filtrer au lot courant pour la section "Mainlevées"
+  const garantiesRaw = await dataService.query(ENTITIES.MP_GARANTIE, { operationId: idOperation });
+  const garanties = currentLotId
+    ? garantiesRaw.filter(g => !g.lotId || g.lotId === currentLotId)
+    : garantiesRaw;
 
   const page = el('div', { className: 'page' }, [
     renderSteps(fullData, idOperation),
@@ -103,6 +116,14 @@ export async function renderCloture(params) {
       el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Clôture & Réceptions'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
+
+    // Sélecteur de lot (visible si > 1 lot)
+    renderLotSelector({
+      lots,
+      currentLotId,
+      route: '/mp/cloture',
+      routeParams: { idOperation }
+    }),
 
     // Réception provisoire
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
@@ -284,11 +305,11 @@ export async function renderCloture(params) {
           createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/fiche-marche', { idOperation })),
           el('div', { style: { display: 'flex', gap: '12px' } }, [
             createButton('btn btn-primary', 'Enregistrer', async () => {
-              await handleSave(idOperation, false);
+              await handleSave(idOperation, false, currentLotId, rawCloture);
             }),
             cloture?.receptionDef?.date && garanties.every(g => g.mainleveeDate)
               ? createButton('btn btn-success', '✓ Clôturer Définitivement', async () => {
-                  await handleSave(idOperation, true);
+                  await handleSave(idOperation, true, currentLotId, rawCloture);
                 })
               : null
           ])
@@ -331,7 +352,11 @@ function renderGarantieCheckbox(garantie) {
   ]);
 }
 
-async function handleSave(idOperation, definitive) {
+/**
+ * Marché+ multi-lot : si lotId est fourni, les champs métier vont sous
+ * `entity.parLot[lotId]` plutôt qu'à la racine (back-compat single-lot).
+ */
+async function handleSave(idOperation, definitive, lotId = null, rawCloture = null) {
   const dateRP = document.getElementById('cloture-date-rp')?.value;
   const reservesRP = document.getElementById('cloture-reserves-rp')?.value;
   const dateRD = document.getElementById('cloture-date-rd')?.value;
@@ -355,16 +380,18 @@ async function handleSave(idOperation, definitive) {
     return;
   }
 
-  // Chercher si une clôture existe déjà pour cette opération
-  const existingClotures = await dataService.query(ENTITIES.MP_CLOTURE, { operationId: idOperation });
-  const existingCloture = existingClotures && existingClotures.length > 0 ? existingClotures[0] : null;
+  // Chercher si une clôture existe déjà pour cette opération (utilise rawCloture si fourni)
+  let existing = rawCloture;
+  if (!existing) {
+    const c = await dataService.query(ENTITIES.MP_CLOTURE, { operationId: idOperation });
+    existing = c && c.length > 0 ? c[0] : null;
+  }
 
   // Générer un UUID valide ou réutiliser l'existant
-  const clotureId = existingCloture?.id || crypto.randomUUID();
+  const clotureId = existing?.id || crypto.randomUUID();
 
-  const clotureData = {
-    id: clotureId,
-    operationId: idOperation,
+  // Champs métier (per-lot ou racine selon lotId)
+  const lotFields = {
     receptionProv: {
       date: dateRP,
       pv: 'PV_RP_' + Date.now() + '.pdf',
@@ -379,16 +406,29 @@ async function handleSave(idOperation, definitive) {
     satisfactionCommentaires,
     mainlevees: [], // TODO: track mainlevees
     syntheseFinale: synthese || '',
-    closAt: definitive ? new Date().toISOString() : null,
-    createdAt: existingCloture?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    closAt: definitive ? new Date().toISOString() : null
   };
 
+  // Construit le patch : si lotId, les champs vont sous parLot[lotId]
+  const lotPatch = buildLotPatch(lotId, lotFields, existing);
+
   let result;
-  if (existingCloture) {
-    result = await dataService.update(ENTITIES.MP_CLOTURE, clotureId, clotureData);
+  if (existing) {
+    const updateData = {
+      ...lotPatch,
+      operationId: idOperation,
+      updatedAt: new Date().toISOString()
+    };
+    result = await dataService.update(ENTITIES.MP_CLOTURE, clotureId, updateData);
   } else {
-    result = await dataService.add(ENTITIES.MP_CLOTURE, clotureData);
+    const createData = {
+      ...lotPatch,
+      id: clotureId,
+      operationId: idOperation,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    result = await dataService.add(ENTITIES.MP_CLOTURE, createData);
   }
 
   if (!result.success) {

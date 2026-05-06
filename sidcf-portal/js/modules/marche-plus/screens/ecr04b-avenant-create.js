@@ -7,6 +7,8 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { uploadDocument } from '../../../lib/r2-storage-mp.js';
 import logger from '../../../lib/logger.js';
+import { getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -29,8 +31,19 @@ export async function renderAvenantCreate(params) {
   try {
     // Charger les données
     const operation = await dataService.get(ENTITIES.MP_OPERATION, idOperation);
-    const avenants = await dataService.query(ENTITIES.MP_AVENANT, { operationId: idOperation });
+    const avenantsRaw = await dataService.query(ENTITIES.MP_AVENANT, { operationId: idOperation });
     const registries = dataService.getAllRegistries();
+
+    // Marché+ multi-lot : charger les lots depuis la procédure
+    const fullData = await dataService.getMpOperationFull(idOperation);
+    const procedure = fullData?.procedure;
+    const lots = getLotsFromProcedure(procedure);
+    const currentLotId = resolveCurrentLotId(lots, params);
+
+    // Filtrer avenants au lot pour calcul du numéro et des cumuls
+    const avenants = currentLotId
+      ? avenantsRaw.filter(av => !av.lotId || av.lotId === currentLotId)
+      : avenantsRaw;
 
     if (!operation) {
       mount('#app', el('div', { className: 'page' }, [
@@ -64,10 +77,18 @@ export async function renderAvenantCreate(params) {
 
     const page = el('div', { className: 'page' }, [
       el('div', { className: 'page-header' }, [
-        createButton('btn btn-secondary btn-sm', '← Retour liste avenants', () => router.navigate('/mp/avenants', { idOperation })),
+        createButton('btn btn-secondary btn-sm', '← Retour liste avenants', () => router.navigate('/mp/avenants', { idOperation, lotId: currentLotId })),
         el('h1', { className: 'page-title', style: { marginTop: '12px' } }, `➕ Nouvel avenant N°${numeroAvenant}`),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
+
+      // Sélecteur de lot (visible si > 1 lot)
+      renderLotSelector({
+        lots,
+        currentLotId,
+        route: '/mp/avenant-create',
+        routeParams: { idOperation }
+      }),
 
       // Info contexte
       el('div', { className: 'card', style: { marginBottom: '24px', backgroundColor: '#f8f9fa' } }, [
@@ -341,8 +362,8 @@ export async function renderAvenantCreate(params) {
         el('div', { className: 'card' }, [
           el('div', { className: 'card-body' }, [
             el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
-              createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/avenants', { idOperation })),
-              createButton('btn btn-primary', '✅ Créer l\'avenant', () => handleSubmit(idOperation, operation, numeroAvenant, montantActuel, totalAvenants))
+              createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/avenants', { idOperation, lotId: currentLotId })),
+              createButton('btn btn-primary', '✅ Créer l\'avenant', () => handleSubmit(idOperation, operation, numeroAvenant, montantActuel, totalAvenants, currentLotId))
             ])
           ])
         ])
@@ -475,8 +496,11 @@ function handleFileChange(e) {
 
 /**
  * Soumission du formulaire
+ *
+ * Marché+ multi-lot : si lotId est fourni, on l'enregistre sur l'avenant
+ * (chaque avenant est rattaché à un lot précis ; null pour mono-lot).
  */
-async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel, totalAvenants) {
+async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel, totalAvenants, lotId = null) {
   try {
     // Validation de base
     const numero = document.getElementById('avenant-numero').value.trim();
@@ -559,6 +583,7 @@ async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel
     const avenantData = {
       id: avenantId,
       operationId: idOperation,
+      lotId: lotId || null,
       numero,
       type,
       dateSignature,
@@ -599,7 +624,7 @@ async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel
       ? `✅ Avenant de délai créé avec succès (+${variationDelai} mois)`
       : '✅ Avenant créé avec succès';
     alert(messageSucces);
-    router.navigate('/mp/avenants', { idOperation });
+    router.navigate('/mp/avenants', { idOperation, lotId });
 
   } catch (err) {
     logger.error('[ECR04B-Create] Erreur création avenant', err);
