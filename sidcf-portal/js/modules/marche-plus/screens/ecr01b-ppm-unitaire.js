@@ -6,6 +6,14 @@ import { el, mount } from '../../../lib/dom.js';
 import { money, moneyMillions } from '../../../lib/format.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
+import { getRegionsOptions } from '../../../lib/mp-regions-ci.js';
+
+// Cache local pour les régions CI (33 entrées chargées une fois)
+let _regionsCiCache = null;
+async function _getRegionsCi() {
+  if (!_regionsCiCache) _regionsCiCache = await getRegionsOptions();
+  return _regionsCiCache;
+}
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -47,9 +55,10 @@ export async function renderPPMList() {
 
   // Extract unique values for filters
   const exercices = [...new Set(operations.map(op => op.exercice).filter(Boolean))].sort((a, b) => b - a);
-  const regions = [...new Set(operations.map(op => op.localisation?.region).filter(Boolean))].sort();
   const unites = [...new Set(operations.map(op => op.unite).filter(Boolean))].sort();
   const activites = [...new Set(operations.map(op => op.chaineBudgetaire?.activiteLib).filter(Boolean))].sort();
+  // Régions : référentiel officiel CI (33 entrées) — pas le calcul ad hoc sur les opérations
+  const regions = await _getRegionsCi();
 
   // Apply filters
   const filteredOps = applyFilters(operations);
@@ -87,15 +96,28 @@ export async function renderPPMList() {
 
     // Filters — Marché+ : multi-sélection (tenir Cmd/Ctrl pour cocher plusieurs valeurs)
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, '🔍 Filtres'),
-        el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, [
-          el('span', { className: 'text-small text-muted' }, 'Multi-sélection : maintiens Cmd/Ctrl pour choisir plusieurs valeurs'),
-          createButton('btn btn-sm btn-secondary', 'Réinitialiser', () => resetFilters())
+      el('div', { className: 'card-header', style: { display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' } }, [
+        el('h3', { className: 'card-title', style: { margin: 0 } }, [
+          '🔍 Filtres',
+          // Badge nombre de filtres actifs
+          (() => {
+            const activeCount = Object.entries(activeFilters)
+              .filter(([k, v]) => Array.isArray(v) ? v.length > 0 : (v && v !== ''))
+              .length;
+            return activeCount > 0
+              ? el('span', {
+                  style: { marginLeft: '10px', fontSize: '12px', background: '#0f5132', color: '#fff', padding: '2px 10px', borderRadius: '12px', fontWeight: '600' }
+                }, `${activeCount} filtre${activeCount > 1 ? 's' : ''} actif${activeCount > 1 ? 's' : ''}`)
+              : null;
+          })()
+        ]),
+        el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' } }, [
+          el('span', { className: 'text-small text-muted', style: { fontSize: '11px' } }, 'Cmd/Ctrl + clic pour multi-sélection'),
+          createButton('btn btn-sm btn-secondary', '🔄 Tout réinitialiser', () => resetFilters())
         ])
       ]),
       el('div', { className: 'card-body' }, [
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' } }, [
           // Search (texte libre)
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Recherche'),
@@ -164,11 +186,11 @@ export async function renderPPMList() {
             activeFilters.categoriePrestation
           ),
 
-          // Région (multi)
+          // Région (multi) — référentiel officiel CI : 2 districts autonomes + 31 régions
           renderMultiSelectFilter(
             'region',
-            'Région',
-            regions.map(r => ({ code: r, label: r })),
+            'Région (Côte d\'Ivoire)',
+            regions,
             activeFilters.region
           ),
 
@@ -221,32 +243,84 @@ export async function renderPPMList() {
 }
 
 /**
- * Helper : champ filtre <select multiple> avec hauteur fixée pour voir 4-5 options.
+ * Helper : champ filtre <select multiple> + champ de recherche pour filtrer les options
  * options : tableau d'objets { code, label }
  * selected : array des valeurs cochées
+ *
+ * UX :
+ *  - Liste à hauteur fixe (~6 lignes visibles, scroll interne)
+ *  - Petite barre de recherche au-dessus pour filtrer les options
+ *    (utile pour Région, Unité Administrative, Bailleur, Activité…)
+ *  - Badge compteur avec le nombre de valeurs sélectionnées
+ *  - title attribut sur chaque option (label complet au hover si tronqué)
+ *  - Bouton "✕ Vider" pour décocher en un clic
  */
 function renderMultiSelectFilter(name, label, options, selected) {
   const sel = el('select', {
-    className: 'form-input',
+    className: 'form-input mp-filter-select',
     id: `filter-${name}`,
     multiple: true,
-    size: 4,
-    style: { minHeight: '90px' }
+    size: 6,
+    style: { minHeight: '140px', fontSize: '13px', padding: '4px' }
   }, options.map(o => {
-    const attrs = { value: o.code };
+    const attrs = { value: o.code, title: o.label };
     if (selected && selected.includes(o.code)) attrs.selected = 'selected';
     return el('option', attrs, o.label);
   }));
 
+  // Barre de recherche : filtre live les options visibles
+  const searchInput = el('input', {
+    type: 'text',
+    className: 'form-input mp-filter-search',
+    placeholder: `🔎 Filtrer ${label.toLowerCase()}...`,
+    style: { fontSize: '12px', padding: '4px 8px', marginBottom: '4px' },
+    oninput: (e) => {
+      const q = (e.target.value || '').toLowerCase().trim();
+      Array.from(sel.options).forEach(opt => {
+        const match = !q || opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q);
+        opt.style.display = match ? '' : 'none';
+      });
+    }
+  });
+
   const count = selected ? selected.length : 0;
+  const totalOptions = options.length;
+
+  // Bouton ✕ pour vider la sélection (visible si au moins une valeur)
+  const clearBtn = count > 0
+    ? el('button', {
+        type: 'button',
+        className: 'btn btn-sm btn-secondary',
+        style: { fontSize: '11px', padding: '2px 8px', marginLeft: '6px' },
+        onclick: (e) => {
+          e.preventDefault();
+          Array.from(sel.options).forEach(o => { o.selected = false; });
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }, '✕ Vider')
+    : null;
+
   return el('div', { className: 'form-field' }, [
-    el('label', { className: 'form-label' }, [
-      label,
-      count > 0
-        ? el('span', { style: { marginLeft: '6px', fontSize: '11px', background: '#0f5132', color: '#fff', padding: '1px 6px', borderRadius: '10px' } }, String(count))
-        : null
+    el('label', {
+      className: 'form-label',
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }
+    }, [
+      el('span', {}, [
+        label,
+        count > 0
+          ? el('span', { style: { marginLeft: '6px', fontSize: '11px', background: '#0f5132', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontWeight: 'bold' } }, String(count))
+          : null
+      ]),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        totalOptions > 0 ? `${totalOptions} valeur${totalOptions > 1 ? 's' : ''}` : '—'
+      )
     ]),
-    sel
+    // Recherche interne au filtre — visible seulement si > 5 options
+    totalOptions > 5 ? searchInput : null,
+    sel,
+    clearBtn
+      ? el('div', { style: { textAlign: 'right', marginTop: '4px' } }, [clearBtn])
+      : null
   ]);
 }
 

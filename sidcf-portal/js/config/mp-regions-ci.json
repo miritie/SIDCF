@@ -1,0 +1,50 @@
+{
+  "_doc": "Régions et Districts autonomes de Côte d'Ivoire (découpage administratif 2011, mis à jour 2014). Source : Décret 2011-263 + Loi d'orientation sur l'administration territoriale. 31 régions regroupées en 12 districts + 2 districts autonomes (Abidjan, Yamoussoukro).",
+  "regions": [
+    { "code": "ABIDJAN",        "label": "District Autonome d'Abidjan",     "type": "DISTRICT_AUTONOME", "chefLieu": "Abidjan" },
+    { "code": "YAMOUSSOUKRO",   "label": "District Autonome de Yamoussoukro", "type": "DISTRICT_AUTONOME", "chefLieu": "Yamoussoukro" },
+
+    { "code": "AGNEBY_TIASSA",  "label": "Agnéby-Tiassa",          "type": "REGION", "district": "Lagunes",            "chefLieu": "Agboville" },
+    { "code": "GRANDS_PONTS",   "label": "Grands-Ponts",           "type": "REGION", "district": "Lagunes",            "chefLieu": "Dabou" },
+    { "code": "LA_ME",          "label": "La Mé",                  "type": "REGION", "district": "Lagunes",            "chefLieu": "Adzopé" },
+
+    { "code": "SUD_COMOE",      "label": "Sud-Comoé",              "type": "REGION", "district": "Comoé",              "chefLieu": "Aboisso" },
+    { "code": "INDENIE_DJUABLIN","label": "Indénié-Djuablin",      "type": "REGION", "district": "Comoé",              "chefLieu": "Abengourou" },
+
+    { "code": "IFFOU",          "label": "Iffou",                  "type": "REGION", "district": "Lacs",               "chefLieu": "Daoukro" },
+    { "code": "MORONOU",        "label": "Moronou",                "type": "REGION", "district": "Lacs",               "chefLieu": "Bongouanou" },
+    { "code": "N_ZI",           "label": "N'Zi",                   "type": "REGION", "district": "Lacs",               "chefLieu": "Dimbokro" },
+    { "code": "BELIER",         "label": "Bélier",                 "type": "REGION", "district": "Lacs",               "chefLieu": "Toumodi" },
+
+    { "code": "GBEKE",          "label": "Gbêkê",                  "type": "REGION", "district": "Vallée du Bandama",  "chefLieu": "Bouaké" },
+    { "code": "HAMBOL",         "label": "Hambol",                 "type": "REGION", "district": "Vallée du Bandama",  "chefLieu": "Katiola" },
+
+    { "code": "MARAHOUE",       "label": "Marahoué",               "type": "REGION", "district": "Sassandra-Marahoué", "chefLieu": "Bouaflé" },
+    { "code": "HAUT_SASSANDRA", "label": "Haut-Sassandra",         "type": "REGION", "district": "Sassandra-Marahoué", "chefLieu": "Daloa" },
+
+    { "code": "CAVALLY",        "label": "Cavally",                "type": "REGION", "district": "Montagnes",          "chefLieu": "Guiglo" },
+    { "code": "GUEMON",         "label": "Guémon",                 "type": "REGION", "district": "Montagnes",          "chefLieu": "Duékoué" },
+    { "code": "TONKPI",         "label": "Tonkpi",                 "type": "REGION", "district": "Montagnes",          "chefLieu": "Man" },
+
+    { "code": "GBOKLE",         "label": "Gbôklé",                 "type": "REGION", "district": "Bas-Sassandra",      "chefLieu": "Sassandra" },
+    { "code": "NAWA",           "label": "Nawa",                   "type": "REGION", "district": "Bas-Sassandra",      "chefLieu": "Soubré" },
+    { "code": "SAN_PEDRO",      "label": "San Pédro",              "type": "REGION", "district": "Bas-Sassandra",      "chefLieu": "San Pédro" },
+
+    { "code": "GOH",            "label": "Gôh",                    "type": "REGION", "district": "Gôh-Djiboua",        "chefLieu": "Gagnoa" },
+    { "code": "LOH_DJIBOUA",    "label": "Lôh-Djiboua",            "type": "REGION", "district": "Gôh-Djiboua",        "chefLieu": "Divo" },
+
+    { "code": "BAGOUE",         "label": "Bagoué",                 "type": "REGION", "district": "Savanes",            "chefLieu": "Boundiali" },
+    { "code": "PORO",           "label": "Poro",                   "type": "REGION", "district": "Savanes",            "chefLieu": "Korhogo" },
+    { "code": "TCHOLOGO",       "label": "Tchologo",               "type": "REGION", "district": "Savanes",            "chefLieu": "Ferkessédougou" },
+
+    { "code": "BAFING",         "label": "Bafing",                 "type": "REGION", "district": "Woroba",             "chefLieu": "Touba" },
+    { "code": "BERE",           "label": "Béré",                   "type": "REGION", "district": "Woroba",             "chefLieu": "Mankono" },
+    { "code": "WORODOUGOU",     "label": "Worodougou",             "type": "REGION", "district": "Woroba",             "chefLieu": "Séguéla" },
+
+    { "code": "BOUNKANI",       "label": "Bounkani",               "type": "REGION", "district": "Zanzan",             "chefLieu": "Bouna" },
+    { "code": "GONTOUGO",       "label": "Gontougo",               "type": "REGION", "district": "Zanzan",             "chefLieu": "Bondoukou" },
+
+    { "code": "FOLON",          "label": "Folon",                  "type": "REGION", "district": "Denguélé",           "chefLieu": "Minignan" },
+    { "code": "KABADOUGOU",     "label": "Kabadougou",             "type": "REGION", "district": "Denguélé",           "chefLieu": "Odienné" }
+  ]
+}
