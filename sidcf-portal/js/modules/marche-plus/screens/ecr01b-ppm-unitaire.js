@@ -21,6 +21,9 @@ function createButton(className, text, onClick) {
   return btn;
 }
 
+// Filtres repliés par défaut (gain de place vertical)
+let filtersExpanded = false;
+
 // État global des filtres — Marché+ : multi-select (arrays), array vide = tous
 let activeFilters = {
   search: '',
@@ -94,28 +97,50 @@ export async function renderPPMList() {
       PHASES.map(p => renderKPI(p.label, stats.parPhase[p.key], p.color, p.icon))
     ),
 
-    // Filters — Marché+ : multi-sélection (tenir Cmd/Ctrl pour cocher plusieurs valeurs)
-    el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header', style: { display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' } }, [
-        el('h3', { className: 'card-title', style: { margin: 0 } }, [
-          '🔍 Filtres',
-          // Badge nombre de filtres actifs
-          (() => {
-            const activeCount = Object.entries(activeFilters)
-              .filter(([k, v]) => Array.isArray(v) ? v.length > 0 : (v && v !== ''))
-              .length;
-            return activeCount > 0
+    // Filters — collapsible, replié par défaut pour gagner de l'espace
+    (() => {
+      const activeCount = Object.entries(activeFilters)
+        .filter(([k, v]) => Array.isArray(v) ? v.length > 0 : (v && v !== ''))
+        .length;
+      // Chips synthétiques (pour voir les filtres actifs sans déplier)
+      const chips = renderActiveFilterChips(activeFilters, registries, exercices);
+
+      return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+        // Header cliquable : toggle expand/collapse
+        el('div', {
+          className: 'card-header',
+          style: {
+            display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center',
+            cursor: 'pointer', userSelect: 'none'
+          },
+          onclick: (e) => {
+            // Ne pas toggler si l'utilisateur clique sur un bouton
+            if (e.target.closest('button')) return;
+            filtersExpanded = !filtersExpanded;
+            renderPPMList();
+          }
+        }, [
+          el('h3', { className: 'card-title', style: { margin: 0, display: 'flex', alignItems: 'center', gap: '8px' } }, [
+            el('span', {}, filtersExpanded ? '▾' : '▸'),
+            el('span', {}, '🔍 Filtres'),
+            activeCount > 0
               ? el('span', {
-                  style: { marginLeft: '10px', fontSize: '12px', background: '#0f5132', color: '#fff', padding: '2px 10px', borderRadius: '12px', fontWeight: '600' }
-                }, `${activeCount} filtre${activeCount > 1 ? 's' : ''} actif${activeCount > 1 ? 's' : ''}`)
-              : null;
-          })()
+                  style: { fontSize: '12px', background: '#0f5132', color: '#fff', padding: '2px 10px', borderRadius: '12px', fontWeight: '600' }
+                }, `${activeCount} actif${activeCount > 1 ? 's' : ''}`)
+              : el('span', { style: { fontSize: '12px', color: '#9ca3af', fontWeight: 'normal' } }, '(cliquer pour déplier)')
+          ]),
+          // Chips affichés dans le header replié (synthèse)
+          !filtersExpanded && chips ? chips : null,
+          el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' } }, [
+            filtersExpanded
+              ? el('span', { className: 'text-small text-muted', style: { fontSize: '11px' } }, 'Cmd/Ctrl + clic pour multi-sélection')
+              : null,
+            activeCount > 0
+              ? createButton('btn btn-sm btn-secondary', '🔄 Tout réinitialiser', (e) => { e.stopPropagation(); resetFilters(); })
+              : null
+          ])
         ]),
-        el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' } }, [
-          el('span', { className: 'text-small text-muted', style: { fontSize: '11px' } }, 'Cmd/Ctrl + clic pour multi-sélection'),
-          createButton('btn btn-sm btn-secondary', '🔄 Tout réinitialiser', () => resetFilters())
-        ])
-      ]),
+      ...(filtersExpanded ? [
       el('div', { className: 'card-body' }, [
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' } }, [
           // Search (texte libre)
@@ -211,7 +236,9 @@ export async function renderPPMList() {
           )
         ])
       ])
-    ]),
+      ] : [])
+      ]);
+    })(),
 
     // Results table (SIMPLIFIED)
     el('div', { className: 'card' }, [
@@ -240,6 +267,46 @@ export async function renderPPMList() {
 
   // Attach event listeners
   setupFilterListeners();
+}
+
+/**
+ * Synthèse compacte des filtres actifs (visible quand le panneau est replié).
+ * Retourne un fragment avec une série de "chips" (un par filtre actif).
+ * Si aucun filtre actif → null (rien à afficher).
+ */
+function renderActiveFilterChips(filters, registries, exercices) {
+  const chips = [];
+  const labelFor = (registry, code) => {
+    const r = (registries[registry] || []).find(x => x.code === code);
+    return r?.label || code;
+  };
+
+  if (filters.search) chips.push(`🔎 "${filters.search}"`);
+  if (filters.activite?.length)         chips.push(`Activité (${filters.activite.length})`);
+  if (filters.typeMarche?.length)       chips.push(`Type (${filters.typeMarche.length})`);
+  if (filters.modePassation?.length)    chips.push(`Mode (${filters.modePassation.length})`);
+  if (filters.etat?.length)             chips.push(`État (${filters.etat.length})`);
+  if (filters.typeFinancement?.length)  chips.push(`Financement (${filters.typeFinancement.length})`);
+  if (filters.bailleur?.length)         chips.push(`Bailleur (${filters.bailleur.length})`);
+  if (filters.categoriePrestation?.length) chips.push(`Catégorie (${filters.categoriePrestation.length})`);
+  if (filters.region?.length)           chips.push(`Région (${filters.region.length})`);
+  if (filters.unite?.length)            chips.push(`UA (${filters.unite.length})`);
+  if (filters.exercice?.length)         chips.push(`Exercice (${filters.exercice.length})`);
+
+  if (chips.length === 0) return null;
+
+  return el('div', {
+    style: { display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', marginLeft: '12px' }
+  }, chips.map(c => el('span', {
+    style: {
+      background: '#e0e7ff',
+      color: '#3730a3',
+      padding: '2px 8px',
+      borderRadius: '10px',
+      fontSize: '11px',
+      fontWeight: '500'
+    }
+  }, c)));
 }
 
 /**
