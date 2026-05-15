@@ -36,6 +36,7 @@ import { renderStepsAsync } from '../../../ui/widgets/steps-mp.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
 import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
 import { renderRelatedOperations } from '../../../ui/widgets/related-operations-mp.js';
+import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import logger from '../../../lib/logger.js';
 
@@ -86,12 +87,14 @@ export async function renderFicheMarche(params) {
   //  - la ligne budgétaire spécifique (si liée)
   //  - toutes les lignes budgétaires (pour le widget historique multi-financement)
   //  - toutes les opérations PPM (pour le widget historique de la ligne budgétaire — modif #27)
-  const [budgetLine, mpBudgetLines, mpOperations] = await Promise.all([
+  //  - les difficultés associées au marché (modif #29)
+  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes] = await Promise.all([
     operation.budgetLineId
       ? dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null)
       : Promise.resolve(null),
     dataService.query(ENTITIES.MP_BUDGET_LINE).catch(() => []),
-    dataService.query(ENTITIES.MP_OPERATION).catch(() => [])
+    dataService.query(ENTITIES.MP_OPERATION).catch(() => []),
+    dataService.query(ENTITIES.MP_DIFFICULTE, { operationId }).catch(() => [])
   ]);
 
   const page = el('div', { className: 'page fiche-marche-page', style: { paddingBottom: '60px' } }, [
@@ -107,7 +110,9 @@ export async function renderFicheMarche(params) {
         await renderFicheMarche(params);
       }
     }),
-    renderHealthKPIs(fullData, currentLotId),
+    renderHealthKPIs(fullData, currentLotId, mpDifficultes),
+    // Modif #29 : section difficultés du marché — visible en haut, structurée, exploitable
+    renderDifficultesSection(idOperation, mpDifficultes, registries),
     lots.length > 1 ? renderLotSelectorAndSummary(lots, currentLotId, fullData, registries, idOperation) : null,
     el('div', {
       className: 'fiche-grid',
@@ -288,7 +293,7 @@ function navigateToCurrentPhase(operation, idOperation) {
 // KPIs santé du marché
 // ============================================
 
-function renderHealthKPIs(fullData, currentLotId) {
+function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
   const { operation, avenants = [], garanties = [], echeancier, ordresService = [] } = fullData;
   const montantInitial = operation.montantPrevisionnel || 0;
 
@@ -321,11 +326,24 @@ function renderHealthKPIs(fullData, currentLotId) {
   const osCount = ordresService.length;
   const osColor = osCount > 0 ? '#0f5132' : '#6b7280';
 
+  // KPI 5 : Difficultés du marché (modif #29) — couleur selon impact des difficultés en cours
+  const difCount = countDifficultes(mpDifficultes);
+  const difColor = difCount.critiques > 0 ? '#dc2626'
+    : (difCount.eleves > 0 ? '#ea580c'
+    : (difCount.enCours > 0 ? '#f59e0b' : '#16a34a'));
+  const difSub = difCount.critiques > 0
+    ? `⚠ ${difCount.critiques} critique${difCount.critiques > 1 ? 's' : ''}`
+    : (difCount.eleves > 0
+        ? `⚠ ${difCount.eleves} impact élevé`
+        : (difCount.enCours > 0
+            ? `${difCount.enCours} en cours · ${difCount.resolus} résolue${difCount.resolus > 1 ? 's' : ''}`
+            : 'Aucune difficulté'));
+
   return el('div', {
     className: 'fiche-kpis',
     style: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
       gap: '12px',
       marginBottom: '20px'
     }
@@ -353,7 +371,42 @@ function renderHealthKPIs(fullData, currentLotId) {
       `${osCount}`,
       osCount > 0 ? 'Exécution démarrée' : 'Aucun OS émis',
       osColor
+    ),
+    renderKpiCard(
+      'Difficultés',
+      `${difCount.enCours} en cours`,
+      difSub,
+      difColor
     )
+  ]);
+}
+
+/**
+ * Section dédiée aux difficultés du marché — modif #29.
+ * Visible en haut de la fiche pour priorisation, structurée pour suivi
+ * et exploitable (filtres, ajout, édition, suppression).
+ */
+function renderDifficultesSection(idOperation, mpDifficultes, registries) {
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '20px' }
+  }, [
+    el('div', {
+      className: 'card-header',
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+    }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '🚨 Difficultés du marché'),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        'Saisie possible à tout moment du cycle de vie')
+    ]),
+    el('div', { className: 'card-body' }, [
+      renderDifficultesManager({
+        operationId: idOperation,
+        difficultes: mpDifficultes,
+        registries
+        // onSaved : pas de reload complet — le widget gère son state interne
+      })
+    ])
   ]);
 }
 

@@ -13,6 +13,57 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Saisie structurée des difficultés du marché
+
+> **Modif #29** — Toute difficulté rencontrée pendant le cycle de vie du marché peut désormais être saisie à tout moment depuis la fiche de vie. La saisie est structurée (impact, catégorie, statut, actions correctives, décideur, document) pour permettre un suivi et une exploitation efficaces.
+
+### Modif #29 — Widget `difficultes-manager-mp.js` + intégration fiche
+
+#### Schéma — utilise `MP_DIFFICULTE` existant
+Le schéma était déjà défini (champs `statutTraitement`, `decision`, `probleme`, `dateDecision`, `nomDecideur`, `fichier`, `impact`, `categorieProbleme`, `actionsCorrectives`). Aucune modification de schéma — modif purement UI.
+
+#### Widget — `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js` (~400 lignes)
+
+**Bandeau de synthèse** :
+- Couleur conditionnelle selon la gravité (rouge si critique non résolue, jaune si élevé, gris sinon)
+- Compteurs : total, en cours, résolues, critiques non résolues, impact élevé
+- Bouton « ➕ Nouvelle difficulté »
+
+**Filtres** : par statut (En cours / Résolu / Abandonné) + par impact (Faible / Moyen / Élevé / Critique)
+
+**Tableau** trié intelligemment :
+- En cours d'abord, puis Résolus, puis Abandonnés
+- Au sein de chaque statut : Critique > Élevé > Moyen > Faible
+- À gravité égale : plus récent d'abord
+- Colonnes : Impact (badge couleur), Catégorie, Problème (tronqué + tooltip), Statut (badge), Décision, Date, Actions (modifier/supprimer)
+
+**Modal d'ajout / édition** complète :
+- Impact (4 niveaux), Catégorie (9 codes : TECHNIQUE, FINANCIER, JURIDIQUE, CONTRACTUEL, DELAI, QUALITE, RESSOURCE, EXTERNE, AUTRE)
+- Statut + date de décision
+- Description du problème (textarea, obligatoire)
+- Décision prise + actions correctives + nom du décideur
+- Référence document (champ texte — upload R2 prévu dans modif #31)
+
+**Persistence** via `dataService.add/update/delete(MP_DIFFICULTE, ...)`. Aucun changement Worker requis (l'entité existait déjà côté API).
+
+#### Intégration Fiche de Vie
+
+1. **Chargement** : `dataService.query(MP_DIFFICULTE, { operationId })` ajouté au `Promise.all` parallèle existant.
+2. **Section dédiée** : sous les KPIs santé, avant le sélecteur de lot — visibilité prioritaire car les difficultés sont transverses au cycle de vie.
+3. **5e KPI santé « Difficultés »** : ajouté à la barre KPIs avec couleur conditionnelle :
+   - Rouge (#dc2626) si ≥1 critique non résolue
+   - Orange (#ea580c) si ≥1 impact élevé non résolu
+   - Jaune (#f59e0b) si difficultés en cours sans critique/élevé
+   - Vert (#16a34a) si aucune difficulté en cours
+   - Sous-libellé adapté : « N critiques » / « N impact élevé » / « N en cours · M résolues » / « Aucune difficulté »
+4. **Helper `countDifficultes()`** exporté du widget pour les KPIs.
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js`
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (import + chargement parallèle + section + KPI)
+
+Pas de migration DB. Pas de déploiement Worker.
+
 ## 2026-05-15 — Liens entre marchés (étude antérieure / contrôle postérieur)
 
 > **Modif #28** — Un marché s'inscrit dans une chaîne projet (Étude → Réalisation → Contrôle). On expose désormais ces liens dans la fiche de vie via un bandeau visuel synthétique, avec gestion explicite et suggestions automatiques.
