@@ -617,7 +617,7 @@ function showDetailModal(operation, registries) {
         renderDetailSection('Chaîne budgétaire', [
           { label: 'Activité', value: operation.chaineBudgetaire?.activite },
           { label: 'Code activité', value: operation.chaineBudgetaire?.activiteCode },
-          { label: 'Ligne budgétaire', value: operation.chaineBudgetaire?.ligneBudgetaire },
+          { label: 'Imputation budgétaire', value: operation.chaineBudgetaire?.ligneBudgetaire },
           { label: 'Bailleur', value: operation.chaineBudgetaire?.bailleur }
         ]),
 

@@ -99,10 +99,10 @@ export async function renderFicheMarche(params) {
       : Promise.resolve(null),
     dataService.query(ENTITIES.MP_BUDGET_LINE).catch(() => []),
     dataService.query(ENTITIES.MP_OPERATION).catch(() => []),
-    dataService.query(ENTITIES.MP_DIFFICULTE, { operationId }).catch(() => []),
-    dataService.query(ENTITIES.MP_DOCUMENT, { operationId }).catch(() => []),
+    dataService.query(ENTITIES.MP_DIFFICULTE, { operationId: idOperation }).catch(() => []),
+    dataService.query(ENTITIES.MP_DOCUMENT, { operationId: idOperation }).catch(() => []),
     // Modif #34 : OP / Mandats rattachés au marché (situation d'exécution financière)
-    dataService.query(ENTITIES.MP_DECOMPTE, { operationId }).catch(() => []),
+    dataService.query(ENTITIES.MP_DECOMPTE, { operationId: idOperation }).catch(() => []),
     getPhasesAsync(operation.modePassation || 'PSD').catch(() => [])
   ]);
 
@@ -816,7 +816,7 @@ function renderBudgetLineHistorySection(operation, registries, mpBudgetLines, mp
 
   const wrap = el('div', { style: { marginTop: '16px' } }, [
     el('h4', { style: { margin: '0 0 10px', fontSize: '14px', fontWeight: 600 } },
-      `🧮 Utilisation de la ligne budgétaire (${financements.length} financement${financements.length > 1 ? 's' : ''})`)
+      `🧮 Utilisation de l'imputation budgétaire (${financements.length} financement${financements.length > 1 ? 's' : ''})`)
   ]);
 
   financements.forEach((fin, idx) => {
