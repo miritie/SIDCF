@@ -656,6 +656,18 @@ export const SCHEMAS = {
     updatedAt: null
   },
 
+  // Type d'élément de MP_OPERATION.relations (Marché+ modif #28)
+  // sens : 'ANTERIEUR' (l'opération liée précède la courante) | 'POSTERIEUR' (lui succède)
+  // role : 'ETUDE' (typique d'un antérieur PI), 'CONTROLE' (typique d'un postérieur PI),
+  //        'TRAVAUX', 'FOURNITURE', 'MAITRISE_OEUVRE', 'AUTRE'
+  MP_OPERATION_RELATION: {
+    id: '',          // ID de l'opération PPM liée
+    sens: 'ANTERIEUR',
+    role: 'AUTRE',
+    note: '',
+    createdAt: null
+  },
+
   MP_OPERATION: {
     id: null,
     planId: null,
@@ -716,6 +728,14 @@ export const SCHEMAS = {
       latitude: null,
       coordsOK: false
     },
+
+    // Liens entre marchés (Marché+ modif #28)
+    // Permet de relier ce marché à des marchés antérieurs (typiquement une étude PI)
+    // et postérieurs (typiquement le contrôle / la surveillance). Chaque élément
+    // respecte la forme MP_OPERATION_RELATION (cf. au-dessus de MP_OPERATION).
+    // Stockage mono-directionnel : seuls les liens *créés depuis ce marché* sont
+    // stockés ici ; les liens entrants sont calculés à la volée à l'affichage.
+    relations: [],
 
     // Workflow
     timeline: ['PLANIF'],

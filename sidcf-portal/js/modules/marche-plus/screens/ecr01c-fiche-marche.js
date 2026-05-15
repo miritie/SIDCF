@@ -35,6 +35,7 @@ import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderStepsAsync } from '../../../ui/widgets/steps-mp.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
 import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
+import { renderRelatedOperations } from '../../../ui/widgets/related-operations-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import logger from '../../../lib/logger.js';
 
@@ -96,6 +97,16 @@ export async function renderFicheMarche(params) {
   const page = el('div', { className: 'page fiche-marche-page', style: { paddingBottom: '60px' } }, [
     renderHeaderSticky(operation, registries, fullData, currentLotId, lots, idOperation),
     stepsWidget,
+    // Modif #28 : bandeau visuel des opérations liées (étude antérieure / contrôle postérieur)
+    renderRelatedOperations({
+      operation,
+      allOperations: mpOperations,
+      registries,
+      onSaved: async () => {
+        // Recharger la fiche après modification d'un lien
+        await renderFicheMarche(params);
+      }
+    }),
     renderHealthKPIs(fullData, currentLotId),
     lots.length > 1 ? renderLotSelectorAndSummary(lots, currentLotId, fullData, registries, idOperation) : null,
     el('div', {

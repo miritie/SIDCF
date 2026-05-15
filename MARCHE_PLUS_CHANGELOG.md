@@ -13,6 +13,54 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Liens entre marchés (étude antérieure / contrôle postérieur)
+
+> **Modif #28** — Un marché s'inscrit dans une chaîne projet (Étude → Réalisation → Contrôle). On expose désormais ces liens dans la fiche de vie via un bandeau visuel synthétique, avec gestion explicite et suggestions automatiques.
+
+### Modif #28 — Widget `related-operations-mp.js` + modèle de relation
+
+#### Modèle de données
+- Nouveau champ `MP_OPERATION.relations: []` — chaque élément suit la forme `MP_OPERATION_RELATION` :
+  ```js
+  { id: 'OP-2024-0123', sens: 'ANTERIEUR' | 'POSTERIEUR',
+    role: 'ETUDE' | 'CONTROLE' | 'TRAVAUX' | 'FOURNITURE' | 'MAITRISE_OEUVRE' | 'AUTRE',
+    note: '', createdAt: '...' }
+  ```
+- **Stockage mono-directionnel** : un lien créé depuis A vers B est stocké uniquement dans A.relations. À l'affichage de la fiche de B, les liens entrants (opérations qui me citent) sont calculés à la volée en scannant `allOperations` — pas de duplication, pas de désynchronisation possible.
+
+#### Widget — `sidcf-portal/js/ui/widgets/related-operations-mp.js` (~450 lignes)
+
+**Affichage visuel** :
+- Bandeau horizontal flow-chart : `[← Antérieurs] → [📋 Marché courant] → [Postérieurs →]`
+- Cartes cliquables (clic = ouverture de la fiche de l'opération liée)
+- **Distinction visuelle** : carte verte pour le marché courant, cartes blanches pour les liens directs (créés depuis ici), cartes jaunes pointillées pour les liens entrants (opérations qui nous citent — non modifiables depuis ici).
+- Badge état + tronquage objet à 38 caractères + tooltip complet.
+- Connecteurs `→` actifs si une colonne contient au moins un lien, grisés sinon.
+- Compteur total dans l'en-tête : `🔗 Liens entre marchés (N)`.
+
+**Modal « Gérer les liens »** :
+- Tableau des liens directs existants avec bouton supprimer ligne par ligne (les liens entrants ne sont pas modifiables ici — il faut aller sur la fiche source).
+- Formulaire d'ajout : sélecteur de marché (recherche par ID + objet, top 200 par date), sens (ANTERIEUR / POSTERIEUR), rôle (5 codes + AUTRE), note libre.
+- **Section « 💡 Suggestions automatiques »** : jusqu'à 6 opérations candidates pré-scorées, avec :
+  - Score = même `activiteCode` (+5) + mots-clés rôle dans l'objet (+3) + rôles complémentaires (+2) + mots-clés communs (+1/mot)
+  - Sens et rôle pré-suggérés selon la chronologie (`createdAt`) et le mot-clé détecté (étude→antérieur, contrôle/surveillance→postérieur)
+  - Bouton « Lier » à un clic — note auto « Lien suggéré automatiquement »
+- Détection mots-clés normalisée (accents/casse) : `étude`, `apd`, `aps`, `faisabilité`, `tdr`, `contrôle`, `surveillance`, `suivi`, `inspection`, `maîtrise d'œuvre`, `moe`, `travaux`, `construction`, `réhabilitation`, `fourniture`, `équipement`, etc.
+
+#### Intégration dans la Fiche de Vie
+- Sous la timeline, avant les KPIs santé — emplacement choisi pour visibilité maximale.
+- `onSaved` recharge la fiche complète après chaque modification (simple, garantit la cohérence multi-widgets).
+- Utilise `mpOperations` déjà chargé par la modif #27 — coût zéro additionnel.
+
+#### Persistence
+- `dataService.update(MP_OPERATION, id, { relations, updatedAt })` — pas de nouvelle route API ni de migration, juste un champ JSONB ajouté dans le bloc `relations` (lu/écrit comme les autres champs de l'opération).
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/related-operations-mp.js`
+- Modifiés : `sidcf-portal/js/datastore/schema.js` (ajout `MP_OPERATION_RELATION` + champ `relations: []` sur `MP_OPERATION`), `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (intégration)
+
+Pas de migration DB (champ JSONB existant). Pas de déploiement Worker.
+
 ## 2026-05-15 — Cumul ligne budgétaire + liste des opérations déjà planifiées
 
 > **Modif #27** — Le cumul d'utilisation d'une ligne budgétaire (activité × type de financement × bailleur) tenait déjà compte de toutes les opérations existantes, mais la liste détaillée n'était pas visible. On expose maintenant **les opérations PPM déjà rattachées** à chaque combinaison, à la fois dans le formulaire de création d'une ligne PPM et dans la fiche de vie. Cela évite les ressaisies, donne le contexte complet à l'utilisateur, et rend le cumul auditable.
