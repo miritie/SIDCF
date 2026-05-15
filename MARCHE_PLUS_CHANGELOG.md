@@ -13,6 +13,74 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Fiche de Vie du Marché : implémentation consolidée (MVP)
+
+> **Modif #26** — Mise en œuvre du MVP de la « Fiche de Vie » proposée en modif #25 (sous-modifs A → F). Refonte complète de `/mp/fiche-marche` : la fiche n'est plus une page de lancement, c'est une **vue consolidée exhaustive** de toutes les phases du marché, accessible via le bouton « 📋 Fiche de vie » sur chaque ligne de la liste PPM.
+
+### Modif #26 — Fiche de Vie consolidée
+
+#### Accès
+- **Liste PPM** (`ecr01b-ppm-unitaire.js`) : renommage du bouton ligne « 👁 Voir » → **« 📋 Fiche de vie »** (bouton primaire, en avant). Le bouton « 📋 Détails » devient « ℹ️ Détails » (secondaire — ouvre la modale rapide).
+
+#### Structure de la fiche (`ecr01c-fiche-marche.js` — refonte complète, ~600 lignes)
+
+1. **En-tête sticky** (top de la page, reste visible au scroll) :
+   - Objet, n° marché, type, mode de passation
+   - Badges : état (couleur), dérogation, **nombre de lots**
+   - Montants HT/TTC du marché de base (issus de `attribution.montants` sinon `montantPrevisionnel`)
+   - Dates clés condensées : OS de démarrage, clôture/durée prévisionnelle
+   - Actions : ⤓ PDF (stub), ⤓ Excel (stub), 🖨 Imprimer, ✏️ Modifier (navigue vers l'écran de la phase courante selon `operation.etat`)
+   - Bouton retour « ← Liste PPM »
+
+2. **Timeline 5 phases** via `renderStepsAsync` (composant existant)
+
+3. **4 KPIs de santé** (cards avec bordure colorée) :
+   - **Cumul avenants** : `Σ variationMontant / montantInitial × 100` — vert <25%, jaune 25-30%, rouge ≥30% (RG021)
+   - **Échéancier planifié** : somme des `pourcentage` des items
+   - **Garanties** : nb actives / nb expirées (rouge si ≥1 expirée)
+   - **Ordres de Service** : nombre + indicateur démarrage
+
+4. **Sélecteur de lot global + Sommaire par lot** (visible uniquement si > 1 lot) :
+   - Vue par défaut = **« 📊 Marché global (tous lots) »** (currentLotId = `'ALL'`).
+   - Sélecteur dropdown en en-tête du bloc → bascule entre `ALL` et chaque lotId. La sélection est passée via l'URL (`?lotId=...`) et toutes les sections aval se filtrent automatiquement.
+   - **Tableau récapitulatif par lot** : Lot, libellé, attributaire, montant TTC, cumul avenants (avec code couleur), nb garanties, état déduit (En procédure / Attribué / En exécution). Bouton « Voir » par ligne pour zoomer.
+
+5. **6 sections accordéon** dans le main (colonne gauche du grid 2 colonnes) :
+   - **Planification** (PPM) — défaut ouvert : objet, type, montants prévisionnels, dates, chaîne budgétaire (ou ligne budgétaire si liée), livrables prévisionnels avec quantité et localisation cascade.
+   - **Contractualisation** : mode + type dossier + commission, observations, **détails par lot** (offres reçues/classées, 4 dates, soumissionnaires). Si vue par lot, n'affiche que ce lot.
+   - **Attribution** : attributaire (raison sociale, NCC, adresse, nature), montants HT/TTC, **garanties contractuelles** (avance/BE/cautionnement avec base, montant, dates), échéancier (n°, date, type, base, montant, %), clé de répartition (année, bailleur, type fin, base, montant, %, avec ligne TVA État en jaune), bandeau warning si réserves CF.
+   - **Approbation (Visa CF)** : tableau des visas (organe, décision avec couleur, date, motif, document).
+   - **Exécution** : 3 sous-tableaux — Ordres de Service (type, n°, dates), Avenants (n°, type, base, variation colorée rouge/vert selon signe, motif, date signature), Garanties en cours (type étendu, base, taux, montant, dates, état).
+   - **Clôture** : dates dernier décompte/réception provisoire/définitive + PVs + clôture effective.
+   - Chaque section a un **badge de complétude** (Complet/Partiel/Vide) et un bouton **✏️ Modifier** qui navigue vers l'écran de saisie de la phase, en propageant le `lotId` si applicable.
+   - **État replié/déployé persistant** par section dans `localStorage` (clé `sidcf:fiche:accordion:<id>`).
+
+6. **Panneau Documents latéral sticky** (colonne droite, 320px desktop, position sticky top:160px) :
+   - **Agrégation de tous les `documentRef` / `docRef`** trouvés dans : procedure.lots.pv, attribution.documentRef, attribution.garanties.*.docRef, visasCF.documentRef, ordresService.documentRef, avenants.documentRef, garanties.doc (entité standalone), cloture.receptionProv/Def.documentRef.
+   - Groupés par phase, comptage par groupe et global.
+   - Clic = alerte stub (téléchargement R2 à brancher dans une modif future).
+   - Filtré sur `lotId` quand vue par lot.
+
+7. **Section Audit log** (placeholder repliable, status `empty`) — l'implémentation NF07 (table `mp_audit_log` côté serveur + instrumentation CRUD) est notée comme modif à venir.
+
+#### Responsive et impression
+- Grid 2 colonnes (main + side 320px) sur desktop ; **passage en colonne unique sous 1024px** (style injecté `<style>` global).
+- **Style print** : en-tête repasse en flow normal, boutons masqués. Le `window.print()` du bouton 🖨 produit une fiche imprimable de base (à raffiner dans la sous-modif #G PDF).
+
+#### Pas livré dans ce MVP (sous-modifs proposées séparément)
+- **G** : Export PDF (jsPDF ou puppeteer Worker)
+- **H** : Export Excel multi-onglets (SheetJS)
+- **I** : Audit log serveur (table + instrumentation)
+
+#### Réponse à une question métier
+- **Question #6 de la proposition** « Multi-lot — fiche consolidée tous lots ? » → **OUI** : implémentée via la vue par défaut `ALL` qui affiche le marché entier + le tableau sommaire par lot. La vue par lot reste accessible via le sélecteur.
+
+#### Fichiers
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` — **refonte complète** (de 238 lignes minimalistes à ~600 lignes consolidées)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` — renommage bouton ligne
+
+**Pas de migration DB**, **pas de déploiement Worker** (lecture uniquement via `getMpOperationFull` existant).
+
 ## 2026-05-15 — Conformité SDF : RG010 + types garantie + modes de passation + proposition Fiche Marché
 
 > **Modif #25** — Trois corrections de conformité au SDF (Hector 26/11/2025 V1.0) + proposition de design pour la « vraie » Fiche de Marché demandée par UC04.

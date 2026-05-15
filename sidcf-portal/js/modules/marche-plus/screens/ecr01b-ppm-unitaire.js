@@ -425,11 +425,11 @@ function renderSimpleRow(op, registries) {
       }, etat?.label || op.etat)
     ),
     el('td', {}, [
-      createButton('btn btn-sm btn-secondary', '👁️ Voir', (e) => {
+      createButton('btn btn-sm btn-primary', '📋 Fiche de vie', (e) => {
         e.stopPropagation();
         router.navigate('/mp/fiche-marche', { idOperation: op.id });
       }),
-      createButton('btn btn-sm btn-primary', '📋 Détails', (e) => {
+      createButton('btn btn-sm btn-secondary', 'ℹ️ Détails', (e) => {
         e.stopPropagation();
         showDetailModal(op, registries);
       })
