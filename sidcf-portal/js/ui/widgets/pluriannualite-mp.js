@@ -22,6 +22,7 @@
 
 import { el } from '../../lib/dom.js';
 import { money } from '../../lib/format.js';
+import { renderFormulaBadge } from './formula-tip-mp.js';
 
 /**
  * @param {Object} opts
@@ -166,10 +167,22 @@ export function renderPluriannualite({ cleRepartition, decomptes = [], registrie
       fontSize: '13px'
     }
   }, [
-    el('strong', {}, `📅 Marché pluriannuel sur ${annees.length} années : ${annees[0]} → ${annees[annees.length - 1]}`),
-    el('br', {}),
-    el('span', { style: { color: '#374151', fontSize: '12px' } },
-      `${bailleursOrder.length} bailleur${bailleursOrder.length > 1 ? 's' : ''} · ${lignes.length} ligne${lignes.length > 1 ? 's' : ''} de répartition · Total planifié ${money(grandTotal)}`)
+    el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' } }, [
+      el('div', {}, [
+        el('strong', {}, `📅 Marché pluriannuel sur ${annees.length} années : ${annees[0]} → ${annees[annees.length - 1]}`),
+        el('br', {}),
+        el('span', { style: { color: '#374151', fontSize: '12px' } },
+          `${bailleursOrder.length} bailleur${bailleursOrder.length > 1 ? 's' : ''} · ${lignes.length} ligne${lignes.length > 1 ? 's' : ''} de répartition · Total planifié ${money(grandTotal)}`)
+      ]),
+      // Modif #37 — Badge formule sur le pivot
+      renderFormulaBadge({
+        titre: 'Encart pluriannualité',
+        formule: 'pivot[bailleur][année] = Σ MP_CLE_LIGNE.montant ; Total planifié(année) = Σ bailleurs ; Écart(année) = Total planifié − Σ OP visés (etat ∈ {VISE,PAYE} ET dateDecompte.year = année)',
+        regle: 'La planification pluriannuelle est lue depuis la clé de répartition multi-bailleurs (chaque ligne porte un champ "annee"). L\'exécuté est calculé à partir des OP visés ou payés avec dateDecompte dans l\'année cible. Écart > 0 = en retard, < 0 = en avance.',
+        exemple: 'Année N planifié 600 M (bailleur A 400 M + bailleur B 200 M) · 2 OP visés en N pour 300 M ⇒ Écart = +300 M (rouge, retard)',
+        reference: 'Doc DCF 7-8 · Modif #35'
+      })
+    ])
   ]);
 
   return {

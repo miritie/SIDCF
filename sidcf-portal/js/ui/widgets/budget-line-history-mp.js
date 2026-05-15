@@ -29,6 +29,7 @@
  */
 
 import { el } from '../../lib/dom.js';
+import { renderFormulaBadge } from './formula-tip-mp.js';
 
 function formatXOF(n) {
   const v = Number(n) || 0;
@@ -166,6 +167,20 @@ export function renderBudgetLineHistory(opts = {}) {
         `<span style="font-weight:600;">${labelDispo} :</span> <strong>${formatXOF(Math.abs(available))}${isOver ? ' ⚠' : ''}</strong>`;
     }
     container.appendChild(synthesis);
+    // Modif #37 — Badge formule sur le bandeau de cumul
+    if (line) {
+      const formulaWrap = el('div', { style: { marginTop: '4px', textAlign: 'right' } }, [
+        el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'Méthode '),
+        renderFormulaBadge({
+          titre: 'Cumul d\'utilisation d\'une ligne budgétaire',
+          formule: 'Initiale (AE) − (Σ autres opérations PPM sur cette combinaison activité × type × bailleur + ligne courante)',
+          regle: 'Le cumul prend en compte toutes les opérations PPM rattachées à la même combinaison, qu\'elles soient au stade planification ou plus avancées. L\'opération en cours de saisie est ajoutée au total. Si négatif → dépassement budgétaire (alerte rouge).',
+          exemple: 'Ligne 500 M, 3 opérations existantes pour 350 M, nouvelle opération 100 M ⇒ disponible après = 500 − 450 = 50 M (vert)',
+          reference: 'Modif #27 · F002 du SDF'
+        })
+      ]);
+      container.appendChild(formulaWrap);
+    }
 
     // En-tête de section liste
     const headerRow = el('div', {

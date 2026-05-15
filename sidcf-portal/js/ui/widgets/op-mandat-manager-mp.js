@@ -23,6 +23,7 @@ import dataService, { ENTITIES } from '../../datastore/data-service.js';
 import logger from '../../lib/logger.js';
 import { money, date as fmtDate } from '../../lib/format.js';
 import { uid } from '../../lib/uid.js';
+import { renderFormulaBadge } from './formula-tip-mp.js';
 
 const TYPE_OP = [
   { code: 'OP', label: 'Ordre de Paiement (OP)' },
@@ -113,7 +114,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
       : tauxExec >= 25 ? '#f59e0b'
       : '#6b7280';
 
-    function card(label, value, sub, color) {
+    function card(label, value, sub, color, formula) {
       return el('div', {
         style: {
           flex: '1 1 180px',
@@ -124,7 +125,10 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
           boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
         }
       }, [
-        el('div', { style: { fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.4px' } }, label),
+        el('div', { style: { fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.4px', display: 'flex', alignItems: 'center' } }, [
+          el('span', {}, label),
+          formula ? renderFormulaBadge(formula) : null
+        ]),
         el('div', { style: { fontSize: '17px', fontWeight: 700, color, margin: '2px 0' } }, value),
         sub ? el('div', { style: { fontSize: '11px', color: '#6b7280' } }, sub) : null
       ]);
@@ -135,19 +139,49 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     }, [
       card('Montant global du marché', money(montantGlobal),
         avenants?.length > 0 ? `base + ${avenants.length} avenant${avenants.length > 1 ? 's' : ''}` : 'base seule',
-        '#0f5132'),
+        '#0f5132',
+        {
+          titre: 'Montant global du marché',
+          formule: 'montant attribué TTC + Σ variationMontant (avenants)',
+          regle: 'Base de référence pour le taux d\'exécution. Inclut tous les avenants financiers (FINAN et MIXTE), pas les avenants de délai pur.',
+          exemple: 'Attribution 100 M + avenant +20 M + avenant délai (sans montant) ⇒ Montant global = 120 M XOF'
+        }),
       card('Cumul OP / Mandat visé', money(cumulVise),
         `${items.filter(d => d.etat === 'VISE' || d.etat === 'PAYE').length} pièce(s)`,
-        '#0066cc'),
+        '#0066cc',
+        {
+          titre: 'Cumul OP / Mandat visé',
+          formule: 'Σ (montant) pour OP avec etat ∈ {VISE, PAYE}',
+          regle: 'Somme des montants nets TTC des OP/Mandats visés par le CF, y compris ceux déjà payés. Les OP en état SOUMIS, DRAFT ou REJETE ne sont pas comptés.',
+          reference: 'Doc DCF 5b'
+        }),
       card('Cumul payé', money(cumulPaye),
         `${items.filter(d => d.etat === 'PAYE').length} pièce(s)`,
-        '#059669'),
+        '#059669',
+        {
+          titre: 'Cumul payé',
+          formule: 'Σ (montant) pour OP avec etat = PAYE',
+          regle: 'Somme des montants effectivement décaissés. Toujours ≤ Cumul visé.'
+        }),
       card('Reste à payer', money(restePayer),
         montantGlobal > 0 ? `${((restePayer / montantGlobal) * 100).toFixed(1)}% du marché` : '',
-        '#92400e'),
+        '#92400e',
+        {
+          titre: 'Reste à payer',
+          formule: 'max(0, Montant global − Cumul OP visé)',
+          regle: 'Indique le potentiel restant de paiement sur le marché. Ne peut pas être négatif (en cas de sur-visa, plafonné à 0).',
+          reference: 'Doc DCF 5c'
+        }),
       card('Taux d\'exécution financier', `${tauxExec.toFixed(1)}%`,
         montantGlobal > 0 ? `${money(cumulVise)} / ${money(montantGlobal)}` : 'montant global indéterminé',
-        tauxColor)
+        tauxColor,
+        {
+          titre: 'Taux d\'exécution financier',
+          formule: 'Cumul OP visé / Montant global × 100',
+          regle: 'Pourcentage d\'avancement financier. Code couleur : vert ≥90 % · bleu ≥50 % · orange ≥25 % · gris sinon.',
+          exemple: 'Montant global 120 M, cumul visé 60 M ⇒ 60/120 = 50 % (bleu)',
+          reference: 'Doc DCF 5d'
+        })
     ]);
   }
 

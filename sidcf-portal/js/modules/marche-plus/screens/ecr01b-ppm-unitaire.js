@@ -9,6 +9,37 @@ import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { getRegionsOptions } from '../../../lib/mp-regions-ci.js';
 import { renderMultiSelectCollapsible } from '../../../ui/widgets/multi-select-collapsible-mp.js';
 import { computeExecutionFinanciere } from '../../../ui/widgets/op-mandat-manager-mp.js';
+import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
+
+// Modif #37 — Formules associées aux 5 catégories de santé du marché (exposées via badge 📐)
+const SANTE_FORMULES = {
+  NORMAL: {
+    titre: 'Santé : en progression normale',
+    formule: 'État ∈ {EN_EXEC, EXECUTION, CLOS} ET cumul avenants < 25 % ET pas de difficulté CRITIQUE/ELEVE non résolue',
+    regle: 'Marché qui suit son cours sans alerte particulière.'
+  },
+  SURVEILLER: {
+    titre: 'Santé : à surveiller',
+    formule: '(cumul avenants ∈ [25 %, 30 %[) OU (≥1 difficulté impact ELEVE non résolue)',
+    regle: 'Indicateurs précurseurs de risque. Action recommandée : vérification CF à court terme.'
+  },
+  A_RISQUE: {
+    titre: 'Santé : à risque',
+    formule: 'cumul avenants ≥ 30 %',
+    regle: 'Dépassement du seuil légal RG021. Dérogation requise pour tout nouvel avenant.',
+    reference: 'RG021 du SDF · Code MP CI'
+  },
+  BLOQUE: {
+    titre: 'Santé : bloqué',
+    formule: '(≥1 difficulté impact CRITIQUE non résolue) OU (état = RESILIE)',
+    regle: 'Marché stoppé ou en crise. Décision attendue.'
+  },
+  NON_DEMARRE: {
+    titre: 'Santé : non démarré',
+    formule: 'État ∉ {EN_EXEC, EXECUTION, RESILIE, CLOS}',
+    regle: 'Marché encore en phase amont (planifié, contractualisation, attribué…) — la santé d\'exécution ne s\'évalue qu\'après l\'OS de démarrage.'
+  }
+};
 
 // Modif #36 — Catégories de santé d'un marché avec leurs métadonnées d'affichage
 const SANTE_CATEGORIES = [
@@ -853,7 +884,11 @@ function renderSanteTuiles(parSante, filteredOps, santeMap) {
     }, [
       el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' } }, [
         el('span', { style: { fontSize: '20px' } }, s.icon),
-        el('span', { style: { fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.3px' } }, s.label)
+        el('span', { style: { fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.3px' } }, s.label),
+        // Modif #37 — Badge formule (icône 📐 cliquable qui explique la règle de classification)
+        SANTE_FORMULES[s.code] ? el('span', {
+          onclick: (e) => e.stopPropagation()
+        }, [renderFormulaBadge(SANTE_FORMULES[s.code])]) : null
       ]),
       el('div', { style: { fontSize: '24px', fontWeight: 700, color: s.color } }, String(count)),
       el('div', {

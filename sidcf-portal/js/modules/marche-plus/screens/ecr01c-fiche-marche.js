@@ -40,6 +40,7 @@ import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/
 import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.js';
 import { renderOpMandatManager } from '../../../ui/widgets/op-mandat-manager-mp.js';
 import { renderPluriannualite } from '../../../ui/widgets/pluriannualite-mp.js';
+import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
 import logger from '../../../lib/logger.js';
@@ -423,31 +424,64 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
       'Cumul avenants',
       `${cumulPct.toFixed(1)}%`,
       `${money(totalAvenants)} sur ${money(montantInitial)} · seuil 30%`,
-      cumulColor
+      cumulColor,
+      {
+        titre: 'Cumul avenants',
+        formule: 'Σ variationMontant / montantInitial × 100',
+        regle: 'Code des Marchés Publics CI : seuil ≤ 30 %. Alerte à partir de 25 %. Couleur : vert <25 %, jaune 25-30 %, rouge ≥30 %.',
+        exemple: 'Marché 100 M XOF + avenants +15 M + +10 M ⇒ 25 M / 100 M = 25 % (alerte jaune)',
+        reference: 'RG021 du SDF · Art. avenants Code MP CI'
+      }
     ),
     renderKpiCard(
       'Échéancier planifié',
       `${echeancierPct.toFixed(1)}%`,
       `${items.length} échéance${items.length > 1 ? 's' : ''}`,
-      echeancierColor
+      echeancierColor,
+      {
+        titre: 'Échéancier planifié',
+        formule: 'Σ items[].pourcentage',
+        regle: 'Le total des pourcentages des échéances de paiement doit atteindre 100 % du montant marché (selon base HT ou TTC choisie par échéance).',
+        exemple: 'Avance 20 % + Acompte 1 = 30 % + Acompte 2 = 30 % + Solde = 20 %  ⇒ total = 100 % (valide)',
+        reference: 'F011 du SDF'
+      }
     ),
     renderKpiCard(
       'Garanties',
       `${garActives} actives`,
       garExpirees > 0 ? `⚠ ${garExpirees} expirée${garExpirees > 1 ? 's' : ''}` : `0 expirée`,
-      garColor
+      garColor,
+      {
+        titre: 'Garanties',
+        formule: 'count(etat=ACTIVE) · count(etat=EXPIREE)',
+        regle: 'Garantie active : dateÉmission ≤ aujourd\'hui ≤ dateÉchéance. Une garantie expirée non levée déclenche une alerte rouge.',
+        reference: 'Art. 97-104 Code MP CI'
+      }
     ),
     renderKpiCard(
       'Ordres de service',
       `${osCount}`,
       osCount > 0 ? 'Exécution démarrée' : 'Aucun OS émis',
-      osColor
+      osColor,
+      {
+        titre: 'Ordres de Service',
+        formule: 'count(MP_ORDRE_SERVICE)',
+        regle: 'L\'OS de démarrage est obligatoire pour passer en phase Exécution (RG017). Date fin prévisionnelle = date OS + durée d\'exécution.',
+        reference: 'RG017 et F016 du SDF'
+      }
     ),
     renderKpiCard(
       'Difficultés',
       `${difCount.enCours} en cours`,
       difSub,
-      difColor
+      difColor,
+      {
+        titre: 'Difficultés du marché',
+        formule: 'count(statut=EN_COURS, impact ∈ {CRITIQUE, ELEVE, MOYEN, FAIBLE})',
+        regle: 'Code couleur du KPI : rouge si ≥1 critique non résolue · orange si ≥1 impact élevé non résolu · jaune s\'il y a des difficultés en cours · vert sinon.',
+        exemple: '1 difficulté CRITIQUE non résolue ⇒ KPI rouge "Bloqué"',
+        reference: 'Modif #29 — saisie structurée'
+      }
     )
   ]);
 }
@@ -538,7 +572,7 @@ function renderDifficultesSection(idOperation, mpDifficultes, registries) {
   ]);
 }
 
-function renderKpiCard(label, value, sub, color) {
+function renderKpiCard(label, value, sub, color, formula) {
   return el('div', {
     className: 'card',
     style: {
@@ -549,7 +583,10 @@ function renderKpiCard(label, value, sub, color) {
       boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
     }
   }, [
-    el('div', { style: { fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.3px' } }, label),
+    el('div', { style: { fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.3px', display: 'flex', alignItems: 'center' } }, [
+      el('span', {}, label),
+      formula ? renderFormulaBadge(formula) : null
+    ]),
     el('div', { style: { fontSize: '22px', fontWeight: 'bold', color, margin: '4px 0' } }, value),
     el('div', { style: { fontSize: '11px', color: '#6b7280' } }, sub)
   ]);

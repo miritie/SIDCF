@@ -10,6 +10,7 @@ import logger from '../../../lib/logger.js';
 import { getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
+import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 
 // API exposée par le widget dual de l'avenant courant (montant peut être négatif)
 let _avenantMontantApi = null;
@@ -103,7 +104,17 @@ export async function renderAvenantCreate(params) {
               el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantInitial.toLocaleString()} XOF`)
             ]),
             el('div', {}, [
-              el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Cumul avenants'),
+              el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px', display: 'flex', alignItems: 'center' } }, [
+                el('span', {}, 'Cumul avenants'),
+                // Modif #37 — Badge formule sur le cumul avenants
+                renderFormulaBadge({
+                  titre: 'Cumul des avenants',
+                  formule: 'Σ variationMontant / montantInitial × 100',
+                  regle: 'Seuil légal RG021 : cumul ≤ 30 % du montant initial. Alerte à partir de 25 %. Dépassement = dérogation requise du Directeur des Marchés Publics.',
+                  exemple: 'Marché initial 100 M + avenant 1 +15 M + avenant 2 +10 M ⇒ cumul = 25 M / 100 M = 25 % (jaune, attention)',
+                  reference: 'RG021 du SDF · Code MP CI'
+                })
+              ]),
               el('div', { style: { fontSize: '18px', fontWeight: 'bold', color: pourcentageCumul >= 25 ? '#dc3545' : '#28a745' } },
                 `${totalAvenants.toLocaleString()} XOF (${pourcentageCumul.toFixed(1)}%)`)
             ]),

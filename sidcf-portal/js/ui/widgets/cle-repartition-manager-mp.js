@@ -9,6 +9,7 @@
 import { el } from '../../lib/dom.js';
 import logger from '../../lib/logger.js';
 import { renderMontantPourcentageDualInput } from './montant-pourcentage-dual-input.js';
+import { renderFormulaBadge } from './formula-tip-mp.js';
 
 /**
  * @param {Array} cleRepartition - Liste des lignes de répartition existantes
@@ -412,11 +413,28 @@ export function renderCleRepartitionManager(
 
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Total contributions'),
+          el('div', { className: 'text-small text-muted', style: { display: 'flex', alignItems: 'center' } }, [
+            el('span', {}, 'Total contributions'),
+            // Modif #37 — Badge formule
+            renderFormulaBadge({
+              titre: 'Total contributions',
+              formule: 'Σ ligne.montant',
+              regle: 'Somme des montants alloués à chaque bailleur (et à l\'État si TVA État activée). Doit égaler le montant marché (HT ou TTC selon la base de calcul exclusive choisie).',
+              reference: 'F013 · RG022 du SDF'
+            })
+          ]),
           el('div', { style: { fontSize: '20px', fontWeight: 'bold', color: '#0066cc' } }, totalMontant.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' XOF')
         ]),
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Total pourcentage'),
+          el('div', { className: 'text-small text-muted', style: { display: 'flex', alignItems: 'center' } }, [
+            el('span', {}, 'Total pourcentage'),
+            renderFormulaBadge({
+              titre: 'Total pourcentage de la clé de répartition',
+              formule: 'Σ ligne.pourcentage avec ligne.pourcentage = ligne.montant / montantMarché(baseCalc) × 100',
+              regle: 'Le total doit valoir 100 % (à ±0,01 % près). Sinon le bouton enregistrer reste actif mais une alerte rouge indique l\'incohérence. La base est exclusive HT ou TTC par ligne.',
+              exemple: 'Marché HT 472 M : ÉTAT 50 % (236 M) + BM 30 % (141,6 M) + AFD 20 % (94,4 M) = 100 % ✓'
+            })
+          ]),
           el('div', {
             style: {
               fontSize: '20px',

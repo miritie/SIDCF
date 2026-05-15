@@ -13,6 +13,52 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Transparence des formules : badges 📐 partout où il y a un calcul
+
+> **Modif #37** — Toutes les formules et méthodes d'évaluation sont désormais explicitement exposées via un badge cliquable 📐 placé à côté du KPI ou de l'indicateur correspondant. Cela permet aux métiers de vérifier que la méthode appliquée correspond à leur attente, et aux devs de garantir la prise en compte sans dérive.
+
+### Modif #37 — Composant réutilisable `formula-tip-mp.js`
+
+#### Nouveau widget
+- **`renderFormulaBadge(opts)`** : petite icône 📐 (18px, cercle) inline à côté d'un libellé. Tooltip natif au survol (titre + formule + règle + réf), popup détaillé au clic avec sections « Formule », « Règle métier », « Exemple », « Référence ». Fermeture du popup au clic extérieur.
+- **`renderFormulaBlock(opts)`** : variante encart visible en permanence sous un KPI (à utiliser pour les indicateurs centraux où la transparence prime sur la compacité).
+- API : `{ titre, formule, regle, exemple, reference }`. Toutes les clés sauf `titre` sont optionnelles.
+
+#### Intégration sur les zones de calcul
+
+| Zone | Indicateur enrichi | Formule exposée |
+|---|---|---|
+| Fiche de vie — KPI Cumul avenants | `Σ variationMontant / montantInitial × 100` | Seuil 30 % RG021 |
+| Fiche de vie — KPI Échéancier planifié | `Σ items[].pourcentage` | Doit valoir 100 % |
+| Fiche de vie — KPI Garanties | `count(etat=ACTIVE) · count(etat=EXPIREE)` | Active = dans la période [émission, échéance] |
+| Fiche de vie — KPI Ordres de service | `count(MP_ORDRE_SERVICE)` | OS obligatoire pour passage exécution (RG017) |
+| Fiche de vie — KPI Difficultés | `count(statut=EN_COURS) par impact` | Code couleur selon gravité |
+| Situation exécution — Montant global | `attribution.ttc + Σ variationMontant` | Inclut avenants FINAN/MIXTE, exclut avenants délai |
+| Situation exécution — Cumul OP visé | `Σ montant pour etat ∈ {VISE, PAYE}` | Référence doc DCF 5b |
+| Situation exécution — Cumul payé | `Σ montant pour etat = PAYE` | Toujours ≤ Cumul visé |
+| Situation exécution — Reste à payer | `max(0, montantGlobal − cumulVisé)` | Référence doc DCF 5c |
+| Situation exécution — Taux d'exécution financier | `cumulVisé / montantGlobal × 100` | Code couleur vert/bleu/orange/gris · doc DCF 5d |
+| Encart pluriannualité — Total + Écart | `pivot[bailleur][année]` · `planifié − exécuté` | Doc DCF 7-8 · Modif #35 |
+| Liste PPM — Tuiles santé (5 catégories) | Règles de classification détaillées | Croisement état + avenants + difficultés |
+| Clé Répartition — Total contributions | `Σ ligne.montant` | F013 · RG022 · doit égaler montant marché |
+| Clé Répartition — Total pourcentage | `Σ ligne.pourcentage` | Doit valoir 100 % à ±0,01 % près |
+| Budget Line History — Cumul ligne | `AE − (Σ autres ops + ligne courante)` | F002 · Modif #27 |
+| Attribution Garanties — Plage légale | Détails par type de garantie | Art. 97.3 (BE 3-5 %) · Art. 100 (avance ≤15 %) |
+| Avenant Create — Cumul avenants | `Σ variationMontant / montantInitial × 100` | RG021 · alerte 25 % · dérogation ≥30 % |
+
+#### Bénéfices
+
+- **Vérification métier** : un utilisateur métier peut, en un clic sur 📐, voir la formule exacte appliquée et la confronter à sa compréhension de la règle.
+- **Garde-fou dev** : si la formule indiquée diverge du code, c'est visible directement dans la UI — pas besoin d'inspecter le source.
+- **Document vivant** : chaque référence légale (Art. 97.3, RG021, F011, F013…) est ancrée à l'indicateur qu'elle régit.
+- **Pas de surcharge visuelle** : un petit cercle 📐 18px, popup uniquement au clic. Tooltip natif sur hover pour aperçu rapide.
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/formula-tip-mp.js` (~180 lignes)
+- Modifiés : `ecr01c-fiche-marche.js`, `ecr01b-ppm-unitaire.js`, `ecr03a-attribution.js`, `ecr04b-avenant-create.js`, `op-mandat-manager-mp.js`, `pluriannualite-mp.js`, `budget-line-history-mp.js`, `cle-repartition-manager-mp.js`
+
+Pas de migration DB. Pas de déploiement Worker.
+
 ## 2026-05-15 — Diligences DCF : exécution financière + pluriannualité + tuiles santé agrégées
 
 > **Modifs #34 + #35 + #36** — Mise en œuvre des 4 points restants du document de diligence DCF (Hector, 26 mars). Trois modifs combinées car elles partagent la même fiche de vie et la même infrastructure de calculs financiers.

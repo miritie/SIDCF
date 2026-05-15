@@ -24,6 +24,30 @@ import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { checkSanction, checkSanctionsGroupement, renderSanctionBanner, renderGroupementSanctionsBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
 import { loadBanques } from '../../../lib/mp-banques.js';
 import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
+import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
+
+// Modif #37 — Formules et règles légales associées aux garanties contractuelles
+const GARANTIE_FORMULES = {
+  avance: {
+    titre: 'Garantie d\'avance (Art. 100 Code MP CI)',
+    formule: 'taux × montantMarché(baseCalc) / 100',
+    regle: 'Plage légale : 10 % – 15 % du montant du marché. La garantie couvre le remboursement de l\'avance forfaitaire de démarrage (max 15 % du marché — RG011).',
+    exemple: 'Marché 100 M HT, avance 15 % ⇒ garantie 15 M XOF',
+    reference: 'Art. 100 Code MP CI · RG011 du SDF'
+  },
+  bonneExec: {
+    titre: 'Garantie de bonne exécution (Art. 97.3 Code MP CI)',
+    formule: 'taux × montantMarché(baseCalc) / 100',
+    regle: 'Plage légale : 3 % – 5 % du montant du marché (corrigée modif #25.1 — auparavant 5 %–10 %, non conforme).',
+    exemple: 'Marché 200 M HT, BE 5 % ⇒ garantie 10 M XOF',
+    reference: 'Art. 97.3 Code MP CI · RG010 du SDF'
+  },
+  cautionnement: {
+    titre: 'Cautionnement',
+    formule: 'montant fixe ou pourcentage selon CCAP',
+    regle: 'Pas de plage légale standard — défini au cas par cas dans le Cahier des Clauses Administratives Particulières du marché.'
+  }
+};
 import { validateTaux, getLabelContraintes } from '../../../lib/mp-garanties-rules.js';
 
 // Cache local pour éviter de recharger les banques à chaque render
@@ -1124,18 +1148,24 @@ function renderGarantieItem(id, label, garantie, required = false, montantsTotau
         }),
         el('span', { style: { fontWeight: 'bold' } }, label)
       ]),
-      // Badge contraintes légales (à droite du titre)
-      contraintes ? el('span', {
-        style: {
-          fontSize: '11px',
-          fontWeight: '600',
-          padding: '3px 8px',
-          borderRadius: '12px',
-          background: '#dbeafe',
-          color: '#1e40af',
-          border: '1px solid #93c5fd'
-        }
-      }, `📐 ${contraintes}`) : null
+      // Badge contraintes légales (à droite du titre) — modif #37 enrichi avec formula badge
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
+        contraintes ? el('span', {
+          style: {
+            fontSize: '11px',
+            fontWeight: '600',
+            padding: '3px 8px',
+            borderRadius: '12px',
+            background: '#dbeafe',
+            color: '#1e40af',
+            border: '1px solid #93c5fd'
+          }
+        }, `📐 ${contraintes}`) : null,
+        // Badge formule détaillé (cliquable)
+        regleType && GARANTIE_FORMULES[regleType]
+          ? renderFormulaBadge(GARANTIE_FORMULES[regleType])
+          : null
+      ])
     ]),
 
     el('div', {
