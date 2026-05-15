@@ -13,6 +13,67 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Libellés de montant contextuels par phase
+
+> **Modif #22** — Le même chiffre porte un libellé différent selon l'étape du cycle de vie du marché. On uniformise tous les écrans pour respecter la règle métier énoncée par l'utilisateur.
+
+### Modif #22 — Libellés Montant selon la phase
+- **Règle métier** :
+  | Phase | Libellé |
+  |---|---|
+  | PPM (planification) | `Montant prévisionnel` |
+  | Attribution | `Montant du marché de base` |
+  | Saisie d'avenant | `Montant de l'avenant` |
+  | Après avenant | `Montant total du marché` |
+- **Nouveau helper** : `sidcf-portal/js/lib/montant-labels-mp.js` — `getMontantLabel(phase, options)` + variante courte `getMontantLabelShort(phase)`. Centralise la règle pour éviter la dérive entre écrans.
+- **Renommages appliqués** :
+  - **Attribution** (`ecr03a-attribution.js`) : carte « 💰 Montants du marché » → **« 💰 Montant du marché de base »** + sous-titre explicatif rappelant que les avenants viendront s'y cumuler.
+  - **Visa CF / Approbation** (`ecr03c-visa-cf.js`) : libellé « Montant attribué » → **« Montant du marché de base »**.
+  - **Échéancier / Clé** (`ecr03b-echeancier-cle.js`) : KPIs « Montant Marché (TTC) » + « Montant HT » → **« Montant du marché de base (TTC) »** + **« Montant du marché de base (HT) »**.
+  - **Exécution OS** (`ecr04a-execution-os.js`) : KPIs « Montant initial » / « Montant actuel » → **« Montant du marché de base »** / **« Montant total du marché »**.
+  - **Avenants liste** (`ecr04b-avenants.js`) : KPIs idem → **« Montant du marché de base »** / **« Montant total du marché »**.
+  - **Avenant create** (`ecr04b-avenant-create.js`) :
+    - Bloc info contexte : « Montant initial » → **« Montant du marché de base »** ; « Montant actuel » → **« Montant total du marché »**.
+    - Champ Variation : label « Variation montant et % » → **« Montant de l'avenant (montant + %) »**.
+    - Affichage calculé : « Nouveau montant marché » → **« Montant total du marché (après cet avenant) »**.
+    - Aperçu impact dynamique : « Nouveau montant » → **« Montant total du marché »**.
+  - **Garanties** (`ecr04c-garanties.js`) : KPI « Montant marché » → **« Montant total du marché »**.
+- **Pas de changement de données** : les noms de champs en base et le modèle restent identiques (`montantPrevisionnel`, `montants.ht/ttc`, `variationMontant`, etc.). Uniquement les libellés d'affichage évoluent.
+
+## 2026-05-15 — Saisie duale Montant + % avec base de calcul exclusive HT/TTC
+
+> **Modif #21** — Refonte de la saisie des montants susceptibles d'être évalués sur la base d'un pourcentage : deux champs visibles **Montant (XOF)** et **Pourcentage (%)**, synchronisés bidirectionnellement (modifier l'un met à jour l'autre), avec une **base de calcul exclusive HT ou TTC** (suppression de l'option « HT et TTC »). Appliqué à 4 endroits : Clé de Répartition, Échéancier, Garanties (avance/bonne exécution/cautionnement), Avenants.
+
+### Modif #21 — Widget DUAL `montant-pourcentage-dual-input.js` + base exclusive
+
+- **Écrans touchés** : `/mp/attribution` (Clé Répartition, Garanties, Échéancier embedded) + `/mp/avenant-create`
+- **Nouveau widget** `sidcf-portal/js/ui/widgets/montant-pourcentage-dual-input.js` (~180 lignes) :
+  - **Deux champs visibles** empilés verticalement : ligne Montant (XOF) au-dessus, ligne Pourcentage (%) en dessous, chacun avec son helper d'équivalent (« ≈ X% du total » / « ≈ Y XOF »).
+  - **Synchronisation bidirectionnelle** : saisir un montant met le % à jour ; saisir un % met le montant à jour.
+  - **Base de référence dynamique** : `setTotal(newTotal)` permet au caller de basculer HT↔TTC à la volée. Le widget recalcule le côté approprié selon le dernier mode saisi (si l'utilisateur a saisi un %, le montant se recalcule ; sinon le % se recalcule).
+  - **Mode `allowNegative`** : pour les avenants (variations en diminution possibles).
+  - API publique : `getMontant()`, `getMode()`, `setTotal()`, `setMontant()`.
+- **Base de calcul exclusive HT ou TTC** :
+  - Retrait de l'entrée `HT_TTC` dans `registries.json` (`BASE_CALCUL_CLE`).
+  - **Migration douce** dans `cle-repartition-manager-mp.js` : à la lecture, toute ligne avec `baseCalc === 'HT_TTC'` est normalisée en `HT`. Pas de migration SQL — les données vivent dans le JSONB de `mp_cle_repartition` et la correction est appliquée à la prochaine sauvegarde.
+  - Le formulaire filtre les options HT/TTC uniquement.
+- **Application aux 4 écrans** :
+  - **Clé Répartition Multi-Bailleurs** (`cle-repartition-manager-mp.js`) : remplace l'input toggle XOF/% par le widget dual. Bascule HT↔TTC via le sélecteur existant → `setTotal()`. La table affiche déjà les colonnes Base et Pourcentage par ligne.
+  - **Échéancier** (`echeancier-manager-mp.js`) : ajout d'un sélecteur **Base de calcul (HT/TTC) par échéance**, signature étendue (3ᵉ paramètre accepte désormais `{ ht, ttc }` ; compat avec l'ancienne forme `number` interprété comme TTC). Nouvelle colonne **Base** dans la table.
+  - **Garanties** (`ecr03a-attribution.js` - `renderGarantiesSection` + `initGarantieWidget`) : pour chacune des 3 garanties (avance, bonne exécution, cautionnement), ajout d'un sélecteur baseCalc HT/TTC, widget dual remplaçant le single toggle, et `data-total-ht` / `data-total-ttc` au lieu d'un seul `data-total`. Avance et bonne exécution default à `POURCENTAGE` (saisie typique en taux), cautionnement default à `MONTANT`. Le warning de seuil (plage légale) continue à être recalculé sur la base courante via `_garantieWidgetApis[id]`.
+  - **Avenants** (`ecr04b-avenant-create.js`) : nouveau bloc « Base de calcul (HT/TTC) » + widget dual avec `allowNegative: true`. Base HT/TTC issue de `fullData.attribution.montants` (fallback `montantPrevisionnel`/1.18 pour HT, `montantPrevisionnel` pour TTC). Un champ caché `avenant-montant` est synchronisé via onChange pour préserver le flow de soumission existant (`updateImpactPreview`). Nouvelle colonne **Base** dans la liste des avenants (`ecr04b-avenants.js`).
+- **Schéma** (`schema.js`) :
+  - `CLE_LIGNE` / `MP_CLE_LIGNE` : ajout commentaire `baseCalc: 'HT' | 'TTC' (exclusif)` + champ `saisieMode`.
+  - `MP_ECHEANCE_ITEM` : ajout `baseCalc` (`'TTC'` par défaut) + `saisieMode`.
+  - `MP_ATTRIBUTION.garanties.*` : ajout `baseCalc: 'HT'` + `saisieMode`.
+  - `MP_AVENANT` : ajout `variationBaseCalc: 'TTC'` + `variationSaisieMode`.
+- **Pas de migration DB** : tous les nouveaux champs vivent dans les colonnes JSONB existantes. Les anciennes lignes sans ces champs sont rétro-compatibles (lecture avec valeurs par défaut).
+- **Pas de déploiement Worker** : aucune route API modifiée, aucune nouvelle entité.
+- **Fichiers** :
+  - Nouveau : `sidcf-portal/js/ui/widgets/montant-pourcentage-dual-input.js`
+  - Modifiés : `cle-repartition-manager-mp.js`, `echeancier-manager-mp.js`, `ecr03a-attribution.js`, `ecr04b-avenant-create.js`, `ecr04b-avenants.js`, `schema.js`, `registries.json`
+- **Réversibilité** : retirer le sélecteur baseCalc et reconvertir vers le widget single `montant-pourcentage-input.js` (toujours présent dans la base, non supprimé). Les données existantes avec `baseCalc`/`saisieMode` resteront en place mais seront ignorées.
+
 ## 2026-05-15 — Approbation : élargissement des organes (CF + autres)
 
 > **Modif #16** — La liste des organes d'approbation du marché passe de 11 à 27 entrées, incluant le **Contrôleur Financier (CF)** et plusieurs autres organes transverses ou sectoriels demandés par l'utilisateur.

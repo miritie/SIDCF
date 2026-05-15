@@ -349,7 +349,7 @@ export async function renderExecutionOS(params) {
                 // Résumé des avenants
                 el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' } }, [
                   el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
-                    el('div', { className: 'text-small text-muted' }, 'Montant initial'),
+                    el('div', { className: 'text-small text-muted' }, 'Montant du marché de base'),
                     el('div', { style: { fontWeight: '600', fontSize: '14px' } }, money(montantInitial))
                   ]),
                   el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
@@ -358,7 +358,7 @@ export async function renderExecutionOS(params) {
                       `${totalAvenants >= 0 ? '+' : ''}${money(totalAvenants)}`)
                   ]),
                   el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
-                    el('div', { className: 'text-small text-muted' }, 'Montant actuel'),
+                    el('div', { className: 'text-small text-muted' }, 'Montant total du marché'),
                     el('div', { style: { fontWeight: '600', fontSize: '14px' } }, money(montantActuel))
                   ]),
                   el('div', { style: { textAlign: 'center', padding: '12px', background: pourcentageAvenants > 25 ? 'var(--color-warning-bg)' : 'var(--color-gray-100)', borderRadius: '8px' } }, [

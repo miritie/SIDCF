@@ -164,8 +164,8 @@ function renderKPISummary(montantMarche, attribution) {
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' } }, [
-        renderKPI('Montant Marché (TTC)', `${(montantMarche / 1000000).toFixed(2)}M XOF`, 'var(--color-primary)'),
-        renderKPI('Montant HT', `${((attribution?.montants?.ht || 0) / 1000000).toFixed(2)}M XOF`, 'var(--color-info)'),
+        renderKPI('Montant du marché de base (TTC)', `${(montantMarche / 1000000).toFixed(2)}M XOF`, 'var(--color-primary)'),
+        renderKPI('Montant du marché de base (HT)', `${((attribution?.montants?.ht || 0) / 1000000).toFixed(2)}M XOF`, 'var(--color-info)'),
         renderKPI('Délai', `${attribution?.delaiExecution || 0} ${attribution?.delaiUnite || 'MOIS'}`, 'var(--color-warning)')
       ])
     ])

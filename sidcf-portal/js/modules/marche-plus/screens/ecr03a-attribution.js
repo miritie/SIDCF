@@ -23,7 +23,7 @@ import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } 
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
 import { loadBanques } from '../../../lib/mp-banques.js';
-import { renderMontantPourcentageInput } from '../../../ui/widgets/montant-pourcentage-input.js';
+import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
 import { validateTaux, getLabelContraintes } from '../../../lib/mp-garanties-rules.js';
 
 // Cache local pour éviter de recharger les banques à chaque render
@@ -227,9 +227,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Montants
     renderMontantsSection(montantHT, montantTTC),
 
-    // Section Garanties (contextuelle) — Marché+ : on passe aussi le montant
-    // attribué pour que le widget montant/% puisse calculer les pourcentages.
-    renderGarantiesSection(existingAttr.garanties || {}, modePassation, montantHT || montantTTC || 0),
+    // Section Garanties (contextuelle) — Marché+ : on passe HT et TTC pour que le widget
+    // dual montant/% puisse calculer les pourcentages selon la base choisie par garantie.
+    renderGarantiesSection(existingAttr.garanties || {}, modePassation, { ht: montantHT, ttc: montantTTC }),
 
     // Section Réserves CF
     renderReservesCFSection(existingAttr.decisionCF || {}),
@@ -509,7 +509,9 @@ function renderMontantsSection(montantHT, montantTTC) {
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, '💰 Montants du marché')
+      el('h3', { className: 'card-title' }, '💰 Montant du marché de base'),
+      el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+        'Montant arrêté à l\'attribution. Les éventuels avenants viendront se cumuler à ce socle pour former le « Montant total du marché ».')
     ]),
     el('div', { className: 'card-body' }, [
       // Sélection de la base de calcul
@@ -685,16 +687,22 @@ function calculerMontants() {
 /**
  * Section Garanties (contextuelle)
  */
-function renderGarantiesSection(garanties, modePassation, montantTotal = 0) {
+function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht: 0, ttc: 0 }) {
   // Pour PI, masquer complètement la section garanties
   if (isFieldHidden('garantieAvance', modePassation, 'attribution') &&
       isFieldHidden('garantieBonneExecution', modePassation, 'attribution')) {
     return el('div', { className: 'card', style: { display: 'none' } });
   }
 
-  const garantieAvance = garanties.garantieAvance || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
-  const garantieBonneExec = garanties.garantieBonneExec || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
-  const cautionnement = garanties.cautionnement || { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null };
+  // Defaults : on s'assure que baseCalc/saisieMode existent même sur des entités legacy.
+  const fillDefaults = (g, defaultMode = 'POURCENTAGE') => ({
+    existe: false, montant: 0, baseCalc: 'HT', saisieMode: defaultMode,
+    dateEmission: null, dateEcheance: null, docRef: null,
+    ...(g || {})
+  });
+  const garantieAvance = fillDefaults(garanties.garantieAvance, 'POURCENTAGE');
+  const garantieBonneExec = fillDefaults(garanties.garantieBonneExec, 'POURCENTAGE');
+  const cautionnement = fillDefaults(garanties.cautionnement, 'MONTANT');
 
   // Vérifier si les garanties sont obligatoires (AOO)
   const avanceObligatoire = isFieldRequired('garantieAvance', modePassation, 'attribution');
@@ -705,7 +713,7 @@ function renderGarantiesSection(garanties, modePassation, montantTotal = 0) {
   // Garantie d'avance (si non cachée)
   if (!isFieldHidden('garantieAvance', modePassation, 'attribution')) {
     garantiesVisibles.push(
-      renderGarantieItem('avance', 'Garantie d\'avance' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire, montantTotal, 'avance')
+      renderGarantieItem('avance', 'Garantie d\'avance' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire, montantsTotaux, 'avance')
     );
   }
 
@@ -715,7 +723,7 @@ function renderGarantiesSection(garanties, modePassation, montantTotal = 0) {
       garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
     }
     garantiesVisibles.push(
-      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire, montantTotal, 'bonneExec')
+      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire, montantsTotaux, 'bonneExec')
     );
   }
 
@@ -724,7 +732,7 @@ function renderGarantiesSection(garanties, modePassation, montantTotal = 0) {
     garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
   }
   garantiesVisibles.push(
-    renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false, montantTotal, 'cautionnement')
+    renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false, montantsTotaux, 'cautionnement')
   );
 
   return el('div', { className: 'card' }, [
@@ -966,25 +974,42 @@ function initGarantieWidget(id) {
   const host = document.getElementById(`garantie-${id}-montant-host`);
   if (!host) return;
   const initMontant = parseFloat(host.dataset.initMontant) || 0;
-  const initMode = host.dataset.initMode || 'MONTANT';
-  const total = parseFloat(host.dataset.total) || 0;
+  const initMode = host.dataset.initMode || 'POURCENTAGE';
+  const initBaseCalc = host.dataset.initBaseCalc === 'TTC' ? 'TTC' : 'HT';
+  const totalHT = parseFloat(host.dataset.totalHt) || 0;
+  const totalTTC = parseFloat(host.dataset.totalTtc) || 0;
   const regleType = host.dataset.regleType || null;
 
-  const widget = renderMontantPourcentageInput({
-    id: `garantie-${id}-montant`,
-    total,
+  let currentBaseCalc = initBaseCalc;
+  const currentTotal = () => (currentBaseCalc === 'TTC' ? totalTTC : totalHT);
+
+  const widget = renderMontantPourcentageDualInput({
+    idPrefix: `garantie-${id}`,
+    total: currentTotal(),
     value: initMontant,
     mode: initMode,
     onChange: (montant /* mode */) => {
-      // Mettre à jour le warning seuil
-      updateGarantieWarning(id, montant, total, regleType);
+      // Le warning de seuil s'évalue toujours en % sur la base courante.
+      updateGarantieWarning(id, montant, currentTotal(), regleType);
     }
   });
   host.innerHTML = '';
   host.appendChild(widget);
-  _garantieWidgetApis[id] = widget._mpInput;
+  _garantieWidgetApis[id] = widget._mpDual;
+
+  // Brancher le sélecteur de base sur le widget
+  const baseSelect = document.getElementById(`garantie-${id}-base-calc`);
+  if (baseSelect) {
+    baseSelect.addEventListener('change', () => {
+      currentBaseCalc = baseSelect.value === 'TTC' ? 'TTC' : 'HT';
+      widget._mpDual.setTotal(currentTotal());
+      const m = widget._mpDual.getMontant();
+      updateGarantieWarning(id, m, currentTotal(), regleType);
+    });
+  }
+
   // Premier calcul du warning
-  updateGarantieWarning(id, initMontant, total, regleType);
+  updateGarantieWarning(id, initMontant, currentTotal(), regleType);
 }
 
 function updateGarantieWarning(id, montant, total, regleType) {
@@ -1041,10 +1066,13 @@ async function populateBanqueSelect(selectId) {
   });
 }
 
-function renderGarantieItem(id, label, garantie, required = false, montantTotal = 0, regleType = null) {
+function renderGarantieItem(id, label, garantie, required = false, montantsTotaux = { ht: 0, ttc: 0 }, regleType = null) {
   // Par défaut décoché, sauf si existe=true dans les données
   const isChecked = garantie.existe === true;
   const contraintes = regleType ? getLabelContraintes(regleType) : '';
+  const totalsHT = Number(montantsTotaux?.ht) || 0;
+  const totalsTTC = Number(montantsTotaux?.ttc) || 0;
+  const initBaseCalc = garantie.baseCalc === 'TTC' ? 'TTC' : 'HT';
 
   return el('div', { style: { marginBottom: '16px' } }, [
     el('div', { style: { marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } }, [
@@ -1085,14 +1113,22 @@ function renderGarantieItem(id, label, garantie, required = false, montantTotal 
         paddingLeft: '24px'
       }
     }, [
-      el('div', { className: 'form-field', style: { gridColumn: 'span 1' } }, [
-        el('label', { className: 'form-label' }, 'Montant ou %'),
-        // Host pour le widget montant/% — instancié après mount via initGarantieWidget
+      // Colonne 1 : Base de calcul + widget dual montant/%
+      el('div', { className: 'form-field', style: { gridColumn: 'span 2' } }, [
+        el('label', { className: 'form-label' }, 'Base de calcul'),
+        el('select', { className: 'form-input', id: `garantie-${id}-base-calc` }, [
+          el('option', { value: 'HT', selected: initBaseCalc === 'HT' }, 'HT'),
+          el('option', { value: 'TTC', selected: initBaseCalc === 'TTC' }, 'TTC')
+        ]),
+        el('label', { className: 'form-label', style: { marginTop: '8px' } }, 'Montant et %'),
+        // Host pour le widget DUAL — instancié après mount via initGarantieWidget
         el('div', {
           id: `garantie-${id}-montant-host`,
           'data-init-montant': String(garantie.montant || 0),
-          'data-init-mode': garantie.saisieMode || 'MONTANT',
-          'data-total': String(montantTotal),
+          'data-init-mode': garantie.saisieMode || 'POURCENTAGE',
+          'data-init-base-calc': initBaseCalc,
+          'data-total-ht': String(totalsHT),
+          'data-total-ttc': String(totalsTTC),
           'data-regle-type': regleType || ''
         }),
         // Bandeau warning (caché par défaut, alimenté par le listener du widget)
@@ -1324,11 +1360,12 @@ function initializeWidgets(operation, registries) {
 
   if (echeancierContainer) {
     const montantTTC = parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0;
+    const montantHT = parseFloat(document.getElementById('attr-montant-ht')?.value) || 0;
 
     const widget = renderEcheancierManager(
       echeancierData,
       operation.livrables || [],
-      montantTTC,
+      { ht: montantHT, ttc: montantTTC },
       registries,
       (updatedEcheancier) => {
         echeancierData = updatedEcheancier;
@@ -1452,13 +1489,14 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     // Garanties (Marché+ — modif #18 : montant via widget montant/%)
     const collectGarantie = (id) => {
       const existe = document.getElementById(`garantie-${id}-existe`)?.checked === true;
-      if (!existe) return { existe: false, montant: 0 };
+      if (!existe) return { existe: false, montant: 0, baseCalc: 'HT' };
       const api = _garantieWidgetApis[id];
       const montant = api ? api.getMontant() : 0;
-      const saisieMode = api ? api.getMode() : 'MONTANT';
+      const saisieMode = api ? api.getMode() : 'POURCENTAGE';
+      const baseCalc = document.getElementById(`garantie-${id}-base-calc`)?.value === 'TTC' ? 'TTC' : 'HT';
       const dateEmission = document.getElementById(`garantie-${id}-emission`)?.value || null;
       const dateEcheance = document.getElementById(`garantie-${id}-echeance`)?.value || null;
-      return { existe: true, montant, saisieMode, dateEmission, dateEcheance };
+      return { existe: true, montant, baseCalc, saisieMode, dateEmission, dateEcheance };
     };
     const garantiesData = {
       garantieAvance: collectGarantie('avance'),

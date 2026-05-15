@@ -178,7 +178,7 @@ function renderAttributionInfo(attribution, operation) {
           el('div', { style: { fontWeight: 'bold' } }, attributaire.nif || attributaire.ncc || '-')
         ]),
         el('div', {}, [
-          el('div', { className: 'text-small text-muted' }, 'Montant attribué'),
+          el('div', { className: 'text-small text-muted' }, 'Montant du marché de base'),
           el('div', { style: { fontWeight: 'bold', color: '#0066cc' } },
             `${(typeof montantPrincipal === 'number' ? montantPrincipal.toLocaleString('fr-FR') : montantPrincipal)} ${montants.devise || 'XOF'}`)
         ])

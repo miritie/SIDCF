@@ -9,6 +9,10 @@ import { uploadDocument } from '../../../lib/r2-storage-mp.js';
 import logger from '../../../lib/logger.js';
 import { getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
+
+// API exposée par le widget dual de l'avenant courant (montant peut être négatif)
+let _avenantMontantApi = null;
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -95,7 +99,7 @@ export async function renderAvenantCreate(params) {
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
             el('div', {}, [
-              el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Montant initial'),
+              el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Montant du marché de base'),
               el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantInitial.toLocaleString()} XOF`)
             ]),
             el('div', {}, [
@@ -104,7 +108,7 @@ export async function renderAvenantCreate(params) {
                 `${totalAvenants.toLocaleString()} XOF (${pourcentageCumul.toFixed(1)}%)`)
             ]),
             el('div', {}, [
-              el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Montant actuel'),
+              el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Montant total du marché'),
               el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantActuel.toLocaleString()} XOF`)
             ])
           ])
@@ -192,20 +196,16 @@ export async function renderAvenantCreate(params) {
             el('div', { id: 'bloc-variation-montant' }, [
               el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' } }, [
                 el('div', { className: 'form-field' }, [
-                  el('label', { className: 'form-label' }, ['Variation du montant (XOF)', el('span', { className: 'required' }, '*')]),
-                  el('input', {
-                    type: 'number',
-                    className: 'form-input',
-                    id: 'avenant-montant',
-                    placeholder: 'Montant positif ou négatif',
-                    step: 0.01,
-                    oninput: updateImpactPreview
-                  }),
-                  el('small', { className: 'text-muted' }, 'Montant positif = augmentation, négatif = diminution')
+                  el('label', { className: 'form-label' }, 'Base de calcul'),
+                  el('select', { className: 'form-input', id: 'avenant-base-calc' }, [
+                    el('option', { value: 'HT' }, 'HT'),
+                    el('option', { value: 'TTC', selected: true }, 'TTC')
+                  ]),
+                  el('small', { className: 'text-muted' }, 'Base du montant marché sur laquelle le pourcentage de variation est évalué')
                 ]),
 
                 el('div', { className: 'form-field' }, [
-                  el('label', { className: 'form-label' }, 'Nouveau montant marché'),
+                  el('label', { className: 'form-label' }, 'Montant total du marché (après cet avenant)'),
                   el('input', {
                     type: 'text',
                     className: 'form-input',
@@ -216,6 +216,16 @@ export async function renderAvenantCreate(params) {
                   })
                 ])
               ]),
+
+              // Widget DUAL montant + % (synchronisés, négatifs autorisés pour diminution)
+              el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+                el('label', { className: 'form-label' }, ['Montant de l\'avenant (montant + %)', el('span', { className: 'required' }, '*')]),
+                el('div', { id: 'avenant-montant-host' }),
+                el('small', { className: 'text-muted' }, 'Saisie synchronisée : montant positif = augmentation, négatif = diminution. Le % est calculé sur la base choisie.')
+              ]),
+
+              // Champ caché pour compat avec le code de soumission existant
+              el('input', { type: 'hidden', id: 'avenant-montant', value: '0' }),
 
               // Aperçu impact financier
               el('div', {
@@ -372,6 +382,40 @@ export async function renderAvenantCreate(params) {
 
     mount('#app', page);
 
+    // Initialiser le widget DUAL montant/% pour la variation d'avenant.
+    // Bases : montants HT/TTC issus de l'attribution si dispo, sinon montantPrevisionnel comme TTC.
+    const attribMontants = fullData?.attribution?.montants || {};
+    const baseHT = Number(attribMontants.ht) || (montantInitial / 1.18);
+    const baseTTC = Number(attribMontants.ttc) || montantInitial;
+    let avenantBaseCalc = 'TTC';
+    const avenantHost = document.getElementById('avenant-montant-host');
+    if (avenantHost) {
+      const widget = renderMontantPourcentageDualInput({
+        idPrefix: 'avenant',
+        total: avenantBaseCalc === 'TTC' ? baseTTC : baseHT,
+        value: 0,
+        mode: 'MONTANT',
+        allowNegative: true,
+        onChange: (montant /* mode */) => {
+          // Synchroniser le champ caché pour conserver le flow de soumission existant
+          const hidden = document.getElementById('avenant-montant');
+          if (hidden) hidden.value = String(montant);
+          updateImpactPreview();
+        }
+      });
+      avenantHost.appendChild(widget);
+      _avenantMontantApi = widget._mpDual;
+    }
+    const avenantBaseSelect = document.getElementById('avenant-base-calc');
+    if (avenantBaseSelect) {
+      avenantBaseSelect.addEventListener('change', () => {
+        avenantBaseCalc = avenantBaseSelect.value === 'HT' ? 'HT' : 'TTC';
+        if (_avenantMontantApi) {
+          _avenantMontantApi.setTotal(avenantBaseCalc === 'TTC' ? baseTTC : baseHT);
+        }
+      });
+    }
+
     // Ajouter le listener pour changer les blocs selon le type d'avenant
     const typeSelect = document.getElementById('avenant-type');
     if (typeSelect) {
@@ -387,9 +431,10 @@ export async function renderAvenantCreate(params) {
           blocDelai.style.display = 'block';
           impactTitle.textContent = '⏱️ Impact sur le délai';
 
-          // Réinitialiser le montant
+          // Réinitialiser le montant (hidden + widget dual)
           const montantInput = document.getElementById('avenant-montant');
-          if (montantInput) montantInput.value = '';
+          if (montantInput) montantInput.value = '0';
+          if (_avenantMontantApi) _avenantMontantApi.setMontant(0);
 
           // Masquer l'aperçu
           const impactPreview = document.getElementById('impact-preview');
@@ -449,7 +494,7 @@ function updateImpactPreview() {
   const signe = variationMontant > 0 ? '+' : '';
   const couleur = variationMontant > 0 ? '#28a745' : '#dc3545';
 
-  impactText.innerHTML = `<span style="color: ${couleur}; font-weight: bold;">${signe}${variationMontant.toLocaleString()} XOF</span> → Nouveau montant: <strong>${nouveauMontant.toLocaleString()} XOF</strong>`;
+  impactText.innerHTML = `<span style="color: ${couleur}; font-weight: bold;">${signe}${variationMontant.toLocaleString()} XOF</span> → Montant total du marché : <strong>${nouveauMontant.toLocaleString()} XOF</strong>`;
 
   const couleurCumul = nouveauPourcentage >= 30 ? '#dc3545' : (nouveauPourcentage >= 25 ? '#ffc107' : '#28a745');
   impactCumul.innerHTML = `<span style="color: ${couleurCumul}; font-weight: bold;">${nouveauCumul.toLocaleString()} XOF (${nouveauPourcentage.toFixed(1)}%)</span>`;
@@ -580,6 +625,8 @@ async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel
 
     // Créer l'avenant
     const avenantId = `AVEN-${idOperation}-${Date.now()}`;
+    const avenantBaseCalc = document.getElementById('avenant-base-calc')?.value === 'HT' ? 'HT' : 'TTC';
+    const avenantSaisieMode = _avenantMontantApi ? _avenantMontantApi.getMode() : 'MONTANT';
     const avenantData = {
       id: avenantId,
       operationId: idOperation,
@@ -589,6 +636,8 @@ async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel
       dateSignature,
       dateApprobation: document.getElementById('avenant-date-approbation').value || null,
       variationMontant: variationMontant || 0,
+      variationBaseCalc: avenantBaseCalc, // HT ou TTC — base utilisée pour le % côté UI
+      variationSaisieMode: avenantSaisieMode, // dernier champ saisi (montant ou %)
       variationDelai: variationDelai || 0,
       motifRef: motif,
       description,
