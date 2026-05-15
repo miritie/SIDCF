@@ -7,6 +7,7 @@ import { money, moneyMillions } from '../../../lib/format.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { getRegionsOptions } from '../../../lib/mp-regions-ci.js';
+import { renderMultiSelectCollapsible } from '../../../ui/widgets/multi-select-collapsible-mp.js';
 
 // Cache local pour les régions CI (33 entrées chargées une fois)
 let _regionsCiCache = null;
@@ -133,7 +134,7 @@ export async function renderPPMList() {
           !filtersExpanded && chips ? chips : null,
           el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' } }, [
             filtersExpanded
-              ? el('span', { className: 'text-small text-muted', style: { fontSize: '11px' } }, 'Cmd/Ctrl + clic pour multi-sélection')
+              ? el('span', { className: 'text-small text-muted', style: { fontSize: '11px' } }, 'Cliquez sur un filtre pour le déployer · multi-sélection via cases à cocher')
               : null,
             activeCount > 0
               ? createButton('btn btn-sm btn-secondary', '🔄 Tout réinitialiser', (e) => { e.stopPropagation(); resetFilters(); })
@@ -310,84 +311,49 @@ function renderActiveFilterChips(filters, registries, exercices) {
 }
 
 /**
- * Helper : champ filtre <select multiple> + champ de recherche pour filtrer les options
- * options : tableau d'objets { code, label }
- * selected : array des valeurs cochées
+ * Helper : filtre compact replié par défaut.
+ * Chaque filtre est un bouton qui affiche le compteur + un aperçu des valeurs
+ * sélectionnées. Cliquer ouvre un panneau avec :
+ *   - barre de recherche interne
+ *   - liste de cases à cocher
+ *   - boutons « Tout » / « Vider » / « Fermer »
+ * Le panneau se ferme au clic dehors, sur Escape, ou via Fermer.
  *
- * UX :
- *  - Liste à hauteur fixe (~6 lignes visibles, scroll interne)
- *  - Petite barre de recherche au-dessus pour filtrer les options
- *    (utile pour Région, Unité Administrative, Bailleur, Activité…)
- *  - Badge compteur avec le nombre de valeurs sélectionnées
- *  - title attribut sur chaque option (label complet au hover si tronqué)
- *  - Bouton "✕ Vider" pour décocher en un clic
+ * @param {string} name      Clé dans activeFilters (ex: 'typeMarche')
+ * @param {string} label     Libellé visible
+ * @param {Array}  options   [{ code, label }]
+ * @param {Array}  selected  Codes déjà cochés
  */
 function renderMultiSelectFilter(name, label, options, selected) {
-  const sel = el('select', {
-    className: 'form-input mp-filter-select',
+  const widget = renderMultiSelectCollapsible({
     id: `filter-${name}`,
-    multiple: true,
-    size: 6,
-    style: { minHeight: '140px', fontSize: '13px', padding: '4px' }
-  }, options.map(o => {
-    const attrs = { value: o.code, title: o.label };
-    if (selected && selected.includes(o.code)) attrs.selected = 'selected';
-    return el('option', attrs, o.label);
-  }));
-
-  // Barre de recherche : filtre live les options visibles
-  const searchInput = el('input', {
-    type: 'text',
-    className: 'form-input mp-filter-search',
-    placeholder: `🔎 Filtrer ${label.toLowerCase()}...`,
-    style: { fontSize: '12px', padding: '4px 8px', marginBottom: '4px' },
-    oninput: (e) => {
-      const q = (e.target.value || '').toLowerCase().trim();
-      Array.from(sel.options).forEach(opt => {
-        const match = !q || opt.textContent.toLowerCase().includes(q) || opt.value.toLowerCase().includes(q);
-        opt.style.display = match ? '' : 'none';
-      });
+    label,
+    options,
+    selected: selected || [],
+    placeholder: '— Tous —',
+    onChange: (newSelected) => {
+      // 'exercice' est stocké en number — reconvertir au moment de l'écriture
+      activeFilters[name] = name === 'exercice'
+        ? newSelected.map(v => Number(v)).filter(v => !isNaN(v))
+        : newSelected;
+      renderPPMList();
     }
   });
 
-  const count = selected ? selected.length : 0;
-  const totalOptions = options.length;
-
-  // Bouton ✕ pour vider la sélection (visible si au moins une valeur)
-  const clearBtn = count > 0
-    ? el('button', {
-        type: 'button',
-        className: 'btn btn-sm btn-secondary',
-        style: { fontSize: '11px', padding: '2px 8px', marginLeft: '6px' },
-        onclick: (e) => {
-          e.preventDefault();
-          Array.from(sel.options).forEach(o => { o.selected = false; });
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }, '✕ Vider')
-    : null;
-
+  // Légende discrète au-dessus du toggle (label déjà dans le bouton — on
+  // affiche juste le compteur de valeurs dispo en surtitre minimal)
   return el('div', { className: 'form-field' }, [
-    el('label', {
-      className: 'form-label',
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }
+    el('div', {
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }
     }, [
-      el('span', {}, [
-        label,
-        count > 0
-          ? el('span', { style: { marginLeft: '6px', fontSize: '11px', background: '#0f5132', color: '#fff', padding: '1px 7px', borderRadius: '10px', fontWeight: 'bold' } }, String(count))
-          : null
-      ]),
-      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
-        totalOptions > 0 ? `${totalOptions} valeur${totalOptions > 1 ? 's' : ''}` : '—'
+      el('span', {
+        style: { fontSize: '12px', color: '#6b7280', fontWeight: '600' }
+      }, label),
+      el('span', { style: { fontSize: '11px', color: '#9ca3af' } },
+        options.length > 0 ? `${options.length} valeur${options.length > 1 ? 's' : ''}` : '—'
       )
     ]),
-    // Recherche interne au filtre — visible seulement si > 5 options
-    totalOptions > 5 ? searchInput : null,
-    sel,
-    clearBtn
-      ? el('div', { style: { textAlign: 'right', marginTop: '4px' } }, [clearBtn])
-      : null
+    widget
   ]);
 }
 
@@ -747,6 +713,10 @@ function applyFilters(operations) {
 }
 
 function setupFilterListeners() {
+  // Seul le champ "Recherche" (texte libre) reste un input DOM classique.
+  // Les filtres multi-select sont désormais gérés par le widget
+  // renderMultiSelectCollapsible (onChange propage directement vers
+  // activeFilters).
   const searchInput = document.getElementById('filter-search');
   let searchTimeout;
   searchInput?.addEventListener('input', (e) => {
@@ -756,19 +726,6 @@ function setupFilterListeners() {
       renderPPMList();
     }, 300);
   });
-
-  // Tous les filtres multi-select
-  const multiKeys = ['exercice', 'typeMarche', 'modePassation', 'etat', 'typeFinancement',
-                     'bailleur', 'categoriePrestation', 'region', 'unite', 'activite'];
-  for (const key of multiKeys) {
-    const input = document.getElementById(`filter-${key}`);
-    if (!input) continue;
-    input.addEventListener('change', () => {
-      // Récupérer toutes les valeurs sélectionnées
-      activeFilters[key] = Array.from(input.selectedOptions).map(o => o.value);
-      renderPPMList();
-    });
-  }
 }
 
 function resetFilters() {

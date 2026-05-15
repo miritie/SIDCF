@@ -13,6 +13,33 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Filtres PPM : multi-select replié par défaut
+
+> **Modif #24** — Refonte UX des filtres de la liste PPM. Chaque filtre devient un **bouton compact** (replié par défaut) qui ouvre à la demande un panneau avec recherche + cases à cocher.
+
+### Modif #24 — Widget `multi-select-collapsible-mp.js` pour les filtres PPM
+- **Écran touché** : `/mp/ppm-list` (ecr01b-ppm-unitaire.js)
+- **Problème** : la zone des filtres affichait chaque filtre comme une **liste plate toujours ouverte** (`<select multiple size="6">`). Sur 10 filtres, l'écran était saturé de listes scrollables côte à côte.
+- **Solution** :
+  - Nouveau widget `sidcf-portal/js/ui/widgets/multi-select-collapsible-mp.js` (~250 lignes) :
+    - Bouton compact affichant `Label + badge compteur + aperçu textuel des 2 premières sélections + flèche ▾`
+    - Au clic : ouverture d'un **popover** sous le bouton avec :
+      - Champ de recherche en haut (focus auto, filtre live)
+      - Liste de **cases à cocher** scrollable (max-height 230px)
+      - Footer : boutons **Tout** / **Vider** / **Fermer**
+    - Fermeture automatique : clic en dehors, touche `Escape`, ou bouton Fermer
+    - Un seul panneau ouvert à la fois (état global `_activePanel`)
+    - `z-index: 9999` pour passer au-dessus de tout le reste de l'UI
+- **Intégration** :
+  - `renderMultiSelectFilter` réécrit pour wrapper le nouveau widget — signature inchangée, callers PPM list inchangés.
+  - `setupFilterListeners` simplifié : seul le champ texte « Recherche » garde son `addEventListener('input')` ; les multi-select wirent via `onChange` directement du widget vers `activeFilters[name]`.
+  - Texte d'aide mis à jour : `Cmd/Ctrl + clic pour multi-sélection` → `Cliquez sur un filtre pour le déployer · multi-sélection via cases à cocher`.
+- **Effet visuel** : chaque filtre prend désormais **1 ligne** au lieu de 8-10 lignes. La zone Filtres passe d'un mur de listes à une grille compacte de boutons explicites.
+- **Pas de changement de logique de filtrage** : `activeFilters[name]` reste le même format (array de codes), le `applyFilters()` est inchangé.
+- **Fichiers** :
+  - Nouveau : `sidcf-portal/js/ui/widgets/multi-select-collapsible-mp.js`
+  - Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` (3 zones : import, renderMultiSelectFilter, setupFilterListeners)
+
 ## 2026-05-15 — Écran Garanties (exécution) : widget dual + base HT/TTC
 
 > **Modif #23** — Application de la règle « saisie bidirectionnelle Montant ↔ Pourcentage » à l'écran Garanties standalone (`/mp/garanties`), qui utilisait jusqu'ici le pattern unidirectionnel (taux saisissable → montant en lecture seule).
