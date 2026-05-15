@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Approbation : élargissement des organes (CF + autres)
+
+> **Modif #16** — La liste des organes d'approbation du marché passe de 11 à 27 entrées, incluant le **Contrôleur Financier (CF)** et plusieurs autres organes transverses ou sectoriels demandés par l'utilisateur.
+
+### Modif #16 — Référentiel `mp-organes-approbation.json` enrichi
+- **Écran touché** : `/mp/visa-cf` (« Approbation du marché »)
+- **Description** :
+  - L'écran filtrait par scope (institution) + seuil (montant) sur une liste très restreinte (11 organes). Sur **ADMIN_CENTRALE 472M**, seules 3 entrées s'affichaient (Ministre MP, DMP, Autre).
+  - On ratisse plus large : **+ 16 organes**, dont :
+    - **Contrôleur Financier (CF)** — scope `*` (transverse, tout type d'institution)
+    - **DGMP** (Directeur Général des Marchés Publics) — scope `*`
+    - **DGBF** (Directeur Général du Budget et des Finances) — scope `*`
+    - **Premier Ministre** (≥ 1 Md XOF) et **Président de la République** (cas exceptionnel)
+    - **Directeur de Cabinet** / **SG** des ministères Technique et Marchés Publics (par délégation)
+    - **Préfet de Région** + **Sous-Préfet** (par délégation) pour le scope déconcentré
+    - **Maire**, **Présidents de Conseil Régional / Départemental** (collectivités)
+    - **PCA EPN** + **DG EPN** (Établissements Publics Nationaux — scope nouveau `EPN`)
+    - **Directeur du Projet** (en plus du Coordonnateur, pour les projets cofinancés)
+- **Filtrage inchangé** : les organes en scope `*` (CF, DGMP, DGBF, AUTRE) apparaissent **quel que soit le scope** ; les autres sont filtrés sur `scope === institutionType` + seuil `[min, max]`. Le filtre fallback (« si tout est filtré → afficher tous les organes du scope ») reste en place.
+- **Effet pour Admin Centrale 472M XOF** : la liste passe de 3 à **8 options** (CF, DGMP, DGBF, Ministre MP, Directeur Cabinet MMP, DMP, Président République, Autre).
+- **Fichier** : `sidcf-portal/js/config/mp-organes-approbation.json`
+
 ## 2026-05-06 — Désactivation du module Marché historique
 
 > **Modif #15** — Marché historique masqué pour éviter l'ambiguïté dans la sidebar.
