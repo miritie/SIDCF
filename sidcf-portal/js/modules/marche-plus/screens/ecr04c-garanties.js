@@ -9,6 +9,11 @@ import { renderSteps } from '../../../ui/widgets/steps-mp.js';
 import logger from '../../../lib/logger.js';
 import { getLotData, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
+
+// API exposée par le widget dual courant pour la garantie en saisie
+let _garantieDualApi = null;
+let _garantieBaseCalc = 'HT';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -86,9 +91,12 @@ export async function renderGaranties(params) {
     ? garantiesRaw.filter(g => !g.lotId || g.lotId === currentLotId)
     : garantiesRaw;
 
-  // Attribution scopée au lot pour le montant
+  // Attribution scopée au lot pour les montants HT/TTC
   const attributionForLot = getLotData(attribution, currentLotId);
-  const montantMarche = attributionForLot?.montants?.ttc || operation.montantPrevisionnel || 0;
+  const montantMarcheTTC = Number(attributionForLot?.montants?.ttc) || Number(operation.montantPrevisionnel) || 0;
+  const montantMarcheHT = Number(attributionForLot?.montants?.ht) || (montantMarcheTTC / 1.18);
+  // Total marché total affiché dans le résumé (TTC par défaut, compat existant)
+  const montantMarche = montantMarcheTTC;
 
   const page = el('div', { className: 'page' }, [
     // Timeline
@@ -146,35 +154,27 @@ export async function renderGaranties(params) {
           ]),
 
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Taux (%)',
-              el('span', { className: 'required' }, '*')
+            el('label', { className: 'form-label' }, 'Base de calcul'),
+            el('select', { className: 'form-input', id: 'garantie-base-calc' }, [
+              el('option', { value: 'HT', selected: true }, 'HT'),
+              el('option', { value: 'TTC' }, 'TTC')
             ]),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'garantie-taux',
-              min: 0,
-              max: 100,
-              step: 0.1,
-              placeholder: 'Ex: 10'
-            })
-          ]),
-
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Montant (XOF)'),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'garantie-montant',
-              'data-montant-marche': montantMarche,
-              min: 0,
-              step: 100000,
-              placeholder: 'Calculé automatiquement',
-              disabled: true,
-              style: { background: 'var(--color-gray-100)' }
-            })
+            el('small', { className: 'text-muted' }, 'Base du montant marché')
           ])
+        ]),
+
+        // Widget DUAL montant + % (synchronisés bidirectionnellement)
+        el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+          el('label', { className: 'form-label' }, [
+            'Montant et pourcentage',
+            el('span', { className: 'required' }, '*')
+          ]),
+          el('div', {
+            id: 'garantie-montant-host',
+            'data-montant-marche-ht': String(montantMarcheHT),
+            'data-montant-marche-ttc': String(montantMarcheTTC)
+          }),
+          el('small', { className: 'text-muted' }, 'Les deux champs sont synchronisés : modifier l\'un met à jour l\'autre.')
         ]),
 
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' } }, [
@@ -232,8 +232,8 @@ export async function renderGaranties(params) {
 
   mount('#app', page);
 
-  // Setup listeners
-  setupGarantieListeners(montantMarche, rulesConfig);
+  // Setup listeners — widget dual montant/% avec base HT/TTC
+  setupGarantieListeners(montantMarcheTTC, montantMarcheHT, rulesConfig);
 }
 
 /**
@@ -301,18 +301,39 @@ function createTypeGarantieSelect(rulesConfig) {
 }
 
 /**
- * Setup garantie listeners
+ * Setup garantie listeners — widget DUAL montant/% (Marché+ modif #23)
  */
-function setupGarantieListeners(montantMarche, rulesConfig) {
+function setupGarantieListeners(montantMarcheTTC, montantMarcheHT, rulesConfig) {
   const typeSelect = document.getElementById('garantie-type');
-  const tauxInput = document.getElementById('garantie-taux');
-  const montantInput = document.getElementById('garantie-montant');
+  const baseSelect = document.getElementById('garantie-base-calc');
+  const host = document.getElementById('garantie-montant-host');
   const dateEmissionInput = document.getElementById('garantie-date-emission');
   const dateEcheanceInput = document.getElementById('garantie-date-echeance');
 
-  if (!typeSelect || !tauxInput || !montantInput) return;
+  if (!typeSelect || !host || !baseSelect) return;
 
-  // Update taux recommandé when type changes
+  _garantieBaseCalc = baseSelect.value === 'TTC' ? 'TTC' : 'HT';
+  const currentTotal = () => (_garantieBaseCalc === 'TTC' ? montantMarcheTTC : montantMarcheHT);
+
+  // Construire le widget dual une fois
+  const widget = renderMontantPourcentageDualInput({
+    idPrefix: 'garantie',
+    total: currentTotal(),
+    value: 0,
+    mode: 'POURCENTAGE', // Garanties typiquement saisies en taux
+    required: true
+  });
+  host.innerHTML = '';
+  host.appendChild(widget);
+  _garantieDualApi = widget._mpDual;
+
+  // Bascule HT/TTC → setTotal sur le widget
+  baseSelect.addEventListener('change', () => {
+    _garantieBaseCalc = baseSelect.value === 'TTC' ? 'TTC' : 'HT';
+    _garantieDualApi.setTotal(currentTotal());
+  });
+
+  // Type → taux recommandé + montant calculé sur la base courante
   typeSelect.addEventListener('change', (e) => {
     const type = e.target.value;
     const garantiesConfig = rulesConfig?.garanties || {};
@@ -331,28 +352,20 @@ function setupGarantieListeners(montantMarche, rulesConfig) {
       dureeDays = 365;
     }
 
-    tauxInput.value = tauxRecommande;
+    // Appliquer le taux recommandé : on calcule le montant correspondant et on l'injecte
+    // dans le widget (les deux champs montant + % s'actualisent en cohérence).
+    const total = currentTotal();
+    const montantRecommande = (total * tauxRecommande) / 100;
+    _garantieDualApi.setMontant(montantRecommande);
 
     // Calculate echeance
-    if (dateEmissionInput.value) {
+    if (dateEmissionInput?.value) {
       const dateEmission = new Date(dateEmissionInput.value);
       const dateEcheance = new Date(dateEmission);
       dateEcheance.setDate(dateEcheance.getDate() + dureeDays);
-      dateEcheanceInput.value = dateEcheance.toISOString().split('T')[0];
+      if (dateEcheanceInput) dateEcheanceInput.value = dateEcheance.toISOString().split('T')[0];
     }
-
-    // Recalculate montant
-    recalculateMontant(montantMarche);
   });
-
-  // Recalculate montant when taux changes
-  tauxInput.addEventListener('input', () => recalculateMontant(montantMarche));
-
-  function recalculateMontant(montantMarche) {
-    const taux = parseFloat(tauxInput.value) || 0;
-    const montant = (montantMarche * taux) / 100;
-    montantInput.value = Math.round(montant);
-  }
 }
 
 /**
@@ -364,6 +377,7 @@ function renderGarantiesTable(garanties, rulesConfig) {
       el('thead', {}, [
         el('tr', {}, [
           el('th', {}, 'Type'),
+          el('th', {}, 'Base'),
           el('th', {}, 'Taux'),
           el('th', {}, 'Montant'),
           el('th', {}, 'Émission'),
@@ -385,7 +399,8 @@ function renderGarantieRow(garantie, rulesConfig) {
 
   return el('tr', {}, [
     el('td', { style: { fontWeight: '500' } }, typeObj?.label || garantie.type),
-    el('td', {}, `${garantie.taux}%`),
+    el('td', {}, garantie.baseCalc || 'TTC'),
+    el('td', {}, `${(garantie.taux ?? 0).toFixed(2)}%`),
     el('td', {}, `${(garantie.montant / 1000000).toFixed(2)}M`),
     el('td', {}, garantie.dateEmission ? new Date(garantie.dateEmission).toLocaleDateString() : '-'),
     el('td', {}, garantie.dateEcheance ? new Date(garantie.dateEcheance).toLocaleDateString() : '-'),
@@ -429,14 +444,21 @@ function renderEtatBadge(etat) {
  */
 async function handleAddGarantie(idOperation, montantMarche, lotId = null) {
   const type = document.getElementById('garantie-type')?.value;
-  const taux = parseFloat(document.getElementById('garantie-taux')?.value);
-  const montant = parseFloat(document.getElementById('garantie-montant')?.value);
+  const baseCalc = document.getElementById('garantie-base-calc')?.value === 'TTC' ? 'TTC' : 'HT';
   const dateEmission = document.getElementById('garantie-date-emission')?.value;
   const dateEcheance = document.getElementById('garantie-date-echeance')?.value;
   const docInput = document.getElementById('garantie-document');
 
+  // Lire montant + dériver taux via le widget dual
+  const montant = _garantieDualApi ? _garantieDualApi.getMontant() : 0;
+  const saisieMode = _garantieDualApi ? _garantieDualApi.getMode() : 'POURCENTAGE';
+  // Le taux est dérivé du montant et de la base courante pour rester cohérent avec l'affichage.
+  // (Note : montantMarche passé en paramètre = TTC ; on recalcule selon baseCalc choisi.)
+  const totalBase = baseCalc === 'TTC' ? montantMarche : (montantMarche / 1.18);
+  const taux = totalBase > 0 ? parseFloat(((montant / totalBase) * 100).toFixed(4)) : 0;
+
   // Validation
-  if (!type || !taux || !dateEmission || !dateEcheance) {
+  if (!type || !montant || montant <= 0 || !dateEmission || !dateEcheance) {
     alert('⚠️ Veuillez renseigner tous les champs obligatoires');
     return;
   }
@@ -457,6 +479,8 @@ async function handleAddGarantie(idOperation, montantMarche, lotId = null) {
     type,
     taux,
     montant,
+    baseCalc, // HT | TTC — base sur laquelle le taux a été évalué (Marché+ modif #23)
+    saisieMode, // 'MONTANT' ou 'POURCENTAGE' — dernier champ saisi
     dateEmission,
     dateEcheance,
     etat: 'ACTIVE',

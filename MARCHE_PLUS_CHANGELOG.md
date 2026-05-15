@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Écran Garanties (exécution) : widget dual + base HT/TTC
+
+> **Modif #23** — Application de la règle « saisie bidirectionnelle Montant ↔ Pourcentage » à l'écran Garanties standalone (`/mp/garanties`), qui utilisait jusqu'ici le pattern unidirectionnel (taux saisissable → montant en lecture seule).
+
+### Modif #23 — `ecr04c-garanties.js` migré vers le widget DUAL
+
+- **Écran touché** : `/mp/garanties` (gestion des garanties pendant la phase Exécution)
+- **Avant** : champ « Taux (%) » saisissable + champ « Montant (XOF) » `disabled` calculé automatiquement. Le sens inverse (saisir le montant → déduire le taux) n'était pas possible.
+- **Après** :
+  - Nouveau sélecteur **Base de calcul (HT / TTC)** — base exclusive, par défaut HT.
+  - Widget DUAL `montant-pourcentage-dual-input.js` : les deux champs Montant et Pourcentage sont visibles et **synchronisés bidirectionnellement** (modifier l'un met à jour l'autre instantanément).
+  - Quand l'utilisateur change le **type de garantie** (AVANCE / BONNE_EXEC / RETENUE), le taux recommandé est injecté dans le widget via `setMontant((tauxRecommandé / 100) * baseCourante)` ; les deux champs s'actualisent en cohérence.
+  - Quand l'utilisateur change la **base HT/TTC**, le widget recalcule via `setTotal()` — le pourcentage saisi est conservé, le montant se recalcule (ou inversement selon le dernier mode saisi).
+  - Le `taux` (% absolu) est désormais **dérivé** du montant et de la base au moment de la sauvegarde, plus saisi manuellement.
+- **Table « Garanties enregistrées »** : nouvelle colonne **Base** (HT/TTC) intercalée entre Type et Taux. Le taux s'affiche désormais avec 2 décimales (`(garantie.taux ?? 0).toFixed(2)`).
+- **Schéma** (`schema.js`) :
+  - `MP_GARANTIE` : ajout `baseCalc: 'HT'` + `saisieMode: 'POURCENTAGE'`. Pas de migration nécessaire — les anciennes lignes restent valides (lues comme TTC par défaut dans l'UI, car la table affiche `garantie.baseCalc || 'TTC'`).
+- **Pas de migration DB**, **pas de déploiement Worker**.
+- **Fichiers modifiés** :
+  - `sidcf-portal/js/modules/marche-plus/screens/ecr04c-garanties.js`
+  - `sidcf-portal/js/datastore/schema.js`
+
 ## 2026-05-15 — Libellés de montant contextuels par phase
 
 > **Modif #22** — Le même chiffre porte un libellé différent selon l'étape du cycle de vie du marché. On uniformise tous les écrans pour respecter la règle métier énoncée par l'utilisateur.

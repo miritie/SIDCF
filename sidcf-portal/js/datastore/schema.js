@@ -999,6 +999,8 @@ export const SCHEMAS = {
     type: 'BONNE_EXEC',
     montant: 0,
     taux: 0,
+    baseCalc: 'HT', // HT | TTC — base sur laquelle le taux est évalué (Marché+ modif #23)
+    saisieMode: 'POURCENTAGE', // 'MONTANT' ou 'POURCENTAGE' — dernier champ saisi dans le widget dual
     dateEmission: null,
     dateEcheance: null,
     etat: 'ACTIVE',
