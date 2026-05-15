@@ -39,6 +39,9 @@ let echeancierData = null;
 // Marché+ multi-lot : lot courant pour cet écran
 let currentLotId = null;
 
+// État des co-titulaires (groupement conjoint) — partagé module-level pour persistance UI
+const _coTitulairesState = [];
+
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
 let sanctionCheckTimer = null;
 function triggerSanctionCheck() {
@@ -166,6 +169,15 @@ export async function renderAttribution(params) {
       ['avance', 'bonne-exec', 'cautionnement'].forEach(id => initGarantieWidget(id));
     }, 120);
 
+    // Marché+ modif #20 : initialiser la liste des co-titulaires (groupement conjoint)
+    // + listener sur le changement de type de groupement (visibilité conditionnelle)
+    setTimeout(() => {
+      renderCoTitulairesList();
+      const typeSelect = document.getElementById('attr-group-type');
+      if (typeSelect) typeSelect.addEventListener('change', toggleCoTitulairesVisibility);
+      toggleCoTitulairesVisibility();
+    }, 130);
+
   } catch (err) {
     logger.error('[ECR03A] Erreur chargement', err);
     mount('#app', el('div', { className: 'page' }, [
@@ -253,6 +265,13 @@ function renderAttributaireSection(attributaire, registries) {
     ? existingEntreprises[0]
     : {};
   const cbMandataire = mandataire.coordonneesBancaires || {};
+  // Co-titulaires (membres du groupement autres que le mandataire) — uniquement pour CONJOINT
+  // Stockés dans le state module-level pour persistance entre re-renders
+  const initialCoTitulaires = (singleOrGroup === 'GROUPEMENT' && existingEntreprises.length > 1)
+    ? existingEntreprises.slice(1).map(e => ({ ...e }))
+    : [];
+  _coTitulairesState.length = 0;
+  initialCoTitulaires.forEach(c => _coTitulairesState.push(c));
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
@@ -440,9 +459,27 @@ function renderAttributaireSection(attributaire, registries) {
         // Coordonnées bancaires du mandataire (Marché+ — modif #18)
         renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
 
-        // Liste des membres du groupement (à implémenter plus tard)
-        el('div', { style: { marginTop: '16px', padding: '12px', backgroundColor: 'var(--color-gray-100)', borderRadius: '8px' } }, [
-          el('div', { className: 'text-small text-muted' }, 'Les autres membres du groupement pourront être ajoutés ultérieurement.')
+        // Co-titulaires du groupement (Marché+ modif #20) — visible uniquement pour CONJOINT
+        // En "solidaire", paiement unique au mandataire, donc pas besoin de coordonnées séparées.
+        el('div', {
+          id: 'attr-cotitulaires-wrapper',
+          style: { marginTop: '16px', display: (mandataire?.groupType === 'SOLIDAIRE') ? 'none' : 'block' }
+        }, [
+          el('div', { style: { borderTop: '1px dashed #d1d5db', paddingTop: '16px' } }, [
+            el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' } }, [
+              el('h4', { style: { margin: 0, fontSize: '15px' } }, ['🤝 Membres co-titulaires du groupement']),
+              el('button', {
+                type: 'button',
+                className: 'btn btn-sm btn-primary',
+                onclick: (e) => { e.preventDefault(); addCoTitulaire(); }
+              }, '+ Ajouter un membre')
+            ]),
+            el('p', { className: 'text-small text-muted', style: { marginBottom: '12px' } },
+              'Pour un groupement conjoint, chaque membre est payé séparément. Saisissez l\'identité ' +
+              'et les coordonnées bancaires de chaque co-titulaire (en plus du mandataire ci-dessus).'
+            ),
+            el('div', { id: 'attr-cotitulaires-list' })
+          ])
         ])
       ])
     ])
@@ -706,6 +743,147 @@ function renderGarantiesSection(garanties, modePassation, montantTotal = 0) {
  * idPrefix : 'attr' (entreprise simple) ou 'attr-mandataire' (mandataire de groupement)
  * Le select banque est rempli en async après le mount via populateBanqueSelect.
  */
+// ===== Co-titulaires du groupement conjoint (Marché+ modif #20) =====
+
+function addCoTitulaire() {
+  _coTitulairesState.push({
+    role: 'COTITULAIRE',
+    raisonSociale: '',
+    ncc: '',
+    adresse: '',
+    telephone: '',
+    email: '',
+    coordonneesBancaires: { banque: '', agence: '', numeroCompte: '', intituleCompte: '', swiftBic: '' }
+  });
+  renderCoTitulairesList();
+}
+
+function removeCoTitulaire(idx) {
+  if (!confirm('Retirer ce membre co-titulaire du groupement ?')) return;
+  _coTitulairesState.splice(idx, 1);
+  renderCoTitulairesList();
+}
+
+function readCoTitulaireFromDOM(idx) {
+  // Récupère les valeurs saisies avant un re-render (pour pas perdre la saisie en cours)
+  const get = (suffix) => document.getElementById(`attr-cotit-${idx}-${suffix}`)?.value?.trim() || '';
+  const m = _coTitulairesState[idx];
+  if (!m) return;
+  m.raisonSociale = get('raison-sociale');
+  m.ncc = get('ncc');
+  m.adresse = get('adresse');
+  m.telephone = get('telephone');
+  m.email = get('email');
+  m.coordonneesBancaires = {
+    banque: get('banque'),
+    agence: get('banque-agence'),
+    numeroCompte: get('banque-numero'),
+    intituleCompte: get('banque-intitule'),
+    swiftBic: get('banque-swift')
+  };
+}
+
+function renderCoTitulairesList() {
+  const host = document.getElementById('attr-cotitulaires-list');
+  if (!host) return;
+  // Persister les valeurs DOM courantes vers le state avant re-render
+  for (let i = 0; i < _coTitulairesState.length; i++) readCoTitulaireFromDOM(i);
+  host.innerHTML = '';
+
+  if (_coTitulairesState.length === 0) {
+    host.appendChild(el('div', {
+      className: 'alert alert-info',
+      style: { background: '#f3f4f6', border: '1px dashed #d1d5db', padding: '12px', borderRadius: '6px' }
+    }, 'Aucun co-titulaire ajouté pour le moment. Cliquez sur « + Ajouter un membre » pour en ajouter.'));
+    return;
+  }
+
+  _coTitulairesState.forEach((m, idx) => {
+    host.appendChild(renderCoTitulaireCard(m, idx));
+  });
+
+  // Initialiser les selects banque des cards co-titulaires (en async)
+  setTimeout(() => {
+    _coTitulairesState.forEach((_, idx) => populateBanqueSelect(`attr-cotit-${idx}-banque`));
+  }, 50);
+}
+
+function renderCoTitulaireCard(member, idx) {
+  const cb = member.coordonneesBancaires || {};
+  return el('div', {
+    style: {
+      border: '1px solid #d1d5db',
+      borderRadius: '8px',
+      padding: '14px',
+      marginBottom: '12px',
+      background: '#fafafa'
+    }
+  }, [
+    // Header card
+    el('div', {
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px dashed #d1d5db', paddingBottom: '8px' }
+    }, [
+      el('strong', { style: { color: '#374151' } }, `Membre co-titulaire ${idx + 1}`),
+      el('button', {
+        type: 'button',
+        className: 'btn btn-sm btn-secondary',
+        style: { padding: '4px 10px' },
+        title: 'Retirer ce membre',
+        onclick: (e) => { e.preventDefault(); removeCoTitulaire(idx); }
+      }, '✕ Retirer')
+    ]),
+
+    // Identité (2 colonnes)
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' } }, [
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, [
+          'Raison sociale', el('span', { className: 'required' }, '*')
+        ]),
+        el('input', {
+          type: 'text', className: 'form-input',
+          id: `attr-cotit-${idx}-raison-sociale`,
+          value: member.raisonSociale || '',
+          placeholder: 'Nom du co-titulaire'
+        })
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'N° Compte Contribuable (NCC)'),
+        el('input', {
+          type: 'text', className: 'form-input',
+          id: `attr-cotit-${idx}-ncc`,
+          value: member.ncc || '',
+          placeholder: 'NCC'
+        })
+      ])
+    ]),
+
+    // Contacts (3 colonnes)
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '12px' } }, [
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Adresse'),
+        el('input', { type: 'text', className: 'form-input', id: `attr-cotit-${idx}-adresse`, value: member.adresse || '' })
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Téléphone'),
+        el('input', { type: 'tel', className: 'form-input', id: `attr-cotit-${idx}-telephone`, value: member.telephone || '' })
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Email'),
+        el('input', { type: 'email', className: 'form-input', id: `attr-cotit-${idx}-email`, value: member.email || '' })
+      ])
+    ]),
+
+    // Coordonnées bancaires propres au co-titulaire
+    renderCoordonneesBancairesSection(`attr-cotit-${idx}`, cb)
+  ]);
+}
+
+function toggleCoTitulairesVisibility() {
+  const wrapper = document.getElementById('attr-cotitulaires-wrapper');
+  const type = document.getElementById('attr-group-type')?.value || 'CONJOINT';
+  if (wrapper) wrapper.style.display = (type === 'SOLIDAIRE') ? 'none' : 'block';
+}
+
 function renderCoordonneesBancairesSection(idPrefix, cb) {
   const data = cb || {};
   return el('div', {
@@ -1224,12 +1402,35 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       const ent = { role: 'MANDATAIRE', raisonSociale, ncc, adresse, telephone, email };
       if (coordonneesBancaires) ent.coordonneesBancaires = coordonneesBancaires;
 
+      // Marché+ modif #20 : collecter aussi les co-titulaires (groupement CONJOINT uniquement)
+      const cotitulaires = [];
+      if (groupType === 'CONJOINT') {
+        for (let i = 0; i < _coTitulairesState.length; i++) {
+          readCoTitulaireFromDOM(i);
+          const m = _coTitulairesState[i];
+          if (!m.raisonSociale || !m.raisonSociale.trim()) continue; // skip vides
+          const entMember = {
+            role: 'COTITULAIRE',
+            raisonSociale: m.raisonSociale.trim(),
+            ncc: m.ncc || '',
+            adresse: m.adresse || '',
+            telephone: m.telephone || '',
+            email: m.email || ''
+          };
+          // Coordonnées bancaires : ne les inclure que si au moins un champ est saisi
+          const cbMember = m.coordonneesBancaires || {};
+          const hasCb = !!(cbMember.banque || cbMember.agence || cbMember.numeroCompte || cbMember.intituleCompte || cbMember.swiftBic);
+          if (hasCb) entMember.coordonneesBancaires = cbMember;
+          cotitulaires.push(entMember);
+        }
+      }
+
       attributaireData = {
         singleOrGroup: 'GROUPEMENT',
         groupType,
         entrepriseId: null,
         groupementId: null,
-        entreprises: [ent]
+        entreprises: [ent, ...cotitulaires]
       };
     }
 

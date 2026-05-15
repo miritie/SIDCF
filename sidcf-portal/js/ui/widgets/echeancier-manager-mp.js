@@ -1,29 +1,46 @@
 /**
  * Widget de gestion de l'Échéancier de paiement avec livrables — variante Marché+
- * Différence avec la version Marché classique :
- *  - Saisie du montant via le widget montant-pourcentage-input :
- *    l'utilisateur peut taper soit un montant absolu (XOF) soit un pourcentage du total marché
+ *
+ * Différences avec la version Marché classique :
+ *  - Saisie via widget DUAL montant + % (synchronisés bidirectionnellement) ;
+ *  - Base de calcul exclusive HT ou TTC par échéance — le pourcentage est évalué sur
+ *    le montant marché HT ou TTC selon la base choisie.
+ *
+ * Signature : accepte désormais HT et TTC séparément. Compat : si seul un total
+ * historique est passé en 3ᵉ position, il est interprété comme TTC.
  */
 
 import { el } from '../../lib/dom.js';
 import logger from '../../lib/logger.js';
-import { renderMontantPourcentageInput } from './montant-pourcentage-input.js';
+import { renderMontantPourcentageDualInput } from './montant-pourcentage-dual-input.js';
 
 /**
  * @param {Object} echeancier - Objet échéancier existant
  * @param {Array} livrables - Liste des livrables du marché
- * @param {Number} montantMarcheTotal - Montant total du marché (pour calcul %)
- * @param {Object} registries - Référentiels (TYPE_ECHEANCE, PERIODICITE_ECHEANCE, STATUT_LIVRABLE)
+ * @param {Number|Object} montantMarcheTTCOrTotals - Soit le montant TTC (legacy), soit { ht, ttc }
+ * @param {Object} registries - Référentiels (TYPE_ECHEANCE, PERIODICITE_ECHEANCE, STATUT_LIVRABLE, BASE_CALCUL_CLE)
  * @param {Function} onChange - Callback appelé quand l'échéancier change: onChange(echeancierData)
+ * @param {Number} [montantMarcheHT] - Montant HT (optionnel — si fourni, baseCalc devient utile)
  * @returns {HTMLElement}
  */
 export function renderEcheancierManager(
   echeancier = null,
   livrables = [],
-  montantMarcheTotal = 0,
+  montantMarcheTTCOrTotals = 0,
   registries = {},
-  onChange = null
+  onChange = null,
+  montantMarcheHT = 0
 ) {
+  // Compat : la 3ᵉ position pouvait être un nombre (TTC) ; nouvelle forme : { ht, ttc }.
+  let montantMarcheTTC = 0;
+  if (typeof montantMarcheTTCOrTotals === 'object' && montantMarcheTTCOrTotals !== null) {
+    montantMarcheHT = Number(montantMarcheTTCOrTotals.ht) || montantMarcheHT || 0;
+    montantMarcheTTC = Number(montantMarcheTTCOrTotals.ttc) || 0;
+  } else {
+    montantMarcheTTC = Number(montantMarcheTTCOrTotals) || 0;
+  }
+  // Total marché par défaut affiché dans le résumé (TTC si dispo, sinon HT)
+  const montantMarcheTotal = montantMarcheTTC > 0 ? montantMarcheTTC : montantMarcheHT;
   const container = el('div', { className: 'echeancier-manager' });
 
   // État initial
@@ -51,10 +68,14 @@ export function renderEcheancierManager(
     currentEcheancier.totalPourcent = parseFloat(totalPourcent.toFixed(2));
   }
 
-  // Fonction pour calculer le pourcentage d'une échéance
-  function calculatePourcentage(montant) {
-    if (montantMarcheTotal === 0) return 0;
-    return parseFloat(((montant / montantMarcheTotal) * 100).toFixed(2));
+  // Fonction pour calculer le pourcentage d'une échéance — selon sa base (HT ou TTC).
+  // Si la base n'est pas définie, on retombe sur le total dispo (TTC > HT).
+  function calculatePourcentage(montant, baseCalc) {
+    const ref = baseCalc === 'HT'
+      ? montantMarcheHT
+      : (baseCalc === 'TTC' ? montantMarcheTTC : montantMarcheTotal);
+    if (!ref) return 0;
+    return parseFloat(((montant / ref) * 100).toFixed(2));
   }
 
   // Fonction pour calculer la date prévisionnelle selon la périodicité
@@ -105,11 +126,15 @@ export function renderEcheancierManager(
       num: currentEcheancier.items.length + 1,
       datePrevisionnelle: suggestedDate || null,
       montant: 0,
+      baseCalc: montantMarcheTTC > 0 ? 'TTC' : 'HT', // défaut : TTC si dispo
+      saisieMode: 'MONTANT',
       pourcentage: 0,
       typeEcheance: 'ACOMPTE',
       livrablesCibles: [],
       statutsLivrables: {}
     };
+    // Backfill pour items legacy sans baseCalc
+    if (!formData.baseCalc) formData.baseCalc = montantMarcheTTC > 0 ? 'TTC' : 'HT';
 
     const form = el('form', { id: 'echeance-form' }, [
       // Header
@@ -160,11 +185,22 @@ export function renderEcheancierManager(
           ])
         ]),
 
-        // Montant ou % — widget unifié (Marché+)
+        // Base de calcul (HT ou TTC) — exclusive
+        el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+          el('label', { className: 'form-label' }, ['Base de calcul', el('span', { className: 'required' }, '*')]),
+          el('select', { className: 'form-input', id: 'echeance-base-calc', required: true }, [
+            ...(registries.BASE_CALCUL_CLE || [])
+              .filter(b => b.code === 'HT' || b.code === 'TTC')
+              .map(b => el('option', { value: b.code, selected: b.code === formData.baseCalc }, b.label))
+          ]),
+          el('small', { className: 'text-muted' }, 'Base exclusive : HT ou TTC. Le pourcentage est calculé sur cette base du montant marché.')
+        ]),
+
+        // Montant et % — widget DUAL (Marché+ modif #20)
         el('div', { className: 'form-field', style: { marginBottom: '24px' } }, [
-          el('label', { className: 'form-label' }, ['Montant ou %', el('span', { className: 'required' }, '*')]),
+          el('label', { className: 'form-label' }, ['Montant et %', el('span', { className: 'required' }, '*')]),
           el('div', { id: 'echeance-montant-host' }),
-          el('small', { className: 'text-muted' }, `Saisie en XOF ou en % du montant marché total (${montantMarcheTotal.toLocaleString('fr-FR')} XOF)`)
+          el('small', { className: 'text-muted' }, 'Les deux champs sont synchronisés : modifier l\'un met à jour l\'autre.')
         ]),
 
         // Section Livrables
@@ -297,13 +333,15 @@ export function renderEcheancierManager(
       ])
     ]);
 
-    // === Marché+ : widget montant/% intégré ===
+    // === Marché+ : widget DUAL montant + % synchronisés, base HT ou TTC ===
     const host = form.querySelector('#echeance-montant-host');
+    const baseCalcSelect = form.querySelector('#echeance-base-calc');
     let mpInputApi = null;
     {
-      const widget = renderMontantPourcentageInput({
-        id: 'echeance-montant',
-        total: montantMarcheTotal,
+      const total = formData.baseCalc === 'HT' ? montantMarcheHT : montantMarcheTTC;
+      const widget = renderMontantPourcentageDualInput({
+        idPrefix: 'echeance',
+        total,
         value: formData.montant || 0,
         mode: formData.saisieMode || 'MONTANT',
         required: true,
@@ -313,8 +351,13 @@ export function renderEcheancierManager(
         }
       });
       host.appendChild(widget);
-      mpInputApi = widget._mpInput;
+      mpInputApi = widget._mpDual;
     }
+    baseCalcSelect.addEventListener('change', () => {
+      formData.baseCalc = baseCalcSelect.value;
+      const total = formData.baseCalc === 'HT' ? montantMarcheHT : montantMarcheTTC;
+      if (mpInputApi) mpInputApi.setTotal(total);
+    });
 
     // Soumission du formulaire
     form.addEventListener('submit', (e) => {
