@@ -34,6 +34,7 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderStepsAsync } from '../../../ui/widgets/steps-mp.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
+import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import logger from '../../../lib/logger.js';
 
@@ -80,10 +81,17 @@ export async function renderFicheMarche(params) {
   // Charger les steps depuis l'API (timeline)
   const stepsWidget = await renderStepsAsync(fullData, idOperation);
 
-  // Charger la ligne budgétaire si présente
-  const budgetLine = operation.budgetLineId
-    ? await dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null)
-    : null;
+  // Charger en parallèle :
+  //  - la ligne budgétaire spécifique (si liée)
+  //  - toutes les lignes budgétaires (pour le widget historique multi-financement)
+  //  - toutes les opérations PPM (pour le widget historique de la ligne budgétaire — modif #27)
+  const [budgetLine, mpBudgetLines, mpOperations] = await Promise.all([
+    operation.budgetLineId
+      ? dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null)
+      : Promise.resolve(null),
+    dataService.query(ENTITIES.MP_BUDGET_LINE).catch(() => []),
+    dataService.query(ENTITIES.MP_OPERATION).catch(() => [])
+  ]);
 
   const page = el('div', { className: 'page fiche-marche-page', style: { paddingBottom: '60px' } }, [
     renderHeaderSticky(operation, registries, fullData, currentLotId, lots, idOperation),
@@ -100,7 +108,7 @@ export async function renderFicheMarche(params) {
       }
     }, [
       el('div', { className: 'fiche-main', style: { minWidth: 0 } }, [
-        sectionAccordion('planification', '📝 1. Planification (PPM)', renderPlanifContent(operation, budgetLine, registries), {
+        sectionAccordion('planification', '📝 1. Planification (PPM)', renderPlanifContent(operation, budgetLine, registries, mpBudgetLines, mpOperations), {
           modifierRoute: '/mp/ppm-list',
           modifierParams: {},
           defaultOpen: true,
@@ -514,7 +522,7 @@ function sectionAccordion(id, title, content, opts = {}) {
 // Section 1 — Planification
 // ============================================
 
-function renderPlanifContent(operation, budgetLine, registries) {
+function renderPlanifContent(operation, budgetLine, registries, mpBudgetLines = [], mpOperations = []) {
   const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === operation.typeMarche);
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === operation.modePassation);
 
@@ -541,10 +549,79 @@ function renderPlanifContent(operation, budgetLine, registries) {
           { label: 'Nature économique', value: operation.chaineBudgetaire?.nature || '-' },
           { label: 'Bailleur', value: operation.chaineBudgetaire?.bailleur || '-' }
         ]),
+
+    // Modif #27 : panneau d'utilisation de la ligne budgétaire avec liste des
+    // autres opérations PPM rattachées (par combinaison activité × type × bailleur).
+    renderBudgetLineHistorySection(operation, registries, mpBudgetLines, mpOperations),
+
     el('h4', { style: { margin: '20px 0 10px', fontSize: '14px', fontWeight: 600 } },
       `📦 Livrables prévisionnels (${(operation.livrables || []).length})`),
     renderLivrablesTable(operation.livrables || [], registries)
   ]);
+}
+
+/**
+ * Rend une ou plusieurs cartes d'historique de ligne budgétaire selon les
+ * financements de l'opération courante. Pour chaque combinaison
+ * (activité × type × bailleur), on affiche le widget historique enrichi.
+ * L'opération courante est exclue du tableau pour ne pas se répéter, mais
+ * elle est implicitement comptée via currentMontant pour rester cohérent
+ * avec le formulaire de saisie.
+ */
+function renderBudgetLineHistorySection(operation, registries, mpBudgetLines, mpOperations) {
+  const activiteCode = operation?.chaineBudgetaire?.activiteCode || '';
+  if (!activiteCode) return el('div');
+
+  // Reconstituer la liste des combinaisons (financement) pertinentes pour cette opération.
+  const financements = Array.isArray(operation?.chaineBudgetaire?.financements) && operation.chaineBudgetaire.financements.length > 0
+    ? operation.chaineBudgetaire.financements
+    : (operation.typeFinancement && operation.sourceFinancement
+        ? [{
+            typeFinancement: operation.typeFinancement,
+            bailleur: operation.sourceFinancement,
+            montant: operation.montantPrevisionnel || 0
+          }]
+        : []);
+
+  if (financements.length === 0) return el('div');
+
+  const wrap = el('div', { style: { marginTop: '16px' } }, [
+    el('h4', { style: { margin: '0 0 10px', fontSize: '14px', fontWeight: 600 } },
+      `🧮 Utilisation de la ligne budgétaire (${financements.length} financement${financements.length > 1 ? 's' : ''})`)
+  ]);
+
+  financements.forEach((fin, idx) => {
+    const typeFin = fin.typeFinancement || '';
+    const bailleur = fin.bailleur || '';
+    const montant = Number(fin.montant) || 0;
+    if (!typeFin || !bailleur) return;
+
+    const typeLabel = registries.TYPE_FINANCEMENT?.find(t => t.code === typeFin)?.label || typeFin;
+    const bailleurLabel = registries.BAILLEUR?.find(b => b.code === bailleur)?.label || bailleur;
+
+    wrap.appendChild(el('div', {
+      style: { fontSize: '12px', color: '#374151', marginTop: idx === 0 ? '4px' : '12px', marginBottom: '4px' }
+    }, [
+      el('strong', {}, `Financement ${idx + 1} : `),
+      `${typeLabel} · ${bailleurLabel} · ${new Intl.NumberFormat('fr-FR').format(montant)} XOF`
+    ]));
+
+    wrap.appendChild(renderBudgetLineHistory({
+      activiteCode,
+      typeFin,
+      bailleur,
+      mpBudgetLines,
+      mpOperations,
+      currentMontant: montant,
+      excludeOperationId: operation.id, // l'opération courante est exclue du tableau (déjà affichée)
+      registries,
+      onNavigate: (op) => {
+        if (op?.id) router.navigate('/mp/fiche-marche', { idOperation: op.id });
+      }
+    }));
+  });
+
+  return wrap;
 }
 
 function renderLivrablesTable(livrables, registries) {

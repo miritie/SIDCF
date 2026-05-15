@@ -9,6 +9,7 @@ import { operationId } from '../../../lib/uid.js';
 import logger from '../../../lib/logger.js';
 import { renderLivrableManagerMP } from '../../../ui/widgets/livrable-manager-mp.js';
 import { renderSearchableSelect } from '../../../ui/widgets/searchable-select.js';
+import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -722,15 +723,23 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
     grid.appendChild(removeBtn);
     row.appendChild(grid);
 
-    const indicator = document.createElement('div');
-    indicator.className = 'financement-indicator';
-    Object.assign(indicator.style, {
-      marginTop: '10px', padding: '8px 12px', borderRadius: '6px',
-      fontSize: '13px', background: '#f3f4f6', color: '#374151',
-      borderLeft: '4px solid #d1d5db'
+    // Widget historique de la ligne budgétaire (cumul + tableau des opérations existantes)
+    // Modif #27 : remplace l'indicateur simple par le widget consolidé qui montre aussi
+    // toutes les opérations PPM déjà rattachées à cette combinaison.
+    const historyWidget = renderBudgetLineHistory({
+      activiteCode: '',
+      typeFin: '',
+      bailleur: '',
+      mpBudgetLines,
+      mpOperations,
+      currentMontant: 0,
+      registries,
+      onNavigate: (op) => {
+        if (op?.id) router.navigate('/mp/fiche-marche', { idOperation: op.id });
+      }
     });
-    indicator.textContent = '— Sélectionnez activité, type et bailleur pour voir la disponibilité —';
-    row.appendChild(indicator);
+    historyWidget.classList.add('financement-history');
+    row.appendChild(historyWidget);
 
     typeSelect.addEventListener('change', () => {
       populateBailleurSelect(typeSelect, bailleurSelect);
@@ -751,50 +760,32 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
       const montant = Number(row.querySelector('.financement-montant')?.value) || 0;
       const typeFin = row.querySelector('.financement-type')?.value || '';
       const bailleur = row.querySelector('.financement-bailleur')?.value || '';
-      const indicator = row.querySelector('.financement-indicator');
+      const historyEl = row.querySelector('.financement-history');
 
       total += montant;
 
-      if (!activiteCode) {
-        indicator.textContent = '⚠ Sélectionnez d\'abord une activité (chaîne programmatique) en haut du formulaire';
-        Object.assign(indicator.style, { background: '#fef3c7', color: '#92400e', borderLeftColor: '#f59e0b' });
-        row.style.borderColor = '#e5e7eb';
-        return;
-      }
-      if (!typeFin || !bailleur) {
-        indicator.textContent = '— Sélectionnez type et bailleur pour voir la disponibilité —';
-        Object.assign(indicator.style, { background: '#f3f4f6', color: '#374151', borderLeftColor: '#d1d5db' });
-        row.style.borderColor = '#e5e7eb';
-        return;
+      // Le widget gère lui-même les cas "manque d'info" et "ligne inexistante".
+      // On lui passe systématiquement le contexte courant.
+      if (historyEl?._budgetHistory) {
+        historyEl._budgetHistory.update({
+          activiteCode,
+          typeFin,
+          bailleur,
+          currentMontant: montant
+        });
       }
 
-      const line = findBudgetLine(activiteCode, typeFin, bailleur, mpBudgetLines);
-      if (!line) {
-        indicator.innerHTML = `⚠ Aucune ligne budgétaire enregistrée pour cette combinaison (activité <code>${activiteCode}</code> / ${typeFin} / ${bailleur})`;
-        Object.assign(indicator.style, { background: '#fef3c7', color: '#92400e', borderLeftColor: '#f59e0b' });
+      // Le bord visuel de la ligne dépend du dépassement éventuel
+      if (activiteCode && typeFin && bailleur) {
+        const line = findBudgetLine(activiteCode, typeFin, bailleur, mpBudgetLines);
+        const initial = Number(line?.ae) || 0;
+        const usedOther = computeBudgetUsageOther(activiteCode, typeFin, bailleur, mpOperations);
+        const isOver = line && (initial - (usedOther + montant)) < 0;
+        if (isOver) anyOver = true;
+        row.style.borderColor = isOver ? '#fecaca' : (line ? '#d1fae5' : '#e5e7eb');
+      } else {
         row.style.borderColor = '#e5e7eb';
-        return;
       }
-
-      const initial = Number(line.ae) || 0;
-      const usedOther = computeBudgetUsageOther(activiteCode, typeFin, bailleur, mpOperations);
-      const usedTotal = usedOther + montant;
-      const available = initial - usedTotal;
-      const isOver = available < 0;
-      if (isOver) anyOver = true;
-
-      const sep = '<span style="margin: 0 8px; color: #d1d5db;">|</span>';
-      indicator.innerHTML =
-        `<span style="font-weight:600;">Initiale :</span> ${formatXOF(initial)}` + sep +
-        `<span style="font-weight:600;">Programmé (avec cette opération) :</span> ${formatXOF(usedTotal)}` + sep +
-        `<span style="font-weight:600;">${isOver ? 'DÉPASSEMENT' : 'Disponible après'} :</span> ` +
-        `<strong style="color:${isOver ? '#b91c1c' : '#059669'};">${formatXOF(Math.abs(available))}${isOver ? ' ⚠' : ''}</strong>`;
-      Object.assign(indicator.style, {
-        background: isOver ? '#fee2e2' : '#ecfdf5',
-        color: isOver ? '#7f1d1d' : '#064e3b',
-        borderLeftColor: isOver ? '#dc2626' : '#10b981'
-      });
-      row.style.borderColor = isOver ? '#fecaca' : '#d1fae5';
     });
 
     if (totalDiv) {

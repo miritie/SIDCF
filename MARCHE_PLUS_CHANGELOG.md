@@ -13,6 +13,67 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Cumul ligne budgétaire + liste des opérations déjà planifiées
+
+> **Modif #27** — Le cumul d'utilisation d'une ligne budgétaire (activité × type de financement × bailleur) tenait déjà compte de toutes les opérations existantes, mais la liste détaillée n'était pas visible. On expose maintenant **les opérations PPM déjà rattachées** à chaque combinaison, à la fois dans le formulaire de création d'une ligne PPM et dans la fiche de vie. Cela évite les ressaisies, donne le contexte complet à l'utilisateur, et rend le cumul auditable.
+
+### Modif #27 — Widget `budget-line-history-mp.js` réutilisable
+
+#### Nouveau widget — `sidcf-portal/js/ui/widgets/budget-line-history-mp.js` (~250 lignes)
+
+API :
+```js
+const node = renderBudgetLineHistory({
+  activiteCode, typeFin, bailleur,
+  mpBudgetLines, mpOperations,
+  currentMontant: 12_000_000,         // optionnel — ajouté au cumul
+  excludeOperationId: 'OP-2025-001',  // optionnel — exclu du cumul "autres" + du tableau
+  registries,
+  onNavigate: (op) => router.navigate('/mp/fiche-marche', { idOperation: op.id })
+});
+
+// Refresh dynamique sans recréation du DOM
+node._budgetHistory.update({ activiteCode, typeFin, bailleur, currentMontant });
+```
+
+Affichage :
+- **Bandeau de synthèse** (couleur conditionnelle) : `Initiale` / `Autres opérations` / `Cumul + ligne courante` / `Disponible après` (ou `DÉPASSEMENT` en rouge).
+- **Tableau** des opérations PPM déjà rattachées à cette combinaison : N°, Objet (tronqué + tooltip), Mode de passation, Montant **sur cette ligne** (pas le total opération — la part qui pèse sur cette combinaison), État (badge coloré), bouton « Voir » qui ouvre la fiche de vie de l'opération.
+- Si aucune autre opération : message vert « ✓ Aucune autre opération PPM déjà planifiée sur cette ligne ».
+- Gestion multi-financement : si une opération a un financement EXTERNE + un financement ETAT sur la même activité, seul le montant matchant la combinaison courante est compté (pas la totalité du `montantPrevisionnel`).
+- Compat legacy : si une opération a `op.typeFinancement` + `op.sourceFinancement` à la racine (avant la modif #3 multi-financement), c'est interprété comme un financement unique.
+
+#### Intégration 1 — Formulaire de création de ligne PPM (`ecr01d-ppm-create-line.js`)
+
+Sous chaque ligne de financement de l'opération en cours de saisie, l'ancien indicateur simple ("Initiale | Programmé | Disponible") est remplacé par le widget complet : la ligne de synthèse + le tableau des autres opérations. À chaque changement de l'activité, du type, du bailleur ou du montant, `update()` est appelé sur le widget (pas de re-création du DOM).
+
+#### Intégration 2 — Fiche de Vie du Marché (`ecr01c-fiche-marche.js`)
+
+Dans la **section Planification**, après le rappel de la chaîne budgétaire, on affiche un sous-bloc « 🧮 Utilisation de la ligne budgétaire » avec **une carte par financement** de l'opération courante. Pour chaque financement, on rappelle (type, bailleur, montant) et on montre le widget historique :
+- `excludeOperationId = operation.id` (l'opération courante n'apparaît pas dans le tableau, déjà affichée plus haut)
+- `currentMontant = montant du financement` (sa contribution à la ligne budgétaire est comptée dans le cumul total)
+- → l'utilisateur voit *toutes les autres* opérations sur la même ligne et le cumul global incluant celle-ci.
+
+#### Données chargées en plus dans la fiche
+
+`getMpOperationFull` ne ramène pas la liste de toutes les opérations PPM. La fiche de vie effectue désormais en parallèle :
+- `dataService.query(MP_OPERATION)` — toutes les opérations PPM
+- `dataService.query(MP_BUDGET_LINE)` — toutes les lignes budgétaires
+
+Coût : 2 requêtes supplémentaires au chargement de la fiche. Aucun changement Worker / DB.
+
+#### Bénéfices attendus
+
+- **Évite les ressaisies** : l'utilisateur voit ce qui existe déjà, peut s'inspirer des objets, mode de passation, montants similaires.
+- **Cumul auditable** : le CF/agent voit le détail des opérations qui contribuent au cumul affiché.
+- **Cohérence garantie** : le widget est unique, partagé entre la création et la consultation — pas de divergence de calcul possible.
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/budget-line-history-mp.js`
+- Modifiés : `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` (remplacement de l'indicateur simple), `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (section Planification enrichie)
+
+Pas de migration DB, pas de déploiement Worker.
+
 ## 2026-05-15 — Fiche de Vie du Marché : implémentation consolidée (MVP)
 
 > **Modif #26** — Mise en œuvre du MVP de la « Fiche de Vie » proposée en modif #25 (sous-modifs A → F). Refonte complète de `/mp/fiche-marche` : la fiche n'est plus une page de lancement, c'est une **vue consolidée exhaustive** de toutes les phases du marché, accessible via le bouton « 📋 Fiche de vie » sur chaque ligne de la liste PPM.
