@@ -37,6 +37,7 @@ import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.
 import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
 import { renderRelatedOperations } from '../../../ui/widgets/related-operations-mp.js';
 import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/difficultes-manager-mp.js';
+import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import logger from '../../../lib/logger.js';
 
@@ -88,13 +89,16 @@ export async function renderFicheMarche(params) {
   //  - toutes les lignes budgétaires (pour le widget historique multi-financement)
   //  - toutes les opérations PPM (pour le widget historique de la ligne budgétaire — modif #27)
   //  - les difficultés associées au marché (modif #29)
-  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes] = await Promise.all([
+  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes, mpDocuments] = await Promise.all([
     operation.budgetLineId
       ? dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null)
       : Promise.resolve(null),
     dataService.query(ENTITIES.MP_BUDGET_LINE).catch(() => []),
     dataService.query(ENTITIES.MP_OPERATION).catch(() => []),
-    dataService.query(ENTITIES.MP_DIFFICULTE, { operationId }).catch(() => [])
+    dataService.query(ENTITIES.MP_DIFFICULTE, { operationId }).catch(() => []),
+    // Modif #31 : tous les documents MP_DOCUMENT rattachés au marché (uploads libres + uploads
+    // déjà créés par les autres écrans de saisie via uploadDocument)
+    dataService.query(ENTITIES.MP_DOCUMENT, { operationId }).catch(() => [])
   ]);
 
   const page = el('div', { className: 'page fiche-marche-page', style: { paddingBottom: '60px' } }, [
@@ -162,7 +166,7 @@ export async function renderFicheMarche(params) {
         })
       ]),
       el('div', { className: 'fiche-side', style: { minWidth: 0 } }, [
-        renderDocumentsPanel(fullData, currentLotId, registries)
+        renderDocumentsPanel(fullData, currentLotId, registries, mpDocuments, idOperation, params)
       ])
     ]),
     renderAuditLogPlaceholder()
@@ -1059,8 +1063,8 @@ function renderClotureContent(fullData, currentLotId, registries) {
 // Panneau Documents (sticky droite)
 // ============================================
 
-function renderDocumentsPanel(fullData, currentLotId, registries) {
-  const docs = collectAllDocuments(fullData, currentLotId);
+function renderDocumentsPanel(fullData, currentLotId, registries, mpDocuments = [], idOperation, params) {
+  const docs = collectAllDocuments(fullData, currentLotId, mpDocuments);
 
   return el('div', {
     className: 'card',
@@ -1071,12 +1075,27 @@ function renderDocumentsPanel(fullData, currentLotId, registries) {
       overflowY: 'auto'
     }
   }, [
-    el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title', style: { margin: 0, fontSize: '14px' } }, `📚 Documents (${docs.total})`)
+    el('div', {
+      className: 'card-header',
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }
+    }, [
+      el('h3', { className: 'card-title', style: { margin: 0, fontSize: '14px' } }, `📚 Documents (${docs.total})`),
+      // Modif #31 : bouton d'upload libre à tout moment
+      el('button', {
+        className: 'btn btn-sm btn-primary',
+        title: 'Ajouter un document libre rattaché à ce marché',
+        onclick: () => openDocumentUploadModal({
+          operationId: idOperation,
+          onUploaded: async () => {
+            // Recharger la fiche pour faire apparaître le nouveau doc dans le panneau
+            await renderFicheMarche(params);
+          }
+        })
+      }, '📤 Ajouter')
     ]),
     el('div', { className: 'card-body', style: { padding: '8px' } }, [
       docs.total === 0
-        ? el('p', { className: 'text-muted', style: { fontStyle: 'italic', fontSize: '12px', padding: '8px' } }, 'Aucun document attaché')
+        ? el('p', { className: 'text-muted', style: { fontStyle: 'italic', fontSize: '12px', padding: '8px' } }, 'Aucun document attaché. Cliquez sur 📤 Ajouter pour en uploader un.')
         : Object.entries(docs.byPhase).map(([phase, items]) =>
             items.length === 0 ? null : el('div', { style: { marginBottom: '12px' } }, [
               el('div', { style: { fontWeight: 600, fontSize: '12px', color: '#6b7280', padding: '4px 8px', textTransform: 'uppercase' } },
@@ -1090,7 +1109,14 @@ function renderDocumentsPanel(fullData, currentLotId, registries) {
                 },
                 onmouseenter: (e) => e.currentTarget.style.background = '#f9fafb',
                 onmouseleave: (e) => e.currentTarget.style.background = 'transparent',
-                onclick: () => alert(`Téléchargement R2 : ${d.ref}\n(intégration R2 à brancher)`),
+                onclick: () => {
+                  // Si on a une URL directe (uploads R2 récents stockent fichier=URL), on l'ouvre
+                  if (d.url) {
+                    window.open(d.url, '_blank', 'noopener');
+                  } else {
+                    alert(`Référence document : ${d.ref}\n(URL R2 non disponible — recharger la fiche après upload)`);
+                  }
+                },
                 title: d.ref
               }, `📄 ${d.label}`))
             ])
@@ -1099,14 +1125,15 @@ function renderDocumentsPanel(fullData, currentLotId, registries) {
   ]);
 }
 
-function collectAllDocuments(fullData, currentLotId) {
+function collectAllDocuments(fullData, currentLotId, mpDocuments = []) {
   const byPhase = {
     'Planification': [],
     'Contractualisation': [],
     'Attribution': [],
     'Approbation': [],
     'Exécution': [],
-    'Clôture': []
+    'Clôture': [],
+    'Autres documents': [] // Modif #31 : documents libres uploadés depuis la fiche
   };
 
   const inLot = (entity) => currentLotId === 'ALL' || !entity?.lotId || entity.lotId === currentLotId;
@@ -1157,6 +1184,29 @@ function collectAllDocuments(fullData, currentLotId) {
   if (cloture) {
     if (cloture.receptionProv?.documentRef) byPhase['Clôture'].push({ label: 'PV réception provisoire', ref: cloture.receptionProv.documentRef });
     if (cloture.receptionDef?.documentRef) byPhase['Clôture'].push({ label: 'PV réception définitive', ref: cloture.receptionDef.documentRef });
+  }
+
+  // Modif #31 : documents libres MP_DOCUMENT — répartis dans la phase de rattachement choisie
+  // (PLANIF/PROCEDURE/ATTRIBUTION/APPROBATION/EXECUTION/CLOTURE) ou « Autres documents » si phase null.
+  const phaseToBucket = {
+    PLANIF: 'Planification',
+    PROCEDURE: 'Contractualisation',
+    ATTRIBUTION: 'Attribution',
+    APPROBATION: 'Approbation',
+    EXECUTION: 'Exécution',
+    CLOTURE: 'Clôture'
+  };
+  for (const d of (mpDocuments || [])) {
+    if (!d) continue;
+    const bucket = (d.phase && phaseToBucket[d.phase]) || 'Autres documents';
+    const label = d.typeDocument
+      ? `${d.typeDocument}${d.nom ? ' — ' + d.nom : ''}`
+      : (d.nom || 'Document');
+    byPhase[bucket].push({
+      label,
+      ref: d.fichier || d.id,
+      url: d.fichier && /^https?:\/\//.test(d.fichier) ? d.fichier : null
+    });
   }
 
   const total = Object.values(byPhase).reduce((s, arr) => s + arr.length, 0);

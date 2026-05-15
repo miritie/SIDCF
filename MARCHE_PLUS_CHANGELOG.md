@@ -13,6 +13,44 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Upload de documents libres depuis la fiche de vie
+
+> **Modif #31** — Permettre, à tout moment depuis la fiche de vie, d'uploader des documents libres rattachés au marché (notification d'attribution, lettre valant marché, bordereau, facture, correspondance, constat, photo de chantier, etc.). L'upload utilise la pipeline R2 existante et les documents apparaissent dans le panneau Documents agrégé.
+
+### Modif #31 — Widget `document-upload-mp.js` + intégration panneau Documents
+
+#### Nouveau widget — `sidcf-portal/js/ui/widgets/document-upload-mp.js` (~180 lignes)
+
+Modal d'upload avec :
+- **Fichier** : `input[type=file]` accepte PDF, DOC/DOCX, XLS/XLSX, images. Max 50 Mo (validé par `uploadDocument`). Affichage du nom + taille + type MIME une fois sélectionné.
+- **Phase de rattachement** : sélecteur parmi `PLANIF / PROCEDURE / ATTRIBUTION / APPROBATION / EXECUTION / CLOTURE / AUTRE` (default `AUTRE`). Détermine sous quelle phase le document apparaîtra dans le panneau Documents.
+- **Type / catégorie** : champ texte libre avec `<datalist>` de suggestions (Notification d'attribution, Lettre valant marché, Bordereau d'envoi, Facture, Correspondance, Rapport de réunion, Photo de chantier, Constat, Mise en demeure, Autre).
+- **Note** : textarea optionnel.
+- **Statut** en bas de modal qui suit l'upload (« ⏳ Upload en cours… » → « ✅ Document uploadé (id …) » ou « ❌ Échec : … »).
+
+Le widget appelle `uploadDocument(file, { operationId, entityType:'OPERATION', phase, typeDocument, commentaire, … })` (pipeline R2 existante de `r2-storage-mp.js`). Le document est :
+- Stocké sur **Cloudflare R2** avec préfixe `mp/` (filename `mp/<timestamp>_<sanitized>`)
+- Persisté en base dans **MP_DOCUMENT** (entité déjà définie)
+- Visible immédiatement dans le panneau Documents après recharge de la fiche
+
+#### Intégration dans la Fiche de Vie (`ecr01c-fiche-marche.js`)
+- **Chargement parallèle** : `dataService.query(MP_DOCUMENT, { operationId })` ajouté au `Promise.all` existant.
+- **Bouton « 📤 Ajouter »** dans l'en-tête du panneau Documents (colonne sticky droite). Clic = ouverture du modal. Sur succès → recharge complète de la fiche pour faire apparaître le doc.
+- **Répartition par phase** : les MP_DOCUMENT sont distribués dans les groupes existants du panneau (Planification, Contractualisation, Attribution, Approbation, Exécution, Clôture) selon leur `phase`, ou dans un nouveau groupe **« Autres documents »** quand `phase` est null/AUTRE.
+- **Téléchargement** : si `MP_DOCUMENT.fichier` contient une URL HTTPS (cas typique après upload R2), un clic ouvre le fichier dans un nouvel onglet. Sinon (références héritées de PV / OS / etc. sans URL), affichage de la référence.
+- **Libellé** dans le panneau : `<typeDocument> — <nom>` (ex : *Facture — facture_CFAO_2024.pdf*).
+
+#### Bénéfices
+- L'utilisateur peut enrichir le dossier marché à tout moment, sans passer par un écran de phase spécifique.
+- Le panneau Documents devient un vrai dossier consolidé : pièces structurées par phase (PVs, garanties, OS, avenants…) + pièces libres dans « Autres documents » ou ventilées dans la phase de rattachement choisie.
+- Aucune route Worker / migration DB : on réutilise `MP_DOCUMENT` et `r2-storage-mp.js`.
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/document-upload-mp.js`
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (chargement MP_DOCUMENT, bouton 📤 Ajouter, ventilation des docs uploadés, ouverture URL R2)
+
+Pas de migration DB. Pas de déploiement Worker.
+
 ## 2026-05-15 — Sanctions : période active + détection dans un groupement
 
 > **Modif #30** — Deux renforcements demandés explicitement : (1) encadrer la période de sanction pour ne plus alerter sur des sanctions expirées, et (2) détecter les entreprises sanctionnées qui se sont retrouvées au sein d'un groupement (mandataire ou co-titulaires).
