@@ -13,6 +13,51 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Conformité SDF : RG010 + types garantie + modes de passation + proposition Fiche Marché
+
+> **Modif #25** — Trois corrections de conformité au SDF (Hector 26/11/2025 V1.0) + proposition de design pour la « vraie » Fiche de Marché demandée par UC04.
+
+### Modif #25 — Mises à jour référentielles + proposition Fiche Marché
+
+#### 25.1 — RG010 : seuil garantie de bonne exécution corrigé (3–5%)
+- **Avant** : `rules-config.json` → `garantie_bonne_execution: { taux_min: 5, taux_max: 10 }`
+- **Après** : `{ taux_min: 3, taux_max: 5 }` conforme à l'**Art. 97.3 du Code des Marchés Publics CI** (SDF slide 15, RG010)
+- **Impact** : l'écran Garanties (Attribution + standalone) affichera désormais le bandeau « Plage légale 3% – 5% » au lieu de 5–10%. Le warning d'alerte hors plage est recalculé sur ces nouvelles bornes.
+
+#### 25.2 — Référentiel TYPE_GARANTIE élargi à 9 types (vs 3 auparavant)
+- **Ajoutés** : `OFFRE` (garantie d'offre/soumission, phase PROCEDURE), `BIENS_REMIS` (Art. 102), `APPROV_REMIS`, `DELAI_PAIEMENT` (Art. 104), `DECENNALE` (BTP, phase CLOTURE), `AUTRE`.
+- **Conservés et enrichis** : `AVANCE` (Art. 100), `BONNE_EXEC` (Art. 97.3), `RETENUE`.
+- **Méta ajoutées par type** : `regleType` (pointe vers la règle de taux dans `rules-config.garanties`) + `phase` (PROCEDURE / ATTRIBUTION / EXECUTION / CLOTURE) pour permettre un futur filtrage contextuel dans l'UI.
+- **Cohérence** : `rules-config.json` → `referentiels.types_garantie` synchronisé sur la même liste.
+- **Note** : pas de migration des records existants — les anciennes valeurs (`AVANCE`, `BONNE_EXEC`, `RETENUE`) restent valides puisqu'elles sont conservées dans la liste.
+
+#### 25.3 — Référentiel MODE_PASSATION élargi avec sous-variantes
+- **Avant** : 8 codes (PSC, PSD, AOO, PSO, AOR, CI, DEM, ENTENTE_DIRECTE).
+- **Après** : **18 codes** structurés par familles + parent :
+  - **Famille SIMPLIFIEE** : PSD, PSC, PSL, PSO (avec libellés conformes au SDF — PSC = « demande de Cotation », PSO = « à compétition Ouverte »)
+  - **Famille CLASSIQUE** : AOO + sous-variantes AOO_PREQUALIF, AOO_2ETAPES, AOO_CONCOURS (SDF slide 28) ; AON, AOI, CI, DEM
+  - **Famille DEROGATOIRE** : AOR, ENTENTE_DIRECTE, **RECONDUCTION (Art. 79)** ← nouveau
+  - **Famille PI** : PI + sous-variantes PI_CABINET, PI_INDIVIDUEL (Art. 62)
+- **Méta ajoutées par mode** : `famille` (SIMPLIFIEE / CLASSIQUE / DEROGATOIRE / PI) + `parent` (code du mode parent pour les sous-variantes) → permet à terme un sélecteur en cascade dans le formulaire procédure.
+- **Compat** : tous les codes existants conservés, libellés rapprochés du SDF (clarification PSC/PSO/PSL).
+
+#### 25.4 — Proposition de design « Vraie Fiche de Marché »
+- **Fichier livré** : `sidcf-portal/Documentation/proposition-fiche-marche.md` (~250 lignes)
+- **Contenu** :
+  - Constat : l'actuelle `/mp/fiche-marche` n'est qu'une page de lancement (Identité + Chaîne budgétaire + Livrables). Le SDF UC04 demande une **fiche consolidée exhaustive lecture seule** avec toutes les phases + documents + historique + export PDF.
+  - **Structure proposée** : en-tête sticky, timeline 5 phases, 4 KPIs de santé (cumul avenants, échéancier, garanties, docs obligatoires), 6 sections accordéon (Planification → Clôture), panneau Documents latéral, section Audit log.
+  - **Comportements** : sélecteur de lot global, accordéons à état persistant `localStorage`, lien « Modifier » vers chaque écran de phase, exports PDF/Excel.
+  - **Découpage d'implémentation** : 9 sous-modifs (A → I), MVP estimé 4–5 jours pour le squelette + sections, +4–6 jours pour PDF/Excel/Audit log serveur.
+  - **6 questions à trancher avec le métier** avant code (annotations CF, signature PDF, recherche full-text PDF, etc.)
+- **Pas d'implémentation dans cette modif** — purement un document de design à valider.
+
+#### Fichiers modifiés
+- `sidcf-portal/js/config/rules-config.json` (garantie BE + liste types_garantie)
+- `sidcf-portal/js/config/registries.json` (TYPE_GARANTIE + MODE_PASSATION)
+- `sidcf-portal/Documentation/proposition-fiche-marche.md` (NEW)
+
+**Pas de migration DB**, **pas de déploiement Worker**.
+
 ## 2026-05-15 — Filtres PPM : multi-select replié par défaut
 
 > **Modif #24** — Refonte UX des filtres de la liste PPM. Chaque filtre devient un **bouton compact** (replié par défaut) qui ouvre à la demande un panneau avec recherche + cases à cocher.

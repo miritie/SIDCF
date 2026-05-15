@@ -218,10 +218,10 @@
       "description": "Garantie de restitution d'avance"
     },
     "garantie_bonne_execution": {
-      "taux_min": 5,
-      "taux_max": 10,
+      "taux_min": 3,
+      "taux_max": 5,
       "unit": "%",
-      "description": "Garantie de bonne exécution"
+      "description": "Garantie de bonne exécution (Art. 97.3 Code MP CI : entre 3 % et 5 % du montant du marché)"
     },
     "retenue_garantie": {
       "taux": 10,
@@ -279,10 +279,15 @@
       {"code": "AUTRE", "label": "Autre motif"}
     ],
     "types_garantie": [
-      {"code": "AVANCE", "label": "Garantie de restitution d'avance"},
-      {"code": "BONNE_EXEC", "label": "Garantie de bonne exécution"},
-      {"code": "RETENUE", "label": "Retenue de garantie"},
-      {"code": "DECENNALE", "label": "Garantie décennale"}
+      {"code": "OFFRE", "label": "Garantie d'offre ou de soumission"},
+      {"code": "AVANCE", "label": "Garantie de restitution d'avance (Art. 100)"},
+      {"code": "BONNE_EXEC", "label": "Garantie de bonne exécution (Art. 97.3)"},
+      {"code": "RETENUE", "label": "Retenue de garantie sur décomptes"},
+      {"code": "BIENS_REMIS", "label": "Garantie de biens remis (Art. 102)"},
+      {"code": "APPROV_REMIS", "label": "Garantie d'approvisionnements remis"},
+      {"code": "DELAI_PAIEMENT", "label": "Garantie en cas de délai de paiement (Art. 104)"},
+      {"code": "DECENNALE", "label": "Garantie décennale (BTP)"},
+      {"code": "AUTRE", "label": "Autres garanties"}
     ],
     "types_recours": [
       {"code": "CONTESTATION_ATTRIBUTION", "label": "Contestation de l'attribution"},

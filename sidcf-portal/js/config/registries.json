@@ -13,14 +13,24 @@
     { "code": "DELEGATION_SERVICE_PUBLIC", "label": "DÉLÉGATION DE SERVICE PUBLIC" }
   ],
   "MODE_PASSATION": [
-    { "code": "PSC", "label": "Procédure Simplifiée sur Consultation (PSC)", "seuil": true },
-    { "code": "PSD", "label": "Procédure Simplifiée sur Demande de prix (PSD)", "seuil": true },
-    { "code": "AOO", "label": "Appel d'Offres Ouvert (AOO)", "seuil": true },
-    { "code": "PSO", "label": "Procédure Spécialisée sur Offres (PSO)", "seuil": true },
-    { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false },
-    { "code": "CI", "label": "Concours d'Ingénierie (CI)", "seuil": false },
-    { "code": "DEM", "label": "Demande d'Expression de Manifestation (DEM)", "seuil": false },
-    { "code": "ENTENTE_DIRECTE", "label": "Entente Directe", "seuil": false }
+    { "code": "PSD", "label": "Procédure Simplifiée d'Entente Directe (PSD)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
+    { "code": "PSC", "label": "Procédure Simplifiée de demande de Cotation (PSC)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
+    { "code": "PSL", "label": "Procédure Simplifiée à compétition Limitée (PSL)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
+    { "code": "PSO", "label": "Procédure Simplifiée à compétition Ouverte (PSO)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
+    { "code": "AOO", "label": "Appel d'Offres Ouvert (AOO)", "seuil": true, "famille": "CLASSIQUE", "parent": null },
+    { "code": "AOO_PREQUALIF", "label": "AOO avec préqualification", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO" },
+    { "code": "AOO_2ETAPES", "label": "AOO en deux (2) étapes", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO" },
+    { "code": "AOO_CONCOURS", "label": "AOO avec concours", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO" },
+    { "code": "AON", "label": "Appel d'Offres National (AON)", "seuil": true, "famille": "CLASSIQUE", "parent": null },
+    { "code": "AOI", "label": "Appel d'Offres International (AOI)", "seuil": true, "famille": "CLASSIQUE", "parent": null },
+    { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false, "famille": "DEROGATOIRE", "parent": null },
+    { "code": "ENTENTE_DIRECTE", "label": "Gré à gré / Entente directe", "seuil": false, "famille": "DEROGATOIRE", "parent": null },
+    { "code": "RECONDUCTION", "label": "Reconduction (Art. 79)", "seuil": false, "famille": "DEROGATOIRE", "parent": null },
+    { "code": "PI", "label": "Prestation Intellectuelle (PI)", "seuil": false, "famille": "PI", "parent": null },
+    { "code": "PI_CABINET", "label": "PI — Sélection de cabinet de consultant", "seuil": false, "famille": "PI", "parent": "PI" },
+    { "code": "PI_INDIVIDUEL", "label": "PI — Sélection de consultant individuel (Art. 62)", "seuil": false, "famille": "PI", "parent": "PI" },
+    { "code": "CI", "label": "Concours d'Ingénierie (CI)", "seuil": false, "famille": "CLASSIQUE", "parent": null },
+    { "code": "DEM", "label": "Demande d'Expression de Manifestation (DEM)", "seuil": false, "famille": "CLASSIQUE", "parent": null }
   ],
   "CATEGORIE_PROCEDURE": [
     { "code": "NATIONALE", "label": "Nationale" },
@@ -675,9 +685,15 @@
     { "code": "TECH", "label": "Technique (modification prestation)" }
   ],
   "TYPE_GARANTIE": [
-    { "code": "AVANCE", "label": "Garantie d'avance" },
-    { "code": "BONNE_EXEC", "label": "Garantie de bonne exécution" },
-    { "code": "RETENUE", "label": "Retenue de garantie" }
+    { "code": "OFFRE", "label": "Garantie d'offre ou de soumission", "regleType": null, "phase": "PROCEDURE" },
+    { "code": "AVANCE", "label": "Garantie de restitution d'avance (Art. 100)", "regleType": "avance", "phase": "ATTRIBUTION" },
+    { "code": "BONNE_EXEC", "label": "Garantie de bonne exécution (Art. 97.3)", "regleType": "bonneExec", "phase": "ATTRIBUTION" },
+    { "code": "RETENUE", "label": "Retenue de garantie sur décomptes", "regleType": "retenue", "phase": "EXECUTION" },
+    { "code": "BIENS_REMIS", "label": "Garantie de biens remis par l'UGA (Art. 102)", "regleType": null, "phase": "EXECUTION" },
+    { "code": "APPROV_REMIS", "label": "Garantie d'approvisionnements remis par l'UGA", "regleType": null, "phase": "EXECUTION" },
+    { "code": "DELAI_PAIEMENT", "label": "Garantie en cas de délai de paiement (Art. 104)", "regleType": null, "phase": "EXECUTION" },
+    { "code": "DECENNALE", "label": "Garantie décennale (BTP)", "regleType": null, "phase": "CLOTURE" },
+    { "code": "AUTRE", "label": "Autres garanties", "regleType": null, "phase": null }
   ],
   "ETAT_GARANTIE": [
     { "code": "ACTIVE", "label": "Active" },
