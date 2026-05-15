@@ -25,6 +25,7 @@ import { checkSanction, checkSanctionsGroupement, renderSanctionBanner, renderGr
 import { loadBanques } from '../../../lib/mp-banques.js';
 import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
+import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-manager-mp.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -65,6 +66,11 @@ let currentLotId = null;
 
 // État des co-titulaires (groupement conjoint) — partagé module-level pour persistance UI
 const _coTitulairesState = [];
+
+// État des sous-traitants (modif #38.b) — partagé module-level pour persistance UI
+// On stocke la liste courante saisie via le widget renderSousTraitantsManager,
+// et on la persiste à la sauvegarde dans MP_ATTRIBUTION.sousTraitants.
+let _sousTraitantsState = [];
 
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
 let sanctionCheckTimer = null;
@@ -285,6 +291,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Garanties (contextuelle) — Marché+ : on passe HT et TTC pour que le widget
     // dual montant/% puisse calculer les pourcentages selon la base choisie par garantie.
     renderGarantiesSection(existingAttr.garanties || {}, modePassation, { ht: montantHT, ttc: montantTTC }),
+
+    // Section Sous-traitance (Marché+ modif #38.b — mail séance 6 mai §5.g)
+    renderSousTraitanceSection(existingAttr.sousTraitants || []),
 
     // Section Réserves CF
     renderReservesCFSection(existingAttr.decisionCF || {}),
@@ -795,6 +804,35 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
       el('h3', { className: 'card-title' }, '🔐 Garanties et Cautionnement')
     ]),
     el('div', { className: 'card-body' }, garantiesVisibles)
+  ]);
+}
+
+/**
+ * Section Sous-traitance (Marché+ modif #38.b)
+ * Affiche le gestionnaire des sous-traitants déclarés par l'attributaire.
+ */
+function renderSousTraitanceSection(initial) {
+  _sousTraitantsState = Array.isArray(initial) ? [...initial] : [];
+  const host = el('div', { id: 'sous-traitants-host' });
+  // Le widget est ajouté après ce render via onMount-style en différé : on doit
+  // attendre le mount DOM pour brancher. On utilise un setTimeout(0) pour ça.
+  setTimeout(() => {
+    const target = document.getElementById('sous-traitants-host');
+    if (!target) return;
+    target.innerHTML = '';
+    target.appendChild(renderSousTraitantsManager({
+      sousTraitants: _sousTraitantsState,
+      onChange: (list) => { _sousTraitantsState = [...list]; }
+    }));
+  }, 0);
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '🤝 Sous-traitance déclarée'),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        'Plafond légal indicatif 40 % · Code MP CI Art. 130')
+    ]),
+    el('div', { className: 'card-body' }, [host])
   ]);
 }
 
@@ -1592,7 +1630,9 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
         motifRef: null,
         commentaire: ''
       },
-      garanties: garantiesData
+      garanties: garantiesData,
+      // Modif #38.b — sous-traitants déclarés à l'attribution
+      sousTraitants: [..._sousTraitantsState]
     };
 
     // Construit le patch : si lotId, les champs vont sous parLot[lotId]

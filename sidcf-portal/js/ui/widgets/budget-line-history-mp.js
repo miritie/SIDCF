@@ -156,7 +156,7 @@ export function renderBudgetLineHistory(opts = {}) {
     });
 
     if (!line) {
-      synthesis.innerHTML = `⚠ Aucune ligne budgétaire enregistrée pour la combinaison <code>${state.activiteCode}</code> / ${state.typeFin} / ${state.bailleur}.`;
+      synthesis.innerHTML = `⚠ Aucune imputation budgétaire enregistrée pour la combinaison <code>${state.activiteCode}</code> / ${state.typeFin} / ${state.bailleur}.`;
     } else {
       const sep = '<span style="margin:0 8px;color:#d1d5db;">|</span>';
       const labelDispo = isOver ? 'DÉPASSEMENT' : 'Disponible après';
@@ -172,7 +172,7 @@ export function renderBudgetLineHistory(opts = {}) {
       const formulaWrap = el('div', { style: { marginTop: '4px', textAlign: 'right' } }, [
         el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'Méthode '),
         renderFormulaBadge({
-          titre: 'Cumul d\'utilisation d\'une ligne budgétaire',
+          titre: 'Cumul d\'utilisation d\'une imputation budgétaire',
           formule: 'Initiale (AE) − (Σ autres opérations PPM sur cette combinaison activité × type × bailleur + ligne courante)',
           regle: 'Le cumul prend en compte toutes les opérations PPM rattachées à la même combinaison, qu\'elles soient au stade planification ou plus avancées. L\'opération en cours de saisie est ajoutée au total. Si négatif → dépassement budgétaire (alerte rouge).',
           exemple: 'Ligne 500 M, 3 opérations existantes pour 350 M, nouvelle opération 100 M ⇒ disponible après = 500 − 450 = 50 M (vert)',

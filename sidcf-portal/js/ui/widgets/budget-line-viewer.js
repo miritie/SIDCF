@@ -12,12 +12,12 @@ import { openDrawer } from './drawer.js';
  */
 export function showBudgetLineDetails(budgetLine) {
   if (!budgetLine) {
-    alert('Aucune ligne budgétaire trouvée');
+    alert('Aucune imputation budgétaire trouvée');
     return;
   }
 
   const content = renderBudgetLineContent(budgetLine);
-  openDrawer('Ligne Budgétaire', content, { width: '600px' });
+  openDrawer('Imputation Budgétaire', content, { width: '600px' });
 }
 
 /**
@@ -55,8 +55,8 @@ function renderBudgetLineContent(bl) {
       { label: 'Libellé', value: bl.activiteLib }
     ]),
 
-    // Ligne budgétaire
-    renderSection('Ligne budgétaire', [
+    // Imputation budgétaire
+    renderSection('Imputation budgétaire', [
       { label: 'Code ligne', value: bl.ligneCode },
       { label: 'Libellé', value: bl.ligneLib },
       { label: 'Grande nature', value: getNatureLabel(bl.grandeNature) }
@@ -123,7 +123,7 @@ function getNatureLabel(code) {
  */
 export function renderBudgetLineSummary(budgetLine) {
   if (!budgetLine) {
-    return el('div', { className: 'alert alert-warning' }, 'Aucune ligne budgétaire associée');
+    return el('div', { className: 'alert alert-warning' }, 'Aucune imputation budgétaire associée');
   }
 
   const viewBtn = el('button', { className: 'btn btn-sm btn-secondary' }, '👁️ Voir détails');
@@ -131,7 +131,7 @@ export function renderBudgetLineSummary(budgetLine) {
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, 'Ligne budgétaire'),
+      el('h3', { className: 'card-title' }, 'Imputation budgétaire'),
       viewBtn
     ]),
     el('div', { className: 'card-body' }, [

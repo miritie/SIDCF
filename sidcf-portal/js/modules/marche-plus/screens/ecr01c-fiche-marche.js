@@ -985,6 +985,9 @@ function renderAttributionContent(fullData, currentLotId, registries) {
     el('h4', { style: { margin: '20px 0 10px', fontSize: '14px', fontWeight: 600 } }, '🛡 Garanties contractuelles'),
     renderGarantiesAttribution(garanties),
 
+    // Modif #38.b — Sous-traitants déclarés (section Attribution de la fiche de vie)
+    renderSousTraitantsAttribution(attribLot?.sousTraitants || attribution.sousTraitants || []),
+
     echeancierLot && (echeancierLot.items || []).length > 0
       ? el('div', {}, [
           el('h4', { style: { margin: '20px 0 10px', fontSize: '14px', fontWeight: 600 } },
@@ -1010,6 +1013,40 @@ function renderAttributionContent(fullData, currentLotId, registries) {
           attribution.decisionCF.commentaire || attribution.decisionCF.motifReserve || '(non précisées)'
         ])
       : null
+  ]);
+}
+
+/**
+ * Affichage lecture-seule des sous-traitants déclarés dans la fiche de vie.
+ * Marché+ modif #38.b — Réf : mail séance 6 mai §5.g
+ */
+function renderSousTraitantsAttribution(sousTraitants) {
+  const list = Array.isArray(sousTraitants) ? sousTraitants : [];
+  if (list.length === 0) return el('div');
+  const cumul = list.reduce((s, st) => s + (Number(st.pourcentageMarche) || 0), 0);
+  const isOver = cumul > 40;
+  return el('div', {}, [
+    el('h4', { style: { margin: '20px 0 10px', fontSize: '14px', fontWeight: 600 } },
+      `🤝 Sous-traitants déclarés (${list.length}) — cumul ${cumul.toFixed(2)}%${isOver ? ' ⚠ dépasse 40 %' : ''}`),
+    el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
+      el('thead', {}, [el('tr', {}, [
+        el('th', {}, 'Raison sociale'),
+        el('th', {}, 'NCC'),
+        el('th', {}, 'Prestations'),
+        el('th', { style: { textAlign: 'right' } }, '% marché'),
+        el('th', {}, 'Agrément CF')
+      ])]),
+      el('tbody', {}, list.map(st => el('tr', {}, [
+        el('td', { style: { fontWeight: 500 } }, st.raisonSociale || '-'),
+        el('td', { style: { fontFamily: 'monospace', fontSize: '11px', color: '#6b7280' } }, st.ncc || '-'),
+        el('td', { style: { fontSize: '12px' } },
+          (st.prestations || '').length > 60 ? st.prestations.substring(0, 60) + '…' : (st.prestations || '-')),
+        el('td', { style: { textAlign: 'right' } }, `${(Number(st.pourcentageMarche) || 0).toFixed(2)} %`),
+        el('td', {}, st.agrementCF
+          ? el('span', { className: 'badge badge-success', style: { fontSize: '11px' } }, '✓ Agréé')
+          : el('span', { className: 'badge badge-warning', style: { fontSize: '11px' } }, 'Non agréé'))
+      ])))
+    ])
   ]);
 }
 

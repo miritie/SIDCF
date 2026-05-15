@@ -13,6 +13,52 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Imputation budgétaire + Module sous-traitance (séance métier §3.a + §5.g)
+
+> **Modif #38** — Deux points résiduels du mail de synthèse de la séance du 6 mai : renommage généralisé « Ligne budgétaire » → « Imputation budgétaire » dans les libellés UI (§3.a), et ajout d'un module de gestion des sous-traitants déclarés à l'attribution (§5.g).
+
+### Modif #38.a — Renommage « Ligne budgétaire » → « Imputation budgétaire »
+
+Renommage de tous les libellés visibles utilisateur. Les noms techniques (table `mp_budget_line`, entité `MP_BUDGET_LINE`, champ JSONB `chaineBudgetaire.ligneBudgetaire`) restent inchangés pour ne pas casser les données existantes — seuls les libellés UI évoluent.
+
+Fichiers touchés (libellés uniquement) :
+- `ecr01b-ppm-unitaire.js` — modale Détails opération
+- `ecr01d-ppm-create-line.js` — formulaire création (label calculé + aide multi-financement)
+- `ecr01c-fiche-marche.js` — section Planification (titre du sous-bloc)
+- `budget-line-viewer.js` — drawer + carte synthétique + alerte vide
+- `chaine-programmatique-display.js` — récap chaîne
+- `budget-line-history-mp.js` — message d'erreur + titre formule 📐
+
+Les commentaires de code (non visibles utilisateur) restent en l'état pour ne pas polluer le diff.
+
+### Modif #38.b — Module sous-traitance dans l'Attribution
+
+**Schéma** : ajout du champ `MP_ATTRIBUTION.sousTraitants: []`. Chaque entrée porte `{ raisonSociale, ncc, adresse, telephone, prestations, pourcentageMarche, agrementCF: bool, agrementCFDocRef, dateDeclaration }`.
+
+**Nouveau widget** `sidcf-portal/js/ui/widgets/sous-traitants-manager-mp.js` (~280 lignes) :
+- **Synthèse en tête** : nombre de sous-traitants + cumul `Σ pourcentageMarche` avec code couleur (vert ≤ 30 %, jaune 30-40 %, rouge > 40 %). Badge 📐 explique la règle (plafond légal indicatif 40 % — Code MP CI Art. 130).
+- **Tableau** : raison sociale, NCC, prestations tronquées, % marché, badge agrément CF (✓ Agréé / ⚠ Non agréé), actions modifier/supprimer.
+- **Détection sanctions** automatique : pour chaque sous-traitant listé, appel asynchrone à `checkSanction()` avec filtrage par période active (modif #30). Si une sanction est trouvée, un bandeau d'alerte s'affiche sous la ligne du sous-traitant. Détection live dans le modal d'édition aussi (debounce 300 ms sur raison sociale + NCC).
+- **Modal d'édition** : tous les champs + checkbox Agrément CF + référence document. Validation : raison sociale obligatoire, % entre 0 et 100.
+
+**Intégration dans `ecr03a-attribution.js`** :
+- Nouvelle section « 🤝 Sous-traitance déclarée » insérée entre les Garanties et les Réserves CF.
+- État module-level `_sousTraitantsState` persisté à la sauvegarde dans `MP_ATTRIBUTION.sousTraitants` (et respecte le multi-lot via `buildLotPatch`).
+
+**Intégration dans la fiche de vie** (`ecr01c-fiche-marche.js`) :
+- Section Attribution enrichie : sous-tableau lecture seule des sous-traitants déclarés avec cumul affiché en titre. Alerte si cumul > 40 %.
+
+### Point §5.f (paiements séparés cotraitants) — confirmé OK
+
+Le user a confirmé que côté Marché+ il suffit de collecter les coordonnées bancaires de chaque cotraitant (déjà livré en modif #20). L'orchestration des paiements séparés se fait côté module budget à l'exécution des OP / Mandats. Aucune action supplémentaire sur Marché+.
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/sous-traitants-manager-mp.js`
+- Modifiés : `schema.js` (ajout champ `sousTraitants` sur `MP_ATTRIBUTION`), `ecr03a-attribution.js` (section + état + persistance), `ecr01c-fiche-marche.js` (affichage lecture-seule)
+- Renommage UI (#38.a) : `ecr01b-ppm-unitaire.js`, `ecr01d-ppm-create-line.js`, `ecr01c-fiche-marche.js`, `budget-line-viewer.js`, `chaine-programmatique-display.js`, `budget-line-history-mp.js`
+
+Pas de migration DB (champ JSONB existant). Pas de déploiement Worker.
+
 ## 2026-05-15 — Transparence des formules : badges 📐 partout où il y a un calcul
 
 > **Modif #37** — Toutes les formules et méthodes d'évaluation sont désormais explicitement exposées via un badge cliquable 📐 placé à côté du KPI ou de l'indicateur correspondant. Cela permet aux métiers de vérifier que la méthode appliquée correspond à leur attente, et aux devs de garantir la prise en compte sans dérive.

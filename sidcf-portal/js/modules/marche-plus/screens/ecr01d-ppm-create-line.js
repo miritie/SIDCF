@@ -289,7 +289,7 @@ export async function renderPPMCreateLine(params) {
 
             // Ligne budgétaire calculée (activité + nature éco)
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Ligne budgétaire (calculée)'),
+              el('label', { className: 'form-label' }, 'Imputation budgétaire (calculée)'),
               el('input', {
                 type: 'text',
                 className: 'form-input',
@@ -359,7 +359,7 @@ export async function renderPPMCreateLine(params) {
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '💰 Informations financières'),
           el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
-            'Chaque ligne = un montant prévu pour un (Type de financement, Bailleur). L\'indicateur compare le programmé au montant initial de la ligne budgétaire.')
+            'Chaque ligne = un montant prévu pour un (Type de financement, Bailleur). L\'indicateur compare le programmé au montant initial de l\'imputation budgétaire.')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { id: 'financements-list' }),

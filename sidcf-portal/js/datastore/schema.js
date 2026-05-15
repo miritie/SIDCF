@@ -871,6 +871,13 @@ export const SCHEMAS = {
       cautionnement: { existe: false, montant: 0, baseCalc: 'HT', saisieMode: 'MONTANT', dateEmission: null, dateEcheance: null, docRef: null }
     },
 
+    // Sous-traitance (Marché+ modif #38.b)
+    // Liste des sous-traitants déclarés par l'attributaire. Chaque entrée :
+    //   { raisonSociale, ncc, adresse, telephone, prestations, pourcentageMarche,
+    //     agrementCF: bool, agrementCFDocRef, dateDeclaration }
+    // Plafond légal indicatif : 40 % du montant du marché (Code MP CI Art. 130).
+    sousTraitants: [],
+
     // Dates
     dates: {
       signatureTitulaire: null,

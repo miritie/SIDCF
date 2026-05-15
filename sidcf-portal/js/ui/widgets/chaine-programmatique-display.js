@@ -70,7 +70,7 @@ export function renderChaineProgrammatique(operation, registries = {}, options =
         { label: 'Programme', value: getProgrammeLabel(operation.section, operation.programme) },
         { label: 'Unité Administrative', value: getUniteLabel(operation.section, operation.programme, operation.unite) },
         { label: 'Activité', value: operation.activite || '-' },
-        { label: 'Ligne budgétaire', value: operation.ligneBudgetaire || '-' }
+        { label: 'Imputation budgétaire', value: operation.ligneBudgetaire || '-' }
       ]
     },
     {
