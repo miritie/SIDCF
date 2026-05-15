@@ -13,6 +13,52 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Bouton Voir restauré + boutons phase + widget dual saisissable partout
+
+> **Modifs #32 + #33** — Deux correctifs demandés explicitement après la refonte de la fiche :
+> - **#32** : ramener le bouton « 👁 Voir » dans la liste PPM et restaurer la rangée de boutons de navigation par phase dans la fiche, perdue lors de la refonte #26.
+> - **#33** : corriger un cas où, dans le widget dual montant/%, seul le champ taux semblait saisissable. Garantir partout la saisie bidirectionnelle.
+
+### Modif #32 — Restauration des boutons de suivi du processus
+
+**Liste PPM** (`ecr01b-ppm-unitaire.js`) — 3 boutons par ligne désormais :
+- **👁 Voir** *(restauré)* — ouvre la fiche de vie
+- **📋 Fiche de vie** *(modif #26)* — ouvre la fiche de vie consolidée
+- **ℹ️ Détails** *(existant)* — ouvre la modale rapide d'identité
+
+Les deux premiers boutons pointent vers la même route (`/mp/fiche-marche`) mais leur cohabitation respecte les habitudes utilisateur d'avant refonte.
+
+**Fiche de vie** (`ecr01c-fiche-marche.js`) — restauration de la **rangée de boutons par phase** :
+- Sous la timeline, avant les KPIs santé — emplacement de l'ancien fichier.
+- Phases dynamiques selon le mode de passation (issues de `getPhasesAsync` qui lit la config d'étapes).
+- Chaque phase a une route mappée (PROCEDURE → `/mp/procedure`, ATTRIBUTION → `/mp/attribution`, VISA_CF → `/mp/visa-cf`, EXECUTION → `/mp/execution`, AVENANTS → `/mp/avenants`, CLOTURE → `/mp/cloture`).
+- La phase « PLANIF » (Identité) est en bouton primaire actif (on est sur la fiche).
+- Le `lotId` courant est propagé dans les params de navigation pour préserver le filtrage par lot.
+- Bandeau informatif au-dessus : « Suivi du processus — cliquez sur une phase pour ouvrir l'écran de saisie ».
+
+### Modif #33 — Widget dual montant/% : saisie bidirectionnelle garantie
+
+Le user a constaté dans les Garanties d'Attribution que seul le champ taux semblait saisissable. Trois durcissements appliqués au widget `montant-pourcentage-dual-input.js` :
+
+1. **Suppression du `disabled` automatique sur le champ pourcentage** quand `totalRef <= 0`. Le user reste libre de saisir le taux même si la base est temporairement indéterminée — le calcul du montant sera juste 0 mais ne bloque plus la saisie.
+2. **Pas de `disabled` par défaut sur les inputs** — uniquement si le caller passe explicitement `disabled: true`. `autocomplete: 'off'` ajouté pour éviter les interférences navigateur.
+3. **Protection contre l'écrasement pendant la saisie** dans `refreshDisplay()` : on ne réécrit plus `montantInput.value` ni `pctInput.value` si `document.activeElement` est l'un de ces champs. Cas typique évité : un `setTotal()` externe (ex: changement HT↔TTC pendant qu'on tape) qui aurait pu effacer la valeur en cours de frappe.
+
+Helpers ajustés :
+- Si `totalRef <= 0` : `pctHelper` affiche « Base non définie — saisissez via le sélecteur HT/TTC » au lieu d'un message ambigu.
+
+Comportement attendu après le fix :
+- **Cliquer sur le champ Montant → taper une valeur → le % se met à jour automatiquement.**
+- **Cliquer sur le champ % → taper une valeur → le montant se met à jour automatiquement.**
+- Les deux directions fonctionnent partout : Clé Répartition, Échéancier, Garanties (Attribution + standalone), Avenants.
+
+#### Fichiers
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` (3 boutons par ligne)
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (rangée boutons phase + import `getPhasesAsync`)
+- Modifié : `sidcf-portal/js/ui/widgets/montant-pourcentage-dual-input.js` (durcissement saisie)
+
+Pas de migration DB. Pas de déploiement Worker.
+
 ## 2026-05-15 — Upload de documents libres depuis la fiche de vie
 
 > **Modif #31** — Permettre, à tout moment depuis la fiche de vie, d'uploader des documents libres rattachés au marché (notification d'attribution, lettre valant marché, bordereau, facture, correspondance, constat, photo de chantier, etc.). L'upload utilise la pipeline R2 existante et les documents apparaissent dans le panneau Documents agrégé.

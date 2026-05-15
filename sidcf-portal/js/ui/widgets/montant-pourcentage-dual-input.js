@@ -73,10 +73,12 @@ export function renderMontantPourcentageDualInput({
     className: 'form-input',
     step: '0.01',
     required: !!required,
-    disabled: !!disabled,
     placeholder: 'Montant XOF',
+    // Modif #33 : pas de pointer-events désactivé, pas de readonly. On garde la saisie libre.
+    autocomplete: 'off',
     style: { flex: '1', minWidth: '0' }
   };
+  if (disabled) montantInputAttrs.disabled = true;
   if (!allowNegative) montantInputAttrs.min = '0';
   const montantInput = el('input', montantInputAttrs);
   const montantSuffix = el('span', {
@@ -98,10 +100,14 @@ export function renderMontantPourcentageDualInput({
     id: idPct,
     className: 'form-input',
     step: '0.0001',
-    disabled: !!disabled || totalRef <= 0,
     placeholder: 'Pourcentage',
+    autocomplete: 'off',
     style: { flex: '1', minWidth: '0' }
   };
+  // Modif #33 : ne plus désactiver le % quand totalRef <= 0. Le caller doit fixer
+  // la base correctement ; en attendant, on laisse la saisie libre (le calcul du
+  // montant sera juste 0 si la base est nulle — mais ça ne doit pas bloquer le user).
+  if (disabled) pctInputAttrs.disabled = true;
   if (!allowNegative) pctInputAttrs.min = '0';
   const pctInput = el('input', pctInputAttrs);
   const pctSuffix = el('span', {
@@ -126,19 +132,26 @@ export function renderMontantPourcentageDualInput({
   }
 
   function refreshDisplay() {
-    // Montant : afficher la valeur courante
-    montantInput.value = currentMontant ? formatMontant(currentMontant) : '';
-    // Pourcentage : dérivé du montant et du total
+    // Modif #33 : ne pas écraser les champs si l'utilisateur a le focus dessus
+    // (cas typique : on tape dans Montant, un setTotal externe se déclenche → on
+    // ne doit pas effacer la saisie en cours).
+    const activeEl = document.activeElement;
+    const editingMontant = activeEl === montantInput;
+    const editingPct = activeEl === pctInput;
+
+    if (!editingMontant) {
+      montantInput.value = currentMontant ? formatMontant(currentMontant) : '';
+    }
     if (totalRef > 0) {
       const pct = (currentMontant / totalRef) * 100;
-      pctInput.value = currentMontant ? formatPct(pct) : '';
-      pctInput.disabled = !!disabled;
+      if (!editingPct) {
+        pctInput.value = currentMontant ? formatPct(pct) : '';
+      }
       pctHelper.textContent = `≈ ${currentMontant.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} XOF`;
       montantHelper.textContent = `≈ ${pct.toFixed(2)}% de ${totalRef.toLocaleString('fr-FR')} XOF`;
     } else {
-      pctInput.value = '';
-      pctInput.disabled = true;
-      pctHelper.textContent = 'Base non définie';
+      if (!editingPct) pctInput.value = '';
+      pctHelper.textContent = 'Base non définie — saisissez via le sélecteur HT/TTC';
       montantHelper.textContent = '';
     }
   }

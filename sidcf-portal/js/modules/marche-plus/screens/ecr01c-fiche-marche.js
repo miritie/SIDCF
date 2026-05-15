@@ -39,6 +39,7 @@ import { renderRelatedOperations } from '../../../ui/widgets/related-operations-
 import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
+import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
 import logger from '../../../lib/logger.js';
 
 // ============================================
@@ -89,7 +90,7 @@ export async function renderFicheMarche(params) {
   //  - toutes les lignes budgétaires (pour le widget historique multi-financement)
   //  - toutes les opérations PPM (pour le widget historique de la ligne budgétaire — modif #27)
   //  - les difficultés associées au marché (modif #29)
-  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes, mpDocuments] = await Promise.all([
+  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes, mpDocuments, phases] = await Promise.all([
     operation.budgetLineId
       ? dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null)
       : Promise.resolve(null),
@@ -98,12 +99,17 @@ export async function renderFicheMarche(params) {
     dataService.query(ENTITIES.MP_DIFFICULTE, { operationId }).catch(() => []),
     // Modif #31 : tous les documents MP_DOCUMENT rattachés au marché (uploads libres + uploads
     // déjà créés par les autres écrans de saisie via uploadDocument)
-    dataService.query(ENTITIES.MP_DOCUMENT, { operationId }).catch(() => [])
+    dataService.query(ENTITIES.MP_DOCUMENT, { operationId }).catch(() => []),
+    // Modif #32 : phases pour reconstruire la rangée de boutons « processus d'exécution »
+    getPhasesAsync(operation.modePassation || 'PSD').catch(() => [])
   ]);
 
   const page = el('div', { className: 'page fiche-marche-page', style: { paddingBottom: '60px' } }, [
     renderHeaderSticky(operation, registries, fullData, currentLotId, lots, idOperation),
     stepsWidget,
+    // Modif #32 : rangée de boutons de navigation par phase pour permettre le suivi
+    // du processus d'exécution cohérent (comportement de l'ancienne fiche).
+    renderPhaseNavButtons(phases, operation, idOperation, currentLotId),
     // Modif #28 : bandeau visuel des opérations liées (étude antérieure / contrôle postérieur)
     renderRelatedOperations({
       operation,
@@ -291,6 +297,60 @@ function navigateToCurrentPhase(operation, idOperation) {
   if (etat === 'EXECUTION') return router.navigate('/mp/execution', { idOperation });
   if (etat === 'RESILIE' || etat === 'CLOS') return router.navigate('/mp/cloture', { idOperation });
   router.navigate('/mp/procedure', { idOperation });
+}
+
+// ============================================
+// Boutons de navigation par phase (modif #32)
+// ============================================
+
+const PHASE_ROUTES = {
+  PLANIF: null, // on reste sur la fiche
+  PROCEDURE: '/mp/procedure',
+  ATTRIBUTION: '/mp/attribution',
+  VISA_CF: '/mp/visa-cf',
+  EXECUTION: '/mp/execution',
+  AVENANTS: '/mp/avenants',
+  CLOTURE: '/mp/cloture'
+};
+
+function renderPhaseNavButtons(phases, operation, idOperation, currentLotId) {
+  if (!Array.isArray(phases) || phases.length === 0) return el('div');
+
+  const navParams = currentLotId && currentLotId !== 'ALL'
+    ? { idOperation, lotId: currentLotId }
+    : { idOperation };
+
+  const buttons = phases.map(phase => {
+    const route = PHASE_ROUTES[phase.code];
+    if (!route) {
+      // Phase courante (Identité / Planif) — bouton actif sans navigation
+      return el('button', {
+        type: 'button',
+        className: 'btn btn-sm btn-primary',
+        title: `Vous êtes sur ${phase.titre || phase.code}`
+      }, `${phase.icon || ''} ${phase.titre || phase.code}`);
+    }
+    return el('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-secondary',
+      title: `Aller à ${phase.titre || phase.code}`,
+      onclick: () => router.navigate(route, navParams)
+    }, `${phase.icon || ''} ${phase.titre || phase.code}`);
+  });
+
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '20px' }
+  }, [
+    el('div', {
+      className: 'card-body',
+      style: { padding: '12px 16px' }
+    }, [
+      el('div', { style: { fontSize: '11px', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' } },
+        'Suivi du processus — cliquez sur une phase pour ouvrir l\'écran de saisie'),
+      el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, buttons)
+    ])
+  ]);
 }
 
 // ============================================
