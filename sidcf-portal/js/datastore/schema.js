@@ -756,6 +756,7 @@ export const SCHEMAS = {
     operationId: null, // lien avec l'opération parente
     type: '', // code from TYPE_LIVRABLE registry
     libelle: '', // description du livrable
+    quantite: 1, // nombre d'exemplaires identiques (ex: 30 ordinateurs)
     localisation: {
       region: '',
       regionCode: '',

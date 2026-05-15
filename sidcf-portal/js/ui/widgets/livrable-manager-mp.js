@@ -23,6 +23,7 @@ const blankLivrable = () => ({
   id: uid('LIV'),
   type: '',
   libelle: '',
+  quantite: 1,
   localisation: blankLocalisation()
 });
 
@@ -36,12 +37,21 @@ function opt(value, text, selected = false) {
 
 function fieldWrap(labelText, control, opts = {}) {
   const wrap = document.createElement('div');
+  // min-width: 0 → permet aux selects natifs avec long placeholder de rétrécir
+  // sans déborder de leur cellule de grille (fix chevauchement)
+  Object.assign(wrap.style, { minWidth: '0' });
   if (opts.span) wrap.style.gridColumn = `span ${opts.span}`;
   const lbl = document.createElement('label');
   lbl.className = 'form-label';
   lbl.textContent = labelText;
   Object.assign(lbl.style, { fontSize: '12px', marginBottom: '4px' });
   wrap.appendChild(lbl);
+  // Garantir que le contrôle occupe toute la largeur de la cellule
+  if (control && control.style) {
+    control.style.width = '100%';
+    control.style.minWidth = '0';
+    control.style.boxSizing = 'border-box';
+  }
   wrap.appendChild(control);
   return wrap;
 }
@@ -75,12 +85,12 @@ function buildLivrableCard(livrable, index, registries, onUpdate, onRemove) {
   header.appendChild(removeBtn);
   card.appendChild(header);
 
-  // Grid
+  // Grid — minmax 200px pour donner plus de place aux selects avec long placeholder
   const grid = document.createElement('div');
   Object.assign(grid.style, {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-    gap: '10px'
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '12px'
   });
 
   // Type
@@ -102,6 +112,22 @@ function buildLivrableCard(livrable, index, registries, onUpdate, onRemove) {
   libInput.addEventListener('input', () => { livrable.libelle = libInput.value; onUpdate(); });
   grid.appendChild(fieldWrap('Libellé / Description', libInput, { span: 2 }));
 
+  // Quantité (Marché+ modif #19) — nombre d'exemplaires identiques (ex: 30 ordinateurs)
+  const qteInput = document.createElement('input');
+  qteInput.type = 'number';
+  qteInput.className = 'form-input';
+  qteInput.min = '1';
+  qteInput.step = '1';
+  qteInput.placeholder = '1';
+  qteInput.value = livrable.quantite != null ? String(livrable.quantite) : '1';
+  qteInput.title = 'Nombre d\'exemplaires identiques du même livrable (ex: 30 pour 30 ordinateurs identiques)';
+  qteInput.addEventListener('input', () => {
+    const v = parseInt(qteInput.value, 10);
+    livrable.quantite = isNaN(v) || v < 1 ? 1 : v;
+    onUpdate();
+  });
+  grid.appendChild(fieldWrap('Quantité (nombre d\'exemplaires)', qteInput));
+
   // Localisation cascade
   const regionSelect = document.createElement('select');
   regionSelect.className = 'form-input';
@@ -114,19 +140,19 @@ function buildLivrableCard(livrable, index, registries, onUpdate, onRemove) {
   const deptSelect = document.createElement('select');
   deptSelect.className = 'form-input';
   deptSelect.disabled = true;
-  deptSelect.appendChild(opt('', '-- Région d\'abord --'));
+  deptSelect.appendChild(opt('', '— Région d\'abord'));
   grid.appendChild(fieldWrap('Département', deptSelect));
 
   const spSelect = document.createElement('select');
   spSelect.className = 'form-input';
   spSelect.disabled = true;
-  spSelect.appendChild(opt('', '-- Département d\'abord --'));
+  spSelect.appendChild(opt('', '— Département d\'abord'));
   grid.appendChild(fieldWrap('Sous-préfecture', spSelect));
 
   const locSelect = document.createElement('select');
   locSelect.className = 'form-input';
   locSelect.disabled = true;
-  locSelect.appendChild(opt('', '-- Sous-préfecture d\'abord --'));
+  locSelect.appendChild(opt('', '— Sous-préfecture d\'abord'));
   grid.appendChild(fieldWrap('Localité', locSelect));
 
   // Lat / Lon
@@ -175,10 +201,10 @@ function buildLivrableCard(livrable, index, registries, onUpdate, onRemove) {
     deptSelect.appendChild(opt('', '-- Sélectionner un département --'));
     deptSelect.disabled = !code;
     spSelect.innerHTML = '';
-    spSelect.appendChild(opt('', '-- Département d\'abord --'));
+    spSelect.appendChild(opt('', '— Département d\'abord'));
     spSelect.disabled = true;
     locSelect.innerHTML = '';
-    locSelect.appendChild(opt('', '-- Sous-préfecture d\'abord --'));
+    locSelect.appendChild(opt('', '— Sous-préfecture d\'abord'));
     locSelect.disabled = true;
     if (code) {
       const region = (registries.LOCALITE_CI?.regions || []).find(r => r.code === code);
@@ -195,7 +221,7 @@ function buildLivrableCard(livrable, index, registries, onUpdate, onRemove) {
     spSelect.appendChild(opt('', '-- Sélectionner une sous-préfecture --'));
     spSelect.disabled = !code;
     locSelect.innerHTML = '';
-    locSelect.appendChild(opt('', '-- Sous-préfecture d\'abord --'));
+    locSelect.appendChild(opt('', '— Sous-préfecture d\'abord'));
     locSelect.disabled = true;
     if (code) {
       const region = (registries.LOCALITE_CI?.regions || []).find(r => r.code === regionCode);

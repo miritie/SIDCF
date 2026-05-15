@@ -1,14 +1,56 @@
 {
-  "_doc": "Référentiel des organes d'approbation des marchés publics — Côte d'Ivoire. Source : Décret 2021-909 + Arrêté 728/MPMB/DGBF/DMP + DISPOSITIF JURIDIQUE 2019.",
-  "_doc_filtrage": "scope = type d'institution applicable. seuilMin/seuilMax en FCFA (null = pas de borne). delegation = oui si organe par délégation d'une autorité supérieure.",
+  "_doc": "Référentiel des organes d'approbation des marchés publics — Côte d'Ivoire. Source : Décret 2021-909 + Arrêté 728/MPMB/DGBF/DMP + DISPOSITIF JURIDIQUE 2019. Liste étendue (modif #16) pour couvrir Contrôleur Financier (CF), DGMP, hiérarchies déconcentrées et collectivités, EPN, et autorités politiques.",
+  "_doc_filtrage": "scope = type d'institution applicable. seuilMin/seuilMax en FCFA (null = pas de borne). delegation = oui si organe par délégation d'une autorité supérieure. scope = '*' → organe applicable quel que soit le scope (transverse).",
   "organes": [
     {
+      "code": "CONTROLEUR_FINANCIER",
+      "label": "Contrôleur Financier (CF)",
+      "scope": "*",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "DGMP",
+      "label": "Directeur Général des Marchés Publics (DGMP)",
+      "scope": "*",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "DGBF",
+      "label": "Directeur Général du Budget et des Finances (DGBF)",
+      "scope": "*",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
       "code": "MINISTRE_TECHNIQUE",
-      "label": "Ministre Technique",
+      "label": "Ministre Technique (ministère sectoriel)",
       "scope": "ADMIN_CENTRALE",
       "seuilMin": 100000000,
       "seuilMax": 299999999,
       "delegation": false
+    },
+    {
+      "code": "DIR_CABINET_MIN_TECHNIQUE",
+      "label": "Directeur de Cabinet du Ministre Technique (par délégation)",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 100000000,
+      "seuilMax": 299999999,
+      "delegation": true,
+      "delegataireDe": "MINISTRE_TECHNIQUE"
+    },
+    {
+      "code": "SG_MIN_TECHNIQUE",
+      "label": "Secrétaire Général du Ministère Technique (par délégation)",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 100000000,
+      "seuilMax": 299999999,
+      "delegation": true,
+      "delegataireDe": "MINISTRE_TECHNIQUE"
     },
     {
       "code": "MINISTRE_MARCHES_PUBLICS",
@@ -17,6 +59,15 @@
       "seuilMin": 300000000,
       "seuilMax": null,
       "delegation": false
+    },
+    {
+      "code": "DIR_CABINET_MMP",
+      "label": "Directeur de Cabinet du Ministre des Marchés Publics",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 300000000,
+      "seuilMax": null,
+      "delegation": true,
+      "delegataireDe": "MINISTRE_MARCHES_PUBLICS"
     },
     {
       "code": "DIR_MARCHES_PUBLICS",
@@ -37,6 +88,30 @@
       "delegataireDe": "MINISTRE_MARCHES_PUBLICS"
     },
     {
+      "code": "PREMIER_MINISTRE",
+      "label": "Premier Ministre",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": 1000000000,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "PRESIDENT_REPUBLIQUE",
+      "label": "Président de la République (cas exceptionnel)",
+      "scope": "ADMIN_CENTRALE",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "PREFET_REGION",
+      "label": "Préfet de Région",
+      "scope": "DECONCENTRE",
+      "seuilMin": 100000000,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
       "code": "PREFET_DEPARTEMENT",
       "label": "Préfet du Département",
       "scope": "DECONCENTRE",
@@ -45,11 +120,44 @@
       "delegation": false
     },
     {
+      "code": "SOUS_PREFET",
+      "label": "Sous-Préfet (par délégation du Préfet)",
+      "scope": "DECONCENTRE",
+      "seuilMin": null,
+      "seuilMax": 99999999,
+      "delegation": true,
+      "delegataireDe": "PREFET_DEPARTEMENT"
+    },
+    {
       "code": "ORGANE_EXECUTIF_CT",
       "label": "Organe exécutif de la collectivité territoriale",
       "scope": "COLLECTIVITE_TERRITORIALE",
       "seuilMin": 30000000,
       "seuilMax": 100000000,
+      "delegation": false
+    },
+    {
+      "code": "MAIRE",
+      "label": "Maire (commune)",
+      "scope": "COLLECTIVITE_TERRITORIALE",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "PRESIDENT_CONSEIL_REGIONAL",
+      "label": "Président du Conseil Régional",
+      "scope": "COLLECTIVITE_TERRITORIALE",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "PRESIDENT_CONSEIL_DEPARTEMENTAL",
+      "label": "Président du Conseil Départemental",
+      "scope": "COLLECTIVITE_TERRITORIALE",
+      "seuilMin": null,
+      "seuilMax": null,
       "delegation": false
     },
     {
@@ -70,8 +178,33 @@
       "delegataireDe": "CA_SODE_SPFME"
     },
     {
+      "code": "PCA_EPN",
+      "label": "Président du Conseil d'Administration (EPN)",
+      "scope": "EPN",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": false
+    },
+    {
+      "code": "DG_EPN",
+      "label": "Directeur Général de l'EPN (par délégation du PCA)",
+      "scope": "EPN",
+      "seuilMin": null,
+      "seuilMax": null,
+      "delegation": true,
+      "delegataireDe": "PCA_EPN"
+    },
+    {
       "code": "COORDONNATEUR_PROJET",
-      "label": "Coordonnateur du Projet",
+      "label": "Coordonnateur du Projet (cofinancé)",
+      "scope": "PROJET_COFINANCE",
+      "seuilMin": null,
+      "seuilMax": 1000000000,
+      "delegation": false
+    },
+    {
+      "code": "DIRECTEUR_PROJET",
+      "label": "Directeur du Projet (cofinancé)",
       "scope": "PROJET_COFINANCE",
       "seuilMin": null,
       "seuilMax": 1000000000,
