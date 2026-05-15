@@ -21,7 +21,7 @@ import {
 } from '../../../lib/procedure-context.js';
 import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
-import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
+import { checkSanction, checkSanctionsGroupement, renderSanctionBanner, renderGroupementSanctionsBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
 import { loadBanques } from '../../../lib/mp-banques.js';
 import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
 import { validateTaux, getLabelContraintes } from '../../../lib/mp-garanties-rules.js';
@@ -51,14 +51,45 @@ function triggerSanctionCheck() {
     if (!banner) return;
     const raisonSociale = (document.getElementById('attr-raison-sociale')?.value || '').trim();
     const ncc = (document.getElementById('attr-ncc')?.value || '').trim();
-    if (!raisonSociale && !ncc) {
+
+    // Modif #30 : on collecte aussi les co-titulaires saisis dans le DOM pour la détection groupement.
+    // Le toggle est un radio name="attr-type" (SIMPLE | GROUPEMENT).
+    const attrTypeRadio = document.querySelector('input[name="attr-type"]:checked');
+    const isGroupement = attrTypeRadio?.value === 'GROUPEMENT';
+
+    // Lire les co-titulaires depuis l'état module (frais après readCoTitulaireFromDOM)
+    try { for (let i = 0; i < _coTitulairesState.length; i++) readCoTitulaireFromDOM(i); } catch (_e) {}
+    const coTitulaires = (isGroupement && Array.isArray(_coTitulairesState))
+      ? _coTitulairesState.map(c => ({
+          raisonSociale: (c.raisonSociale || '').trim(),
+          ncc: (c.ncc || '').trim()
+        })).filter(c => c.raisonSociale || c.ncc)
+      : [];
+
+    if (!raisonSociale && !ncc && coTitulaires.length === 0) {
       banner.innerHTML = '';
       return;
     }
-    const sanction = await checkSanction({ raisonSociale, ncc });
+
     banner.innerHTML = '';
-    if (sanction) {
-      const node = renderSanctionBanner(sanction);
+
+    // Cas simple : pas de groupement → ancienne logique (entreprise unique)
+    if (!isGroupement) {
+      const sanction = await checkSanction({ raisonSociale, ncc });
+      if (sanction) {
+        const node = renderSanctionBanner(sanction);
+        if (node) banner.appendChild(node);
+      }
+      return;
+    }
+
+    // Cas groupement : on scanne mandataire (= les champs principaux) + tous les co-titulaires
+    const result = await checkSanctionsGroupement({
+      mandataire: { raisonSociale, ncc },
+      coTitulaires
+    });
+    if (result.members && result.members.length > 0) {
+      const node = renderGroupementSanctionsBanner(result);
       if (node) banner.appendChild(node);
     }
   }, 300);
@@ -851,7 +882,9 @@ function renderCoTitulaireCard(member, idx) {
           type: 'text', className: 'form-input',
           id: `attr-cotit-${idx}-raison-sociale`,
           value: member.raisonSociale || '',
-          placeholder: 'Nom du co-titulaire'
+          placeholder: 'Nom du co-titulaire',
+          // Modif #30 : déclenche la détection sanctions sur le groupement à chaque saisie
+          oninput: () => { try { window.__mpTriggerSanctionCheck?.(); } catch (_) {} }
         })
       ]),
       el('div', { className: 'form-field' }, [
@@ -860,7 +893,8 @@ function renderCoTitulaireCard(member, idx) {
           type: 'text', className: 'form-input',
           id: `attr-cotit-${idx}-ncc`,
           value: member.ncc || '',
-          placeholder: 'NCC'
+          placeholder: 'NCC',
+          oninput: () => { try { window.__mpTriggerSanctionCheck?.(); } catch (_) {} }
         })
       ])
     ]),

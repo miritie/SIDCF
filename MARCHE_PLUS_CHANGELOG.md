@@ -13,6 +13,40 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Sanctions : période active + détection dans un groupement
+
+> **Modif #30** — Deux renforcements demandés explicitement : (1) encadrer la période de sanction pour ne plus alerter sur des sanctions expirées, et (2) détecter les entreprises sanctionnées qui se sont retrouvées au sein d'un groupement (mandataire ou co-titulaires).
+
+### Modif #30 — `mp-sanctions.js` enrichi + intégration Attribution
+
+#### Nouvelles fonctions exportées
+- **`isSanctionActive(sanction, now)`** : retourne `true` si la sanction est en cours à la date donnée (`dateDebut <= now <= dateFin`, avec `dateFin == null` → sans terme).
+- **`checkSanction(entreprise, opts)`** : signature étendue. Par défaut, ne retourne désormais **que les sanctions actives à la date du jour**. Pour récupérer y compris les sanctions expirées (consultation historique), passer `{ includeExpired: true }`. Le paramètre `asOf` permet de tester à une date arbitraire.
+- **`checkSanctionsGroupement({ attributaire, mandataire, coTitulaires }, opts)`** : scanne les sanctions sur **tout le groupement**. Retourne `{ direct, members }` où :
+  - `direct` : la sanction sur le principal (attributaire simple ou mandataire), null si aucune
+  - `members` : liste agrégée `[{ role, raisonSociale, ncc, sanction }]` pour tous les membres sanctionnés (rôles ATTRIBUTAIRE / MANDATAIRE / COTITULAIRE)
+- **`renderGroupementSanctionsBanner(result)`** : bandeau visuel agrégé — un tableau qui liste tous les membres sanctionnés du groupement avec rôle, raison sociale, NCC, type de sanction (badge coloré), période (avec dates), source. Bande rouge si au moins une sanction bloquante, jaune sinon. Bandeau auto-masqué si aucun membre sanctionné.
+
+#### Intégration dans Attribution (`ecr03a-attribution.js`)
+- `triggerSanctionCheck` détecte désormais le mode `GROUPEMENT` via le radio `attr-type` (SIMPLE / GROUPEMENT).
+- **Mode SIMPLE** : comportement inchangé — bandeau simple sur l'entreprise unique via `renderSanctionBanner`.
+- **Mode GROUPEMENT** : collecte le mandataire (champs principaux) + tous les co-titulaires (via `_coTitulairesState`), appelle `checkSanctionsGroupement`, affiche le bandeau agrégé `renderGroupementSanctionsBanner`.
+- Les inputs **« Raison sociale »** et **« NCC »** des co-titulaires déclenchent désormais `window.__mpTriggerSanctionCheck()` à chaque frappe (debounce 300ms inchangé) → la détection est temps-réel.
+
+#### Côté drawer de gestion (`openSanctionsDrawer`)
+- Les champs `Date début` et `Date fin` du formulaire CRUD existaient déjà → aucun changement nécessaire à l'UI de saisie.
+- Les sanctions désactivées (`actif: false`) restent invisibles dans la détection (filtrage existant).
+
+#### Effets attendus
+- Une sanction expirée (date de fin passée) n'affiche **plus** d'alerte sur les nouveaux formulaires d'attribution.
+- Une entreprise sanctionnée présente comme co-titulaire d'un groupement (mode souvent utilisé pour contourner une blacklist) est **détectée et signalée explicitement** avec son rôle.
+
+#### Fichiers
+- Modifié : `sidcf-portal/js/lib/mp-sanctions.js` (+ `isSanctionActive`, signature `checkSanction` enrichie, `checkSanctionsGroupement`, `renderGroupementSanctionsBanner`)
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` (logique de détection groupement + listeners sur co-titulaires)
+
+Pas de migration DB. Pas de déploiement Worker.
+
 ## 2026-05-15 — Saisie structurée des difficultés du marché
 
 > **Modif #29** — Toute difficulté rencontrée pendant le cycle de vie du marché peut désormais être saisie à tout moment depuis la fiche de vie. La saisie est structurée (impact, catégorie, statut, actions correctives, décideur, document) pour permettre un suivi et une exploitation efficaces.

@@ -30,6 +30,21 @@ function normalize(s) {
     .trim();
 }
 
+/**
+ * Vérifie si une sanction est active à une date donnée (par défaut : maintenant).
+ * Modif #30 — On encadre la période de sanction : sanction active si
+ *   dateDebut <= now  ET  (dateFin >= now  OU  dateFin == null/vide)
+ */
+export function isSanctionActive(sanction, now = new Date()) {
+  if (!sanction) return false;
+  const nowMs = (now instanceof Date ? now : new Date(now)).getTime();
+  const debutMs = sanction.dateDebut ? new Date(sanction.dateDebut).getTime() : null;
+  const finMs = sanction.dateFin ? new Date(sanction.dateFin).getTime() : null;
+  if (debutMs != null && debutMs > nowMs) return false; // pas encore en vigueur
+  if (finMs != null && finMs < nowMs) return false;     // expirée
+  return true;
+}
+
 async function loadAll(forceRefresh = false) {
   const now = Date.now();
   if (!forceRefresh && cache && (now - cacheAt) < CACHE_TTL_MS) return cache;
@@ -45,10 +60,16 @@ async function loadAll(forceRefresh = false) {
 
 /**
  * Vérifie si une entreprise est sanctionnée (informatif).
+ *
+ * Par défaut, seule une sanction **active à date du jour** est retournée
+ * (cf. encadrement de la période — modif #30). Pour récupérer toutes les
+ * sanctions matchantes y compris expirées, passer `{ includeExpired: true }`.
+ *
  * @param {{raisonSociale?:string, ncc?:string, rccm?:string}} entreprise
+ * @param {{includeExpired?:boolean, asOf?:Date|string}} [opts]
  * @returns {Promise<Object|null>} la sanction trouvée, ou null
  */
-export async function checkSanction(entreprise) {
+export async function checkSanction(entreprise, opts = {}) {
   if (!entreprise) return null;
   const all = await loadAll();
   if (!all || all.length === 0) return null;
@@ -56,23 +77,73 @@ export async function checkSanction(entreprise) {
   const ncc = (entreprise.ncc || '').trim();
   const rccm = (entreprise.rccm || '').trim();
   const nameNorm = normalize(entreprise.raisonSociale);
+  const asOf = opts.asOf ? new Date(opts.asOf) : new Date();
+  const includeExpired = !!opts.includeExpired;
+
+  const pool = includeExpired ? all : all.filter(s => isSanctionActive(s, asOf));
 
   // 1. Match exact sur NCC
   if (ncc) {
-    const m = all.find(s => s.ncc && s.ncc.trim().toLowerCase() === ncc.toLowerCase());
+    const m = pool.find(s => s.ncc && s.ncc.trim().toLowerCase() === ncc.toLowerCase());
     if (m) return m;
   }
   // 2. Match exact sur RCCM
   if (rccm) {
-    const m = all.find(s => s.rccm && s.rccm.trim().toLowerCase() === rccm.toLowerCase());
+    const m = pool.find(s => s.rccm && s.rccm.trim().toLowerCase() === rccm.toLowerCase());
     if (m) return m;
   }
   // 3. Match normalisé sur la raison sociale
   if (nameNorm && nameNorm.length >= 4) {
-    const m = all.find(s => normalize(s.raisonSociale) === nameNorm);
+    const m = pool.find(s => normalize(s.raisonSociale) === nameNorm);
     if (m) return m;
   }
   return null;
+}
+
+/**
+ * Vérifie les sanctions sur un groupement complet : attributaire principal + mandataire + co-titulaires.
+ * Modif #30 — Permet de détecter une entreprise sanctionnée qui s'est retrouvée
+ * au sein d'un groupement (souvent l'angle d'attaque utilisé pour contourner une sanction).
+ *
+ * @param {Object} input
+ * @param {Object} [input.attributaire]    Entreprise principale (cas hors groupement)
+ * @param {Object} [input.mandataire]      Mandataire du groupement (si applicable)
+ * @param {Array}  [input.coTitulaires]    Co-titulaires du groupement
+ * @param {Object} [opts]
+ * @returns {Promise<{ direct: ?Object, members: Array<{role:string,raisonSociale:string,sanction:Object}> }>}
+ *   - `direct`   : sanction sur l'attributaire / mandataire principal (null si aucune)
+ *   - `members`  : liste agrégée de toutes les entreprises sanctionnées (attributaire compris)
+ */
+export async function checkSanctionsGroupement(input = {}, opts = {}) {
+  const { attributaire, mandataire, coTitulaires = [] } = input;
+  const members = [];
+
+  // Le rôle "principal" couvre soit l'attributaire simple, soit le mandataire du groupement
+  const principal = mandataire || attributaire;
+  const principalSanction = principal ? await checkSanction(principal, opts) : null;
+  if (principalSanction) {
+    members.push({
+      role: mandataire ? 'MANDATAIRE' : 'ATTRIBUTAIRE',
+      raisonSociale: principal.raisonSociale || '?',
+      ncc: principal.ncc || '',
+      sanction: principalSanction
+    });
+  }
+
+  for (const m of coTitulaires) {
+    if (!m) continue;
+    const s = await checkSanction(m, opts);
+    if (s) {
+      members.push({
+        role: 'COTITULAIRE',
+        raisonSociale: m.raisonSociale || '?',
+        ncc: m.ncc || '',
+        sanction: s
+      });
+    }
+  }
+
+  return { direct: principalSanction, members };
 }
 
 /**
@@ -333,4 +404,79 @@ export async function openSanctionsDrawer() {
   document.body.appendChild(drawer);
 }
 
-export default { checkSanction, renderSanctionBanner, openSanctionsDrawer };
+/**
+ * Bandeau visuel agrégé pour les sanctions détectées dans un groupement.
+ * Modif #30 — Met en évidence les entreprises sanctionnées au sein
+ * d'un groupement (mandataire ou co-titulaires).
+ */
+export function renderGroupementSanctionsBanner(result) {
+  if (!result || !result.members || result.members.length === 0) return null;
+
+  const anyBlocking = result.members.some(m => m.sanction?.gravite === 'BLOQUANTE');
+  const color = anyBlocking ? '#dc2626' : '#f59e0b';
+  const bg = anyBlocking ? '#fef2f2' : '#fffbeb';
+  const border = anyBlocking ? '#fecaca' : '#fde68a';
+
+  const roleLabel = {
+    ATTRIBUTAIRE: 'Attributaire',
+    MANDATAIRE: 'Mandataire du groupement',
+    COTITULAIRE: 'Co-titulaire'
+  };
+
+  return el('div', {
+    className: 'sanction-groupement-banner',
+    style: {
+      marginTop: '8px',
+      padding: '12px 14px',
+      backgroundColor: bg,
+      border: `1px solid ${border}`,
+      borderLeft: `4px solid ${color}`,
+      borderRadius: '6px',
+      fontSize: '13px'
+    }
+  }, [
+    el('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' } }, [
+      el('div', { style: { fontSize: '20px', lineHeight: '1' } }, anyBlocking ? '🚫' : '⚠️'),
+      el('div', { style: { flex: 1 } }, [
+        el('div', { style: { fontWeight: 'bold', color } },
+          `${result.members.length} entreprise${result.members.length > 1 ? 's' : ''} sanctionnée${result.members.length > 1 ? 's' : ''} détectée${result.members.length > 1 ? 's' : ''} dans ce groupement`),
+        el('div', { style: { fontSize: '11px', color: '#6b7280', marginTop: '2px' } },
+          'Une entreprise sanctionnée présente dans un groupement reste informative (non-bloquant).')
+      ])
+    ]),
+    el('table', { style: { width: '100%', fontSize: '12px', background: '#fff', borderRadius: '4px' } }, [
+      el('thead', {}, [el('tr', { style: { background: '#f3f4f6' } }, [
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Rôle'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Raison sociale'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'NCC'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Type'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Période'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Source')
+      ])]),
+      el('tbody', {}, result.members.map(m => {
+        const sanction = m.sanction;
+        const dateRange = sanction.dateFin
+          ? `${sanction.dateDebut || '?'} → ${sanction.dateFin}`
+          : `Depuis ${sanction.dateDebut || '?'} (sans terme)`;
+        return el('tr', { style: { borderBottom: '1px solid #e5e7eb' } }, [
+          el('td', { style: { padding: '5px 8px', fontWeight: 600 } }, roleLabel[m.role] || m.role),
+          el('td', { style: { padding: '5px 8px' } }, m.raisonSociale),
+          el('td', { style: { padding: '5px 8px', fontFamily: 'monospace', fontSize: '11px', color: '#6b7280' } }, m.ncc || '-'),
+          el('td', { style: { padding: '5px 8px' } }, el('span', {
+            style: {
+              fontSize: '10px',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: sanction.gravite === 'BLOQUANTE' ? '#dc2626' : '#f59e0b',
+              color: '#fff'
+            }
+          }, sanction.typeSanction || '?')),
+          el('td', { style: { padding: '5px 8px', fontSize: '11px' } }, dateRange),
+          el('td', { style: { padding: '5px 8px', fontSize: '11px' } }, sanction.source || '?')
+        ]);
+      }))
+    ])
+  ]);
+}
+
+export default { checkSanction, checkSanctionsGroupement, renderSanctionBanner, renderGroupementSanctionsBanner, openSanctionsDrawer, isSanctionActive };
