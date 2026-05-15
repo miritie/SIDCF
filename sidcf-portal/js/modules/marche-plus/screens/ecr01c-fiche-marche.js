@@ -38,6 +38,8 @@ import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history
 import { renderRelatedOperations } from '../../../ui/widgets/related-operations-mp.js';
 import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.js';
+import { renderOpMandatManager } from '../../../ui/widgets/op-mandat-manager-mp.js';
+import { renderPluriannualite } from '../../../ui/widgets/pluriannualite-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
 import logger from '../../../lib/logger.js';
@@ -90,17 +92,16 @@ export async function renderFicheMarche(params) {
   //  - toutes les lignes budgétaires (pour le widget historique multi-financement)
   //  - toutes les opérations PPM (pour le widget historique de la ligne budgétaire — modif #27)
   //  - les difficultés associées au marché (modif #29)
-  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes, mpDocuments, phases] = await Promise.all([
+  const [budgetLine, mpBudgetLines, mpOperations, mpDifficultes, mpDocuments, mpDecomptes, phases] = await Promise.all([
     operation.budgetLineId
       ? dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null)
       : Promise.resolve(null),
     dataService.query(ENTITIES.MP_BUDGET_LINE).catch(() => []),
     dataService.query(ENTITIES.MP_OPERATION).catch(() => []),
     dataService.query(ENTITIES.MP_DIFFICULTE, { operationId }).catch(() => []),
-    // Modif #31 : tous les documents MP_DOCUMENT rattachés au marché (uploads libres + uploads
-    // déjà créés par les autres écrans de saisie via uploadDocument)
     dataService.query(ENTITIES.MP_DOCUMENT, { operationId }).catch(() => []),
-    // Modif #32 : phases pour reconstruire la rangée de boutons « processus d'exécution »
+    // Modif #34 : OP / Mandats rattachés au marché (situation d'exécution financière)
+    dataService.query(ENTITIES.MP_DECOMPTE, { operationId }).catch(() => []),
     getPhasesAsync(operation.modePassation || 'PSD').catch(() => [])
   ]);
 
@@ -123,6 +124,12 @@ export async function renderFicheMarche(params) {
     renderHealthKPIs(fullData, currentLotId, mpDifficultes),
     // Modif #29 : section difficultés du marché — visible en haut, structurée, exploitable
     renderDifficultesSection(idOperation, mpDifficultes, registries),
+    // Modif #34 : situation d'exécution financière (OP/Mandats). Affichée seulement si
+    // le marché est en exécution ou postérieur — le widget gère lui-même l'état de
+    // l'opération et affiche un message informatif sinon.
+    renderSituationExecutionFinanciere(operation, mpDecomptes, fullData.attribution, fullData.avenants || [], idOperation),
+    // Modif #35 : encart pluriannualité basé sur la clé de répartition multi-bailleurs
+    renderPluriannualiteSection(fullData.cleRepartition, mpDecomptes, registries),
     lots.length > 1 ? renderLotSelectorAndSummary(lots, currentLotId, fullData, registries, idOperation) : null,
     el('div', {
       className: 'fiche-grid',
@@ -442,6 +449,63 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
       difSub,
       difColor
     )
+  ]);
+}
+
+/**
+ * Section « Pluriannualité » — modif #35.
+ * Encart synthétique tableau pivot années × bailleurs basé sur la clé de répartition.
+ * Visible uniquement si la planification couvre plusieurs années.
+ */
+function renderPluriannualiteSection(cleRepartition, mpDecomptes, registries) {
+  const { node, isPluriannuel } = renderPluriannualite({
+    cleRepartition,
+    decomptes: mpDecomptes,
+    registries
+  });
+  if (!isPluriannuel) return el('div'); // pas d'encart pour les marchés annuels
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '20px' }
+  }, [
+    el('div', {
+      className: 'card-header',
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+    }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '📅 Pluriannualité — répartition année par année'),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        'Issue de la clé de répartition multi-bailleurs')
+    ]),
+    el('div', { className: 'card-body' }, [node])
+  ]);
+}
+
+/**
+ * Section « Situation d'exécution financière » — modif #34.
+ * Visible quand le marché est en exécution (état EXECUTION/RESILIE/CLOS).
+ * Le widget op-mandat-manager-mp gère lui-même l'affichage conditionnel.
+ */
+function renderSituationExecutionFinanciere(operation, mpDecomptes, attribution, avenants, idOperation) {
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '20px' }
+  }, [
+    el('div', {
+      className: 'card-header',
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+    }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '💸 Situation d\'exécution financière'),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        'OP / Mandats · cumul visé · reste à payer · taux d\'exécution')
+    ]),
+    el('div', { className: 'card-body' }, [
+      renderOpMandatManager({
+        operation,
+        decomptes: mpDecomptes,
+        attribution,
+        avenants
+      })
+    ])
   ]);
 }
 

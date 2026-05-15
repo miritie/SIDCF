@@ -13,6 +13,69 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-15 — Diligences DCF : exécution financière + pluriannualité + tuiles santé agrégées
+
+> **Modifs #34 + #35 + #36** — Mise en œuvre des 4 points restants du document de diligence DCF (Hector, 26 mars). Trois modifs combinées car elles partagent la même fiche de vie et la même infrastructure de calculs financiers.
+
+### Modif #34 — Section « Situation d'exécution financière » dans la fiche
+
+- **Widget** `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` (~330 lignes) :
+  - Lit les OP / Mandats rattachés au marché via l'entité existante **MP_DECOMPTE** (champs `numero`, `typeOP`, `dateDecompte`, `netTTC/acompteHTVA`, `etat` DRAFT/SOUMIS/VISE/PAYE/REJETE, `bailleur`)
+  - **KPIs** : Montant global du marché (base + Σ avenants), **Cumul OP/Mandat visé**, **Cumul payé**, **Reste à payer** (= montant global − cumul visé), **Taux d'exécution financier** (= cumul visé / montant global × 100). Code couleur sur le taux selon plage (vert ≥90%, bleu ≥50%, orange ≥25%, gris sinon).
+  - Tableau des OP/Mandats trié par date décroissante, état avec badge coloré.
+  - Saisie manuelle (CRUD) en attendant l'intégration avec le module budget externe. Le user a confirmé que **le rattachement OP↔marché est fait côté budget lors de l'exécution** — cette UI permet déjà l'affichage et la saisie pour test.
+  - **Affichage conditionnel** : visible uniquement si le marché est en état EXECUTION / RESILIE / CLOS. Sinon, message informatif « Marché non encore en exécution. Les OP / Mandats apparaîtront ici dès que le marché passera à l'état Exécution. »
+- **Helper exporté** `computeExecutionFinanciere(operation, attribution, avenants, decomptes)` qui retourne `{ montantGlobal, cumulVise, cumulPaye, restePayer, tauxExec, sante }` — réutilisé par les tuiles santé de la modif #36.
+- **Intégration fiche** : nouvelle section « 💸 Situation d'exécution financière » insérée sous les difficultés. Chargement parallèle de `MP_DECOMPTE` ajouté au `Promise.all` existant.
+
+### Modif #35 — Encart pluriannualité dans la fiche
+
+Le user a confirmé que la planification pluriannuelle existe déjà dans la Clé de Répartition multi-bailleurs (chaque `MP_CLE_LIGNE` porte un champ `annee`). Cette modif rend cette information lisible et synthétique dans la fiche.
+
+- **Widget** `sidcf-portal/js/ui/widgets/pluriannualite-mp.js` (~150 lignes) :
+  - **Bandeau de synthèse** : « 📅 Marché pluriannuel sur N années : YYYY → YYYY », nombre de bailleurs, nombre de lignes, total planifié.
+  - **Tableau pivot** : lignes = bailleurs (avec badge), colonnes = années, dernière colonne « Total bailleur ». Ligne en pied verte « Total planifié » par année + grand total.
+  - **Si des OP/Mandats sont visés/payés** : 2 lignes supplémentaires « Exécuté à ce jour » (par année selon `dateDecompte.year`) et « Écart » (planifié − exécuté), code couleur rouge si retard, bleu si avance, vert si à l'équilibre.
+  - **Affichage conditionnel** : retourne un message court si la clé de répartition est mono-annuelle (`isPluriannuel: false`) — pas d'encart si pas pluriannuel.
+- **Intégration fiche** : nouvelle section « 📅 Pluriannualité — répartition année par année » insérée juste après la situation d'exécution financière. Visible seulement si le marché est sur plusieurs années.
+
+### Modif #36 — Tuiles santé agrégées sur la liste PPM
+
+- **5 catégories de santé** définies dans `ecr01b-ppm-unitaire.js` :
+  - 🟢 **En progression normale** (vert)
+  - 🟡 **À surveiller** (jaune) — cumul avenants 25-30 %, ou ≥1 difficulté élevée non résolue
+  - 🔴 **À risque** (rouge) — cumul avenants ≥30 %
+  - ⛔ **Bloqué** (rouge foncé) — ≥1 difficulté critique non résolue, ou état RESILIE
+  - ⚪ **Non démarré** (gris) — marché pas encore en exécution
+- **Calcul agrégé** : `computeSanteMarche(operation, attribution, avenants, decomptes, difficultes)` produit une catégorie par marché en croisant état + cumul avenants + difficultés critiques/élevées.
+- **Chargement parallèle** : la liste PPM charge désormais en `Promise.all` MP_OPERATION + MP_ATTRIBUTION + MP_AVENANT + MP_DECOMPTE + MP_DIFFICULTE. Indexation par `operationId` pour accès O(1) lors du calcul. Coût acceptable jusqu'à ~5000 opérations.
+- **Tuiles cliquables** sous les KPIs phase, juste avant la zone filtres :
+  - Au survol : `transform: translateY(-1px)` + ombre légère
+  - Au clic sur la tuile : toggle filtre santé (mono-sélection — re-clic désactive)
+  - Au clic sur « → Voir le détail » : ouvre un **drawer latéral** listant les marchés de cette catégorie (ID, objet tronqué, activité, UA, montant en millions, badge état). Clic sur un marché → navigation vers sa fiche de vie.
+- **Filtres respectés** : les comptages des tuiles utilisent `filteredOps` — donc si tu filtres par bailleur ou région, les tuiles reflètent automatiquement le sous-ensemble.
+- **Nouveau filtre `sante: []`** ajouté à `activeFilters`. `applyFilters` reçoit désormais `santeMap` en second paramètre pour filtrer par catégorie.
+
+### Réponses précises aux points DCF
+
+| Diligence DCF | Statut après ces modifs | Détail |
+|---|---|---|
+| 5b — Cumul OP visé / ou Mandat | ✅ | KPI dans la fiche (modif #34) |
+| 5c — Reste à payer | ✅ | KPI dans la fiche (modif #34) |
+| 5d — Taux d'exécution financier | ✅ | KPI dans la fiche (modif #34) |
+| 5g — Soutenabilité pluriannuelle | ✅ | Encart pluriannualité (modif #35) |
+| 7-8 — Pluriannualité explicite | ✅ | Encart dans la fiche (modif #35) |
+| 11 — Marchés correctement / à surveiller / à risque | ✅ | Tuiles agrégées (modif #36) |
+| 12 — Vue détaillée synthétique | ✅ | Drawer latéral cliquable (modif #36) |
+
+#### Fichiers
+- Nouveau : `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js`
+- Nouveau : `sidcf-portal/js/ui/widgets/pluriannualite-mp.js`
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (chargement MP_DECOMPTE + 2 sections)
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` (catégories santé + tuiles + drawer + filtre `sante`)
+
+Pas de migration DB (entités existantes). Pas de déploiement Worker.
+
 ## 2026-05-15 — Bouton Voir restauré + boutons phase + widget dual saisissable partout
 
 > **Modifs #32 + #33** — Deux correctifs demandés explicitement après la refonte de la fiche :

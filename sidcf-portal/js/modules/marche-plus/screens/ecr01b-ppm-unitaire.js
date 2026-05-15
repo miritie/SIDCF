@@ -8,6 +8,42 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { getRegionsOptions } from '../../../lib/mp-regions-ci.js';
 import { renderMultiSelectCollapsible } from '../../../ui/widgets/multi-select-collapsible-mp.js';
+import { computeExecutionFinanciere } from '../../../ui/widgets/op-mandat-manager-mp.js';
+
+// Modif #36 — Catégories de santé d'un marché avec leurs métadonnées d'affichage
+const SANTE_CATEGORIES = [
+  { code: 'NORMAL',       label: 'En progression normale', icon: '🟢', color: '#16a34a', bg: '#dcfce7' },
+  { code: 'SURVEILLER',   label: 'À surveiller',           icon: '🟡', color: '#ca8a04', bg: '#fef9c3' },
+  { code: 'A_RISQUE',     label: 'À risque',               icon: '🔴', color: '#dc2626', bg: '#fee2e2' },
+  { code: 'BLOQUE',       label: 'Bloqué',                 icon: '⛔', color: '#7f1d1d', bg: '#fecaca' },
+  { code: 'NON_DEMARRE',  label: 'Non démarré',            icon: '⚪', color: '#6b7280', bg: '#f3f4f6' }
+];
+
+/**
+ * Calcule la santé d'un marché en combinant : situation financière,
+ * cumul avenants et difficultés non résolues. Retourne un code parmi
+ * SANTE_CATEGORIES.
+ */
+function computeSanteMarche(operation, attribution, avenants, decomptes, difficultes) {
+  const etat = operation?.etat;
+  if (etat !== 'EN_EXEC' && etat !== 'EXECUTION' && etat !== 'RESILIE' && etat !== 'CLOS') {
+    return 'NON_DEMARRE';
+  }
+
+  const difCritiquesEnCours = difficultes.filter(d => d.statutTraitement === 'EN_COURS' && d.impact === 'CRITIQUE').length;
+  if (difCritiquesEnCours > 0) return 'BLOQUE';
+  if (etat === 'RESILIE') return 'BLOQUE';
+
+  const baseTTC = Number(attribution?.montants?.ttc) || Number(operation?.montantPrevisionnel) || 0;
+  const totalAvenants = avenants.reduce((s, a) => s + (Number(a?.variationMontant) || 0), 0);
+  const cumulAvenantPct = baseTTC > 0 ? (totalAvenants / baseTTC) * 100 : 0;
+  if (cumulAvenantPct >= 30) return 'A_RISQUE';
+
+  const difElevesEnCours = difficultes.filter(d => d.statutTraitement === 'EN_COURS' && d.impact === 'ELEVE').length;
+  if (difElevesEnCours > 0 || cumulAvenantPct >= 25) return 'SURVEILLER';
+
+  return 'NORMAL';
+}
 
 // Cache local pour les régions CI (33 entrées chargées une fois)
 let _regionsCiCache = null;
@@ -37,7 +73,9 @@ let activeFilters = {
   region: [],
   exercice: [],
   unite: [],
-  activite: []  // nouveau filtre Marché+
+  activite: [],
+  // Modif #36 — filtre santé du marché (NORMAL / SURVEILLER / A_RISQUE / BLOQUE / NON_DEMARRE)
+  sante: []
 };
 
 // Mapping des phases (états) — utilisé pour les KPIs
@@ -53,9 +91,50 @@ const PHASES = [
 let selectedOperation = null;
 
 export async function renderPPMList() {
-  // Load data
-  const operations = await dataService.query(ENTITIES.MP_OPERATION);
+  // Load data — modif #36 : on charge en parallèle attributions, avenants, décomptes
+  // et difficultés pour pouvoir calculer la santé agrégée par marché.
+  const [operations, attributions, avenants, decomptes, difficultes] = await Promise.all([
+    dataService.query(ENTITIES.MP_OPERATION),
+    dataService.query(ENTITIES.MP_ATTRIBUTION).catch(() => []),
+    dataService.query(ENTITIES.MP_AVENANT).catch(() => []),
+    dataService.query(ENTITIES.MP_DECOMPTE).catch(() => []),
+    dataService.query(ENTITIES.MP_DIFFICULTE).catch(() => [])
+  ]);
   const registries = dataService.getAllRegistries();
+
+  // Indexer par operationId pour accès O(1) lors du calcul de santé
+  const attribByOp = new Map();
+  for (const a of attributions || []) if (a?.operationId) attribByOp.set(a.operationId, a);
+  const avenantsByOp = new Map();
+  for (const av of avenants || []) {
+    if (!av?.operationId) continue;
+    if (!avenantsByOp.has(av.operationId)) avenantsByOp.set(av.operationId, []);
+    avenantsByOp.get(av.operationId).push(av);
+  }
+  const decomptesByOp = new Map();
+  for (const d of decomptes || []) {
+    if (!d?.operationId) continue;
+    if (!decomptesByOp.has(d.operationId)) decomptesByOp.set(d.operationId, []);
+    decomptesByOp.get(d.operationId).push(d);
+  }
+  const difficultesByOp = new Map();
+  for (const d of difficultes || []) {
+    if (!d?.operationId) continue;
+    if (!difficultesByOp.has(d.operationId)) difficultesByOp.set(d.operationId, []);
+    difficultesByOp.get(d.operationId).push(d);
+  }
+
+  // Calculer la santé pour chaque opération (cache pour éviter les recalculs en filtre)
+  const santeMap = new Map();
+  for (const op of operations) {
+    santeMap.set(op.id, computeSanteMarche(
+      op,
+      attribByOp.get(op.id),
+      avenantsByOp.get(op.id) || [],
+      decomptesByOp.get(op.id) || [],
+      difficultesByOp.get(op.id) || []
+    ));
+  }
 
   // Extract unique values for filters
   const exercices = [...new Set(operations.map(op => op.exercice).filter(Boolean))].sort((a, b) => b - a);
@@ -64,15 +143,19 @@ export async function renderPPMList() {
   // Régions : référentiel officiel CI (33 entrées) — pas le calcul ad hoc sur les opérations
   const regions = await _getRegionsCi();
 
-  // Apply filters
-  const filteredOps = applyFilters(operations);
+  // Apply filters (avec filtre santé qui s'appuie sur santeMap)
+  const filteredOps = applyFilters(operations, santeMap);
 
-  // Calculate stats : total + montant + 1 KPI par phase
+  // Calculate stats : total + montant + 1 KPI par phase + 1 KPI par catégorie de santé
   const stats = {
     totalOperations: filteredOps.length,
     totalMontant: filteredOps.reduce((sum, op) => sum + (op.montantPrevisionnel || 0), 0),
     parPhase: PHASES.reduce((acc, p) => {
       acc[p.key] = filteredOps.filter(op => p.etats.includes(op.etat)).length;
+      return acc;
+    }, {}),
+    parSante: SANTE_CATEGORIES.reduce((acc, s) => {
+      acc[s.code] = filteredOps.filter(op => santeMap.get(op.id) === s.code).length;
       return acc;
     }, {})
   };
@@ -94,9 +177,13 @@ export async function renderPPMList() {
       renderKPI('Total marchés et contrats', stats.totalOperations, 'var(--color-primary)', '📁'),
       renderKPI('Montant Total (F CFA)', money(stats.totalMontant, 'F CFA'), 'var(--color-success)', '💰')
     ]),
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' } },
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '16px' } },
       PHASES.map(p => renderKPI(p.label, stats.parPhase[p.key], p.color, p.icon))
     ),
+
+    // Modif #36 — Tuiles santé agrégées (cliquables pour filtrer la liste)
+    renderSanteTuiles(stats.parSante, filteredOps, santeMap),
+
 
     // Filters — collapsible, replié par défaut pour gagner de l'espace
     (() => {
@@ -688,7 +775,7 @@ function _matchMulti(arr, value) {
   return arr.includes(value);
 }
 
-function applyFilters(operations) {
+function applyFilters(operations, santeMap = null) {
   return operations.filter(op => {
     // Search texte libre
     if (activeFilters.search) {
@@ -712,8 +799,150 @@ function applyFilters(operations) {
     if (!_matchMulti(activeFilters.unite, op.unite)) return false;
     if (!_matchMulti(activeFilters.activite, op.chaineBudgetaire?.activiteLib)) return false;
 
+    // Modif #36 — filtre santé : nécessite la map pré-calculée
+    if (Array.isArray(activeFilters.sante) && activeFilters.sante.length > 0) {
+      const sante = santeMap?.get(op.id);
+      if (!sante || !activeFilters.sante.includes(sante)) return false;
+    }
+
     return true;
   });
+}
+
+// =====================================================================
+// Modif #36 — Tuiles santé agrégées (cliquables) + drawer détail
+// =====================================================================
+
+function renderSanteTuiles(parSante, filteredOps, santeMap) {
+  return el('div', {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+      gap: '10px',
+      marginBottom: '24px'
+    }
+  }, SANTE_CATEGORIES.map(s => {
+    const count = parSante[s.code] || 0;
+    const isActive = activeFilters.sante.includes(s.code);
+    const isOnlyOneActive = activeFilters.sante.length === 1 && isActive;
+
+    return el('div', {
+      style: {
+        padding: '12px 14px',
+        background: isActive ? s.bg : '#fff',
+        border: `2px solid ${isActive ? s.color : '#e5e7eb'}`,
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'transform 0.1s, box-shadow 0.1s',
+        position: 'relative'
+      },
+      title: isActive
+        ? `Filtre actif — cliquer pour désactiver`
+        : `Cliquer pour filtrer la liste sur "${s.label}"`,
+      onclick: () => {
+        // Toggle : si déjà actif (et seul actif), on désactive ; sinon on remplace par celui-ci
+        if (isOnlyOneActive) {
+          activeFilters.sante = [];
+        } else {
+          activeFilters.sante = [s.code];
+        }
+        renderPPMList();
+      },
+      onmouseenter: (e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.08)'; },
+      onmouseleave: (e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }
+    }, [
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' } }, [
+        el('span', { style: { fontSize: '20px' } }, s.icon),
+        el('span', { style: { fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.3px' } }, s.label)
+      ]),
+      el('div', { style: { fontSize: '24px', fontWeight: 700, color: s.color } }, String(count)),
+      el('div', {
+        style: {
+          fontSize: '11px',
+          color: '#0066cc',
+          textDecoration: 'underline',
+          marginTop: '4px'
+        },
+        onclick: (e) => { e.stopPropagation(); openSanteDrawer(s.code, filteredOps, santeMap); }
+      }, count > 0 ? '→ Voir le détail' : '')
+    ]);
+  }));
+}
+
+/**
+ * Drawer synthétique : liste les marchés d'une catégorie de santé donnée
+ * avec leurs infos clés (objet, montant, état, cumul avenants, exécution).
+ */
+function openSanteDrawer(santeCode, filteredOps, santeMap) {
+  const meta = SANTE_CATEGORIES.find(s => s.code === santeCode);
+  const matchingOps = filteredOps.filter(op => santeMap.get(op.id) === santeCode);
+
+  const old = document.getElementById('sante-drawer');
+  if (old) old.remove();
+
+  const drawer = el('div', {
+    id: 'sante-drawer',
+    style: {
+      position: 'fixed', top: 0, right: 0, width: 'min(720px, 96vw)', height: '100vh',
+      background: '#fff', boxShadow: '-4px 0 16px rgba(0,0,0,0.15)', zIndex: 9999,
+      overflowY: 'auto', padding: '24px'
+    }
+  });
+
+  drawer.appendChild(el('div', {
+    style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '12px', borderBottom: `2px solid ${meta.color}` }
+  }, [
+    el('div', {}, [
+      el('h2', { style: { margin: 0, fontSize: '20px' } }, `${meta.icon} ${meta.label}`),
+      el('div', { style: { color: '#6b7280', fontSize: '13px', marginTop: '4px' } },
+        `${matchingOps.length} marché${matchingOps.length > 1 ? 's' : ''} dans cette catégorie (filtres en vigueur appliqués)`)
+    ]),
+    el('button', { className: 'btn btn-secondary btn-sm', onclick: () => drawer.remove() }, '✕ Fermer')
+  ]));
+
+  if (matchingOps.length === 0) {
+    drawer.appendChild(el('p', { style: { color: '#6b7280', fontStyle: 'italic', padding: '16px' } },
+      'Aucun marché ne correspond à cette catégorie compte tenu des filtres en vigueur.'));
+  } else {
+    const list = el('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } });
+    matchingOps.forEach(op => {
+      const card = el('div', {
+        style: {
+          border: '1px solid #e5e7eb',
+          borderRadius: '6px',
+          padding: '12px 14px',
+          cursor: 'pointer',
+          background: '#fff',
+          transition: 'background 0.1s'
+        },
+        title: 'Ouvrir la fiche de vie',
+        onmouseenter: (e) => e.currentTarget.style.background = '#f9fafb',
+        onmouseleave: (e) => e.currentTarget.style.background = '#fff',
+        onclick: () => { drawer.remove(); router.navigate('/mp/fiche-marche', { idOperation: op.id }); }
+      }, [
+        el('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' } }, [
+          el('div', { style: { flex: 1, minWidth: 0 } }, [
+            el('div', { style: { fontSize: '11px', color: '#6b7280', fontFamily: 'monospace', marginBottom: '2px' } }, op.id),
+            el('div', { style: { fontWeight: 600, fontSize: '13px', marginBottom: '4px' } },
+              (op.objet || '(sans objet)').length > 90 ? op.objet.substring(0, 90) + '…' : (op.objet || '(sans objet)')
+            ),
+            el('div', { style: { fontSize: '11px', color: '#6b7280' } }, [
+              op.chaineBudgetaire?.activiteLib || 'Activité non renseignée',
+              op.unite ? ` · UA ${op.unite}` : '',
+              ` · ${moneyMillions(op.montantPrevisionnel)}`
+            ])
+          ]),
+          el('div', { style: { flexShrink: 0 } }, [
+            el('span', { className: `badge badge-${op.etat?.toLowerCase().replace('_', '-')}` }, op.etat || '?')
+          ])
+        ])
+      ]);
+      list.appendChild(card);
+    });
+    drawer.appendChild(list);
+  }
+
+  document.body.appendChild(drawer);
 }
 
 function setupFilterListeners() {
@@ -744,7 +973,8 @@ function resetFilters() {
     region: [],
     exercice: [],
     unite: [],
-    activite: []
+    activite: [],
+    sante: []
   };
   renderPPMList();
 }
