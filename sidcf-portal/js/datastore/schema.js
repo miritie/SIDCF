@@ -414,11 +414,12 @@ export const SCHEMAS = {
     bailleur: '', // code from BAILLEUR registry
     typeFinancement: 'ETAT', // ETAT | EMPRUNT | DON
     natureEco: '', // code from NATURE_ECO registry
-    baseCalc: 'HT', // HT | TTC | HT_TTC
+    baseCalc: 'HT', // HT | TTC (exclusif — l'ancienne valeur HT_TTC est migrée vers HT à la lecture)
     etatSupporteTVA: false, // true si l'État supporte la TVA (18%)
     montant: 0,
     montantTVAEtat: 0, // Si etatSupporteTVA=true, 18% du TTC
-    pourcentage: 0 // % par rapport au montant total du marché
+    saisieMode: 'MONTANT', // 'MONTANT' ou 'POURCENTAGE' — dernier champ saisi dans le widget dual
+    pourcentage: 0 // % par rapport au montant total du marché (selon baseCalc)
   },
 
   AVENANT: {
@@ -843,11 +844,11 @@ export const SCHEMAS = {
       confidentiel: false
     },
 
-    // Garanties et cautionnement
+    // Garanties et cautionnement — baseCalc + saisieMode pour le widget dual montant/% (Marché+ modif #21)
     garanties: {
-      garantieAvance: { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null },
-      garantieBonneExec: { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null },
-      cautionnement: { existe: false, montant: 0, dateEmission: null, dateEcheance: null, docRef: null }
+      garantieAvance: { existe: false, montant: 0, baseCalc: 'HT', saisieMode: 'POURCENTAGE', dateEmission: null, dateEcheance: null, docRef: null },
+      garantieBonneExec: { existe: false, montant: 0, baseCalc: 'HT', saisieMode: 'POURCENTAGE', dateEmission: null, dateEcheance: null, docRef: null },
+      cautionnement: { existe: false, montant: 0, baseCalc: 'HT', saisieMode: 'MONTANT', dateEmission: null, dateEcheance: null, docRef: null }
     },
 
     // Dates
@@ -958,6 +959,8 @@ export const SCHEMAS = {
 
     // Variations
     variationMontant: 0,
+    variationBaseCalc: 'TTC', // HT | TTC — base sur laquelle le % de variation est évalué (Marché+ modif #21)
+    variationSaisieMode: 'MONTANT', // 'MONTANT' ou 'POURCENTAGE' — dernier champ saisi dans le widget dual
     variationDuree: 0, // en jours
     nouveauMontantTotal: 0,
     nouveauDelaiTotal: 0,
@@ -1183,7 +1186,9 @@ export const SCHEMAS = {
     num: 1,
     datePrevisionnelle: null,
     montant: 0,
-    pourcentage: 0, // % par rapport au montant total du marché
+    baseCalc: 'TTC', // HT | TTC — base sur laquelle le pourcentage est évalué (montant marché HT ou TTC)
+    saisieMode: 'MONTANT', // 'MONTANT' ou 'POURCENTAGE' — dernier champ saisi (widget dual)
+    pourcentage: 0, // % par rapport à la base choisie (HT ou TTC) du montant marché
     typeEcheance: 'ACOMPTE', // AVANCE | ACOMPTE | SOLDE
     livrablesCibles: [], // IDs des livrables concernés
     statutsLivrables: {} // { livrableId: { statut: 'DEMARRE|EN_COURS|TERMINE', pourcentage: 0-100 } }
@@ -1194,11 +1199,12 @@ export const SCHEMAS = {
     bailleur: '', // code from BAILLEUR registry
     typeFinancement: 'ETAT', // ETAT | EMPRUNT | DON
     natureEco: '', // code from NATURE_ECO registry
-    baseCalc: 'HT', // HT | TTC | HT_TTC
+    baseCalc: 'HT', // HT | TTC (exclusif — l'ancienne valeur HT_TTC est migrée vers HT à la lecture)
     etatSupporteTVA: false, // true si l'État supporte la TVA (18%)
     montant: 0,
     montantTVAEtat: 0, // Si etatSupporteTVA=true, 18% du TTC
-    pourcentage: 0 // % par rapport au montant total du marché
+    saisieMode: 'MONTANT', // 'MONTANT' ou 'POURCENTAGE' — dernier champ saisi dans le widget dual
+    pourcentage: 0 // % par rapport au montant total du marché (selon baseCalc)
   },
 
   // Module Marché+ - Liste des entreprises sanctionnées (informatif)

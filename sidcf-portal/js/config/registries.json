@@ -724,8 +724,7 @@
   ],
   "BASE_CALCUL_CLE": [
     { "code": "HT", "label": "Hors Taxe (HT)" },
-    { "code": "TTC", "label": "Toutes Taxes Comprises (TTC)" },
-    { "code": "HT_TTC", "label": "HT et TTC" }
+    { "code": "TTC", "label": "Toutes Taxes Comprises (TTC)" }
   ],
   "TYPE_PIECE": [
     { "code": "PPM_APPROUVE", "label": "PPM approuvé" },

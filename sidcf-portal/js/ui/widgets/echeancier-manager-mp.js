@@ -196,7 +196,7 @@ export function renderEcheancierManager(
           el('small', { className: 'text-muted' }, 'Base exclusive : HT ou TTC. Le pourcentage est calculé sur cette base du montant marché.')
         ]),
 
-        // Montant et % — widget DUAL (Marché+ modif #20)
+        // Montant et % — widget DUAL (Marché+ modif #21)
         el('div', { className: 'form-field', style: { marginBottom: '24px' } }, [
           el('label', { className: 'form-label' }, ['Montant et %', el('span', { className: 'required' }, '*')]),
           el('div', { id: 'echeance-montant-host' }),
@@ -365,12 +365,14 @@ export function renderEcheancierManager(
 
       const montant = mpInputApi ? mpInputApi.getMontant() : (parseFloat(formData.montant) || 0);
       const saisieMode = mpInputApi ? mpInputApi.getMode() : 'MONTANT';
+      const baseCalc = document.getElementById('echeance-base-calc').value || 'TTC';
       const newEcheance = {
         num: parseInt(document.getElementById('echeance-num').value),
         datePrevisionnelle: document.getElementById('echeance-date').value,
         montant: montant,
+        baseCalc,
         saisieMode,
-        pourcentage: calculatePourcentage(montant),
+        pourcentage: calculatePourcentage(montant, baseCalc),
         typeEcheance: document.getElementById('echeance-type').value,
         livrablesCibles: [],
         statutsLivrables: {}
@@ -497,6 +499,7 @@ export function renderEcheancierManager(
           el('th', {}, 'N°'),
           el('th', {}, 'Date prévisionnelle'),
           el('th', {}, 'Type'),
+          el('th', {}, 'Base'),
           el('th', { style: { textAlign: 'right' } }, 'Montant (XOF)'),
           el('th', { style: { textAlign: 'right' } }, 'Pourcentage (%)'),
           el('th', {}, 'Livrables'),
@@ -506,7 +509,7 @@ export function renderEcheancierManager(
       el('tbody', {},
         currentEcheancier.items.length === 0
           ? [el('tr', {}, [
-              el('td', { colspan: 7, style: { textAlign: 'center', padding: '24px' } },
+              el('td', { colspan: 8, style: { textAlign: 'center', padding: '24px' } },
                 el('span', { className: 'text-muted' }, '📅 Aucune échéance définie')
               )
             ])]
@@ -528,12 +531,14 @@ export function renderEcheancierManager(
                 }).filter(Boolean).join('\n');
               }
 
+              const baseCalcCode = item.baseCalc || (montantMarcheTTC > 0 ? 'TTC' : 'HT');
               return el('tr', {}, [
                 el('td', { style: { fontWeight: 'bold' } }, `#${item.num}`),
                 el('td', {}, new Date(item.datePrevisionnelle).toLocaleDateString('fr-FR')),
                 el('td', {}, el('span', { className: 'badge badge-secondary' }, typeLabel)),
+                el('td', {}, el('span', { className: 'badge badge-secondary' }, baseCalcCode)),
                 el('td', { style: { textAlign: 'right', fontWeight: 'bold' } }, item.montant.toLocaleString('fr-FR', { minimumFractionDigits: 2 })),
-                el('td', { style: { textAlign: 'right', fontWeight: 'bold' } }, `${item.pourcentage.toFixed(2)}%`),
+                el('td', { style: { textAlign: 'right', fontWeight: 'bold' } }, `${(item.pourcentage || 0).toFixed(2)}%`),
                 el('td', {}, [
                   nbLivrables > 0
                     ? el('span', {

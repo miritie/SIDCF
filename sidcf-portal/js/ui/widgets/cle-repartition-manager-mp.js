@@ -1,13 +1,14 @@
 /**
  * Widget de gestion de la Clé de Répartition multi-bailleurs — variante Marché+
- * Différence avec la version Marché classique :
- *  - Saisie du montant via le widget montant-pourcentage-input :
- *    l'utilisateur peut taper soit un montant absolu (XOF) soit un pourcentage du total marché
+ * Différences avec la version Marché classique :
+ *  - Saisie via le widget DUAL montant + % (deux champs synchronisés bidirectionnellement) ;
+ *  - Base de calcul exclusive HT ou TTC (l'ancienne valeur HT_TTC est migrée silencieusement
+ *    vers HT à la lecture — les enregistrements existants ne sont pas perdus).
  */
 
 import { el } from '../../lib/dom.js';
 import logger from '../../lib/logger.js';
-import { renderMontantPourcentageInput } from './montant-pourcentage-input.js';
+import { renderMontantPourcentageDualInput } from './montant-pourcentage-dual-input.js';
 
 /**
  * @param {Array} cleRepartition - Liste des lignes de répartition existantes
@@ -26,7 +27,13 @@ export function renderCleRepartitionManager(
 ) {
   const container = el('div', { className: 'cle-repartition-manager' });
 
-  let currentCle = [...cleRepartition];
+  // Migration douce : ancienne valeur HT_TTC → HT (la base est désormais exclusive).
+  let currentCle = cleRepartition.map(ligne => {
+    if (ligne && ligne.baseCalc === 'HT_TTC') {
+      return { ...ligne, baseCalc: 'HT' };
+    }
+    return ligne;
+  });
   let etatSupporteTVA = currentCle.some(ligne => ligne.isTVAEtat === true);
 
   // Fonction pour notifier le parent
@@ -155,23 +162,26 @@ export function renderCleRepartitionManager(
           ])
         ]),
 
-        // Base de calcul
+        // Base de calcul — exclusive HT ou TTC
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, ['Base de calcul', el('span', { className: 'required' }, '*')]),
           el('select', { className: 'form-input', id: 'ligne-base-calc', required: true }, [
-            ...(registries.BASE_CALCUL_CLE || []).map(b =>
-              el('option', { value: b.code, selected: b.code === formData.baseCalc }, b.label)
-            )
+            // On filtre les codes valides : HT et TTC uniquement (l'ancien HT_TTC est exclu)
+            ...(registries.BASE_CALCUL_CLE || [])
+              .filter(b => b.code === 'HT' || b.code === 'TTC')
+              .map(b =>
+                el('option', { value: b.code, selected: b.code === formData.baseCalc }, b.label)
+              )
           ]),
-          el('small', { className: 'text-muted' }, 'Base sur laquelle sera calculé le pourcentage')
+          el('small', { className: 'text-muted' }, 'Base exclusive : HT ou TTC. Le % est calculé sur cette base du montant marché.')
         ]),
 
-        // Montant ou pourcentage (widget unifié — Marché+)
+        // Montant ET pourcentage (widget DUAL — Marché+ modif #21)
         el('div', { className: 'form-field', id: 'ligne-montant-wrapper' }, [
-          el('label', { className: 'form-label' }, ['Montant ou %', el('span', { className: 'required' }, '*')]),
-          // Le widget est injecté dynamiquement après création du form (il dépend du baseCalc choisi)
+          el('label', { className: 'form-label' }, ['Montant et %', el('span', { className: 'required' }, '*')]),
+          // Le widget dual est injecté dynamiquement (il dépend du baseCalc choisi : HT ou TTC)
           el('div', { id: 'ligne-montant-host' }),
-          el('small', { className: 'text-muted' }, 'Saisie en XOF ou en % du montant marché (sélecteur à droite)')
+          el('small', { className: 'text-muted' }, 'Les deux champs sont synchronisés : modifier l\'un met à jour l\'autre.')
         ])
       ]),
 
@@ -189,34 +199,40 @@ export function renderCleRepartitionManager(
       ])
     ]);
 
-    // === Marché+ : widget montant/% intégré ===
+    // === Marché+ : widget DUAL montant + % synchronisés ===
     const baseCalcSelect = form.querySelector('#ligne-base-calc');
     const host = form.querySelector('#ligne-montant-host');
     let mpInputApi = null;
     let saisieMode = formData.saisieMode || 'MONTANT'; // mémorisé sur la ligne pour réafficher
 
-    function buildMontantWidget() {
+    // Le widget est construit une seule fois ; quand baseCalc change on appelle setTotal()
+    // pour conserver le % saisi (utilisation typique : l'utilisateur bascule HT↔TTC).
+    {
       const baseCalc = baseCalcSelect.value;
       const total = baseCalc === 'TTC' ? montantMarcheTTC : montantMarcheHT;
-      host.innerHTML = '';
-      const widget = renderMontantPourcentageInput({
-        id: 'ligne-montant',
+      const widget = renderMontantPourcentageDualInput({
+        idPrefix: 'ligne',
         total,
         value: formData.montant || 0,
         mode: saisieMode,
         required: true,
         onChange: (montant, mode) => {
           saisieMode = mode;
-          formData.montant = montant; // garder en mémoire pour reconstruction si baseCalc change
+          formData.montant = montant;
         }
       });
       host.appendChild(widget);
-      mpInputApi = widget._mpInput;
+      mpInputApi = widget._mpDual;
     }
-    buildMontantWidget();
 
-    // Si l'utilisateur change la base (HT/TTC), le total de référence change → on rebuild
-    baseCalcSelect.addEventListener('change', buildMontantWidget);
+    // Si l'utilisateur change la base (HT/TTC), on met à jour le total de référence
+    // sans détruire le widget : si l'utilisateur avait saisi un %, le montant se recalcule
+    // sur la nouvelle base ; s'il avait saisi un montant, le % se recalcule.
+    baseCalcSelect.addEventListener('change', () => {
+      const baseCalc = baseCalcSelect.value;
+      const total = baseCalc === 'TTC' ? montantMarcheTTC : montantMarcheHT;
+      if (mpInputApi) mpInputApi.setTotal(total);
+    });
 
     // Soumission du formulaire
     form.addEventListener('submit', (e) => {
@@ -231,7 +247,7 @@ export function renderCleRepartitionManager(
         etatSupporteTVA: false,
         isTVAEtat: false,
         montant: mpInputApi ? mpInputApi.getMontant() : (parseFloat(formData.montant) || 0),
-        saisieMode: mpInputApi ? mpInputApi.getMode() : 'MONTANT',
+        saisieMode: mpInputApi ? mpInputApi.getMode() : (formData.saisieMode || 'MONTANT'),
         montantTVAEtat: 0,
         pourcentage: 0
       };
