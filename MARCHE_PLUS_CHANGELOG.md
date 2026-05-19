@@ -13,6 +13,70 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-19 — Modélisation TYPE_DOSSIER_APPEL conforme DGMP + propagation matrice pièces
+
+> **Modif #40** — Suite logique de la Modif #39 (retrait des sigles fantômes). Après vérification des sources officielles, on intègre les **4 types de dossier d'appel qui manquaient** dans la nomenclature ivoirienne, avec propagation effective sur la matrice des pièces obligatoires et sur le filtrage UI.
+
+### Modif #40.a — Refonte du référentiel `TYPE_DOSSIER_APPEL`
+
+Refonte de `sidcf-portal/js/config/registries.json` avec **9 types officiellement attestés** (au lieu de 4) :
+
+| Code | Libellé | Modes liés | Source officielle |
+|---|---|---|---|
+| `DAO` | Dossier d'Appel d'Offres | AOO, AOO_PREQUALIF, AOO_2ETAPES, AOO_CONCOURS, AON, AOI, AOR | Décrets 2013-404/405 |
+| `DTAO_PI` | DTAO Prestations Intellectuelles | PI, PI_CABINET, PI_INDIVIDUEL | Décret 2013-406 |
+| `AMI` | Avis à Manifestation d'Intérêt | DEM, PI_CABINET, CI | Code MP — Ord. 2019-679 |
+| `DC` | Demande de Cotation | PSC | Décret 2021-909 |
+| `DOSSIER_CONS_PSL` | Dossier de consultation — PSL | PSL | Décret 2021-909 (Art. 16) |
+| `DOSSIER_CONS_PSO` | Dossier de consultation — PSO | PSO | Décret 2021-909 (Art. 16) |
+| `BC_PROFORMA` | Bon de commande + Facture pro forma | PSD | Décret 2021-909 (PSD) |
+| `LETTRE_GAG` | Lettre de marché négocié (Gré à gré) | ENTENTE_DIRECTE, RECONDUCTION | Ord. 2019-679 |
+| `AUTRE` | Autre dossier | (libre) | — |
+
+### Modif #40.b — Matrice des pièces obligatoires alignée
+
+Mise à jour de `sidcf-portal/js/config/pieces-matrice.json` — **impact effectif sur la checklist documentaire** affichée à chaque phase du processus.
+
+**Phase INVITATION** — pièces ajoutées avec champ `source` (texte fondateur) :
+- `BON_COMMANDE` + `FACTURE_PROFORMA` (obligatoires pour PSD)
+- `AUTORISATION_DMP_GAG` + `LETTRE_GAG` (obligatoires pour ENTENTE_DIRECTE)
+- `DTAO_PI` (obligatoire pour PI / PI_CABINET / PI_INDIVIDUEL)
+- `TDR` étendu aux modes PI* (en plus de PSO/CI)
+- `COURRIER_INVITATION` étendu aux modes PI*
+- Suppression du doublon `DAC` qui faisait redondance avec `DAO`
+
+**Phase OUVERTURE / ANALYSE / JUGEMENT** — extension aux modes manquants :
+- PI / PI_CABINET ajoutés à toutes les pièces de commission (liste présence, mandat, PV, grille, comité d'évaluation)
+- PSL ajouté à la phase ANALYSE (lacune corrigée — il était déjà en OUVERTURE et JUGEMENT)
+- Nouvelle pièce `PROCES_VERBAL_NEGOCIATION` en ANALYSE pour ENTENTE_DIRECTE
+- Nouvelle pièce `PV_NEGOCIATION_PI` en JUGEMENT pour la négociation contractuelle PI
+
+### Modif #40.c — Filtrage UI dynamique
+
+Mise à jour de `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` (lignes 668-678) : le dropdown « Type de dossier d'appel » est désormais **filtré par mode de passation** courant — l'utilisateur en mode PSD ne voit plus les options DAO/AMI/DTAO_PI, mais uniquement `BC_PROFORMA` et `AUTRE`. Le hint utilisateur indique dynamiquement le mode actif.
+
+### Modif #40.d — Cohérence des commentaires schema
+
+`sidcf-portal/js/datastore/schema.js` (2 occurrences) — commentaire `typeDossierAppel` aligné sur la liste complète et pointant vers `registries.TYPE_DOSSIER_APPEL` comme source de vérité.
+
+### Impact processus
+
+- **UI checklist documentaire** : à la phase Invitation, l'utilisateur d'une PSD voit désormais 2 cases obligatoires (BC + facture pro forma) au lieu de zéro. Idem pour ENTENTE_DIRECTE (autorisation DMP + lettre négociée) et PI (DTAO PI + TDR).
+- **Validation côté agent CF** : les contrôles « pièces manquantes » du moteur de règles seront déclenchés sur les bons documents pour chaque mode — réduit le risque de visa accordé sur dossier incomplet.
+- **Reporting / traçabilité** : chaque pièce porte désormais un champ `source` citant le texte officiel — facilite l'auditabilité et l'explicabilité réglementaire vis-à-vis de la DMP.
+
+### Périmètre **non** modifié (volontairement)
+
+- Le module legacy `js/modules/marche/screens/ecr02a-procedure-pv.js` n'est pas mis à jour (Marché+ uniquement).
+- `rules-config.json` section `contextualite_procedures` : les `documents_requis` pour PSD étaient déjà `BON_COMMANDE` + `FACTURE_PROFORMA` ✅ ; aucune modélisation `ENTENTE_DIRECTE` n'existe encore dans cette section (à traiter en modif ultérieure si besoin).
+- Garanties phase EXECUTION : `GARANTIE_BONNE_EXEC` reste obligatoire pour PSO dans la matrice alors que la config la marque « optionnelle mais recommandée ». Divergence à arbitrer hors scope.
+
+### Action déploiement
+
+Aucun `wrangler deploy` requis — modifs purement front (JSON + JS statiques). Pas de migration SQL.
+
+---
+
 ## 2026-05-19 — Nettoyage TYPE_DOSSIER_APPEL : retrait des sigles non officiels (AONO, DPI, DPS)
 
 > **Modif #39** — Question explicite du client sur l'origine des sigles AONO, DPI et DPS dans le champ « Type de dossier d'appel ». Vérification croisée des sources officielles (Ordonnance n°2019-679 du 24/07/2019 portant Code des marchés publics, Décret n°2021-909 du 22/12/2021 sur les procédures simplifiées, Décrets n°2013-404/405/406 sur les DTAO, Arrêté n°112/MPMBPE/DGBF/DMP du 08/03/2016, ainsi que la page officielle DGMP `marchespublics.ci/dossier_appeloffre`) : aucun de ces trois sigles n'apparaît dans la nomenclature ivoirienne officielle. Retrait pur et simple.

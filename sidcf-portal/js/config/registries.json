@@ -46,9 +46,14 @@
     { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" }
   ],
   "TYPE_DOSSIER_APPEL": [
-    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOR"] },
-    { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["DEM", "CI"] },
-    { "code": "DC", "label": "Demande de Cotation (DC)", "modes": ["PSC"] },
+    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOO_PREQUALIF", "AOO_2ETAPES", "AOO_CONCOURS", "AON", "AOI", "AOR"] },
+    { "code": "DTAO_PI", "label": "DTAO Prestations Intellectuelles (Décret 2013-406)", "modes": ["PI", "PI_CABINET", "PI_INDIVIDUEL"] },
+    { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["DEM", "PI_CABINET", "CI"] },
+    { "code": "DC", "label": "Demande de Cotation (DC) — PSC", "modes": ["PSC"] },
+    { "code": "DOSSIER_CONS_PSL", "label": "Dossier de consultation — PSL", "modes": ["PSL"] },
+    { "code": "DOSSIER_CONS_PSO", "label": "Dossier de consultation — PSO", "modes": ["PSO"] },
+    { "code": "BC_PROFORMA", "label": "Bon de commande + Facture pro forma (PSD)", "modes": ["PSD"] },
+    { "code": "LETTRE_GAG", "label": "Lettre de marché négocié (Gré à gré)", "modes": ["ENTENTE_DIRECTE", "RECONDUCTION"] },
     { "code": "AUTRE", "label": "Autre dossier", "modes": [] }
   ],
   "TYPE_LIVRABLE": [

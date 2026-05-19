@@ -665,16 +665,16 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           ])
         ]),
 
-        // Type dossier d'appel
+        // Type dossier d'appel — filtré par mode de passation courant
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, 'Type de dossier d\'appel'),
           el('select', { className: 'form-input', id: 'proc-type-dossier' }, [
             el('option', { value: '' }, '-- Sélectionner --'),
-            ...(registries.TYPE_DOSSIER_APPEL || []).map(d =>
-              el('option', { value: d.code, selected: d.code === existingProc.typeDossierAppel }, d.label)
-            )
+            ...(registries.TYPE_DOSSIER_APPEL || [])
+              .filter(d => !d.modes?.length || d.modes.includes(selectedMode))
+              .map(d => el('option', { value: d.code, selected: d.code === existingProc.typeDossierAppel }, d.label))
           ]),
-          el('small', { className: 'text-muted' }, 'DAO, AMI, DPI, etc.')
+          el('small', { className: 'text-muted' }, `Types compatibles avec ${selectedMode || 'le mode sélectionné'}`)
         ]),
 
         // Upload dossier d'appel

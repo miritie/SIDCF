@@ -225,7 +225,7 @@ export const SCHEMAS = {
     categorie: 'NATIONALE', // NATIONALE | INTERNATIONALE
 
     // Dossier d'appel à candidature
-    typeDossierAppel: null, // DAO | AMI | DC | AUTRE (selon mode passation)
+    typeDossierAppel: null, // DAO | DTAO_PI | AMI | DC | DOSSIER_CONS_PSL | DOSSIER_CONS_PSO | BC_PROFORMA | LETTRE_GAG | AUTRE (cf. registries.TYPE_DOSSIER_APPEL)
     dossierAppelDoc: null, // document uploadé
 
     // Dates chronologiques
@@ -804,7 +804,7 @@ export const SCHEMAS = {
     categorie: 'NATIONALE', // NATIONALE | INTERNATIONALE
 
     // Dossier d'appel à candidature
-    typeDossierAppel: null, // DAO | AMI | DC | AUTRE (selon mode passation)
+    typeDossierAppel: null, // DAO | DTAO_PI | AMI | DC | DOSSIER_CONS_PSL | DOSSIER_CONS_PSO | BC_PROFORMA | LETTRE_GAG | AUTRE (cf. registries.TYPE_DOSSIER_APPEL)
     dossierAppelDoc: null, // document uploadé
 
     // Dates chronologiques

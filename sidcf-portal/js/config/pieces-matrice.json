@@ -22,36 +22,87 @@
           "code": "COURRIER_INVITATION",
           "label": "Courrier d'invitation",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
-          "typeMarche": ["*"]
-        },
-        {
-          "code": "DAC",
-          "label": "Dossier d'Appel à Concurrence",
-          "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET", "PI_INDIVIDUEL"],
           "typeMarche": ["*"]
         },
         {
           "code": "DAO",
-          "label": "Dossier d'Appel d'Offres",
+          "label": "Dossier d'Appel d'Offres (DAO)",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR"],
-          "typeMarche": ["*"]
+          "modePassation": ["AOO", "AOO_PREQUALIF", "AOO_2ETAPES", "AOO_CONCOURS", "AON", "AOI", "AOR"],
+          "typeMarche": ["*"],
+          "source": "Décrets 2013-404 / 2013-405 / 2013-406 (DTAO)"
         },
         {
-          "code": "DDC",
-          "label": "Dossier de Demande de Cotations",
+          "code": "DOSSIER_CONS_PSO",
+          "label": "Dossier de consultation — PSO",
+          "obligatoire": true,
+          "modePassation": ["PSO"],
+          "typeMarche": ["*"],
+          "source": "Décret 2021-909 — Procédure Simplifiée à compétition Ouverte"
+        },
+        {
+          "code": "DOSSIER_CONS_PSL",
+          "label": "Dossier de consultation — PSL",
+          "obligatoire": true,
+          "modePassation": ["PSL"],
+          "typeMarche": ["*"],
+          "source": "Décret 2021-909 — Procédure Simplifiée à compétition Limitée"
+        },
+        {
+          "code": "DC",
+          "label": "Demande de Cotation (DC)",
           "obligatoire": true,
           "modePassation": ["PSC"],
-          "typeMarche": ["*"]
+          "typeMarche": ["*"],
+          "source": "Décret 2021-909 — Procédure Simplifiée de Demande de Cotation"
+        },
+        {
+          "code": "BON_COMMANDE",
+          "label": "Bon de commande",
+          "obligatoire": true,
+          "modePassation": ["PSD"],
+          "typeMarche": ["*"],
+          "source": "Décret 2021-909 — Procédure Simplifiée d'Entente Directe"
+        },
+        {
+          "code": "FACTURE_PROFORMA",
+          "label": "Facture pro forma",
+          "obligatoire": true,
+          "modePassation": ["PSD"],
+          "typeMarche": ["*"],
+          "source": "Décret 2021-909 — PSD"
+        },
+        {
+          "code": "AUTORISATION_DMP_GAG",
+          "label": "Autorisation préalable DMP — Gré à gré",
+          "obligatoire": true,
+          "modePassation": ["ENTENTE_DIRECTE"],
+          "typeMarche": ["*"],
+          "source": "Code MP — Ordonnance 2019-679 (marché négocié)"
+        },
+        {
+          "code": "LETTRE_GAG",
+          "label": "Lettre de marché négocié (Gré à gré)",
+          "obligatoire": true,
+          "modePassation": ["ENTENTE_DIRECTE", "RECONDUCTION"],
+          "typeMarche": ["*"],
+          "source": "Code MP — Ordonnance 2019-679"
+        },
+        {
+          "code": "DTAO_PI",
+          "label": "DTAO Prestations Intellectuelles",
+          "obligatoire": true,
+          "modePassation": ["PI", "PI_CABINET", "PI_INDIVIDUEL"],
+          "typeMarche": ["SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "source": "Décret 2013-406 du 06/06/2013"
         },
         {
           "code": "TDR",
           "label": "Termes de Référence",
           "obligatoire": true,
-          "modePassation": ["PSO", "CI"],
-          "typeMarche": ["SERVICES_INTELLECTUELS"]
+          "modePassation": ["PSO", "CI", "PI", "PI_CABINET", "PI_INDIVIDUEL"],
+          "typeMarche": ["SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"]
         },
         {
           "code": "MANDAT_CF",
@@ -70,56 +121,56 @@
           "code": "LISTE_PRESENCE_COMMISSION",
           "label": "Liste de présence des membres de la commission (COPE/COJO)",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET", "PI_INDIVIDUEL"],
           "typeMarche": ["*"]
         },
         {
           "code": "MANDAT_COMMISSION",
           "label": "Copie du mandat des membres de la commission",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "LISTE_DEPOT_PLIS",
           "label": "Liste de dépôt des plis",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "LISTE_PRESENCE_SOUMISSIONNAIRES",
           "label": "Liste de présence des soumissionnaires",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "PV_OUVERTURE",
           "label": "PV d'ouverture des plis",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "COPIES_OFFRES",
           "label": "Copies des offres des soumissionnaires",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "GRILLE_ANALYSE",
           "label": "Grille d'analyse des offres",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "DESIGNATION_COMITE_EVAL",
           "label": "Désignation du comité d'évaluation",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
@@ -139,36 +190,44 @@
           "code": "LISTE_PRESENCE_COMMISSION_ANALYSE",
           "label": "Liste de présence des membres (si séance séparée)",
           "obligatoire": false,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "GRILLE_ANALYSE_RENSEIGNEE",
           "label": "Grille d'analyse des offres renseignée",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "PROJET_RAPPORT_ANALYSE_AGENT",
           "label": "Projet de rapport d'analyse de l'agent",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "COURRIERS_ECLAIRCISSEMENT",
           "label": "Courriers de demande et réponses d'éclaircissement",
           "obligatoire": false,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
         },
         {
           "code": "RAPPORT_ANALYSE_CONSOLIDE",
           "label": "Rapport d'analyse consolidé par la commission",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
+        },
+        {
+          "code": "PROCES_VERBAL_NEGOCIATION",
+          "label": "Procès-verbal de négociation (gré à gré)",
+          "obligatoire": true,
+          "modePassation": ["ENTENTE_DIRECTE"],
+          "typeMarche": ["*"],
+          "source": "Code MP — Ordonnance 2019-679 (marché négocié)"
         }
       ]
     },
@@ -215,8 +274,16 @@
           "code": "PV_JUGEMENT",
           "label": "PV de jugement",
           "obligatoire": true,
-          "modePassation": ["AOO", "AOR", "PSO", "PSL"],
+          "modePassation": ["AOO", "AOR", "PSO", "PSL", "PI", "PI_CABINET"],
           "typeMarche": ["*"]
+        },
+        {
+          "code": "PV_NEGOCIATION_PI",
+          "label": "PV de négociation du contrat (PI)",
+          "obligatoire": true,
+          "modePassation": ["PI", "PI_CABINET", "PI_INDIVIDUEL"],
+          "typeMarche": ["SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
+          "source": "Décret 2013-406 — DTAO PI"
         }
       ]
     },
