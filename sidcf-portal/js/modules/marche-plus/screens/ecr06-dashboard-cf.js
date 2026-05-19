@@ -6,6 +6,7 @@
 import { el, mount } from '../../../lib/dom.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
+import { ETAT_LABEL_MP } from '../etat-labels-mp.js';
 import logger from '../../../lib/logger.js';
 
 function createButton(className, text, onClick) {
@@ -295,12 +296,12 @@ function renderKPICards(metrics, colors) {
 
 function renderStateDistribution(metrics, colors) {
   const states = [
-    { key: 'PLANIFIE', label: 'Planifié', color: '#ffc107', count: metrics.byState.PLANIFIE.length },
-    { key: 'EN_EXEC', label: 'En Exécution', color: '#198754', count: metrics.byState.EN_EXEC.length },
-    { key: 'EN_PROC', label: 'EN_PROC', color: '#0dcaf0', count: metrics.byState.EN_PROC.length },
-    { key: 'ATTRIBUE', label: 'ATTRIBUE', color: '#6f42c1', count: metrics.byState.ATTRIBUE.length },
-    { key: 'VISE', label: 'Visé', color: '#0d6efd', count: metrics.byState.VISE.length },
-    { key: 'CLOS', label: 'Clôturé', color: '#6c757d', count: metrics.byState.CLOS.length }
+    { key: 'PLANIFIE', label: ETAT_LABEL_MP.PLANIFIE, color: '#ffc107', count: metrics.byState.PLANIFIE.length },
+    { key: 'EN_EXEC',  label: ETAT_LABEL_MP.EN_EXEC,  color: '#198754', count: metrics.byState.EN_EXEC.length },
+    { key: 'EN_PROC',  label: ETAT_LABEL_MP.EN_PROC,  color: '#0dcaf0', count: metrics.byState.EN_PROC.length },
+    { key: 'ATTRIBUE', label: ETAT_LABEL_MP.ATTRIBUE, color: '#6f42c1', count: metrics.byState.ATTRIBUE.length },
+    { key: 'VISE',     label: ETAT_LABEL_MP.VISE,     color: '#0d6efd', count: metrics.byState.VISE.length },
+    { key: 'CLOS',     label: ETAT_LABEL_MP.CLOS,     color: '#6c757d', count: metrics.byState.CLOS.length }
   ];
 
   const maxCount = Math.max(...states.map(s => s.count), 1);
@@ -363,7 +364,7 @@ function renderAlerts(metrics, colors) {
   if (metrics.byState.VISE.length > 0) {
     alerts.push({
       type: 'warning',
-      message: `${metrics.byState.VISE.length} marché(s) visé(s) en attente d'OS`,
+      message: `${metrics.byState.VISE.length} marché(s) approuvé(s) en attente d'OS`,
       icon: '⚠️'
     });
   }
@@ -603,14 +604,8 @@ function renderTopMarches(metrics, colors) {
 }
 
 function renderRecentActivity(metrics, colors) {
-  const stateLabels = {
-    PLANIFIE: 'Planifié',
-    EN_PROC: 'EN_PROC',
-    ATTRIBUE: 'ATTRIBUE',
-    VISE: 'Visé',
-    EN_EXEC: 'En Exécution',
-    CLOS: 'Clôturé'
-  };
+  // Modif #41 — libellés alignés sur ETAT_LABEL_MP
+  const stateLabels = ETAT_LABEL_MP;
 
   const stateColors = {
     PLANIFIE: '#ffc107',

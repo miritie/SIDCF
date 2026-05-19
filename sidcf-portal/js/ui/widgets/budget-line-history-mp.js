@@ -30,6 +30,7 @@
 
 import { el } from '../../lib/dom.js';
 import { renderFormulaBadge } from './formula-tip-mp.js';
+import { ETAT_LABEL_MP } from '../../modules/marche-plus/etat-labels-mp.js';
 
 function formatXOF(n) {
   const v = Number(n) || 0;
@@ -225,7 +226,7 @@ export function renderBudgetLineHistory(opts = {}) {
           el('td', { style: { padding: '5px 8px' } }, el('span', {
             className: `badge badge-${etat?.color || 'gray'}`,
             style: { fontSize: '10px' }
-          }, etat?.label || op.etat || '-')),
+          }, ETAT_LABEL_MP[op.etat] || etat?.label || op.etat || '-')),
           el('td', { style: { padding: '5px 8px', textAlign: 'center' } },
             state.onNavigate
               ? el('button', {

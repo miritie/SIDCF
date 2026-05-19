@@ -10,6 +10,7 @@ import { getRegionsOptions } from '../../../lib/mp-regions-ci.js';
 import { renderMultiSelectCollapsible } from '../../../ui/widgets/multi-select-collapsible-mp.js';
 import { computeExecutionFinanciere } from '../../../ui/widgets/op-mandat-manager-mp.js';
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
+import { ETAT_LABEL_MP } from '../etat-labels-mp.js';
 
 // Modif #37 — Formules associées aux 5 catégories de santé du marché (exposées via badge 📐)
 const SANTE_FORMULES = {
@@ -111,12 +112,14 @@ let activeFilters = {
 
 // Mapping des phases (états) — utilisé pour les KPIs
 const PHASES = [
-  { key: 'planification',     label: 'Planification',     icon: '📅', color: 'var(--color-warning)', etats: ['PLANIFIE'] },
-  { key: 'contractualisation', label: 'Contractualisation', icon: '📝', color: 'var(--color-info)',    etats: ['EN_PROC'] },
-  { key: 'attribution',        label: 'Attribution',        icon: '✅', color: '#0d6efd',              etats: ['ATTRIBUE', 'VISE'] },
-  { key: 'execution',          label: 'Exécution',          icon: '⚙️', color: '#6f42c1',              etats: ['EN_EXEC'] },
-  { key: 'cloture',            label: 'Clôture',            icon: '🏁', color: 'var(--color-gray-500)', etats: ['CLOS'] }
+  { key: 'planification',     label: 'En Planification',     icon: '📅', color: 'var(--color-warning)', etats: ['PLANIFIE'] },
+  { key: 'contractualisation', label: 'En Contractualisation', icon: '📝', color: 'var(--color-info)',    etats: ['EN_PROC'] },
+  { key: 'attribution',        label: 'Attribué',              icon: '✅', color: '#0d6efd',              etats: ['ATTRIBUE', 'VISE'] },
+  { key: 'execution',          label: 'En exécution',          icon: '⚙️', color: '#6f42c1',              etats: ['EN_EXEC'] },
+  { key: 'cloture',            label: 'Achevé',                icon: '🏁', color: 'var(--color-gray-500)', etats: ['CLOS'] }
 ];
+
+// Modif #41 — Libellés des étapes Marché+ : importés depuis etat-labels-mp.js
 
 // Opération sélectionnée pour modal détails
 let selectedOperation = null;
@@ -205,8 +208,8 @@ export async function renderPPMList() {
 
     // Stats KPIs — total + montant (rangée 1) puis 5 phases (rangée 2)
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '12px' } }, [
-      renderKPI('Total marchés et contrats', stats.totalOperations, 'var(--color-primary)', '📁'),
-      renderKPI('Montant Total (F CFA)', money(stats.totalMontant, 'F CFA'), 'var(--color-success)', '💰')
+      renderKPI('Total marché planifié', stats.totalOperations, 'var(--color-primary)', '📁'),
+      renderKPI('Montant total prévisionnel', money(stats.totalMontant, 'F CFA'), 'var(--color-success)', '💰')
     ]),
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '16px' } },
       PHASES.map(p => renderKPI(p.label, stats.parPhase[p.key], p.color, p.icon))
@@ -298,11 +301,11 @@ export async function renderPPMList() {
             activeFilters.modePassation
           ),
 
-          // État (multi)
+          // État (multi) — libellés Marché+ surchargés via ETAT_LABEL_MP
           renderMultiSelectFilter(
             'etat',
             'État',
-            registries.ETAT_MARCHE || [],
+            (registries.ETAT_MARCHE || []).map(e => ({ ...e, label: ETAT_LABEL_MP[e.code] || e.label })),
             activeFilters.etat
           ),
 
@@ -540,7 +543,7 @@ function renderSimpleRow(op, registries) {
       el('span', {
         className: `badge badge-${etat?.color || 'gray'}`,
         style: { fontSize: '11px' }
-      }, etat?.label || op.etat)
+      }, ETAT_LABEL_MP[op.etat] || etat?.label || op.etat)
     ),
     el('td', {}, [
       createButton('btn btn-sm btn-secondary', '👁️ Voir', (e) => {
@@ -602,7 +605,7 @@ function showDetailModal(operation, registries) {
           { label: 'Mode de passation', value: modePassation?.label || operation.modePassation },
           { label: 'Revue', value: operation.revue },
           { label: 'Nature des prix', value: naturePrix?.label || operation.naturePrix },
-          { label: 'État', value: etat?.label || operation.etat }
+          { label: 'État', value: ETAT_LABEL_MP[operation.etat] || etat?.label || operation.etat }
         ]),
 
         // Section: Financier
@@ -968,7 +971,7 @@ function openSanteDrawer(santeCode, filteredOps, santeMap) {
             ])
           ]),
           el('div', { style: { flexShrink: 0 } }, [
-            el('span', { className: `badge badge-${op.etat?.toLowerCase().replace('_', '-')}` }, op.etat || '?')
+            el('span', { className: `badge badge-${op.etat?.toLowerCase().replace('_', '-')}` }, ETAT_LABEL_MP[op.etat] || op.etat || '?')
           ])
         ])
       ]);

@@ -41,8 +41,10 @@ import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.
 import { renderOpMandatManager } from '../../../ui/widgets/op-mandat-manager-mp.js';
 import { renderPluriannualite } from '../../../ui/widgets/pluriannualite-mp.js';
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
+import { openKpiDrilldownDrawer } from '../../../ui/widgets/kpi-drilldown-drawer-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
 import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
+import { ETAT_LABEL_MP } from '../etat-labels-mp.js';
 import logger from '../../../lib/logger.js';
 
 // ============================================
@@ -122,7 +124,7 @@ export async function renderFicheMarche(params) {
         await renderFicheMarche(params);
       }
     }),
-    renderHealthKPIs(fullData, currentLotId, mpDifficultes),
+    renderHealthKPIs(fullData, currentLotId, mpDifficultes, idOperation),
     // Modif #29 : section difficultés du marché — visible en haut, structurée, exploitable
     renderDifficultesSection(idOperation, mpDifficultes, registries),
     // Modif #34 : situation d'exécution financière (OP/Mandats). Affichée seulement si
@@ -234,7 +236,7 @@ function renderHeaderSticky(operation, registries, fullData, currentLotId, lots,
           el('span', {
             className: `badge badge-${etat?.color || 'gray'}`,
             style: { fontSize: '13px', padding: '4px 12px' }
-          }, etat?.label || operation.etat),
+          }, ETAT_LABEL_MP[operation.etat] || etat?.label || operation.etat),
           operation.procDerogation?.isDerogation ? el('span', {
             className: 'badge badge-warning',
             style: { fontSize: '12px' }
@@ -365,9 +367,11 @@ function renderPhaseNavButtons(phases, operation, idOperation, currentLotId) {
 // KPIs santé du marché
 // ============================================
 
-function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
+function renderHealthKPIs(fullData, currentLotId, mpDifficultes = [], idOperation) {
   const { operation, avenants = [], garanties = [], echeancier, ordresService = [] } = fullData;
   const montantInitial = operation.montantPrevisionnel || 0;
+  // Lot effectif pour les query params de navigation (undefined si « ALL »)
+  const lotIdNav = currentLotId && currentLotId !== 'ALL' ? currentLotId : undefined;
 
   // Filtrer avenants au lot courant si applicable
   const avenantsLot = currentLotId === 'ALL'
@@ -431,7 +435,10 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
         regle: 'Code des Marchés Publics CI : seuil ≤ 30 %. Alerte à partir de 25 %. Couleur : vert <25 %, jaune 25-30 %, rouge ≥30 %.',
         exemple: 'Marché 100 M XOF + avenants +15 M + +10 M ⇒ 25 M / 100 M = 25 % (alerte jaune)',
         reference: 'RG021 du SDF · Art. avenants Code MP CI'
-      }
+      },
+      // Modif #42 — drawer arrière-table : avenants approuvés par le CF
+      () => openAvenantsDrilldownDrawer(avenantsLot, idOperation, lotIdNav),
+      'Voir les avenants approuvés'
     ),
     renderKpiCard(
       'Échéancier planifié',
@@ -444,7 +451,9 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
         regle: 'Le total des pourcentages des échéances de paiement doit atteindre 100 % du montant marché (selon base HT ou TTC choisie par échéance).',
         exemple: 'Avance 20 % + Acompte 1 = 30 % + Acompte 2 = 30 % + Solde = 20 %  ⇒ total = 100 % (valide)',
         reference: 'F011 du SDF'
-      }
+      },
+      () => openEcheancierDrilldownDrawer(items, montantInitial, idOperation),
+      'Voir les échéances planifiées'
     ),
     renderKpiCard(
       'Garanties',
@@ -456,7 +465,9 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
         formule: 'count(etat=ACTIVE) · count(etat=EXPIREE)',
         regle: 'Garantie active : dateÉmission ≤ aujourd\'hui ≤ dateÉchéance. Une garantie expirée non levée déclenche une alerte rouge.',
         reference: 'Art. 97-104 Code MP CI'
-      }
+      },
+      () => openGarantiesDrilldownDrawer(garantiesLot, idOperation, lotIdNav),
+      'Voir les garanties'
     ),
     renderKpiCard(
       'Ordres de service',
@@ -468,7 +479,9 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
         formule: 'count(MP_ORDRE_SERVICE)',
         regle: 'L\'OS de démarrage est obligatoire pour passer en phase Exécution (RG017). Date fin prévisionnelle = date OS + durée d\'exécution.',
         reference: 'RG017 et F016 du SDF'
-      }
+      },
+      () => openOrdresServiceDrilldownDrawer(ordresService, idOperation),
+      'Voir les ordres de service'
     ),
     renderKpiCard(
       'Difficultés',
@@ -481,9 +494,205 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = []) {
         regle: 'Code couleur du KPI : rouge si ≥1 critique non résolue · orange si ≥1 impact élevé non résolu · jaune s\'il y a des difficultés en cours · vert sinon.',
         exemple: '1 difficulté CRITIQUE non résolue ⇒ KPI rouge "Bloqué"',
         reference: 'Modif #29 — saisie structurée'
-      }
+      },
+      () => openDifficultesDrilldownDrawer(mpDifficultes),
+      'Voir les difficultés'
     )
   ]);
+}
+
+// ============================================
+// Modif #42 — Drawers « arrière-table » des tuiles KPI
+// ============================================
+
+/** Drawer : avenants approuvés par le CF (filtre dateApprobation non nulle). */
+function openAvenantsDrilldownDrawer(avenantsLot, idOperation, lotIdNav) {
+  const approuves = (avenantsLot || []).filter(av => av.dateApprobation);
+  const enAttente = (avenantsLot || []).length - approuves.length;
+  // Tri par numéro croissant pour stabilité d'affichage
+  const rows = [...approuves].sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+  openKpiDrilldownDrawer({
+    title: 'Avenants approuvés par le CF',
+    subtitle: rows.length === 1
+      ? `1 avenant approuvé${enAttente > 0 ? ` · ${enAttente} en cours d'approbation` : ''}`
+      : `${rows.length} avenants approuvés${enAttente > 0 ? ` · ${enAttente} en cours d'approbation` : ''}`,
+    columns: [
+      { key: 'numero',         label: 'N°',          width: '50px' },
+      { key: 'type',           label: 'Type',        width: '70px' },
+      { key: 'dateSignature',  label: 'Signature',   width: '110px' },
+      { key: 'dateApprobation',label: 'Approbation', width: '110px' },
+      { key: 'variation',      label: 'Variation',   align: 'right' },
+      { key: 'motif',          label: 'Motif' }
+    ],
+    cellRender: (av, col) => {
+      switch (col.key) {
+        case 'numero':          return `#${av.numero || '-'}`;
+        case 'type':            return av.type || '-';
+        case 'dateSignature':   return av.dateSignature ? fmtDate(av.dateSignature) : '-';
+        case 'dateApprobation': return av.dateApprobation ? fmtDate(av.dateApprobation) : '-';
+        case 'variation':       return (av.variationMontant != null) ? money(av.variationMontant) : '-';
+        case 'motif':           return av.motifRef || av.motifAutre || av.description || '-';
+        default:                return '-';
+      }
+    },
+    rows,
+    onRowClick: () => {
+      router.navigate('/mp/avenants', { idOperation, lotId: lotIdNav });
+    },
+    emptyMessage: enAttente > 0
+      ? `Aucun avenant approuvé pour ce marché. ${enAttente} avenant(s) en cours d'approbation par le CF.`
+      : 'Aucun avenant pour ce marché.',
+    footerHint: 'Cliquez sur une ligne pour ouvrir l\'écran des avenants du marché.'
+  });
+}
+
+/** Drawer : échéances planifiées (items de l'échéancier). */
+function openEcheancierDrilldownDrawer(items, montantInitial, idOperation) {
+  const rows = [...(items || [])].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+
+  openKpiDrilldownDrawer({
+    title: 'Échéances planifiées',
+    subtitle: `${rows.length} échéance${rows.length > 1 ? 's' : ''}`,
+    columns: [
+      { key: 'ordre',       label: '#',          width: '40px' },
+      { key: 'libelle',     label: 'Libellé' },
+      { key: 'pourcentage', label: '%',          align: 'right', width: '80px' },
+      { key: 'montant',     label: 'Montant',    align: 'right' },
+      { key: 'echeance',    label: 'Échéance',   width: '110px' }
+    ],
+    cellRender: (it, col) => {
+      switch (col.key) {
+        case 'ordre':       return it.ordre != null ? it.ordre : '-';
+        case 'libelle':     return it.libelle || it.type || '-';
+        case 'pourcentage': return it.pourcentage != null ? `${it.pourcentage.toFixed(1)} %` : '-';
+        case 'montant':     {
+          const m = it.montant != null
+            ? it.montant
+            : (it.pourcentage != null && montantInitial ? (it.pourcentage / 100) * montantInitial : null);
+          return m != null ? money(m) : '-';
+        }
+        case 'echeance':    return it.dateEcheance ? fmtDate(it.dateEcheance) : (it.echeance || '-');
+        default:            return '-';
+      }
+    },
+    rows,
+    onRowClick: () => {
+      router.navigate('/mp/echeancier', { idOperation });
+    },
+    emptyMessage: 'Aucune échéance planifiée pour ce marché.',
+    footerHint: 'Cliquez sur une ligne pour ouvrir l\'écran Échéancier du marché.'
+  });
+}
+
+/** Drawer : garanties du marché (lot courant). */
+function openGarantiesDrilldownDrawer(garantiesLot, idOperation, lotIdNav) {
+  const rows = [...(garantiesLot || [])].sort((a, b) => {
+    const da = a.dateEmission || '';
+    const db = b.dateEmission || '';
+    return db.localeCompare(da);
+  });
+
+  openKpiDrilldownDrawer({
+    title: 'Garanties du marché',
+    subtitle: `${rows.length} garantie${rows.length > 1 ? 's' : ''}`,
+    columns: [
+      { key: 'type',         label: 'Type',       width: '120px' },
+      { key: 'montant',      label: 'Montant',    align: 'right' },
+      { key: 'dateEmission', label: 'Émission',   width: '110px' },
+      { key: 'dateEcheance', label: 'Échéance',   width: '110px' },
+      { key: 'etat',         label: 'État',       width: '90px' }
+    ],
+    cellRender: (g, col) => {
+      switch (col.key) {
+        case 'type':         return g.type || '-';
+        case 'montant':      return g.montant != null ? money(g.montant) : '-';
+        case 'dateEmission': return g.dateEmission ? fmtDate(g.dateEmission) : '-';
+        case 'dateEcheance': return g.dateEcheance ? fmtDate(g.dateEcheance) : '-';
+        case 'etat':         return g.etat || '-';
+        default:             return '-';
+      }
+    },
+    rows,
+    onRowClick: () => {
+      router.navigate('/mp/garanties', { idOperation, lotId: lotIdNav });
+    },
+    emptyMessage: 'Aucune garantie enregistrée pour ce marché.',
+    footerHint: 'Cliquez sur une ligne pour ouvrir l\'écran Garanties du marché.'
+  });
+}
+
+/** Drawer : ordres de service du marché. */
+function openOrdresServiceDrilldownDrawer(ordresService, idOperation) {
+  const rows = [...(ordresService || [])].sort((a, b) => {
+    const da = a.dateEmission || a.date || '';
+    const db = b.dateEmission || b.date || '';
+    return db.localeCompare(da);
+  });
+
+  openKpiDrilldownDrawer({
+    title: 'Ordres de service',
+    subtitle: `${rows.length} OS émis`,
+    columns: [
+      { key: 'numero',       label: 'N°',         width: '70px' },
+      { key: 'type',         label: 'Type',       width: '110px' },
+      { key: 'dateEmission', label: 'Émission',   width: '110px' },
+      { key: 'objet',        label: 'Objet' }
+    ],
+    cellRender: (os, col) => {
+      switch (col.key) {
+        case 'numero':       return os.numero || '-';
+        case 'type':         return os.type || '-';
+        case 'dateEmission': return os.dateEmission ? fmtDate(os.dateEmission) : (os.date ? fmtDate(os.date) : '-');
+        case 'objet':        return os.objet || os.description || '-';
+        default:             return '-';
+      }
+    },
+    rows,
+    onRowClick: () => {
+      router.navigate('/mp/execution', { idOperation });
+    },
+    emptyMessage: 'Aucun ordre de service émis pour ce marché.',
+    footerHint: 'Cliquez sur une ligne pour ouvrir l\'écran Exécution du marché.'
+  });
+}
+
+/** Drawer : difficultés du marché. */
+function openDifficultesDrilldownDrawer(mpDifficultes) {
+  const rows = [...(mpDifficultes || [])].sort((a, b) => {
+    const da = a.dateSurvenance || a.createdAt || '';
+    const db = b.dateSurvenance || b.createdAt || '';
+    return db.localeCompare(da);
+  });
+
+  const scrollToSection = () => {
+    const target = document.getElementById('section-difficultes');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  openKpiDrilldownDrawer({
+    title: 'Difficultés du marché',
+    subtitle: `${rows.length} difficulté${rows.length > 1 ? 's' : ''} enregistrée${rows.length > 1 ? 's' : ''}`,
+    columns: [
+      { key: 'dateSurvenance', label: 'Date',     width: '110px' },
+      { key: 'impact',         label: 'Impact',   width: '90px' },
+      { key: 'statut',         label: 'Statut',   width: '100px' },
+      { key: 'description',    label: 'Description' }
+    ],
+    cellRender: (d, col) => {
+      switch (col.key) {
+        case 'dateSurvenance': return d.dateSurvenance ? fmtDate(d.dateSurvenance) : '-';
+        case 'impact':         return d.impact || '-';
+        case 'statut':         return d.statut || '-';
+        case 'description':    return d.description || d.titre || '-';
+        default:               return '-';
+      }
+    },
+    rows,
+    onRowClick: scrollToSection,
+    emptyMessage: 'Aucune difficulté enregistrée sur ce marché.',
+    footerHint: 'Cliquez sur une ligne pour accéder à la section Difficultés (édition possible).'
+  });
 }
 
 /**
@@ -550,6 +759,7 @@ function renderSituationExecutionFinanciere(operation, mpDecomptes, attribution,
  */
 function renderDifficultesSection(idOperation, mpDifficultes, registries) {
   return el('div', {
+    id: 'section-difficultes',
     className: 'card',
     style: { marginBottom: '20px' }
   }, [
@@ -572,7 +782,7 @@ function renderDifficultesSection(idOperation, mpDifficultes, registries) {
   ]);
 }
 
-function renderKpiCard(label, value, sub, color, formula) {
+function renderKpiCard(label, value, sub, color, formula, onPlusClick, plusTitle) {
   return el('div', {
     className: 'card',
     style: {
@@ -580,7 +790,8 @@ function renderKpiCard(label, value, sub, color, formula) {
       borderLeft: `4px solid ${color}`,
       background: '#fff',
       borderRadius: '6px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      position: 'relative'
     }
   }, [
     el('div', { style: { fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.3px', display: 'flex', alignItems: 'center' } }, [
@@ -588,7 +799,35 @@ function renderKpiCard(label, value, sub, color, formula) {
       formula ? renderFormulaBadge(formula) : null
     ]),
     el('div', { style: { fontSize: '22px', fontWeight: 'bold', color, margin: '4px 0' } }, value),
-    el('div', { style: { fontSize: '11px', color: '#6b7280' } }, sub)
+    el('div', { style: { fontSize: '11px', color: '#6b7280' } }, sub),
+    // Modif #42 — bouton + (coin bas droite) pour ouvrir l'arrière-table
+    onPlusClick ? el('button', {
+      type: 'button',
+      title: plusTitle || 'Voir la liste',
+      onclick: (e) => { e.stopPropagation(); onPlusClick(); },
+      style: {
+        position: 'absolute',
+        bottom: '6px',
+        right: '6px',
+        width: '22px',
+        height: '22px',
+        borderRadius: '50%',
+        border: `1px solid ${color}`,
+        background: '#fff',
+        color: color,
+        fontSize: '14px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        lineHeight: '1',
+        padding: '0',
+        transition: 'all 0.15s'
+      },
+      onmouseenter: (e) => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#fff'; },
+      onmouseleave: (e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = color; }
+    }, '+') : null
   ]);
 }
 

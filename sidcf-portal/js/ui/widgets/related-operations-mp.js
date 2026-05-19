@@ -35,6 +35,7 @@ import { el } from '../../lib/dom.js';
 import dataService, { ENTITIES } from '../../datastore/data-service.js';
 import router from '../../router.js';
 import logger from '../../lib/logger.js';
+import { ETAT_LABEL_MP } from '../../modules/marche-plus/etat-labels-mp.js';
 
 // ----- Référentiels statiques (locaux au widget) -----
 
@@ -358,8 +359,8 @@ export function renderRelatedOperations({
       ]),
       el('div', { style: { fontFamily: 'monospace', fontSize: '10px', color: '#94a3b8', margin: '1px 0' } }, target.id),
       el('div', { style: { fontSize: '12px', fontWeight: 600, color: '#1e293b', lineHeight: '1.3' }, title: objet }, objetShort),
-      etat ? el('div', { style: { marginTop: '4px' } }, [
-        el('span', { className: `badge badge-${etat.color || 'gray'}`, style: { fontSize: '9px' } }, etat.label || target.etat)
+      (etat || target.etat) ? el('div', { style: { marginTop: '4px' } }, [
+        el('span', { className: `badge badge-${etat?.color || 'gray'}`, style: { fontSize: '9px' } }, ETAT_LABEL_MP[target.etat] || etat?.label || target.etat)
       ]) : null
     ]);
   }

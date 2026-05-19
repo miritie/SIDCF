@@ -13,6 +13,81 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-19 — Libellés des étapes Marché+ alignés sur le vocabulaire client
+
+> **Modif #41** — Observation client sur la liste PPM Marché+ et sur les badges « étape » des tableaux : les libellés actuels (« Planifié », « En procédure », « Visé », « Clôturé ») ne correspondent pas aux termes attendus par le métier. Renommage scrupuleux sur tout le module Marché+ sans toucher au registre global (qui reste utilisé tel quel par le module Marché original). Bonus : correction du bug d'affichage du code brut « EN_EXEC » dans la colonne État.
+
+### Mapping appliqué
+
+| Code (inchangé en base) | Avant | Après |
+|---|---|---|
+| `PLANIFIE` | Planifié | **En Planification** |
+| `EN_PROC` | En procédure | **En Contractualisation** |
+| `ATTRIBUE` | Attribué | **Attribué** |
+| `VISE` | Visé | **Approuvé** (étape d'approbation) |
+| `EN_EXEC` | EN_EXEC (bug) | **En exécution** |
+| `CLOS` | Clôturé | **Achevé** |
+| `RESILIE` | Résilié | **Résilié** |
+
+Renommage en parallèle des KPI de la liste PPM : « Total marchés et contrats » → **Total marché planifié** et « Montant Total (F CFA) » → **Montant total prévisionnel**. Les 5 tuiles phases sont préfixées « En » quand approprié.
+
+### Source unique de vérité
+
+Nouveau module `sidcf-portal/js/modules/marche-plus/etat-labels-mp.js` qui exporte `ETAT_LABEL_MP` (map code → libellé Marché+) et un helper `getEtatLabelMP(code, registries)`. Surcharge le registre global `ETAT_MARCHE` (qui contient toujours les anciens libellés pour le module Marché original).
+
+#### Fallback en chaîne
+
+`ETAT_LABEL_MP[code] → registry.label → code brut` — toute opération avec un etat inconnu reste lisible. Couvre aussi `EXECUTION` et `CLOTURE` (codes legacy) en sécurité.
+
+#### Fichiers consommateurs alignés
+
+- `ecr01b-ppm-unitaire.js` — 4 sites : filtre État du dropdown, badge ligne du tableau résultats, modale Détails opération, drawer « voir détail » des tuiles santé
+- `ecr01c-fiche-marche.js` — badge état du header sticky
+- `ecr06-dashboard-cf.js` — 2 sites : distribution des états + activité récente · 1 texte d'alerte « marché(s) visé(s) » → « marché(s) approuvé(s) »
+- `widgets/budget-line-history-mp.js` — badge état dans le tableau d'historique d'utilisation
+- `widgets/related-operations-mp.js` — badge état des opérations liées (chaîne de projet)
+
+Pas de migration DB. Pas de changement Worker. Aucun code ni clé technique (PLANIFIE, EN_PROC, VISE…) n'est modifié — toute la logique métier conditionnelle (`etat === 'VISE'`, etc.) continue de fonctionner à l'identique.
+
+## 2026-05-19 — Drawers « arrière-table » sur les 5 tuiles KPI de la fiche de vie
+
+> **Modif #42** — Observation client sur la fiche de vie d'un marché : les tuiles KPI (Cumul avenants, Échéancier planifié, Garanties, Ordres de service, Difficultés) affichent un chiffre/pourcentage mais ne donnent pas accès à la liste détaillée derrière. Ajout d'une icône `+` discrète dans le coin bas-droite de chaque tuile qui ouvre un drawer latéral présentant la liste lecture seule des enregistrements, avec navigation vers l'écran dédié au clic sur une ligne.
+
+### Comportement implémenté
+
+- Bouton `+` (22 px, cercle bordé à la couleur du KPI, tooltip explicite « Voir la liste des… »)
+- Au clic → drawer glissant depuis la droite (animation, fermeture Échap / clic extérieur / bouton ✕)
+- Listing **strict lecture seule** — aucun formulaire, aucun écran reconstruit
+- Clic sur une ligne → navigation vers l'écran dédié du marché en cours, dans le bon contexte de lot
+
+### Tuile → contenu drawer → cible de navigation
+
+| Tuile | Filtre / colonnes | Destination au clic |
+|---|---|---|
+| **Cumul avenants** | Avenants approuvés par le CF (`dateApprobation` non null). Colonnes : N°, Type, Signature, Approbation, Variation, Motif | `/mp/avenants?idOperation=…&lotId=…` |
+| **Échéancier planifié** | Items de l'échéancier (#, Libellé, %, Montant, Échéance) | `/mp/echeancier?idOperation=…` |
+| **Garanties** | Garanties du lot courant (Type, Montant, Émission, Échéance, État) | `/mp/garanties?idOperation=…&lotId=…` |
+| **Ordres de service** | Tous les OS du marché (N°, Type, Émission, Objet) | `/mp/execution?idOperation=…` |
+| **Difficultés** | Toutes les difficultés (Date, Impact, Statut, Description) | Scroll vers `#section-difficultes` de la fiche courante |
+
+### Garde-fous
+
+- **Zéro régression CRUD** : tous les clics navigent vers les écrans existants déjà testés. Aucun formulaire reconstruit dans le drawer.
+- **Empty state contextuel** : ex. « 2 avenants en cours d'approbation par le CF » sur la tuile Cumul avenants quand rien n'est encore approuvé.
+- **Tri stable** : avenants par numéro, OS/garanties/difficultés par date desc, échéances par ordre.
+- **Bouton + non intrusif** : ne masque pas le badge 📐 (formule) qui reste en haut.
+
+#### Fichiers
+
+- Nouveau : `sidcf-portal/js/ui/widgets/kpi-drilldown-drawer-mp.js` (~190 lignes)
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` :
+  - `renderKpiCard` accepte 2 nouveaux params optionnels (`onPlusClick`, `plusTitle`)
+  - `renderHealthKPIs` reçoit `idOperation` (mis à jour côté call site)
+  - 5 fonctions inline `openXxxDrilldownDrawer(...)` qui préparent les données + colonnes + handler de clic
+  - Section Difficultés reçoit un anchor `#section-difficultes` pour le scroll
+
+Pas de Worker ni de DB touchée. Pas de déploiement.
+
 ## 2026-05-19 — Modélisation TYPE_DOSSIER_APPEL conforme DGMP + propagation matrice pièces
 
 > **Modif #40** — Suite logique de la Modif #39 (retrait des sigles fantômes). Après vérification des sources officielles, on intègre les **4 types de dossier d'appel qui manquaient** dans la nomenclature ivoirienne, avec propagation effective sur la matrice des pièces obligatoires et sur le filtrage UI.
