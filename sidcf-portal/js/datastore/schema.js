@@ -225,7 +225,7 @@ export const SCHEMAS = {
     categorie: 'NATIONALE', // NATIONALE | INTERNATIONALE
 
     // Dossier d'appel à candidature
-    typeDossierAppel: null, // DAO | AMI | AONO | DPI | etc. (selon mode passation)
+    typeDossierAppel: null, // DAO | AMI | DC | AUTRE (selon mode passation)
     dossierAppelDoc: null, // document uploadé
 
     // Dates chronologiques
@@ -804,7 +804,7 @@ export const SCHEMAS = {
     categorie: 'NATIONALE', // NATIONALE | INTERNATIONALE
 
     // Dossier d'appel à candidature
-    typeDossierAppel: null, // DAO | AMI | AONO | DPI | etc. (selon mode passation)
+    typeDossierAppel: null, // DAO | AMI | DC | AUTRE (selon mode passation)
     dossierAppelDoc: null, // document uploadé
 
     // Dates chronologiques

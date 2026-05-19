@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-19 — Nettoyage TYPE_DOSSIER_APPEL : retrait des sigles non officiels (AONO, DPI, DPS)
+
+> **Modif #39** — Question explicite du client sur l'origine des sigles AONO, DPI et DPS dans le champ « Type de dossier d'appel ». Vérification croisée des sources officielles (Ordonnance n°2019-679 du 24/07/2019 portant Code des marchés publics, Décret n°2021-909 du 22/12/2021 sur les procédures simplifiées, Décrets n°2013-404/405/406 sur les DTAO, Arrêté n°112/MPMBPE/DGBF/DMP du 08/03/2016, ainsi que la page officielle DGMP `marchespublics.ci/dossier_appeloffre`) : aucun de ces trois sigles n'apparaît dans la nomenclature ivoirienne officielle. Retrait pur et simple.
+
+- **AONO** « Avis d'Offres Négociées » → inexistant en CI et dans l'UEMOA ; pour l'entente directe, le Code parle de « marché négocié » / « gré à gré ».
+- **DPI** « Demande de Prix » → existe au Burkina Faso (sigle DP) mais pas en CI ; équivalent ivoirien = PSC + Demande de Cotation (DC), déjà présente.
+- **DPS** « Dossier de Procédure Spécialisée » → introuvable dans tout texte officiel ; pour PSO la DGMP utilise « Dossier de consultation » ou « Dossier de référence » (à modéliser dans une modif ultérieure si besoin).
+
+Fichiers touchés :
+- `sidcf-portal/js/config/registries.json` — suppression des 3 entrées `TYPE_DOSSIER_APPEL`.
+- `sidcf-portal/js/datastore/schema.js` — commentaires mis à jour (2 occurrences) : `DAO | AMI | DC | AUTRE`.
+
+Impact :
+- **UI** : les listes déroulantes « Type de dossier d'appel » n'afficheront plus AONO/DPI/DPS. Les marchés existants ayant éventuellement l'une de ces valeurs en base conservent la donnée (pas de migration destructive), mais l'utilisateur devra rebasculer vers une valeur officielle à la prochaine édition.
+- **Worker / DB** : aucun changement côté backend ni Worker (le champ est `text` libre côté SQL). Pas de migration nécessaire.
+
+Action déploiement : aucun `wrangler deploy` requis — modif purement front (JSON statique servi tel quel).
+
+---
+
 ## 2026-05-15 — Imputation budgétaire + Module sous-traitance (séance métier §3.a + §5.g)
 
 > **Modif #38** — Deux points résiduels du mail de synthèse de la séance du 6 mai : renommage généralisé « Ligne budgétaire » → « Imputation budgétaire » dans les libellés UI (§3.a), et ajout d'un module de gestion des sous-traitants déclarés à l'attribution (§5.g).
