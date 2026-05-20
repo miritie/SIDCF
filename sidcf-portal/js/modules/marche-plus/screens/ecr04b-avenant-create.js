@@ -101,7 +101,7 @@ export async function renderAvenantCreate(params) {
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
             el('div', {}, [
               el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Montant du marché de base'),
-              el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantInitial.toLocaleString()} XOF`)
+              el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantInitial.toLocaleString('fr-FR')} XOF`)
             ]),
             el('div', {}, [
               el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px', display: 'flex', alignItems: 'center' } }, [
@@ -116,11 +116,11 @@ export async function renderAvenantCreate(params) {
                 })
               ]),
               el('div', { style: { fontSize: '18px', fontWeight: 'bold', color: pourcentageCumul >= 25 ? '#dc3545' : '#28a745' } },
-                `${totalAvenants.toLocaleString()} XOF (${pourcentageCumul.toFixed(1)}%)`)
+                `${totalAvenants.toLocaleString('fr-FR')} XOF (${pourcentageCumul.toFixed(1)}%)`)
             ]),
             el('div', {}, [
               el('div', { style: { fontSize: '12px', color: '#6c757d', marginBottom: '4px' } }, 'Montant total du marché'),
-              el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantActuel.toLocaleString()} XOF`)
+              el('div', { style: { fontSize: '18px', fontWeight: 'bold' } }, `${montantActuel.toLocaleString('fr-FR')} XOF`)
             ])
           ])
         ])
@@ -500,15 +500,15 @@ function updateImpactPreview() {
   const nouveauCumul = totalAvenants + variationMontant;
   const nouveauPourcentage = montantInitial > 0 ? (nouveauCumul / montantInitial) * 100 : 0;
 
-  nouveauMontantInput.value = `${nouveauMontant.toLocaleString()} XOF`;
+  nouveauMontantInput.value = `${nouveauMontant.toLocaleString('fr-FR')} XOF`;
 
   const signe = variationMontant > 0 ? '+' : '';
   const couleur = variationMontant > 0 ? '#28a745' : '#dc3545';
 
-  impactText.innerHTML = `<span style="color: ${couleur}; font-weight: bold;">${signe}${variationMontant.toLocaleString()} XOF</span> → Montant total du marché : <strong>${nouveauMontant.toLocaleString()} XOF</strong>`;
+  impactText.innerHTML = `<span style="color: ${couleur}; font-weight: bold;">${signe}${variationMontant.toLocaleString('fr-FR')} XOF</span> → Montant total du marché : <strong>${nouveauMontant.toLocaleString('fr-FR')} XOF</strong>`;
 
   const couleurCumul = nouveauPourcentage >= 30 ? '#dc3545' : (nouveauPourcentage >= 25 ? '#ffc107' : '#28a745');
-  impactCumul.innerHTML = `<span style="color: ${couleurCumul}; font-weight: bold;">${nouveauCumul.toLocaleString()} XOF (${nouveauPourcentage.toFixed(1)}%)</span>`;
+  impactCumul.innerHTML = `<span style="color: ${couleurCumul}; font-weight: bold;">${nouveauCumul.toLocaleString('fr-FR')} XOF (${nouveauPourcentage.toFixed(1)}%)</span>`;
 
   impactPreview.style.display = 'block';
 }

@@ -424,7 +424,7 @@ export function renderEcheancierManager(
   function deleteEcheance(index) {
     const echeance = currentEcheancier.items[index];
 
-    if (confirm(`Supprimer l'échéance n°${echeance.num} (${echeance.montant} XOF) ?`)) {
+    if (confirm(`Supprimer l'échéance n°${echeance.num} (${(echeance.montant || 0).toLocaleString('fr-FR')} XOF) ?`)) {
       currentEcheancier.items.splice(index, 1);
       recalculateTotals();
       notifyChange();

@@ -640,10 +640,10 @@ function renderMontantsSection(montantHT, montantTTC) {
             defaultBase === 'HT' ? 'Montant TTC (XOF)' : 'Montant HT (XOF)'
           ),
           el('input', {
-            type: 'number',
+            type: 'text',
             className: 'form-input',
             id: 'attr-montant-calcule',
-            value: defaultBase === 'HT' ? (montantHT * 1.18).toFixed(0) : (montantTTC / 1.18).toFixed(0),
+            value: formatNumber(defaultBase === 'HT' ? montantHT * 1.18 : montantTTC / 1.18),
             disabled: true,
             style: { backgroundColor: '#e9ecef', fontWeight: 'bold' }
           })
@@ -676,10 +676,18 @@ function renderMontantsSection(montantHT, montantTTC) {
 }
 
 /**
- * Format money for display
+ * Format money for display (avec suffixe « XOF »)
  */
 function formatMoney(value) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value) + ' XOF';
+}
+
+/**
+ * Format nombre seul (sans suffixe) — pour insertion dans un input dont le label porte déjà « (XOF) »
+ */
+function formatNumber(value) {
+  if (value == null || isNaN(value)) return '';
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value);
 }
 
 /**
@@ -726,7 +734,7 @@ function calculerMontants() {
   // Update calculated field
   const montantCalcule = document.getElementById('attr-montant-calcule');
   if (montantCalcule) {
-    montantCalcule.value = (base === 'HT' ? montantTTC : montantHT).toFixed(0);
+    montantCalcule.value = formatNumber(base === 'HT' ? montantTTC : montantHT);
   }
 
   // Update hidden fields

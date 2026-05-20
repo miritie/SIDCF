@@ -284,7 +284,7 @@ export function renderCleRepartitionManager(
       return;
     }
 
-    if (confirm(`Supprimer la ligne "${ligne.bailleur}" (${ligne.montant} XOF) ?`)) {
+    if (confirm(`Supprimer la ligne "${ligne.bailleur}" (${(ligne.montant || 0).toLocaleString('fr-FR')} XOF) ?`)) {
       currentCle.splice(index, 1);
       recalculatePourcentages();
       notifyChange();

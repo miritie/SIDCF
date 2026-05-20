@@ -13,6 +13,49 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Séparateurs de milliers fr-FR sur les affichages numériques
+
+> **Modif #46** — Uniformisation de l'affichage des montants XOF dans les écrans Marché+. Plusieurs endroits affichaient des valeurs numériques brutes (« 27848000 ») au lieu du format français avec séparateurs (« 27 848 000 »). Trois causes : (1) un `<input type="number" disabled>` ne peut pas afficher de séparateurs (les caractères non numériques sont rejetés silencieusement) ; (2) des appels `Number.prototype.toLocaleString()` sans argument utilisaient la locale du navigateur (résultat « 27,848,000 » en EN-US au lieu de « 27 848 000 ») ; (3) deux dialogues `confirm()` interpolaient un montant brut.
+
+### Fix par fichier
+
+**`ecr03a-attribution.js`** — Section « 💰 Montant du marché de base »
+- Input calculé (Montant TTC quand base = HT, ou Montant HT quand base = TTC) : passage de `type=number disabled` à `type=text disabled`. Native HTML number input n'acceptant pas les espaces comme séparateurs, on était bloqué sur du brut. Le champ est de toute façon non éditable, donc text+disabled est le bon outil.
+- Ajout d'un helper local `formatNumber(value)` qui retourne `Intl.NumberFormat('fr-FR')` sans suffixe (le label porte déjà « (XOF) »).
+- `calculerMontants()` : valeur calculée injectée via `formatNumber(montant)` au lieu de `.toFixed(0)`.
+
+**`ecr04b-avenant-create.js`** — Création d'un avenant
+- 6 appels `toLocaleString()` → `toLocaleString('fr-FR')` (lignes 104, 119, 123, 503, 508, 511). Concerne le bandeau de contexte « Montant initial / Cumul avenants / Montant total » + l'aperçu impact financier (Impact / Cumul après cet avenant).
+
+**`ecr03a-attribution.js`** indirect : le `formatMoney()` local du résumé HT/TVA/TTC utilisait déjà `Intl.NumberFormat('fr-FR')` — aucun changement requis, juste préservé.
+
+**`ui/widgets/cle-repartition-manager-mp.js`** — Dialog suppression d'une ligne bailleur
+- `confirm()` : montant interpolé via `(ligne.montant || 0).toLocaleString('fr-FR')`.
+
+**`ui/widgets/echeancier-manager-mp.js`** — Dialog suppression d'une échéance
+- `confirm()` : montant interpolé via `(echeance.montant || 0).toLocaleString('fr-FR')`.
+
+### Choix de conception
+
+Cas écarté : convertir les inputs **éditables** (`type=number` non disabled) en `type=text` avec masque de saisie. Décidé après confirmation utilisateur — le compromis « saisie en chiffres bruts, affichage formaté partout ailleurs » a été retenu. Cela évite : la gestion du caret pendant le masque, les bugs sur paste/sélection, et le parsing à la soumission. Les disabled/read-only et tous les affichages dérivés (résumés, badges, dialogs) sont eux formatés.
+
+Note locale : tous les `Intl.NumberFormat`/`toLocaleString` utilisent désormais explicitement `'fr-FR'` dans Marché+. Cela rend l'affichage déterministe quelle que soit la locale du navigateur (un utilisateur sur un Mac en anglais voyait précédemment « 27,848,000 ») — important pour un public DCF Côte d'Ivoire.
+
+### Validation
+
+- Syntaxe JS vérifiée sur les 4 fichiers (`node --check`).
+- Test manuel sur localhost:7001 : tous les fichiers servis 200, pas d'erreur de chargement.
+- Logique de calcul HT⇄TTC préservée (les hidden inputs continuent à stocker la valeur brute, le seul changement est le champ de lecture).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js`
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04b-avenant-create.js`
+- `sidcf-portal/js/ui/widgets/cle-repartition-manager-mp.js`
+- `sidcf-portal/js/ui/widgets/echeancier-manager-mp.js`
+
+Pas de Worker, pas de migration SQL, pas de R2. Aucun déploiement requis — fix purement frontend statique.
+
 ## 2026-05-20 — Fix lib fuzzy : normalisation des formes juridiques avec points
 
 > **Modif #45** — Découvert par batterie de tests end-to-end (26 assertions sur lib + DB + workflow). La fonction `normalizeRaisonSociale()` traitait les points (`.`) comme séparateurs en les remplaçant par un espace → conséquence : `« S.A.R.L. »` était transformé en `« s a r l »` (4 lettres seules) au lieu de `« sarl »`, ce qui empêchait la regex `\b(sarl|sas|sa|sasu|eurl…)\b` de détecter la forme juridique et de la retirer. Résultat : `« Société Dupont S.A.R.L. »` ne matchait pas comme doublon de `« SOCIETE DUPONT SARL »`.
