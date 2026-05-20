@@ -25,6 +25,7 @@
 import { el } from '../../lib/dom.js';
 import { checkSanction, renderSanctionBanner } from '../../lib/mp-sanctions.js';
 import { renderFormulaBadge } from './formula-tip-mp.js';
+import { renderEntreprisePicker } from './entreprise-picker-mp.js';
 import logger from '../../lib/logger.js';
 
 const PLAFOND_LEGAL_PCT = 40; // Code MP CI Art. 130 (indicatif)
@@ -176,6 +177,7 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
   function openEditorModal(idx) {
     const isEdit = idx !== null && idx !== undefined;
     const draft = isEdit ? { ...items[idx] } : {
+      entrepriseId: null,
       raisonSociale: '',
       ncc: '',
       adresse: '',
@@ -202,24 +204,33 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
       el('button', { className: 'btn btn-sm btn-secondary', onclick: () => modal.remove() }, '✕')
     ]));
 
-    const grid = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } });
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, ['Raison sociale', el('span', { className: 'required' }, '*')]),
-      el('input', { type: 'text', className: 'form-input', id: 'st-rs', value: draft.raisonSociale || '', placeholder: 'Nom du sous-traitant' })
+    // Modif #43.b — Picker entreprise (lookup + autofill + création inline)
+    content.appendChild(el('label', { className: 'form-label' }, [
+      'Identité du sous-traitant ', el('span', { className: 'required' }, '*')
     ]));
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'NCC'),
-      el('input', { type: 'text', className: 'form-input', id: 'st-ncc', value: draft.ncc || '', placeholder: 'N° Compte Contribuable' })
-    ]));
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'Adresse'),
-      el('input', { type: 'text', className: 'form-input', id: 'st-adresse', value: draft.adresse || '' })
-    ]));
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'Téléphone'),
-      el('input', { type: 'tel', className: 'form-input', id: 'st-tel', value: draft.telephone || '' })
-    ]));
-    content.appendChild(grid);
+    content.appendChild(el('div', { id: 'st-picker-host', style: { marginBottom: '8px' } },
+      renderEntreprisePicker({
+        initialValue: draft.entrepriseId ? draft : null,
+        onChange: (entreprise) => {
+          // Mirror vers les hidden inputs pour rester compat avec checkSanctionLive + payload
+          const setVal = (id, val) => { const i = document.getElementById(id); if (i) i.value = val || ''; };
+          setVal('st-entreprise-id', entreprise?.entrepriseId || '');
+          setVal('st-rs',            entreprise?.raisonSociale || '');
+          setVal('st-ncc',           entreprise?.ncc || '');
+          setVal('st-adresse',       entreprise?.adresse || '');
+          setVal('st-tel',           entreprise?.telephone || '');
+          // Déclenche le check sanctions
+          const ev = new Event('input', { bubbles: true });
+          document.getElementById('st-rs')?.dispatchEvent(ev);
+        }
+      })
+    ));
+    // Inputs cachés mirorrés depuis le picker — compat avec checkSanctionLive + collecte payload
+    content.appendChild(el('input', { type: 'hidden', id: 'st-entreprise-id', value: draft.entrepriseId || '' }));
+    content.appendChild(el('input', { type: 'hidden', id: 'st-rs', value: draft.raisonSociale || '' }));
+    content.appendChild(el('input', { type: 'hidden', id: 'st-ncc', value: draft.ncc || '' }));
+    content.appendChild(el('input', { type: 'hidden', id: 'st-adresse', value: draft.adresse || '' }));
+    content.appendChild(el('input', { type: 'hidden', id: 'st-tel', value: draft.telephone || '' }));
 
     // Bandeau sanction temps-réel (réutilise debounce de mp-sanctions)
     const sanctionBanner = el('div', { id: 'st-form-sanction-banner', style: { marginTop: '8px' } });
@@ -279,6 +290,7 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
           if (pct < 0 || pct > 100) { alert('Pourcentage du marché entre 0 et 100'); return; }
           const payload = {
             ...draft,
+            entrepriseId: document.getElementById('st-entreprise-id')?.value.trim() || null,
             raisonSociale: rs,
             ncc: document.getElementById('st-ncc').value.trim(),
             adresse: document.getElementById('st-adresse').value.trim(),

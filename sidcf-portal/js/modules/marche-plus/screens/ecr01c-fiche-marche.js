@@ -1204,15 +1204,34 @@ function renderAttributionContent(fullData, currentLotId, registries) {
   const echeancierLot = currentLotId === 'ALL' ? echeancier : getLotData(echeancier, currentLotId);
   const cleLot = currentLotId === 'ALL' ? cleRepartition : getLotData(cleRepartition, currentLotId);
 
+  // Modif #43.b — récupération de l'entrepriseId du titulaire/mandataire si lié au référentiel
+  const firstEntreprise = (attributaire?.entreprises && attributaire.entreprises[0]) || null;
+  const entrepriseIdLie = attributaire?.entrepriseId || firstEntreprise?.entrepriseId || null;
+
   return el('div', {}, [
-    el('h4', { style: { margin: '0 0 10px', fontSize: '14px', fontWeight: 600 } }, '🏢 Attributaire'),
+    el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 10px' } }, [
+      el('h4', { style: { margin: 0, fontSize: '14px', fontWeight: 600 } }, '🏢 Attributaire'),
+      // Badge « Fiche entreprise » si rattachement au référentiel
+      entrepriseIdLie ? el('span', {
+        style: {
+          fontSize: '10px',
+          padding: '2px 8px',
+          background: '#dbeafe',
+          color: '#1e40af',
+          borderRadius: '10px',
+          fontWeight: 600,
+          letterSpacing: '0.3px'
+        },
+        title: `Lié à la fiche entreprise du référentiel mp_entreprise (id: ${entrepriseIdLie})`
+      }, '🏢 Fiche entreprise liée') : null
+    ]),
     renderInfoGrid([
-      { label: 'Raison sociale', value: attributaire.raisonSociale || '-' },
-      { label: 'NCC', value: attributaire.ncc || '-' },
-      { label: 'Adresse', value: attributaire.adresse || '-' },
-      { label: 'Téléphone', value: attributaire.telephone || '-' },
-      { label: 'Email', value: attributaire.email || '-' },
-      { label: 'Nature', value: attributaire.natureGroupement || 'Entreprise simple' }
+      { label: 'Raison sociale', value: (firstEntreprise?.raisonSociale || attributaire.raisonSociale) || '-' },
+      { label: 'NCC', value: (firstEntreprise?.ncc || attributaire.ncc) || '-' },
+      { label: 'Adresse', value: (firstEntreprise?.adresse || attributaire.adresse) || '-' },
+      { label: 'Téléphone', value: (firstEntreprise?.telephone || attributaire.telephone) || '-' },
+      { label: 'Email', value: (firstEntreprise?.email || attributaire.email) || '-' },
+      { label: 'Nature', value: attributaire.singleOrGroup === 'GROUPEMENT' ? `Groupement (${attributaire.groupType || 'CONJOINT'})` : 'Entreprise simple' }
     ]),
 
     el('h4', { style: { margin: '20px 0 10px', fontSize: '14px', fontWeight: 600 } }, '💰 Montants attribués'),

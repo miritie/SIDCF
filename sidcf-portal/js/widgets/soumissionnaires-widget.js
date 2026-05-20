@@ -16,6 +16,7 @@
  */
 
 import { dom } from '../lib/dom.js';
+import { renderEntreprisePicker } from '../ui/widgets/entreprise-picker-mp.js';
 
 const NATURE_GROUPEMENT = [
   { value: 'INDIVIDUEL', label: 'Individuel' },
@@ -53,6 +54,8 @@ export class SoumissionnairesWidget {
   loadData(soumissionnaires = []) {
     this.soumissionnaires = soumissionnaires.map((s, idx) => ({
       id: s.id || `soum_${Date.now()}_${idx}`,
+      // Modif #43.b — lien vers le référentiel mp_entreprise (peut être null sur données legacy)
+      entrepriseId: s.entrepriseId || null,
       ncc: s.ncc || '',
       raisonSociale: s.raisonSociale || '',
       natureGroupement: s.natureGroupement || 'INDIVIDUEL',
@@ -258,13 +261,31 @@ export class SoumissionnairesWidget {
 
     const form = dom.create('form', { className: 'soumissionnaire-form' });
 
-    // NCC
-    const nccGroup = this.createFormGroup('NCC *', 'text', 'ncc', 'Ex: CI-ABJ-2024-123456');
-    form.appendChild(nccGroup);
+    // Modif #43.b — Picker entreprise (lookup typeahead + autofill + création inline)
+    const pickerLabel = dom.create('label', { textContent: 'Identité du soumissionnaire *', className: 'form-label' });
+    form.appendChild(pickerLabel);
+    const pickerHost = dom.create('div', { className: 'form-group', style: 'margin-bottom: 12px;' });
+    pickerHost.appendChild(renderEntreprisePicker({
+      onChange: (entreprise) => {
+        // Mirror vers les hidden inputs lus par FormData au submit
+        const setVal = (name, val) => {
+          const i = form.querySelector(`input[name="${name}"]`);
+          if (i) i.value = val || '';
+        };
+        setVal('entrepriseId',  entreprise?.entrepriseId || '');
+        setVal('ncc',           entreprise?.ncc || '');
+        setVal('raisonSociale', entreprise?.raisonSociale || '');
+        // Pré-remplit banque + numéro compte si renseignés sur la fiche maître
+        if (entreprise?.banque?.libelle) setVal('banque', entreprise.banque.libelle);
+        if (entreprise?.compte?.numero)  setVal('numeroCompte', entreprise.compte.numero);
+      }
+    }));
+    form.appendChild(pickerHost);
 
-    // Raison sociale
-    const raisonSocialeGroup = this.createFormGroup('Raison sociale *', 'text', 'raisonSociale', 'Ex: ENTREPRISE XYZ SARL');
-    form.appendChild(raisonSocialeGroup);
+    // Inputs cachés — mirorrés depuis le picker, lus par FormData au submit
+    form.appendChild(dom.create('input', { type: 'hidden', name: 'entrepriseId' }));
+    form.appendChild(dom.create('input', { type: 'hidden', name: 'ncc' }));
+    form.appendChild(dom.create('input', { type: 'hidden', name: 'raisonSociale' }));
 
     // Nature groupement
     const natureGroup = dom.create('div', { className: 'form-group' });
@@ -382,6 +403,8 @@ export class SoumissionnairesWidget {
 
     const newSoumissionnaire = {
       id: `soum_${Date.now()}`,
+      // Modif #43.b — entrepriseId issu du picker (lien vers le référentiel mp_entreprise)
+      entrepriseId: formData.get('entrepriseId') || null,
       ncc: formData.get('ncc'),
       raisonSociale: formData.get('raisonSociale'),
       natureGroupement: formData.get('natureGroupement'),

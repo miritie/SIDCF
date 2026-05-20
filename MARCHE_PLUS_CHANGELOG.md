@@ -13,6 +13,50 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Picker entreprise dans sous-traitants + soumissionnaires + badges d'affichage
+
+> **Modif #43.b.2** — Suite immédiate de #43.b.1. Câblage du picker entreprise dans les 2 widgets restants de saisie (sous-traitants et soumissionnaires) et ajout de badges visuels « 🏢 Fiche entreprise liée » sur les 2 écrans de lecture (fiche de vie + exécution OS). Les **cotitulaires d'un groupement conjoint** sont reportés à `#43.b.3` (cards dynamiques imbriquées, refonte plus invasive).
+
+### Intégration dans `widgets/sous-traitants-manager-mp.js`
+
+- Modale d'édition d'un sous-traitant : remplace les 4 inputs identité (raison sociale, NCC, adresse, téléphone) par le picker + 5 inputs cachés mirorrés
+- Le `draft` reçoit un champ `entrepriseId` (initialisé à `null` pour les créations, préservé en édition)
+- À l'`onChange` du picker : mirror vers hidden inputs + dispatch `input` event pour déclencher la détection sanctions existante
+- Le payload de save inclut désormais `entrepriseId` aux côtés des autres champs
+
+### Intégration dans `widgets/soumissionnaires-widget.js`
+
+- Différence d'architecture : ce widget est une **classe ES6** utilisant `FormData` au submit, pas des IDs DOM
+- Approche adaptée : hidden inputs avec `name="entrepriseId"`, `name="ncc"`, `name="raisonSociale"` — lus nativement par FormData
+- Pré-remplissage automatique de la banque et du numéro de compte depuis la fiche maître à l'autofill
+- `loadData()` préserve désormais `entrepriseId` lors du chargement de soumissionnaires existants
+
+### Badges d'affichage sur les écrans lecture
+
+#### `ecr01c-fiche-marche.js` — section Attribution de la fiche de vie
+- Détection : `attributaire.entrepriseId || attributaire.entreprises[0]?.entrepriseId`
+- Badge bleu pâle « 🏢 Fiche entreprise liée » à côté du titre de la section si rattachement au référentiel
+- **Bonus** : correction d'un bug d'affichage des champs attributaire (raison sociale, NCC, adresse, …) qui lisaient `attributaire.<champ>` au lieu de `attributaire.entreprises[0].<champ>` — la première forme est toujours vide dans la structure actuelle. Désormais fallback chaîné `entreprises[0].<champ> || attributaire.<champ> || '-'` pour rester compatible legacy.
+- Champ « Nature » dérivé proprement de `attributaire.singleOrGroup` + `groupType` (au lieu d'un champ `natureGroupement` qui n'existait pas)
+
+#### `ecr04a-execution-os.js` — encart « Marché visé »
+- Badge inline « 🏢 fiche liée » à côté du nom de l'attributaire quand `entrepriseId` est présent
+- `renderField()` adapté pour accepter un `HTMLElement` en valeur (en plus de la string) — backward compat préservée
+
+### Reste à faire — Modif #43.b.3
+
+- Cotitulaires du groupement CONJOINT (sub-cards dynamiques rendues par `renderCoTitulaireCard()`) — picker par cotitulaire avec gestion du re-render à l'ajout/suppression
+- Backfill optionnel des sous-traitants et soumissionnaires existants vers le référentiel `mp_entreprise` (migration 018 si jugé utile)
+
+#### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/sous-traitants-manager-mp.js` (import + draft + grid replacement + payload)
+- `sidcf-portal/js/widgets/soumissionnaires-widget.js` (import + form replacement + loadData + handleFormSubmit)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (badge + fallback chaîné)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` (badge + renderField polyvalent)
+
+Pas de Worker, pas de migration DB. Compatibilité ascendante préservée sur tous les sous-traitants/soumissionnaires existants (les hidden inputs garantissent que les anciennes données restent affichées correctement même sans `entrepriseId`).
+
 ## 2026-05-20 — Picker entreprise dans l'écran Attribution (SIMPLE + MANDATAIRE)
 
 > **Modif #43.b.1** — Première intégration concrète du picker entreprise (livré en Modif #43.a) dans l'écran `ecr03a-attribution.js`. Couvre les deux cas principaux : l'**entreprise unique** attributaire et le **mandataire** d'un groupement. Les cotitulaires, sous-traitants et soumissionnaires sont reportés à `#43.b.2` pour permettre une validation visuelle intermédiaire.

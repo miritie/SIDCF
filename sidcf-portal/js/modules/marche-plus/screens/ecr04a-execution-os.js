@@ -577,13 +577,29 @@ function renderAttributionSummary(attribution) {
   const unite = attribution.delaiUnite || 'MOIS';
   const delaiFormatted = delai > 0 ? `${delai} ${unite}` : 'Non renseigné';
 
+  // Modif #43.b — détection du lien vers le référentiel mp_entreprise
+  const firstEnt = attribution.attributaire?.entreprises?.[0];
+  const entrepriseIdLie = attribution.attributaire?.entrepriseId || firstEnt?.entrepriseId || null;
+  const attributaireDisplay = entrepriseIdLie
+    ? el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, [
+        el('span', {}, attributaireName),
+        el('span', {
+          style: {
+            fontSize: '9px', padding: '1px 6px', background: '#dbeafe',
+            color: '#1e40af', borderRadius: '8px', fontWeight: 600
+          },
+          title: 'Lié au référentiel mp_entreprise'
+        }, '🏢 fiche liée')
+      ])
+    : attributaireName;
+
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, 'Marché visé')
     ]),
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-        renderField('Attributaire', attributaireName),
+        renderField('Attributaire', attributaireDisplay),
         renderField('Montant TTC', montantFormatted),
         renderField('Délai d\'exécution', delaiFormatted)
       ])
@@ -592,9 +608,11 @@ function renderAttributionSummary(attribution) {
 }
 
 function renderField(label, value) {
+  // Modif #43.b — accepte un HTMLElement (pour badge inline) en plus d'une string
+  const valueChild = (value instanceof HTMLElement) ? value : String(value || '-');
   return el('div', {}, [
     el('div', { className: 'text-small text-muted' }, label),
-    el('div', { style: { fontWeight: '500', marginTop: '4px' } }, String(value || '-'))
+    el('div', { style: { fontWeight: '500', marginTop: '4px' } }, valueChild)
   ]);
 }
 
