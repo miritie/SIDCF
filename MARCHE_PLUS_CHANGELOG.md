@@ -13,6 +13,50 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Section Clôture : table « Marché global » consolidant les marchés liés
+
+> **Modif #47** — Demande client adressée à la section « 6. Clôture » de la fiche de vie : ajouter une **table consolidée du marché global** réunissant le marché courant et tous ses marchés liés (étude amont, travaux, suivi et contrôle aval…). Cette synthèse capitalise sur la liaison déjà introduite en **Modif #28** (`MP_OPERATION.relations[]`) — aucune saisie supplémentaire requise, les liens définis pendant la vie du marché alimentent automatiquement la table.
+
+### Contenu de la table
+
+Une ligne par marché du « projet global », avec colonnes :
+
+| Rôle | N° opération | Objet | Attributaire | Montant | État |
+|---|---|---|---|---|---|
+| 🎯 Marché courant — *Courant* | OP-2026-… | … | mandataire/raison sociale | montant actuel | badge état |
+| 📘 Étude — *Amont* | OP-2025-… (lien cliquable) | … | – | montant | badge |
+| 🏗️ Travaux — *Aval* | OP-2026-… (lien) | … | – | montant | badge |
+| 🔍 Contrôle / Surveillance — *Aval* | OP-2026-… (lien) | … | – | montant | badge |
+
+Repères visuels :
+- Le marché **courant** est toujours en première ligne, badge « 🎯 Courant », montant en gras.
+- Les marchés **antérieurs** (étude PI typique) portent un badge bleu « ⏪ Amont ».
+- Les marchés **postérieurs** (travaux, contrôle…) portent un badge vert « ⏩ Aval ».
+- Les IDs des marchés liés sont **cliquables** → ouverture directe de la fiche du marché associé.
+
+### Réutilisation existant — économie d'effort
+
+Le widget `related-operations-mp.js` (Modif #28) embarquait déjà la logique de résolution des liens (`computeLinks()` qui consolide les liens sortants stockés sur l'opération + les liens entrants détectés à la volée sur les autres opérations + l'inversion automatique du sens). Cette fonction et `getRoleMeta()` ont été **promues en exports** pour pouvoir être réutilisées par la section Clôture, évitant la duplication de logique.
+
+### Comportement
+
+- **Toujours affichée** dans la section « 6. Clôture » (ouverte ou pas), même avant la clôture effective du marché — le client ouvre la section quand il veut consulter la synthèse.
+- Si **aucun marché lié** n'est défini : message d'orientation invitant à utiliser le bandeau « 🔗 Liens entre marchés » en haut de la fiche.
+- Le bloc historique (réceptions provisoire/définitive, PVs, observations) reste tel quel quand le marché est clôturé ; la table « Marché global » s'ajoute en dessous.
+
+### Résolution de l'attributaire
+
+Pour le marché courant, l'attribution est chargée par la fiche et passée explicitement à la table → résolution complète (mandataire de groupement, ou raison sociale du titulaire simple).
+
+Pour les marchés liés, seule l'opération est connue à ce stade (pas l'attribution → '-' affiché). C'est volontaire : le client peut cliquer sur le N° pour ouvrir la fiche complète du marché lié et voir le détail. Charger les attributions de tous les marchés liés au chargement de chaque fiche serait coûteux pour un gain marginal.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/related-operations-mp.js` — promotion de `computeLinks()` et `getRoleMeta()` en exports nommés.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` — nouvelle fonction `renderMarcheGlobalTable()` + `renderMarcheGlobalRow()` + helper `resolveAttributaireName()` + map de couleurs `ETAT_BADGE_COLOR_MP` ; intégration dans `renderClotureContent()` ; passage de `mpOperations` au call site.
+
+Pas de Worker, pas de migration DB, pas de R2. Réutilisation pleine de la structure de données existante. Aucun déploiement requis — frontend statique.
+
 ## 2026-05-20 — Séparateurs de milliers fr-FR sur les affichages numériques
 
 > **Modif #46** — Uniformisation de l'affichage des montants XOF dans les écrans Marché+. Plusieurs endroits affichaient des valeurs numériques brutes (« 27848000 ») au lieu du format français avec séparateurs (« 27 848 000 »). Trois causes : (1) un `<input type="number" disabled>` ne peut pas afficher de séparateurs (les caractères non numériques sont rejetés silencieusement) ; (2) des appels `Number.prototype.toLocaleString()` sans argument utilisaient la locale du navigateur (résultat « 27,848,000 » en EN-US au lieu de « 27 848 000 ») ; (3) deux dialogues `confirm()` interpolaient un montant brut.

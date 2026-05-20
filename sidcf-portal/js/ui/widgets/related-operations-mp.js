@@ -48,7 +48,7 @@ export const RELATION_ROLES = [
   { code: 'AUTRE', label: 'Autre', icon: '🔗', typicalSens: 'POSTERIEUR' }
 ];
 
-function getRoleMeta(roleCode) {
+export function getRoleMeta(roleCode) {
   return RELATION_ROLES.find(r => r.code === roleCode) || RELATION_ROLES[RELATION_ROLES.length - 1];
 }
 
@@ -173,7 +173,7 @@ function suggestRelations(op, allOperations, max = 6) {
 
 // ----- Calcul des liens à afficher (sortants + entrants) -----
 
-function computeLinks(operation, allOperations) {
+export function computeLinks(operation, allOperations) {
   const directLinks = (operation.relations || []).map(rel => {
     const target = (allOperations || []).find(o => o.id === rel.id);
     return target ? { rel, target, source: 'direct' } : null;

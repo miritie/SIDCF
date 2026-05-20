@@ -35,7 +35,7 @@ import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { renderStepsAsync } from '../../../ui/widgets/steps-mp.js';
 import { renderBudgetLineSummary } from '../../../ui/widgets/budget-line-viewer.js';
 import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
-import { renderRelatedOperations } from '../../../ui/widgets/related-operations-mp.js';
+import { renderRelatedOperations, computeLinks, getRoleMeta } from '../../../ui/widgets/related-operations-mp.js';
 import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.js';
 import { renderOpMandatManager } from '../../../ui/widgets/op-mandat-manager-mp.js';
@@ -174,7 +174,7 @@ export async function renderFicheMarche(params) {
           defaultOpen: false,
           status: (fullData.ordresService || []).length > 0 ? 'complete' : 'partial'
         }),
-        sectionAccordion('cloture', '🏁 6. Clôture', renderClotureContent(fullData, currentLotId, registries), {
+        sectionAccordion('cloture', '🏁 6. Clôture', renderClotureContent(fullData, currentLotId, registries, mpOperations), {
           modifierRoute: '/mp/cloture',
           modifierParams: { idOperation, lotId: currentLotId !== 'ALL' ? currentLotId : undefined },
           defaultOpen: false,
@@ -1495,24 +1495,144 @@ function renderExecutionContent(fullData, currentLotId, registries) {
 // Section 6 — Clôture
 // ============================================
 
-function renderClotureContent(fullData, currentLotId, registries) {
+function renderClotureContent(fullData, currentLotId, registries, mpOperations = []) {
   const cloture = currentLotId === 'ALL' ? fullData.cloture : getLotData(fullData.cloture, currentLotId);
-  if (!cloture) {
-    return el('p', { className: 'text-muted', style: { fontStyle: 'italic' } }, 'Marché non encore clôturé.');
-  }
+  const operation = fullData.operation;
+
+  const clotureBlock = !cloture
+    ? el('p', { className: 'text-muted', style: { fontStyle: 'italic' } }, 'Marché non encore clôturé.')
+    : el('div', {}, [
+        renderInfoGrid([
+          { label: 'Date dernier décompte', value: fmtDate(cloture.dateDernierDecompte) },
+          { label: 'Réception provisoire', value: fmtDate(cloture.receptionProv?.date) },
+          { label: 'PV provisoire', value: cloture.receptionProv?.documentRef ? '📄 Document' : '-' },
+          { label: 'Réception définitive', value: fmtDate(cloture.receptionDef?.date) },
+          { label: 'PV définitif', value: cloture.receptionDef?.documentRef ? '📄 Document' : '-' },
+          { label: 'Date de clôture effective', value: fmtDate(cloture.dateClotureEffective) }
+        ]),
+        cloture.observations ? el('div', { style: { marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '4px', fontSize: '13px' } }, [
+          el('strong', {}, 'Observations : '), cloture.observations
+        ]) : null
+      ]);
+
   return el('div', {}, [
-    renderInfoGrid([
-      { label: 'Date dernier décompte', value: fmtDate(cloture.dateDernierDecompte) },
-      { label: 'Réception provisoire', value: fmtDate(cloture.receptionProv?.date) },
-      { label: 'PV provisoire', value: cloture.receptionProv?.documentRef ? '📄 Document' : '-' },
-      { label: 'Réception définitive', value: fmtDate(cloture.receptionDef?.date) },
-      { label: 'PV définitif', value: cloture.receptionDef?.documentRef ? '📄 Document' : '-' },
-      { label: 'Date de clôture effective', value: fmtDate(cloture.dateClotureEffective) }
-    ]),
-    cloture.observations ? el('div', { style: { marginTop: '12px', padding: '10px', background: '#f9fafb', borderRadius: '4px', fontSize: '13px' } }, [
-      el('strong', {}, 'Observations : '), cloture.observations
-    ]) : null
+    clotureBlock,
+    renderMarcheGlobalTable(operation, mpOperations, registries, fullData.attribution)
   ]);
+}
+
+// Couleurs de badge pour les états — alignées sur la palette existante de la fiche
+const ETAT_BADGE_COLOR_MP = {
+  PLANIFIE: 'info',
+  EN_PROC: 'warning',
+  ATTRIBUE: 'warning',
+  VISE: 'success',
+  EN_EXEC: 'success',
+  EXECUTION: 'success',
+  CLOS: 'success',
+  CLOTURE: 'success',
+  RESILIE: 'error'
+};
+
+/**
+ * Section « Marché global » — Modif #47
+ * Présente la synthèse consolidée des marchés liés (étude amont, travaux,
+ * suivi/contrôle aval…) selon la table demandée par le client. S'appuie
+ * sur les liaisons définies via la Modif #28 (MP_OPERATION.relations[]).
+ */
+function renderMarcheGlobalTable(operation, mpOperations, registries, courantAttribution = null) {
+  const { anterieurs, posterieurs } = computeLinks(operation, mpOperations);
+  const liens = [...anterieurs, ...posterieurs];
+
+  const header = el('div', { style: { marginTop: '20px', marginBottom: '10px' } }, [
+    el('h4', { style: { margin: 0, fontSize: '14px', fontWeight: 600 } },
+      `🌐 Marché global (${liens.length + 1})`),
+    el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+      'Synthèse consolidée du projet : marché courant + études amont + travaux / contrôle / autres marchés associés. Les liens sont définis dans le bandeau « Liens entre marchés » en haut de la fiche.')
+  ]);
+
+  // Pour le marché courant, on injecte l'attribution chargée par la fiche afin de
+  // résoudre proprement le nom de l'attributaire (les marchés liés n'ont pas leur
+  // attribution chargée à ce stade — affichage '-' acceptable, navigation possible).
+  const operationCourante = courantAttribution
+    ? { ...operation, _attribution: courantAttribution }
+    : operation;
+
+  // Ligne « marché courant » (toujours présente, marquée comme telle)
+  const rows = [renderMarcheGlobalRow(operationCourante, { code: 'COURANT', label: 'Marché courant', icon: '🎯' }, null, true)];
+
+  // Lignes des marchés liés (antérieurs puis postérieurs)
+  for (const lien of [...anterieurs, ...posterieurs]) {
+    const roleMeta = getRoleMeta(lien.rel.role);
+    rows.push(renderMarcheGlobalRow(lien.target, roleMeta, lien.rel.sens, false));
+  }
+
+  return el('div', {}, [
+    header,
+    liens.length === 0
+      ? el('div', { style: { padding: '12px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '13px', color: '#92400e' } },
+          'Aucun marché lié à ce marché. Pour relier ce marché à une étude amont ou à un suivi/contrôle aval, utilisez le bandeau « Liens entre marchés » en haut de la fiche.')
+      : el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', {}, 'Rôle'),
+            el('th', {}, 'N° opération'),
+            el('th', {}, 'Objet'),
+            el('th', {}, 'Attributaire'),
+            el('th', { style: { textAlign: 'right' } }, 'Montant'),
+            el('th', {}, 'État')
+          ])]),
+          el('tbody', {}, rows)
+        ])
+  ]);
+}
+
+function renderMarcheGlobalRow(op, roleMeta, sens, isCourant) {
+  const sensBadge = isCourant
+    ? el('span', { className: 'badge badge-primary', style: { fontSize: '11px' } }, '🎯 Courant')
+    : sens === 'ANTERIEUR'
+      ? el('span', { className: 'badge', style: { fontSize: '11px', background: '#dbeafe', color: '#1e40af' } }, '⏪ Amont')
+      : el('span', { className: 'badge', style: { fontSize: '11px', background: '#dcfce7', color: '#166534' } }, '⏩ Aval');
+
+  // Résolution de l'attributaire (multi-formes : entreprises[], attributaire.raisonSociale…)
+  const attribName = resolveAttributaireName(op);
+  const montant = op.montantActuel || op.montantPrevisionnel || 0;
+  const etatLabel = ETAT_LABEL_MP?.[op.etat] || op.etat || '-';
+  const etatColor = ETAT_BADGE_COLOR_MP[op.etat] || 'info';
+
+  return el('tr', {}, [
+    el('td', { style: { fontSize: '12px' } }, [
+      el('span', { style: { marginRight: '4px' } }, roleMeta.icon || '🔗'),
+      el('strong', {}, roleMeta.label),
+      el('div', { style: { marginTop: '2px' } }, sensBadge)
+    ]),
+    el('td', { style: { fontFamily: 'monospace', fontSize: '12px' } },
+      isCourant ? (op.id || '-') :
+        el('a', {
+          href: `#/mp/fiche-marche?idOperation=${encodeURIComponent(op.id)}`,
+          style: { color: '#2563eb', textDecoration: 'underline' }
+        }, op.id || '-')
+    ),
+    el('td', { style: { fontSize: '12px' } }, op.objet || '-'),
+    el('td', { style: { fontSize: '12px' } }, attribName || '-'),
+    el('td', { style: { textAlign: 'right', fontWeight: isCourant ? 600 : 400 } }, money(montant)),
+    el('td', {}, el('span', { className: `badge badge-${etatColor}` }, etatLabel))
+  ]);
+}
+
+/**
+ * Résout le nom de l'attributaire d'une opération en couvrant les différentes
+ * formes possibles (mandataire de groupement, entreprise unique, attribution
+ * non chargée → fallback sur attributaire embarqué sur l'opération si disponible).
+ */
+function resolveAttributaireName(op) {
+  // Forme historique : champ directement sur l'opération (rare, legacy)
+  if (op.attributaireNom) return op.attributaireNom;
+  // Si pas d'attribution chargée sur l'op, on renvoie un placeholder neutre
+  const attr = op.attribution || op._attribution || null;
+  if (!attr) return '-';
+  const ents = attr.attributaire?.entreprises || [];
+  const mandataire = ents.find(e => e.role === 'MANDATAIRE');
+  return mandataire?.raisonSociale || ents[0]?.raisonSociale || attr.attributaire?.raisonSociale || '-';
 }
 
 // ============================================
