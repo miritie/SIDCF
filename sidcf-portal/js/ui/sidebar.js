@@ -79,6 +79,11 @@ export function renderSidebar() {
           el('a', { href: '#/admin/config-etapes', className: 'nav-item' }, [
             el('span', { className: 'nav-item-icon' }, '🎯'),
             el('span', {}, 'Configuration Étapes')
+          ]),
+          // Modif #44 — Référentiel entreprises Marché+
+          el('a', { href: '#/admin/mp-entreprises', className: 'nav-item' }, [
+            el('span', { className: 'nav-item-icon' }, '🏢'),
+            el('span', {}, 'Entreprises (Marché+)')
           ])
         ])
       ])

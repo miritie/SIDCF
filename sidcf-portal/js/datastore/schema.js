@@ -1097,6 +1097,8 @@ export const SCHEMAS = {
     validationStatus: 'VALIDATED', // PENDING (créée en flux d'attribution) | VALIDATED | MERGED
     validationBy: null,
     validationDate: null,
+    // Modif #44 — fusion : si non null, indique la fiche cible vers laquelle on a fusionné
+    mergedIntoId: null,
     createdAt: null,
     updatedAt: null
   },

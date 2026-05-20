@@ -21,6 +21,7 @@ import renderReferentiels from './admin/referentiels.js';
 import renderRegles from './admin/regles-procedures.js';
 import renderReglesV2 from './admin/regles-procedures-v2.js';
 import renderConfigEtapes from './admin/config-etapes.js';
+import renderMpEntreprisesAdmin from './admin/mp-entreprises-validation.js';
 import { mount } from './lib/dom.js';
 
 // Diagnostics
@@ -76,6 +77,8 @@ async function boot() {
     router.register('/admin/regles-v2', renderReglesV2); // Version éditable
     router.register('/admin/config-etapes', renderConfigEtapes);
     router.register('/admin/pieces', stubAdmin('Matrice des pièces'));
+    // Modif #44 — Référentiel entreprises Marché+
+    router.register('/admin/mp-entreprises', renderMpEntreprisesAdmin);
 
     // Seed import - Désactivé temporairement, utiliser import-seed-simple.html
     // const { default: renderSeedImport } = await import('./admin/seed-import.js');

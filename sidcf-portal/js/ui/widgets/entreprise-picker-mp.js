@@ -36,7 +36,10 @@ async function getEntreprises({ forceRefresh = false } = {}) {
   }
   try {
     const list = await dataService.query(ENTITIES.MP_ENTREPRISE);
-    _entreprisesCache = (list || []).filter(e => e.actif !== false);
+    // Modif #44 — exclure les fiches fusionnées (MERGED) du picker
+    _entreprisesCache = (list || []).filter(e =>
+      e.actif !== false && e.validationStatus !== 'MERGED'
+    );
     _cacheTimestamp = now;
     return _entreprisesCache;
   } catch (err) {

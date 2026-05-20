@@ -13,6 +13,82 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Admin queue validation + fusion doublons (Phase 2 du référentiel entreprise)
+
+> **Modif #44** — Phase 2 du chantier référentiel entreprise. Permet de **valider à posteriori** les fiches créées en flux d'attribution (statut `PENDING`) et de **fusionner les doublons** détectés automatiquement. Ferme la boucle promise au client : « si l'entreprise n'existe pas et on rentre dans un processus de création éventuellement soumis à validation ultérieurement ».
+
+### Migration `018_mp_entreprise_merge_support.sql`
+
+- Ajoute la colonne `merged_into_id UUID REFERENCES mp_entreprise(id)` + index partiel
+- Permet de tracer l'historique de fusion : « cette fiche a été fusionnée vers X »
+- Le statut `MERGED` (déjà autorisé en check constraint depuis 017) prend tout son sens
+- **Exécutée sur Neon** : `ALTER TABLE` idempotent, exécution propre
+
+### Nouvel écran admin — `/admin/mp-entreprises`
+
+3 onglets :
+
+**1. « ⏳ À valider »** — Liste des fiches `validationStatus = 'PENDING'`
+- Affiche raison sociale, NCC, contacts, banque, date de création
+- Actions par fiche : **✓ Valider** (passe en `VALIDATED`, traçabilité avec `validationDate`) et **✕ Rejeter** (passe `actif = false`, n'apparaîtra plus dans le picker)
+- Empty state si aucune fiche en attente
+
+**2. « 🔗 Doublons probables »** — Détection automatique de fiches similaires
+- Deux algorithmes de regroupement :
+  - **NCC identique** (case-insensitive) → groupe certain, confiance 100 %
+  - **Raison sociale fuzzy ≥ 85 %** (via `similarity()` de #43.a) → groupe probable, confiance ≥ 85 %
+- Pour chaque groupe, action **« → Fusionner vers X »** :
+  - Si 1 seule cible candidate → bouton direct
+  - Si plusieurs → select + bouton (l'admin choisit la fiche maîtresse)
+
+**3. « 📋 Toutes les fiches »** — Vue consultation avec badges de statut
+
+### Cœur de la modif — Opération de fusion
+
+Au clic sur « Fusionner » :
+1. **Confirmation** explicite avec rappel : « action irréversible »
+2. **Scan exhaustif** des références à la fiche source dans :
+   - `mp_attribution.attributaire.entrepriseId` (racine)
+   - `mp_attribution.attributaire.entreprises[].entrepriseId` (tous les rôles : TITULAIRE, MANDATAIRE, COTITULAIRE)
+   - `mp_attribution.sousTraitants[].entrepriseId`
+   - `mp_attribution.parLot[lotId].attributaire.*` + `sousTraitants[]` (mode multi-lot)
+   - `mp_procedure.soumissionnaires[].entrepriseId`
+3. **Mise à jour** de chaque référence pour pointer vers la cible (immutability : `{ ...obj, entrepriseId: targetId }`)
+4. **Marquage** de la fiche source : `validationStatus: 'MERGED'`, `mergedIntoId: <targetId>`
+5. **Invalidation** du cache du picker (les pickers ouverts retrouveront la liste filtrée au prochain fetch)
+6. **Feedback** : nombre d'attributions / procédures mises à jour
+
+### Filtrage dans le picker
+
+`entreprise-picker-mp.js` filtre désormais les fiches `MERGED` à l'affichage : `actif !== false && validationStatus !== 'MERGED'`. Les attributions qui pointaient vers la fiche source pointent maintenant vers la cible → leur picker affichera correctement la fiche maîtresse.
+
+### Schema JS
+
+Ajout du champ `mergedIntoId: null` sur `MP_ENTREPRISE`.
+
+### Navigation
+
+- Route enregistrée dans `main.js` : `/admin/mp-entreprises`
+- Lien ajouté dans la sidebar Administration : « 🏢 Entreprises (Marché+) »
+
+### Garde-fous
+
+- Toutes les mises à jour passent par `dataService.update()` (transactions Worker)
+- Si une mise à jour échoue à mi-parcours, les autres déjà appliquées restent (pas de transaction distribuée) — l'admin peut relancer la fusion, qui sera idempotente (les références déjà pointant vers la cible sont skippées par `=== sourceId` check)
+- Pas de suppression physique : la fiche source reste en base avec son historique, juste filtrée à l'affichage
+- Le `mergedIntoId` permet à un futur écran d'historique de remonter la chaîne si besoin
+
+### Fichiers
+
+- Nouveau : `sidcf-portal/js/admin/mp-entreprises-validation.js` (~370 lignes)
+- Nouveau : `postgres/migrations/018_mp_entreprise_merge_support.sql`
+- Modifié : `sidcf-portal/js/main.js` (import + route)
+- Modifié : `sidcf-portal/js/ui/sidebar.js` (lien admin)
+- Modifié : `sidcf-portal/js/datastore/schema.js` (champ `mergedIntoId`)
+- Modifié : `sidcf-portal/js/ui/widgets/entreprise-picker-mp.js` (filtre `MERGED`)
+
+Pas de Worker touché. Migration SQL exécutée. Le chantier référentiel entreprise est complet (Modif #43 + #44).
+
 ## 2026-05-20 — Picker entreprise dans les cotitulaires du groupement CONJOINT (clôture Modif #43)
 
 > **Modif #43.b.3** — Dernière sous-modif de la Phase 1 du chantier référentiel entreprise. Câble le picker dans les **cards dynamiques des co-titulaires** d'un groupement CONJOINT (les membres autres que le mandataire). Modif #43 est désormais complète sur tous les sites de saisie d'entreprise du module Marché+.
