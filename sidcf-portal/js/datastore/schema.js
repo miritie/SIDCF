@@ -1093,6 +1093,10 @@ export const SCHEMAS = {
       intitule: ''
     },
     actif: true,
+    // Modif #43 — workflow de validation de la fiche maître (référentiel)
+    validationStatus: 'VALIDATED', // PENDING (créée en flux d'attribution) | VALIDATED | MERGED
+    validationBy: null,
+    validationDate: null,
     createdAt: null,
     updatedAt: null
   },

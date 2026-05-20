@@ -13,6 +13,67 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Foundation picker entreprise (Phase 1.a)
+
+> **Modif #43.a** — Discussion avec le client sur la qualité du référentiel d'entreprises : actuellement les saisies (attribution, sous-traitants, soumissionnaires) sont en champs libres → doublons et incohérences. Approche retenue : **mix lookup + création contrôlée**. Quand l'entreprise existe, on l'appelle depuis le référentiel `MP_ENTREPRISE` (autofill verrouillé) ; sinon on entre dans un processus de création inline avec NCC obligatoire (unicité technique), détection fuzzy des doublons probables, et statut `PENDING` pour validation a posteriori par l'admin (workflow couvert en Modif #44).
+
+> Cette modif est livrée en 2 sous-modifs : **#43.a (foundation)** = lib + widget + migration + schema. **#43.b (intégration)** = câblage dans les 3 écrans de saisie (attribution, sous-traitants, soumissionnaires) + badges d'affichage sur les écrans lecture.
+
+### Modif #43.a — Foundation du picker entreprise
+
+#### Nouveau module — `js/lib/entreprise-fuzzy-mp.js`
+
+Utilitaires de comparaison fuzzy pour la détection de doublons :
+- `normalizeRaisonSociale(str)` — minuscules, sans accents, sans ponctuation, retire les formes juridiques (SARL, SA, SAS, …) qui parasitent la comparaison
+- `similarity(a, b)` — score ∈ [0, 1] basé sur la distance de Levenshtein sur chaînes normalisées
+- `findSimilarEntreprises(rs, list, threshold=0.85)` — retourne les fiches qui ressemblent à un nom donné
+- `searchEntreprises(query, list, max=10)` — recherche typeahead (NCC prefix, raison sociale substring, fuzzy fallback)
+
+Pas de dépendance externe. Algorithme O(n×m) sur Levenshtein, suffisant pour ≤ qq milliers d'entreprises et de la détection « à la saisie ».
+
+#### Nouveau widget — `js/ui/widgets/entreprise-picker-mp.js`
+
+Composant universel à 2 modes :
+- **Mode "search"** (entreprise non liée) : input typeahead avec debounce 250 ms, dropdown de suggestions (≥ 2 caractères), CTA « + Créer la nouvelle entreprise « X » » en bas si rien ne matche
+- **Mode "card"** (entreprise sélectionnée) : carte lecture seule avec raison sociale + NCC + adresse + tel + email + banque, badge « ⏳ À valider » si statut PENDING, boutons « ✏️ Modifier la fiche » (impact référentiel) et « 🔄 Changer » (re-pickage)
+
+Modale de création inline (`openCreateEntrepriseModal`) :
+- Champs : raison sociale (obligatoire), NCC (obligatoire, unique), RCCM, adresse, tel, email, banque (libellé + agence), compte (type + numéro)
+- **Détection fuzzy à la saisie** : pendant que l'utilisateur tape la raison sociale, si une fiche existante a similarité ≥ 85 %, un bandeau rouge propose « → Cliquer pour utiliser cette fiche » avant d'autoriser la création
+- Vérification d'unicité NCC côté client (alerte si conflit, en plus de la contrainte SQL `UNIQUE`)
+- Création avec `validationStatus: 'PENDING'` par défaut → visible dans la queue admin (Modif #44)
+- Cache module-level 30 s pour éviter les re-fetch du référentiel
+
+API :
+```js
+renderEntreprisePicker({
+  initialValue,      // { entrepriseId, raisonSociale, ncc, ... } ou null
+  onChange,          // (entreprise|null) => void
+  onEditMaster,      // (id) => void  — optionnel
+  required, disabled, allowCreate
+})
+```
+
+#### Migration `017_mp_entreprise_validation_status_and_backfill.sql`
+
+- **Colonnes ajoutées** sur `mp_entreprise` : `validation_status` (`PENDING|VALIDATED|MERGED`, défaut `VALIDATED`, check constraint), `validation_by`, `validation_date` + index `idx_mp_entreprise_validation_status`
+- **Backfill depuis `mp_attribution.attributaire->'entreprises'`** : dédoublonnage NCC d'abord (case-insensitive), raison sociale normalisée alphanumérique en fallback. Toutes les fiches existantes et backfillées sont marquées `VALIDATED`.
+- **Résultat exécution** : 10 entreprises insérées, 1 skippée (raison sociale invalide), total 13 fiches dans `mp_entreprise` (3 préexistantes + 10 backfill), 100 % `VALIDATED`.
+- **Scope volontairement réduit pour v1** : pas de backfill des sous-traitants ni des soumissionnaires (structures JSONB moins stables), pas d'injection de `entrepriseId` dans les JSONB existants (frontend gérera le dual-mode au runtime), pas de gestion multi-lot (`attributaire.parLot[lotId].entreprises[]`).
+
+#### Schema JS — `js/datastore/schema.js`
+
+Ajout des champs `validationStatus`, `validationBy`, `validationDate` sur `MP_ENTREPRISE`.
+
+#### Reste à faire pour Modif #43.b
+
+- Intégration dans `ecr03a-attribution.js` (entreprise unique + cotraitants du groupement)
+- Intégration dans `widgets/sous-traitants-manager-mp.js`
+- Intégration dans `widgets/soumissionnaires-widget.js`
+- Badges « 🏢 Fiche entreprise » sur `ecr01c-fiche-marche.js` et `ecr04a-execution-os.js`
+
+Pas de Worker touché. Migration SQL exécutée sur Neon.
+
 ## 2026-05-19 — Libellés des étapes Marché+ alignés sur le vocabulaire client
 
 > **Modif #41** — Observation client sur la liste PPM Marché+ et sur les badges « étape » des tableaux : les libellés actuels (« Planifié », « En procédure », « Visé », « Clôturé ») ne correspondent pas aux termes attendus par le métier. Renommage scrupuleux sur tout le module Marché+ sans toucher au registre global (qui reste utilisé tel quel par le module Marché original). Bonus : correction du bug d'affichage du code brut « EN_EXEC » dans la colonne État.
