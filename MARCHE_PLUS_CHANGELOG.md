@@ -13,6 +13,87 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Tableau de suivi des décomptes : enrichissement complet (saisie + colonnes + synthèse CUMULS/%CUMULS)
+
+> **Modif #48** — Demande client : aligner le widget « Situation d'exécution financière » (op-mandat-manager-mp) sur la maquette du tableau de suivi des décomptes du marché consulté. Trois sujets : (1) saisie des décompositions financières (Acompte HTVA, Avance, Garantie, Pénalité, Net HTVA, Net TTC), (2) affichage tabulaire 14 colonnes identique à la maquette, (3) lignes de synthèse `CUMULS` et `%CUMULS` en pied de tableau.
+
+### Saisie : modal enrichi en 3 sections
+
+Le modal d'édition d'un décompte/OP/Mandat passe de 6 champs à un formulaire structuré :
+
+**Section 1 — Identification**
+- Numéro de décompte (obligatoire), Type d'OP (OP / Mandat / Décompte autre), Numéro d'OP, Date de décompte.
+- Le N° d'OP est explicité comme « renseigné par le module budget » dans le placeholder — saisie possible manuellement aujourd'hui en attendant l'intégration automatique.
+
+**Section 2 — Décomposition financière**
+- 4 inputs **saisis** : Acompte HTVA, Avance restituée, Retenue de garantie, Pénalités.
+- 2 inputs **auto-calculés** mais surchargables : Net HTVA (= Acompte − Avance − Garantie − Pénalités, clampé à 0), Net TTC (= Net HTVA × (1 + tauxTVA)).
+- Le **taux TVA est dérivé** de l'attribution : `(montantTTC / montantHT − 1) × 100`. Fallback 18 % si l'attribution n'a pas les deux montants. Le taux est affiché dans le label de la section pour transparence (« taux TVA 18 % »).
+- Recalcul live sur chaque input : `oninput → recompute()`.
+
+**Section 3 — Suivi & validation**
+- État (DRAFT / SOUMIS / VISE / PAYE / REJETE — workflow du document).
+- Bailleur (texte libre — *cf. question ouverte plus bas*).
+- **Décision** (nouveau) : EN_ATTENTE / APPROUVE / REJETE — avis du CF, distinct de l'État (workflow).
+- Le **taux d'exécution** est calculé à l'enregistrement (Net TTC ligne / Montant global × 100) — pas saisissable, lecture seule en tableau.
+
+### Tableau : 14 colonnes alignées sur la maquette
+
+| Colonne | Source |
+|---|---|
+| N° Décompte | `numero` |
+| Type d'OP | `typeOP` (label allégé sans parenthèse) |
+| N° d'OP | `numeroOP` |
+| Date | `dateDecompte` (format fr-FR) |
+| Acompte HTVA · Avance · Garantie · Pénalité · Net HTVA · Net TTC | montants formatés via `money()` (séparateurs fr-FR — Modif #46) |
+| État | badge couleur (vert visé/payé, bleu soumis, rouge rejeté, gris brouillon) |
+| Bailleur | texte |
+| Décision | badge couleur (vert approuvé, rouge rejeté, gris en attente) |
+| Taux exéc. | pourcentage formaté |
+| Actions | éditer / supprimer |
+
+Le tableau est rendu dans un conteneur `overflow-x: auto` avec `white-space: nowrap` — la largeur cumulée des 15 colonnes nécessite un scroll horizontal sur écrans étroits, ce qui est cohérent avec la maquette client (qui montre aussi un scroll).
+
+### Lignes de synthèse CUMULS et %CUMULS
+
+Conformément à la maquette, deux lignes apparaissent en bas du tableau, en **rouge foncé** sur fond rose pâle :
+- **CUMULS** : somme absolue des 6 colonnes financières (Acompte HTVA, Avance, Garantie, Pénalité, Net HTVA, Net TTC).
+- **%CUMULS** : chaque total exprimé en pourcentage du **montant global du marché** (= TTC attribution + Σ avenants financiers).
+
+Une note en italique sous le tableau explicite la base de calcul : « Les pourcentages %CUMULS sont calculés sur le montant global du marché (XX XOF). »
+
+Les colonnes non financières (N°, Type, N° OP, Date, État, Bailleur, Décision, Taux exéc., Actions) sont vides sur ces lignes de synthèse (`colspan` adapté).
+
+### Questions ouvertes envoyées au client en parallèle
+
+Bien que l'implémentation soit livrée sur des hypothèses raisonnables, **7 questions** ont été levées et envoyées au client. Si une des réponses contredit une hypothèse, l'ajustement sera mineur.
+
+1. **TypeOP = CUMULS / %CUMULS** → interprété comme **lignes de synthèse** (pas un type de décompte stocké). Confirmation attendue.
+2. **Saisie en 2 temps** → DCF saisit le décompte avec ses décompositions, puis le module budget renseigne N°OP + date à l'émission du mandat. Confirmation attendue.
+3. **Net HTVA / Net TTC** : auto-calculés mais surchargeables. Confirmation que le calcul `Acompte − Avance − Garantie − Pénalités` est le bon (variantes possibles selon la pratique CI).
+4. **Décision** : valeurs APPROUVE / REJETE / EN_ATTENTE, distincte de l'État. Confirmation attendue.
+5. **Taux d'exécution** : calculé **par ligne** (Net TTC ligne / Montant global × 100). À confirmer vs cumulé (Σ jusqu'ici).
+6. **Bailleur** : aujourd'hui **texte libre** — à terme dropdown depuis le référentiel BAILLEUR. Et confirmation : un décompte = un seul bailleur (la répartition pluri-bailleurs reste gérée par la clé).
+7. **Lignes CUMULS / %CUMULS** : confirmé comme synthèses calculées en pied de tableau, non stockées en DB.
+
+### Compatibilité ascendante
+
+Les décomptes existants saisis sous l'ancien modal (1 seul champ « Montant » mappé sur `acompteHTVA` ET `netTTC`) restent affichés correctement :
+- Les champs `avance`, `garantie`, `penalite`, `netHTVA` non saisis tomberont à 0 dans le rendu (fallback `Number(d.x) || 0`).
+- À la **réédition** d'une telle ligne, l'agent verra les décompositions à 0 et pourra les compléter — le Net TTC initial restera affiché.
+
+### Limitations connues (à cadrer ultérieurement)
+
+- Pas d'intégration automatique avec le module budget pour récupérer N°OP / date (saisie manuelle dans l'attente).
+- Pas de **versioning** des décompositions (si l'agent corrige après visa CF, l'historique n'est pas tracé — à voir avec le client si nécessaire).
+- Pas de **lien direct vers un document PV** du décompte (champ `documentRef` existe en base mais pas exposé dans le modal — peut être ajouté via upload R2 si besoin).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` — refonte du modal `openEditorModal()`, refonte de `renderTable()` (14 colonnes + synthèse CUMULS/%CUMULS), ajout du référentiel `DECISIONS` + helper `metaDecision()`, dérivation du taux TVA depuis l'attribution.
+
+Pas de Worker, pas de migration DB (toutes les colonnes existent déjà dans `MP_DECOMPTE`). Pas de R2. Aucun déploiement requis — frontend statique.
+
 ## 2026-05-20 — Section Clôture : table « Marché global » consolidant les marchés liés
 
 > **Modif #47** — Demande client adressée à la section « 6. Clôture » de la fiche de vie : ajouter une **table consolidée du marché global** réunissant le marché courant et tous ses marchés liés (étude amont, travaux, suivi et contrôle aval…). Cette synthèse capitalise sur la liaison déjà introduite en **Modif #28** (`MP_OPERATION.relations[]`) — aucune saisie supplémentaire requise, les liens définis pendant la vie du marché alimentent automatiquement la table.

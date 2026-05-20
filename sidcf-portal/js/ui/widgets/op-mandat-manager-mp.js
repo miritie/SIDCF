@@ -39,8 +39,19 @@ const ETATS = [
   { code: 'DRAFT',  label: 'Brouillon', color: '#6b7280', bg: '#f3f4f6' }
 ];
 
+// Modif #48 — Décision du CF (sortie de visa)
+const DECISIONS = [
+  { code: 'EN_ATTENTE', label: 'En attente',     color: '#6b7280', bg: '#f3f4f6' },
+  { code: 'APPROUVE',   label: 'Approuvé',       color: '#16a34a', bg: '#dcfce7' },
+  { code: 'REJETE',     label: 'Rejeté',         color: '#dc2626', bg: '#fee2e2' }
+];
+
 function metaEtat(code) {
   return ETATS.find(e => e.code === code) || ETATS[ETATS.length - 1];
+}
+
+function metaDecision(code) {
+  return DECISIONS.find(d => d.code === code) || DECISIONS[0];
 }
 
 /**
@@ -209,45 +220,110 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
       return (b.numero || '').localeCompare(a.numero || '');
     });
 
-    return el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
-      el('thead', {}, [el('tr', {}, [
-        el('th', {}, 'Numéro'),
-        el('th', {}, 'Type'),
-        el('th', {}, 'Date'),
-        el('th', { style: { textAlign: 'right' } }, 'Montant (XOF)'),
-        el('th', {}, 'État'),
-        el('th', {}, 'Bailleur'),
-        el('th', { style: { textAlign: 'center' } }, 'Actions')
-      ])]),
-      el('tbody', {}, sorted.map(d => {
-        const etatMeta = metaEtat(d.etat);
-        const montant = Number(d.netTTC) || Number(d.acompteHTVA) || 0;
-        return el('tr', {}, [
-          el('td', { style: { fontWeight: 600, fontFamily: 'monospace', fontSize: '12px' } }, d.numero || d.numeroOP || '-'),
-          el('td', { style: { fontSize: '12px' } }, TYPE_OP.find(t => t.code === d.typeOP)?.label?.replace(/\s*\(.*\)/, '') || d.typeOP || '-'),
-          el('td', { style: { fontSize: '12px' } }, fmtDate(d.dateDecompte)),
-          el('td', { style: { textAlign: 'right', fontWeight: 500 } }, money(montant)),
-          el('td', {}, el('span', {
-            style: {
-              fontSize: '11px', fontWeight: 600,
-              padding: '2px 8px', borderRadius: '10px',
-              background: etatMeta.bg, color: etatMeta.color
-            }
-          }, etatMeta.label)),
-          el('td', { style: { fontSize: '12px' } }, d.bailleur || '-'),
-          el('td', { style: { textAlign: 'center' } }, [
-            el('button', {
-              className: 'btn btn-sm btn-secondary',
-              style: { marginRight: '4px' },
-              onclick: () => openEditorModal(d)
-            }, '✏️'),
-            el('button', {
-              className: 'btn btn-sm btn-danger',
-              onclick: () => deleteItem(d)
-            }, '🗑')
+    // Modif #48 — totaux par colonne pour les lignes de synthèse CUMULS / %CUMULS
+    const totals = sorted.reduce((acc, d) => {
+      acc.acompteHTVA += Number(d.acompteHTVA) || 0;
+      acc.avance      += Number(d.avance) || 0;
+      acc.garantie    += Number(d.garantie) || 0;
+      acc.penalite    += Number(d.penalite) || 0;
+      acc.netHTVA     += Number(d.netHTVA) || 0;
+      acc.netTTC      += Number(d.netTTC) || 0;
+      return acc;
+    }, { acompteHTVA: 0, avance: 0, garantie: 0, penalite: 0, netHTVA: 0, netTTC: 0 });
+
+    const montantGlobalRef = getMontantGlobal();
+    const pct = (v) => montantGlobalRef > 0 ? `${((v / montantGlobalRef) * 100).toFixed(2)} %` : '-';
+
+    return el('div', { style: { overflowX: 'auto' } }, [
+      el('table', { className: 'table', style: { width: '100%', fontSize: '12px', whiteSpace: 'nowrap' } }, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', {}, 'N° Décompte'),
+          el('th', {}, 'Type d\'OP'),
+          el('th', {}, 'N° d\'OP'),
+          el('th', {}, 'Date'),
+          el('th', { style: { textAlign: 'right' } }, 'Acompte HTVA'),
+          el('th', { style: { textAlign: 'right' } }, 'Avance'),
+          el('th', { style: { textAlign: 'right' } }, 'Garantie'),
+          el('th', { style: { textAlign: 'right' } }, 'Pénalité'),
+          el('th', { style: { textAlign: 'right' } }, 'Net HTVA'),
+          el('th', { style: { textAlign: 'right' } }, 'Net TTC'),
+          el('th', {}, 'État'),
+          el('th', {}, 'Bailleur'),
+          el('th', {}, 'Décision'),
+          el('th', { style: { textAlign: 'right' } }, 'Taux exéc.'),
+          el('th', { style: { textAlign: 'center' } }, 'Actions')
+        ])]),
+        el('tbody', {}, [
+          ...sorted.map(d => {
+            const etatMeta = metaEtat(d.etat);
+            const decMeta = metaDecision(d.decision);
+            const typeLib = TYPE_OP.find(t => t.code === d.typeOP)?.label?.replace(/\s*\(.*\)/, '') || d.typeOP || '-';
+            return el('tr', {}, [
+              el('td', { style: { fontWeight: 600, fontFamily: 'monospace' } }, d.numero || '-'),
+              el('td', {}, typeLib),
+              el('td', { style: { fontFamily: 'monospace' } }, d.numeroOP || '-'),
+              el('td', {}, fmtDate(d.dateDecompte)),
+              el('td', { style: { textAlign: 'right' } }, money(Number(d.acompteHTVA) || 0)),
+              el('td', { style: { textAlign: 'right' } }, money(Number(d.avance) || 0)),
+              el('td', { style: { textAlign: 'right' } }, money(Number(d.garantie) || 0)),
+              el('td', { style: { textAlign: 'right' } }, money(Number(d.penalite) || 0)),
+              el('td', { style: { textAlign: 'right', fontWeight: 500 } }, money(Number(d.netHTVA) || 0)),
+              el('td', { style: { textAlign: 'right', fontWeight: 600 } }, money(Number(d.netTTC) || 0)),
+              el('td', {}, el('span', {
+                style: {
+                  fontSize: '11px', fontWeight: 600,
+                  padding: '2px 8px', borderRadius: '10px',
+                  background: etatMeta.bg, color: etatMeta.color
+                }
+              }, etatMeta.label)),
+              el('td', {}, d.bailleur || '-'),
+              el('td', {}, el('span', {
+                style: {
+                  fontSize: '11px', fontWeight: 600,
+                  padding: '2px 8px', borderRadius: '10px',
+                  background: decMeta.bg, color: decMeta.color
+                }
+              }, decMeta.label)),
+              el('td', { style: { textAlign: 'right' } }, `${(Number(d.tauxExecution) || 0).toFixed(2)} %`),
+              el('td', { style: { textAlign: 'center' } }, [
+                el('button', {
+                  className: 'btn btn-sm btn-secondary',
+                  style: { marginRight: '4px' },
+                  onclick: () => openEditorModal(d)
+                }, '✏️'),
+                el('button', {
+                  className: 'btn btn-sm btn-danger',
+                  onclick: () => deleteItem(d)
+                }, '🗑')
+              ])
+            ]);
+          }),
+          // Modif #48 — Ligne de synthèse CUMULS (totaux absolus)
+          el('tr', { style: { background: '#fef2f2', borderTop: '2px solid #fecaca' } }, [
+            el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 4 }, 'CUMULS'),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.acompteHTVA)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.avance)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.garantie)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.penalite)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.netHTVA)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.netTTC)),
+            el('td', { colspan: 4 }, '')
+          ]),
+          // Modif #48 — Ligne de synthèse %CUMULS (pourcentages relatifs au montant global)
+          el('tr', { style: { background: '#fef2f2' } }, [
+            el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 4 }, '%CUMULS'),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.acompteHTVA)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.avance)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.garantie)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.penalite)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.netHTVA)),
+            el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.netTTC)),
+            el('td', { colspan: 4 }, '')
           ])
-        ]);
-      }))
+        ])
+      ]),
+      el('p', { style: { marginTop: '8px', fontSize: '11px', color: '#6b7280', fontStyle: 'italic' } },
+        `Les pourcentages %CUMULS sont calculés sur le montant global du marché (${money(montantGlobalRef)}).`)
     ]);
   }
 
@@ -263,12 +339,24 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
       numeroOP: '',
       dateDecompte: new Date().toISOString().slice(0, 10),
       acompteHTVA: 0,
+      avance: 0,
+      garantie: 0,
+      penalite: 0,
+      netHTVA: 0,
       netTTC: 0,
-      etat: 'VISE',
+      etat: 'DRAFT',
       bailleur: '',
+      decision: 'EN_ATTENTE',
       tauxExecution: 0,
       documentRef: null
     };
+
+    // Taux TVA dérivé de l'attribution (TTC/HT − 1) × 100, défaut 18 % si non calculable
+    const attrHT = Number(attribution?.montants?.ht) || 0;
+    const attrTTC = Number(attribution?.montants?.ttc) || 0;
+    const tauxTVA = (attrHT > 0 && attrTTC > 0)
+      ? ((attrTTC / attrHT) - 1) * 100
+      : 18;
 
     const modal = el('div', {
       className: 'modal-overlay',
@@ -277,74 +365,158 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     });
 
     const content = el('div', {
-      style: { background: '#fff', borderRadius: '8px', width: '90%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: '20px' }
+      style: { background: '#fff', borderRadius: '8px', width: '95%', maxWidth: '820px', maxHeight: '90vh', overflowY: 'auto', padding: '20px' }
     });
 
     content.appendChild(el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' } }, [
-      el('h3', { style: { margin: 0, fontSize: '16px' } }, isEdit ? '✏️ Modifier OP / Mandat' : '➕ Nouvel OP / Mandat'),
+      el('h3', { style: { margin: 0, fontSize: '16px' } }, isEdit ? '✏️ Modifier décompte / OP / Mandat' : '➕ Nouveau décompte / OP / Mandat'),
       el('button', { className: 'btn btn-sm btn-secondary', onclick: () => modal.remove() }, '✕')
     ]));
 
-    const grid = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } });
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, ['Numéro', el('span', { className: 'required' }, '*')]),
-      el('input', { type: 'text', className: 'form-input', id: 'op-numero', value: draft.numero || '', placeholder: 'Ex : OP-2026-0124' })
+    // ── Section 1 : Identification ────────────────────────────────────────────
+    content.appendChild(el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' } }, '📋 Identification'));
+    const grid1 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' } });
+    grid1.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, ['Numéro de décompte', el('span', { className: 'required' }, '*')]),
+      el('input', { type: 'text', className: 'form-input', id: 'dec-numero', value: draft.numero || '', placeholder: 'Ex : DEC-2026-001' })
     ]));
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'Type'),
-      el('select', { className: 'form-input', id: 'op-type' },
+    grid1.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Type d\'OP'),
+      el('select', { className: 'form-input', id: 'dec-type' },
         TYPE_OP.map(t => el('option', { value: t.code, selected: draft.typeOP === t.code }, t.label))
       )
     ]));
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'Date'),
-      el('input', { type: 'date', className: 'form-input', id: 'op-date', value: draft.dateDecompte || '' })
+    grid1.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Numéro d\'OP'),
+      el('input', { type: 'text', className: 'form-input', id: 'dec-numeroOP', value: draft.numeroOP || '', placeholder: 'Renseigné par le module budget' })
     ]));
-    grid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, ['Montant (XOF)', el('span', { className: 'required' }, '*')]),
-      el('input', { type: 'number', className: 'form-input', id: 'op-montant', min: '0', step: '1', value: draft.netTTC || draft.acompteHTVA || 0 })
+    grid1.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Date de décompte'),
+      el('input', { type: 'date', className: 'form-input', id: 'dec-date', value: draft.dateDecompte || '' })
     ]));
-    grid.appendChild(el('div', {}, [
+    content.appendChild(grid1);
+
+    // ── Section 2 : Décomposition financière ──────────────────────────────────
+    content.appendChild(el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' } }, [
+      '💰 Décomposition financière ',
+      el('span', { style: { fontSize: '11px', fontWeight: 400, color: '#6b7280' } }, `(taux TVA ${tauxTVA.toFixed(0)} %)`)
+    ]));
+    const grid2 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' } });
+    grid2.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, ['Acompte HTVA (XOF)', el('span', { className: 'required' }, '*')]),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-acompteHTVA', min: '0', step: '1', value: Number(draft.acompteHTVA) || 0, oninput: recompute })
+    ]));
+    grid2.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Avance restituée (XOF)'),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-avance', min: '0', step: '1', value: Number(draft.avance) || 0, oninput: recompute })
+    ]));
+    grid2.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Retenue de garantie (XOF)'),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-garantie', min: '0', step: '1', value: Number(draft.garantie) || 0, oninput: recompute })
+    ]));
+    grid2.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Pénalités (XOF)'),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-penalite', min: '0', step: '1', value: Number(draft.penalite) || 0, oninput: recompute })
+    ]));
+    grid2.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Net HTVA (XOF) — calculé'),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-netHTVA', min: '0', step: '1', value: Number(draft.netHTVA) || 0, style: { background: '#f9fafb', fontWeight: 600 } }),
+      el('small', { className: 'text-muted', style: { fontSize: '11px' } }, 'Acompte HTVA − Avance − Garantie − Pénalités. Surcharge possible.')
+    ]));
+    grid2.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Net TTC (XOF) — calculé'),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-netTTC', min: '0', step: '1', value: Number(draft.netTTC) || 0, style: { background: '#f9fafb', fontWeight: 600 } }),
+      el('small', { className: 'text-muted', style: { fontSize: '11px' } }, `Net HTVA × (1 + ${tauxTVA.toFixed(0)} %). Surcharge possible.`)
+    ]));
+    content.appendChild(grid2);
+
+    // ── Section 3 : Suivi / Validation ────────────────────────────────────────
+    content.appendChild(el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' } }, '🏷️ Suivi & validation'));
+    const grid3 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '8px' } });
+    grid3.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, 'État'),
-      el('select', { className: 'form-input', id: 'op-etat' },
+      el('select', { className: 'form-input', id: 'dec-etat' },
         ETATS.map(e => el('option', { value: e.code, selected: draft.etat === e.code }, e.label))
       )
     ]));
-    grid.appendChild(el('div', {}, [
+    grid3.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, 'Bailleur'),
-      el('input', { type: 'text', className: 'form-input', id: 'op-bailleur', value: draft.bailleur || '', placeholder: 'ETAT_CI, BM, BAD…' })
+      el('input', { type: 'text', className: 'form-input', id: 'dec-bailleur', value: draft.bailleur || '', placeholder: 'ETAT_CI, BM, BAD…' })
     ]));
-    content.appendChild(grid);
+    grid3.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Décision'),
+      el('select', { className: 'form-input', id: 'dec-decision' },
+        DECISIONS.map(d => el('option', { value: d.code, selected: draft.decision === d.code }, d.label))
+      )
+    ]));
+    content.appendChild(grid3);
+    content.appendChild(el('small', { className: 'text-muted', style: { fontSize: '11px' } },
+      'Taux d\'exécution calculé automatiquement à l\'enregistrement : Net TTC de cette ligne / montant global × 100.'));
+
+    // Recompute Net HTVA et Net TTC dès qu'un des inputs financiers change
+    function recompute() {
+      const acompte = parseFloat(document.getElementById('dec-acompteHTVA')?.value) || 0;
+      const avance = parseFloat(document.getElementById('dec-avance')?.value) || 0;
+      const garantie = parseFloat(document.getElementById('dec-garantie')?.value) || 0;
+      const penalite = parseFloat(document.getElementById('dec-penalite')?.value) || 0;
+      const netHTVA = Math.max(0, acompte - avance - garantie - penalite);
+      const netTTC = Math.round(netHTVA * (1 + tauxTVA / 100));
+      const elNetHTVA = document.getElementById('dec-netHTVA');
+      const elNetTTC = document.getElementById('dec-netTTC');
+      if (elNetHTVA) elNetHTVA.value = Math.round(netHTVA);
+      if (elNetTTC) elNetTTC.value = netTTC;
+    }
 
     content.appendChild(el('div', { style: { marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' } }, [
       el('button', { className: 'btn btn-secondary', onclick: () => modal.remove() }, 'Annuler'),
       el('button', {
         className: 'btn btn-primary',
         onclick: async () => {
-          const numero = document.getElementById('op-numero').value.trim();
-          if (!numero) { alert('Numéro obligatoire'); return; }
-          const montant = parseFloat(document.getElementById('op-montant').value) || 0;
-          if (montant <= 0) { alert('Montant invalide'); return; }
+          const numero = document.getElementById('dec-numero').value.trim();
+          if (!numero) { alert('Numéro de décompte obligatoire'); return; }
+
+          const acompteHTVA = parseFloat(document.getElementById('dec-acompteHTVA').value) || 0;
+          const avance      = parseFloat(document.getElementById('dec-avance').value) || 0;
+          const garantie    = parseFloat(document.getElementById('dec-garantie').value) || 0;
+          const penalite    = parseFloat(document.getElementById('dec-penalite').value) || 0;
+          const netHTVA     = parseFloat(document.getElementById('dec-netHTVA').value) || 0;
+          const netTTC      = parseFloat(document.getElementById('dec-netTTC').value) || 0;
+
+          if (acompteHTVA <= 0 && netTTC <= 0) {
+            alert('Au moins un montant non nul est requis (Acompte HTVA ou Net TTC)');
+            return;
+          }
+
           const payload = {
             ...draft,
             numero,
-            numeroOP: numero,
-            typeOP: document.getElementById('op-type').value,
-            dateDecompte: document.getElementById('op-date').value || null,
-            netTTC: montant,
-            acompteHTVA: montant,
-            etat: document.getElementById('op-etat').value,
-            bailleur: document.getElementById('op-bailleur').value.trim(),
+            typeOP: document.getElementById('dec-type').value,
+            numeroOP: document.getElementById('dec-numeroOP').value.trim(),
+            dateDecompte: document.getElementById('dec-date').value || null,
+            acompteHTVA,
+            avance,
+            garantie,
+            penalite,
+            netHTVA,
+            netTTC,
+            etat: document.getElementById('dec-etat').value,
+            bailleur: document.getElementById('dec-bailleur').value.trim(),
+            decision: document.getElementById('dec-decision').value,
             updatedAt: new Date().toISOString()
           };
+
           if (!payload.id) {
             payload.id = `DEC-${operation.id}-${uid('OP')}`;
             payload.operationId = operation.id;
             payload.createdAt = new Date().toISOString();
           }
-          // Taux d'exécution cumulé pour cette ligne (montant ligne / montant global)
+
+          // Taux d'exécution de la ligne (Net TTC ligne / Montant global × 100)
           const montantGlobal = getMontantGlobal();
-          payload.tauxExecution = montantGlobal > 0 ? parseFloat(((montant / montantGlobal) * 100).toFixed(2)) : 0;
+          payload.tauxExecution = montantGlobal > 0
+            ? parseFloat(((netTTC / montantGlobal) * 100).toFixed(2))
+            : 0;
+
           await persist(payload, isEdit);
           modal.remove();
         }
@@ -353,6 +525,9 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
 
     modal.appendChild(content);
     document.body.appendChild(modal);
+
+    // Initialisation : pré-calcul si entité nouvelle
+    if (!isEdit) recompute();
   }
 
   async function persist(payload, isEdit) {
