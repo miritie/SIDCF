@@ -13,6 +13,52 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Picker entreprise dans l'écran Attribution (SIMPLE + MANDATAIRE)
+
+> **Modif #43.b.1** — Première intégration concrète du picker entreprise (livré en Modif #43.a) dans l'écran `ecr03a-attribution.js`. Couvre les deux cas principaux : l'**entreprise unique** attributaire et le **mandataire** d'un groupement. Les cotitulaires, sous-traitants et soumissionnaires sont reportés à `#43.b.2` pour permettre une validation visuelle intermédiaire.
+
+### Approche : minimal-invasive avec inputs cachés mirorrés
+
+Le code existant (sanctions check, handleSave, validations) lit les champs `attr-raison-sociale`, `attr-ncc`, etc. via leurs `id` DOM. Pour éviter de tout refondre et minimiser le risque de régression, on garde ces inputs **en `type="hidden"`** et on les mirorre depuis le state du picker à chaque `onChange`.
+
+Bénéfices :
+- Le triggerSanctionCheck() existant fonctionne sans modification
+- handleSave() lit toujours les mêmes IDs et ne change que sur 1 point : récupération supplémentaire de `attr-entreprise-id` (ou `attr-mandataire-entreprise-id`)
+- Si l'attribution existante n'a pas d'`entrepriseId` (données legacy) → le picker bascule en mode "search" mais les autres données sont conservées intactes dans les hidden inputs
+
+### Intégration SIMPLE (entreprise unique attributaire)
+
+- Remplace les 2 grilles d'inputs (raison sociale/NCC + adresse/tel/email) par `renderEntreprisePicker(...)` au-dessus de la section banque
+- Inputs cachés : `attr-entreprise-id`, `attr-raison-sociale`, `attr-ncc`, `attr-adresse`, `attr-telephone`, `attr-email`
+- À l'`onChange` du picker : mirror des 6 inputs + pré-remplissage de la section coordonnées bancaires depuis l'autofill + déclenchement de la détection sanctions
+
+### Intégration MANDATAIRE (groupement)
+
+Même pattern avec préfixe `attr-mandataire-*`. Le groupement reste fonctionnel : la radio SIMPLE/GROUPEMENT togle l'affichage des deux sections.
+
+### Helpers ajoutés (haut du fichier)
+
+- `_mirrorEntrepriseToHiddenInputs(prefix, entreprise)` — synchronise les 6 inputs cachés depuis l'objet entreprise du picker
+- `_prefillBanqueSection(prefix, entreprise)` — pré-remplit banque/agence/numéro/intitulé depuis la fiche maître. Reste éditable per-attribution (l'utilisateur peut surcharger). Gère le cas où `populateBanqueSelect()` async n'a pas encore peuplé le select (via `dataset.selected`).
+
+### handleSave() — ajout de entrepriseId
+
+- En mode SIMPLE : `entrepriseId` lu depuis le hidden input, placé dans `entreprises[0].entrepriseId` ET au niveau `attributaireData.entrepriseId`
+- En mode GROUPEMENT : `entrepriseId` du mandataire placé idem dans `entreprises[0].entrepriseId` ET au niveau `attributaireData.entrepriseId`
+
+### Reste à faire — Modif #43.b.2
+
+- Cotitulaires (sous-cards dans le groupement CONJOINT) — picker par cotitulaire
+- Widget `sous-traitants-manager-mp.js` — picker dans la modale d'édition
+- Widget `soumissionnaires-widget.js` — picker dans la modale candidat
+- Badges « 🏢 Fiche entreprise » sur `ecr01c-fiche-marche.js` (display attributaire) et `ecr04a-execution-os.js`
+
+#### Fichier touché
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` (~120 lignes ajoutées/modifiées) — import + 2 state vars + 2 helpers + 2 intégrations + 2 modifs handleSave
+
+Pas de Worker, pas de migration DB. Aucune régression sur le mode SOLIDAIRE ou les attributions legacy (les hidden inputs garantissent la rétrocompat).
+
 ## 2026-05-20 — Foundation picker entreprise (Phase 1.a)
 
 > **Modif #43.a** — Discussion avec le client sur la qualité du référentiel d'entreprises : actuellement les saisies (attribution, sous-traitants, soumissionnaires) sont en champs libres → doublons et incohérences. Approche retenue : **mix lookup + création contrôlée**. Quand l'entreprise existe, on l'appelle depuis le référentiel `MP_ENTREPRISE` (autofill verrouillé) ; sinon on entre dans un processus de création inline avec NCC obligatoire (unicité technique), détection fuzzy des doublons probables, et statut `PENDING` pour validation a posteriori par l'admin (workflow couvert en Modif #44).

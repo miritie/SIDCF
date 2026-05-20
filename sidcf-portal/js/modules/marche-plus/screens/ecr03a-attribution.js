@@ -26,6 +26,7 @@ import { loadBanques } from '../../../lib/mp-banques.js';
 import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-manager-mp.js';
+import { renderEntreprisePicker } from '../../../ui/widgets/entreprise-picker-mp.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -71,6 +72,62 @@ const _coTitulairesState = [];
 // On stocke la liste courante saisie via le widget renderSousTraitantsManager,
 // et on la persiste à la sauvegarde dans MP_ATTRIBUTION.sousTraitants.
 let _sousTraitantsState = [];
+
+// Modif #43.b — état des pickers entreprise (entreprise sélectionnée pour l'attribuion)
+let _attribSimplePick = null;       // SIMPLE → entreprise unique
+let _attribMandatairePick = null;   // GROUPEMENT → mandataire
+
+// ============================================
+// Modif #43.b — Helpers picker entreprise
+// ============================================
+
+/**
+ * Reflète les champs d'une entreprise (depuis le picker) vers les inputs cachés
+ * mirroirs, pour rester compatible avec le code existant (triggerSanctionCheck,
+ * handleSave) qui lit ces inputs au lieu d'un state.
+ *
+ * @param {string} prefix - 'attr' (entreprise unique) ou 'attr-mandataire'
+ * @param {Object|null} entreprise - Objet retourné par le picker, ou null si désélection
+ */
+function _mirrorEntrepriseToHiddenInputs(prefix, entreprise) {
+  const setVal = (id, val) => {
+    const elInput = document.getElementById(id);
+    if (elInput) elInput.value = val || '';
+  };
+  setVal(`${prefix}-entreprise-id`,  entreprise?.entrepriseId || '');
+  setVal(`${prefix}-raison-sociale`, entreprise?.raisonSociale || '');
+  setVal(`${prefix}-ncc`,            entreprise?.ncc || '');
+  setVal(`${prefix}-adresse`,        entreprise?.adresse || '');
+  setVal(`${prefix}-telephone`,      entreprise?.telephone || '');
+  setVal(`${prefix}-email`,          entreprise?.email || '');
+}
+
+/**
+ * Pré-remplit la section coordonnées bancaires depuis l'entreprise pickée.
+ * Reste éditable per-attribution (l'utilisateur peut surcharger).
+ */
+function _prefillBanqueSection(prefix, entreprise) {
+  if (!entreprise) return;
+  const b = entreprise.banque || {};
+  const c = entreprise.compte || {};
+
+  const banqueSel = document.getElementById(`${prefix}-banque`);
+  if (banqueSel) {
+    const wanted = b.code || b.libelle || '';
+    // Si l'option existe déjà → on la sélectionne. Sinon on la mémorise pour quand
+    // populateBanqueSelect aura terminé son chargement async.
+    const matching = Array.from(banqueSel.options || []).find(o => o.value === wanted || o.text === wanted);
+    if (matching) banqueSel.value = matching.value;
+    else banqueSel.dataset.selected = wanted;
+  }
+  const setVal = (id, val) => {
+    const elInput = document.getElementById(id);
+    if (elInput && (!elInput.value || elInput.value.trim() === '')) elInput.value = val || '';
+  };
+  setVal(`${prefix}-banque-agence`,   b.agence);
+  setVal(`${prefix}-banque-numero`,   c.numero);
+  setVal(`${prefix}-banque-intitule`, c.intitule || entreprise.raisonSociale);
+}
 
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
 let sanctionCheckTimer = null;
@@ -382,69 +439,35 @@ function renderAttributaireSection(attributaire, registries) {
             onclick: (e) => { e.preventDefault(); openSanctionsDrawer(); }
           }, '🚫 Gérer la liste des entreprises sanctionnées')
         ]),
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Raison sociale',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'attr-raison-sociale',
-              value: entrepriseSimple.raisonSociale || '',
-              placeholder: 'Nom de l\'entreprise',
-              required: true,
-              oninput: (e) => triggerSanctionCheck()
-            }),
-            el('div', { id: 'attr-sanction-banner' }) // bandeau d'alerte
-          ]),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'N° Compte Contribuable (NCC)'),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'attr-ncc',
-              value: entrepriseSimple.ncc || '',
-              placeholder: 'Ex: CI-ABJ-2024-XXXXX',
-              oninput: (e) => triggerSanctionCheck()
-            })
-          ])
-        ]),
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Adresse'),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'attr-adresse',
-              value: entrepriseSimple.adresse || '',
-              placeholder: 'Adresse complète'
-            })
-          ]),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Téléphone'),
-            el('input', {
-              type: 'tel',
-              className: 'form-input',
-              id: 'attr-telephone',
-              value: entrepriseSimple.telephone || '',
-              placeholder: '+225 XX XX XX XX XX'
-            })
-          ]),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Email'),
-            el('input', {
-              type: 'email',
-              className: 'form-input',
-              id: 'attr-email',
-              value: entrepriseSimple.email || '',
-              placeholder: 'contact@entreprise.ci'
-            })
-          ])
-        ]),
 
-        // Coordonnées bancaires (Marché+ — modif #18)
+        // Modif #43.b — Picker entreprise (lookup typeahead + autofill + création inline)
+        el('label', { className: 'form-label' }, [
+          'Identité de l\'attributaire ',
+          el('span', { className: 'required' }, '*')
+        ]),
+        el('div', { id: 'attr-entreprise-simple-picker', style: { marginBottom: '8px' } },
+          renderEntreprisePicker({
+            initialValue: entrepriseSimple.entrepriseId ? entrepriseSimple : null,
+            onChange: (entreprise) => {
+              _attribSimplePick = entreprise;
+              _mirrorEntrepriseToHiddenInputs('attr', entreprise);
+              _prefillBanqueSection('attr', entreprise);
+              triggerSanctionCheck();
+            }
+          })
+        ),
+        el('div', { id: 'attr-sanction-banner', style: { marginBottom: '12px' } }),
+
+        // Inputs cachés — mirorrés depuis le picker pour compat avec triggerSanctionCheck + handleSave
+        el('input', { type: 'hidden', id: 'attr-entreprise-id', value: entrepriseSimple.entrepriseId || '' }),
+        el('input', { type: 'hidden', id: 'attr-raison-sociale', value: entrepriseSimple.raisonSociale || '' }),
+        el('input', { type: 'hidden', id: 'attr-ncc', value: entrepriseSimple.ncc || '' }),
+        el('input', { type: 'hidden', id: 'attr-adresse', value: entrepriseSimple.adresse || '' }),
+        el('input', { type: 'hidden', id: 'attr-telephone', value: entrepriseSimple.telephone || '' }),
+        el('input', { type: 'hidden', id: 'attr-email', value: entrepriseSimple.email || '' }),
+
+        // Coordonnées bancaires (Marché+ — modif #18) — éditables per-attribution,
+        // pré-remplies au moment de l'autofill du picker.
         renderCoordonneesBancairesSection('attr', cbSimple)
       ]),
 
@@ -467,60 +490,32 @@ function renderAttributaireSection(attributaire, registries) {
             el('option', { value: 'SOLIDAIRE' }, 'Groupement solidaire')
           ])
         ]),
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, [
-              'Raison sociale (Mandataire)',
-              el('span', { className: 'required' }, '*')
-            ]),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'attr-mandataire-raison-sociale',
-              placeholder: 'Nom de l\'entreprise mandataire'
-            })
-          ]),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'N° Compte Contribuable'),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'attr-mandataire-ncc',
-              placeholder: 'NCC du mandataire'
-            })
-          ])
+        // Modif #43.b — Picker entreprise pour le MANDATAIRE du groupement
+        el('label', { className: 'form-label' }, [
+          'Mandataire du groupement ',
+          el('span', { className: 'required' }, '*')
         ]),
-        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' } }, [
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Adresse'),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'attr-mandataire-adresse',
-              placeholder: 'Adresse du mandataire'
-            })
-          ]),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Téléphone'),
-            el('input', {
-              type: 'tel',
-              className: 'form-input',
-              id: 'attr-mandataire-telephone',
-              placeholder: '+225 XX XX XX XX XX'
-            })
-          ]),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Email'),
-            el('input', {
-              type: 'email',
-              className: 'form-input',
-              id: 'attr-mandataire-email',
-              placeholder: 'contact@mandataire.ci'
-            })
-          ])
-        ]),
+        el('div', { id: 'attr-mandataire-picker', style: { marginBottom: '12px' } },
+          renderEntreprisePicker({
+            initialValue: mandataire.entrepriseId ? mandataire : null,
+            onChange: (entreprise) => {
+              _attribMandatairePick = entreprise;
+              _mirrorEntrepriseToHiddenInputs('attr-mandataire', entreprise);
+              _prefillBanqueSection('attr-mandataire', entreprise);
+              triggerSanctionCheck();
+            }
+          })
+        ),
 
-        // Coordonnées bancaires du mandataire (Marché+ — modif #18)
+        // Inputs cachés mandataire — mirorrés depuis le picker
+        el('input', { type: 'hidden', id: 'attr-mandataire-entreprise-id', value: mandataire.entrepriseId || '' }),
+        el('input', { type: 'hidden', id: 'attr-mandataire-raison-sociale', value: mandataire.raisonSociale || '' }),
+        el('input', { type: 'hidden', id: 'attr-mandataire-ncc', value: mandataire.ncc || '' }),
+        el('input', { type: 'hidden', id: 'attr-mandataire-adresse', value: mandataire.adresse || '' }),
+        el('input', { type: 'hidden', id: 'attr-mandataire-telephone', value: mandataire.telephone || '' }),
+        el('input', { type: 'hidden', id: 'attr-mandataire-email', value: mandataire.email || '' }),
+
+        // Coordonnées bancaires du mandataire (Marché+ — modif #18) — éditables, pré-remplies à l'autofill.
         renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
 
         // Co-titulaires du groupement (Marché+ modif #20) — visible uniquement pour CONJOINT
@@ -1507,6 +1502,8 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     };
 
     if (attrType === 'SIMPLE') {
+      // Modif #43.b — entrepriseId issu du picker (clé vers le référentiel mp_entreprise)
+      const entrepriseId = document.getElementById('attr-entreprise-id')?.value?.trim() || null;
       const raisonSociale = document.getElementById('attr-raison-sociale')?.value?.trim() || '';
       const ncc = document.getElementById('attr-ncc')?.value?.trim() || '';
       const adresse = document.getElementById('attr-adresse')?.value?.trim() || '';
@@ -1516,19 +1513,21 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
 
       raisonSocialeValidation = raisonSociale;
 
-      const ent = { role: 'TITULAIRE', raisonSociale, ncc, adresse, telephone, email };
+      const ent = { role: 'TITULAIRE', entrepriseId, raisonSociale, ncc, adresse, telephone, email };
       if (coordonneesBancaires) ent.coordonneesBancaires = coordonneesBancaires;
 
       attributaireData = {
         singleOrGroup: 'SIMPLE',
         groupType: null,
-        entrepriseId: null,
+        entrepriseId,
         groupementId: null,
         entreprises: [ent]
       };
     } else {
       // Groupement
       const groupType = document.getElementById('attr-group-type')?.value || 'CONJOINT';
+      // Modif #43.b — entrepriseId du mandataire issu du picker
+      const entrepriseId = document.getElementById('attr-mandataire-entreprise-id')?.value?.trim() || null;
       const raisonSociale = document.getElementById('attr-mandataire-raison-sociale')?.value?.trim() || '';
       const ncc = document.getElementById('attr-mandataire-ncc')?.value?.trim() || '';
       const adresse = document.getElementById('attr-mandataire-adresse')?.value?.trim() || '';
@@ -1538,7 +1537,7 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
 
       raisonSocialeValidation = raisonSociale;
 
-      const ent = { role: 'MANDATAIRE', raisonSociale, ncc, adresse, telephone, email };
+      const ent = { role: 'MANDATAIRE', entrepriseId, raisonSociale, ncc, adresse, telephone, email };
       if (coordonneesBancaires) ent.coordonneesBancaires = coordonneesBancaires;
 
       // Marché+ modif #20 : collecter aussi les co-titulaires (groupement CONJOINT uniquement)
@@ -1567,7 +1566,7 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       attributaireData = {
         singleOrGroup: 'GROUPEMENT',
         groupType,
-        entrepriseId: null,
+        entrepriseId,            // entrepriseId du mandataire
         groupementId: null,
         entreprises: [ent, ...cotitulaires]
       };
