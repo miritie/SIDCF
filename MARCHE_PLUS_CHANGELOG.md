@@ -13,6 +13,33 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Fix lib fuzzy : normalisation des formes juridiques avec points
+
+> **Modif #45** — Découvert par batterie de tests end-to-end (26 assertions sur lib + DB + workflow). La fonction `normalizeRaisonSociale()` traitait les points (`.`) comme séparateurs en les remplaçant par un espace → conséquence : `« S.A.R.L. »` était transformé en `« s a r l »` (4 lettres seules) au lieu de `« sarl »`, ce qui empêchait la regex `\b(sarl|sas|sa|sasu|eurl…)\b` de détecter la forme juridique et de la retirer. Résultat : `« Société Dupont S.A.R.L. »` ne matchait pas comme doublon de `« SOCIETE DUPONT SARL »`.
+
+### Fix
+
+Distinction du traitement des points et des autres ponctuations :
+- **`.`** → retiré sans espace (`« S.A.R.L. »` → `« sarl »` → retiré par le regex forme juridique)
+- **`,;:!?'"()/\&-`** → remplacés par un espace (séparateurs de mots légitimes)
+
+### Validation
+
+Test e2e (26 assertions sur la lib + DB + workflow PENDING → VALIDATED → MERGED, avec contraintes SQL, FK et cleanup automatique) : **26/26 ✓**
+
+Couvre :
+- 6 cas de normalisation (accents, ponctuation, formes juridiques, edge cases)
+- 4 cas de similarité (identique, casse, ponctuation, distance)
+- 2 cas de recherche (fuzzy, substring)
+- 2 vérifications DB (colonnes + index)
+- 11 cas e2e (création PENDING, fuzzy detection, contraintes UNIQUE + CHECK, validation, fusion, FK ON DELETE SET NULL, cleanup)
+
+#### Fichier touché
+
+- `sidcf-portal/js/lib/entreprise-fuzzy-mp.js` — `normalizeRaisonSociale()` : 1 ligne ajoutée (`.replace(/\./g, '')`) + ajustement de la regex ponctuation
+
+Aucune migration DB. Aucun déploiement Worker. Le fix est rétroactivement bénéfique : la détection de doublons à la création inline sera désormais plus tolérante aux formes juridiques avec points.
+
 ## 2026-05-20 — Admin queue validation + fusion doublons (Phase 2 du référentiel entreprise)
 
 > **Modif #44** — Phase 2 du chantier référentiel entreprise. Permet de **valider à posteriori** les fiches créées en flux d'attribution (statut `PENDING`) et de **fusionner les doublons** détectés automatiquement. Ferme la boucle promise au client : « si l'entreprise n'existe pas et on rentre dans un processus de création éventuellement soumis à validation ultérieurement ».

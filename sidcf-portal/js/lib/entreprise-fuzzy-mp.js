@@ -21,7 +21,8 @@ export function normalizeRaisonSociale(str) {
   const base = str
     .toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')  // retire les accents (diacritiques combinants U+0300..U+036F)
-    .replace(/[.,;:!?'"()\/\\&\-]/g, ' ')               // ponctuation → espace
+    .replace(/\./g, '')                                 // points retirés sans espace (ex: « S.A.R.L. » → « sarl »)
+    .replace(/[,;:!?'"()\/\\&\-]/g, ' ')                // autre ponctuation → espace
     .replace(/\s+/g, ' ')
     .trim();
   // Retire les formes juridiques fréquentes (n'impacte que la comparaison fuzzy)
