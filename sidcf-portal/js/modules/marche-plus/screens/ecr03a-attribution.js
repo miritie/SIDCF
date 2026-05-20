@@ -844,6 +844,7 @@ function renderSousTraitanceSection(initial) {
 function addCoTitulaire() {
   _coTitulairesState.push({
     role: 'COTITULAIRE',
+    entrepriseId: null,            // Modif #43.b — lien vers le référentiel mp_entreprise
     raisonSociale: '',
     ncc: '',
     adresse: '',
@@ -865,6 +866,8 @@ function readCoTitulaireFromDOM(idx) {
   const get = (suffix) => document.getElementById(`attr-cotit-${idx}-${suffix}`)?.value?.trim() || '';
   const m = _coTitulairesState[idx];
   if (!m) return;
+  // Modif #43.b — entrepriseId (lien vers référentiel) lu depuis hidden input mirroré du picker
+  m.entrepriseId = get('entreprise-id') || null;
   m.raisonSociale = get('raison-sociale');
   m.ncc = get('ncc');
   m.adresse = get('adresse');
@@ -929,50 +932,45 @@ function renderCoTitulaireCard(member, idx) {
       }, '✕ Retirer')
     ]),
 
-    // Identité (2 colonnes)
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' } }, [
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, [
-          'Raison sociale', el('span', { className: 'required' }, '*')
-        ]),
-        el('input', {
-          type: 'text', className: 'form-input',
-          id: `attr-cotit-${idx}-raison-sociale`,
-          value: member.raisonSociale || '',
-          placeholder: 'Nom du co-titulaire',
-          // Modif #30 : déclenche la détection sanctions sur le groupement à chaque saisie
-          oninput: () => { try { window.__mpTriggerSanctionCheck?.(); } catch (_) {} }
-        })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'N° Compte Contribuable (NCC)'),
-        el('input', {
-          type: 'text', className: 'form-input',
-          id: `attr-cotit-${idx}-ncc`,
-          value: member.ncc || '',
-          placeholder: 'NCC',
-          oninput: () => { try { window.__mpTriggerSanctionCheck?.(); } catch (_) {} }
-        })
-      ])
+    // Modif #43.b — Picker entreprise pour ce co-titulaire
+    el('label', { className: 'form-label' }, [
+      'Identité du co-titulaire ', el('span', { className: 'required' }, '*')
     ]),
+    el('div', { style: { marginBottom: '8px' } },
+      renderEntreprisePicker({
+        initialValue: member.entrepriseId ? member : null,
+        onChange: (entreprise) => {
+          const setVal = (suffix, val) => {
+            const i = document.getElementById(`attr-cotit-${idx}-${suffix}`);
+            if (i) i.value = val || '';
+          };
+          setVal('entreprise-id',  entreprise?.entrepriseId || '');
+          setVal('raison-sociale', entreprise?.raisonSociale || '');
+          setVal('ncc',            entreprise?.ncc || '');
+          setVal('adresse',        entreprise?.adresse || '');
+          setVal('telephone',      entreprise?.telephone || '');
+          setVal('email',          entreprise?.email || '');
+          // Pré-remplit banque + agence sans verrouiller
+          if (entreprise) _prefillBanqueSection(`attr-cotit-${idx}`, entreprise);
+          // Mise à jour du state immédiate + déclenchement détection sanctions groupement
+          _coTitulairesState[idx] = { ..._coTitulairesState[idx], entrepriseId: entreprise?.entrepriseId || null,
+            raisonSociale: entreprise?.raisonSociale || '', ncc: entreprise?.ncc || '',
+            adresse: entreprise?.adresse || '', telephone: entreprise?.telephone || '', email: entreprise?.email || '' };
+          try { window.__mpTriggerSanctionCheck?.(); } catch (_) {}
+        }
+      })
+    ),
 
-    // Contacts (3 colonnes)
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '12px' } }, [
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Adresse'),
-        el('input', { type: 'text', className: 'form-input', id: `attr-cotit-${idx}-adresse`, value: member.adresse || '' })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Téléphone'),
-        el('input', { type: 'tel', className: 'form-input', id: `attr-cotit-${idx}-telephone`, value: member.telephone || '' })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Email'),
-        el('input', { type: 'email', className: 'form-input', id: `attr-cotit-${idx}-email`, value: member.email || '' })
-      ])
-    ]),
+    // Inputs cachés — mirorrés depuis le picker pour rester compatibles avec
+    // readCoTitulaireFromDOM() + détection sanctions existante.
+    el('input', { type: 'hidden', id: `attr-cotit-${idx}-entreprise-id`, value: member.entrepriseId || '' }),
+    el('input', { type: 'hidden', id: `attr-cotit-${idx}-raison-sociale`, value: member.raisonSociale || '' }),
+    el('input', { type: 'hidden', id: `attr-cotit-${idx}-ncc`, value: member.ncc || '' }),
+    el('input', { type: 'hidden', id: `attr-cotit-${idx}-adresse`, value: member.adresse || '' }),
+    el('input', { type: 'hidden', id: `attr-cotit-${idx}-telephone`, value: member.telephone || '' }),
+    el('input', { type: 'hidden', id: `attr-cotit-${idx}-email`, value: member.email || '' }),
 
-    // Coordonnées bancaires propres au co-titulaire
+    // Coordonnées bancaires propres au co-titulaire (éditables per-attribution, pré-remplies à l'autofill)
     renderCoordonneesBancairesSection(`attr-cotit-${idx}`, cb)
   ]);
 }
@@ -1549,6 +1547,7 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
           if (!m.raisonSociale || !m.raisonSociale.trim()) continue; // skip vides
           const entMember = {
             role: 'COTITULAIRE',
+            entrepriseId: m.entrepriseId || null,  // Modif #43.b — lien référentiel mp_entreprise
             raisonSociale: m.raisonSociale.trim(),
             ncc: m.ncc || '',
             adresse: m.adresse || '',

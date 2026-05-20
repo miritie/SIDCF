@@ -13,6 +13,40 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-20 — Picker entreprise dans les cotitulaires du groupement CONJOINT (clôture Modif #43)
+
+> **Modif #43.b.3** — Dernière sous-modif de la Phase 1 du chantier référentiel entreprise. Câble le picker dans les **cards dynamiques des co-titulaires** d'un groupement CONJOINT (les membres autres que le mandataire). Modif #43 est désormais complète sur tous les sites de saisie d'entreprise du module Marché+.
+
+### Comportement
+
+- Chaque card co-titulaire (créée dynamiquement via `addCoTitulaire()`) reçoit son propre picker
+- L'état du picker est mirorré vers les 6 hidden inputs `attr-cotit-${idx}-{entreprise-id,raison-sociale,ncc,adresse,telephone,email}` que `readCoTitulaireFromDOM()` lisait déjà → zéro modification de la logique de persistance
+- À l'autofill : pré-remplissage de la banque + agence du co-titulaire via `_prefillBanqueSection(prefix, entreprise)` (déjà introduit en #43.b.1)
+- Mise à jour immédiate du `_coTitulairesState[idx]` à l'`onChange` pour éviter perte de saisie en cas de re-render (ajout/suppression d'un autre membre)
+- Déclenchement de la détection sanctions groupement à chaque changement de picker
+- Le schéma initial de l'état co-titulaire (`addCoTitulaire`) inclut désormais `entrepriseId: null`
+
+### handleSave — entrepriseId persisté pour chaque cotitulaire
+
+L'objet `entMember` construit dans la boucle des cotitulaires reçoit `entrepriseId: m.entrepriseId || null` aux côtés des autres champs identité.
+
+### Bilan global Modif #43
+
+| Sous-modif | Périmètre | SHA |
+|---|---|---|
+| #43.a | Foundation : lib fuzzy + widget picker + migration 017 (10 entreprises backfillées) + schéma JS | `138dc075` |
+| #43.b.1 | Attribution : SIMPLE + MANDATAIRE du groupement | `4db73ea7` |
+| #43.b.2 | sous-traitants + soumissionnaires + badges fiche liée (fiche de vie + exécution) | `04cbb027` |
+| #43.b.3 | Cotitulaires du groupement CONJOINT | _ce commit_ |
+
+Reste à venir : **Modif #44** — Admin queue PENDING + fusion doublons (couvre le workflow de validation a posteriori des fiches créées en flux).
+
+#### Fichier touché
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — `addCoTitulaire()` + `readCoTitulaireFromDOM()` + `renderCoTitulaireCard()` + branche cotitulaires de `handleSave()`
+
+Pas de Worker, pas de migration DB. Rétrocompat préservée sur les groupements déjà saisis (hidden inputs initialisés depuis les données existantes).
+
 ## 2026-05-20 — Picker entreprise dans sous-traitants + soumissionnaires + badges d'affichage
 
 > **Modif #43.b.2** — Suite immédiate de #43.b.1. Câblage du picker entreprise dans les 2 widgets restants de saisie (sous-traitants et soumissionnaires) et ajout de badges visuels « 🏢 Fiche entreprise liée » sur les 2 écrans de lecture (fiche de vie + exécution OS). Les **cotitulaires d'un groupement conjoint** sont reportés à `#43.b.3` (cards dynamiques imbriquées, refonte plus invasive).
