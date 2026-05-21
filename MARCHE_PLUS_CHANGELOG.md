@@ -13,6 +13,94 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-21 — Mode « Spécification » bavard pour devs externes (écran pilote : Attribution)
+
+> **Modif #49** — Objectif : rendre la maquette interactive exploitable comme spécification fonctionnelle par un développeur externe qui prendra le relais sur l'implémentation. Chaque élément câblé (champ, section, bouton) expose un badge ℹ qui, au clic, ouvre une fiche latérale détaillant son **objet métier, sa source de données, son type, ses conditions de visibilité/édition, les règles métier applicables, les actions possibles, les acteurs concernés, la formule éventuelle, un exemple et la référence réglementaire**. Le mode tient compte des **éléments conditionnels et dynamiques** : chaque fiche évalue à l'ouverture les règles selon le contexte courant (mode de passation, état du marché, lot, etc.).
+
+### Activation — paramètre URL ciblé devs
+
+- **Activer** : ajouter `?spec=1` dans la query string OU dans le hash. Exemples :
+  - `https://sidcf.example/index.html?spec=1#/mp/attribution?idOperation=...`
+  - `https://sidcf.example/index.html#/mp/attribution?idOperation=...&spec=1`
+- **Désactiver** : `?spec=0` (équivalent au clic sur « Revenir au mode utilisateur » dans la bannière violette).
+- **Persistance session** : une fois activé via l'URL, le mode reste actif pour toute la session du tab via `sessionStorage[sidcf:specMode]`. Le dev n'a donc pas besoin de répéter `?spec=1` sur chaque clic, mais le **lien initial qu'il reçoit du métier diffère** : le métier garde des liens sans paramètre, les devs ont leur URL d'entrée spéciale.
+- À la fermeture du tab, retour automatique au mode utilisateur.
+
+### Helper central — `sidcf-portal/js/lib/spec-mode-mp.js`
+
+API exposée :
+
+| Fonction | Rôle |
+|---|---|
+| `initSpecMode()` | À appeler au boot (déjà branché dans main.js). Détecte `spec=1`, applique `body.spec-mode`, injecte les styles, la bannière haut de page et le panel latéral. |
+| `isSpecMode()` | Retourne `true` si actif (URL ou session). |
+| `wireSpec(element, spec)` | Attache une fiche de spec à un élément DOM. En mode utilisateur : no-op. En mode spec : ajoute un badge ℹ cliquable. |
+| `updateSpecContext(partial)` | Met à jour le contexte runtime utilisé par les fiches dynamiques (mode passation, état, lot…). À appeler depuis chaque écran. |
+| `getSpecContext()` | Lecture du contexte courant. |
+
+### Modèle de fiche spec
+
+Chaque appel à `wireSpec()` reçoit un objet dont les champs principaux sont :
+
+```
+{
+  id              : 'identifiant-technique-stable',
+  titre           : 'Titre court affiché en en-tête du panel',
+  objet           : 'À quoi sert cet élément métier',
+  source          : 'Entité.champ, contraintes de stockage',
+  type            : 'Type de donnée ou widget',
+  conditions      : { visible: …, editable: …, requis: … },
+  reglesMetier    : ['règle 1', 'règle 2', …],
+  formule         : 'expression de calcul',
+  exemple         : 'illustration chiffrée concrète',
+  actions         : ['action 1', 'action 2'],
+  acteurs         : 'qui saisit / consulte / valide',
+  reference       : 'références réglementaires, codes',
+  dynamic         : (ctx) => ({ … })   // ← évalué à l'ouverture du panel
+}
+```
+
+Le champ **`dynamic(ctx)`** est la clé du succès demandé par le client : il est invoqué à chaque clic avec le contexte courant fourni par l'écran (`updateSpecContext()`) — il peut donc afficher l'état réel (visible / masqué / requis / verrouillé / conforme au budget…) plutôt qu'une description statique qui dériverait du code.
+
+### Écran pilote — `ecr03a-attribution.js`
+
+5 éléments câblés en démonstration :
+
+1. **Header de la page** (titre Attribution) — fiche écran complète : objet, entités liées, conditions de visibilité de l'écran selon timeline, etc.
+2. **Section « Montant du marché de base »** — montant, calculs HT⇄TTC, lien avec montantPrevisionnel du PPM.
+3. **Input « Montant HT/TTC »** (le champ du screenshot client originel) — validation, formule de conversion, valeur initiale dynamique depuis le PPM.
+4. **Section « Garanties et Cautionnement »** — **exemple-clé du conditionnel** : la fiche `dynamic(ctx)` indique, selon le mode de passation courant, si la section est masquée (PI), si les garanties sont obligatoires (AOO) ou optionnelles (autres modes). Le code de la règle est centralisé dans `lib/procedure-context.js` (`isFieldHidden`, `isFieldRequired`) — la fiche LIT cette source de vérité plutôt que de la dupliquer, garantissant zéro drift.
+5. **Bouton « Enregistrer l'attribution »** — déclencheur, validation côté client, règles de transition d'état (etat → ATTRIBUE), patch multi-lot, refus en post-visa, etc.
+
+### Signalisation visuelle
+
+- En mode spec, **tous les éléments câblés** affichent un cadre pointillé violet pâle (signalisation discrète).
+- Au survol : cadre plein + fond très légèrement teinté.
+- Le **badge ℹ** est positionné en haut-droite avec une petite ombre portée.
+- La **bannière haut de page** rappelle en permanence « MODE SPÉCIFICATION ACTIF » avec un lien de désactivation.
+- Le **panel latéral** glisse depuis la droite (largeur 420 px) avec couleur d'accent violet/indigo (distinct de l'UX normale).
+
+### Limites et conventions
+
+- Pas d'export PDF/Markdown automatique à ce stade — la spec se consulte dans la maquette. Export possible à cadrer dans une modif ultérieure.
+- Les fiches dépendent de la **discipline de PR** : toute évolution fonctionnelle d'un élément câblé doit synchroniser sa fiche. À documenter dans le guide contributeurs.
+- Le wiring est **opt-in** par élément (pas de couverture automatique 100 %). Une convention possible : tagguer chaque PR fonctionnelle avec un check « spec à jour ? » dans la description.
+
+### Démarche recommandée pour étendre
+
+1. Avancer écran par écran en commençant par les plus critiques (Attribution, Procédure, Visa CF, Avenant).
+2. Sur chaque écran, câbler **section header → champs sensibles → boutons d'action**. Cibler 80 % de couverture des éléments significatifs (≠ exhaustif).
+3. Pour chaque règle dynamique, **lire depuis la source de vérité** (rules-engine, procedure-context, etat-labels-mp) plutôt que de dupliquer.
+4. Suivre la convention de nommage `id` : `<ecran>-<element>` (ex : `attribution-section-garanties`).
+
+### Fichiers touchés
+
+- **Nouveau** : `sidcf-portal/js/lib/spec-mode-mp.js` (~300 lignes) — toggle URL, sessionStorage, styles injectés, bannière, panel latéral, helper `wireSpec()`, contexte runtime.
+- Modifié : `sidcf-portal/js/main.js` — appel `initSpecMode()` au boot (avant `boot()`).
+- Modifié : `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — import du helper, push du contexte au chargement (`updateSpecContext`), 5 wirings de démonstration (header, section montants, input montant base, section garanties avec règle dynamique, bouton enregistrer).
+
+Pas de Worker, pas de migration DB, pas de R2. Frontend statique. Aucun déploiement requis.
+
 ## 2026-05-20 — Tableau de suivi des décomptes : enrichissement complet (saisie + colonnes + synthèse CUMULS/%CUMULS)
 
 > **Modif #48** — Demande client : aligner le widget « Situation d'exécution financière » (op-mandat-manager-mp) sur la maquette du tableau de suivi des décomptes du marché consulté. Trois sujets : (1) saisie des décompositions financières (Acompte HTVA, Avance, Garantie, Pénalité, Net HTVA, Net TTC), (2) affichage tabulaire 14 colonnes identique à la maquette, (3) lignes de synthèse `CUMULS` et `%CUMULS` en pied de tableau.

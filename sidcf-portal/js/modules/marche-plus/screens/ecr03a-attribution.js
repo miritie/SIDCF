@@ -27,6 +27,7 @@ import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-p
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-manager-mp.js';
 import { renderEntreprisePicker } from '../../../ui/widgets/entreprise-picker-mp.js';
+import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -212,6 +213,22 @@ export async function renderAttribution(params) {
     // Get mode de passation for contextual behavior
     const modePassation = operation.modePassation || 'PSD';
 
+    // Modif #49 — Pousser le contexte vers le mode Spécification pour évaluation
+    // dynamique des conditions (visibilité/édition des champs selon mode passation,
+    // état du marché, lot courant, etc.). Consommé par spec.dynamic(ctx).
+    updateSpecContext({
+      ecran: 'ecr03a-attribution',
+      idOperation,
+      modePassation,
+      modeAdmis: operation.modeAdmis || operation.modePassation,
+      etatMarche: operation.etat,
+      etatLabel: operation.etat,
+      typeMarche: operation.typeMarche,
+      categorieProcedure: operation.categorieProcedure,
+      lotCourant: currentLotId || '(mono-lot)',
+      montantPrevisionnel: operation.montantPrevisionnel || 0
+    });
+
     // Marché+ multi-lot : résoudre le lot courant depuis la procédure
     const lots = getLotsFromProcedure(procedure);
     currentLotId = resolveCurrentLotId(lots, params);
@@ -224,16 +241,48 @@ export async function renderAttribution(params) {
     cleRepartitionList = [];
     echeancierData = { periodicite: 'LIBRE', periodiciteJours: null, items: [], total: 0, totalPourcent: 0 };
 
+    // Modif #49 — Header avec wiring spec
+    const pageHeader = el('div', { className: 'page-header' }, [
+      el('button', {
+        className: 'btn btn-secondary btn-sm',
+        onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
+      }, '← Retour fiche'),
+      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Attribution du Marché'),
+      el('p', { className: 'page-subtitle' }, operation.objet)
+    ]);
+    wireSpec(pageHeader, {
+      id: 'attribution-screen',
+      titre: 'Écran Attribution du marché (étape 3)',
+      objet: 'Saisie et persistance de l\'attribution du marché : titulaire (entreprise simple ou groupement), montants HT/TTC, garanties, sous-traitance, clé de répartition multi-bailleurs et échéancier de paiement.',
+      source: 'MP_ATTRIBUTION (entité principale). Liée à MP_OPERATION via operationId. Multi-lot : champ parLot[lotId] pour scoping. Liens vers MP_CLE_REPARTITION, MP_ECHEANCIER, MP_GARANTIE.',
+      type: 'Écran formulaire en plusieurs sections',
+      conditions: {
+        visible: 'Marché à l\'état EN_PROC ou postérieur (timeline contient EN_PROC)',
+        editable: 'Tant que le visa CF n\'est pas accordé (etat ≠ VISE, EN_EXEC, CLOS, RESILIE)',
+        prerequis: 'Une procédure (ECR02A) doit être saisie au préalable.'
+      },
+      reglesMetier: [
+        'Le mode de passation conditionne la visibilité / obligation des sections : voir lib/procedure-context.js (isFieldHidden, isFieldRequired).',
+        'L\'attribution est scopée au lot courant en multi-lot — chaque lot a son propre attributaire, montant, garanties, etc.',
+        'Le passage à l\'état ATTRIBUE déclenche l\'apparition de l\'étape Approbation (Visa CF).'
+      ],
+      actions: [
+        'Enregistrer l\'attribution (création ou mise à jour)',
+        'Naviguer vers la fiche du marché (← Retour fiche)',
+        'Sélecteur de lot (en multi-lot uniquement)'
+      ],
+      acteurs: 'DCF (saisie / modification) · CF (consultation uniquement, agit via ECR03C)',
+      reference: 'Code des Marchés Publics CI · CCAP du marché · Décret n°2021-909',
+      dynamic: (ctx) => ({
+        modePassation: ctx.modePassation,
+        etatMarche: ctx.etatMarche,
+        lot: ctx.lotCourant,
+        editable: ['VISE','EN_EXEC','CLOS','RESILIE'].includes(ctx.etatMarche) ? '❌ Verrouillé (post-visa)' : '✓ Modifiable'
+      })
+    });
+
     const page = el('div', { className: 'page' }, [
-      // Header
-      el('div', { className: 'page-header' }, [
-        el('button', {
-          className: 'btn btn-secondary btn-sm',
-          onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
-        }, '← Retour fiche'),
-        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Attribution du Marché'),
-        el('p', { className: 'page-subtitle' }, operation.objet)
-      ]),
+      pageHeader,
 
       // Sélecteur de lot (visible si > 1 lot)
       renderLotSelector({
@@ -258,11 +307,41 @@ export async function renderAttribution(params) {
               className: 'btn btn-secondary',
               onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
             }, 'Annuler'),
-            el('button', {
+            wireSpec(el('button', {
               type: 'button',
               className: 'btn btn-primary',
               onclick: async () => await handleSave(idOperation, operation, rawAttribution, currentLotId)
-            }, (rawAttribution && (currentLotId ? rawAttribution.parLot?.[currentLotId] : true)) ? '💾 Mettre à jour' : '✅ Enregistrer l\'attribution')
+            }, (rawAttribution && (currentLotId ? rawAttribution.parLot?.[currentLotId] : true)) ? '💾 Mettre à jour' : '✅ Enregistrer l\'attribution'), {
+              id: 'attribution-btn-save',
+              titre: 'Bouton Enregistrer l\'attribution',
+              objet: 'Persistance de l\'attribution complète : titulaire, montants, garanties, sous-traitance, clé de répartition, échéancier.',
+              source: 'Déclenche handleSave() → dataService.add() ou .update() sur MP_ATTRIBUTION. En multi-lot : patch ciblé via buildLotPatch().',
+              type: 'Action POST/PUT',
+              conditions: {
+                visible: 'Toujours visible',
+                actif: 'Validation côté client : montant > 0, attributaire renseigné, garanties cohérentes',
+                blocage: 'Si etat ∈ {VISE, EN_EXEC, CLOS, RESILIE} : sauvegarde refusée côté API (verrouillage post-visa)'
+              },
+              reglesMetier: [
+                'Création : génère un ID de la forme `ATTR-{idOperation}` et passe l\'état du marché à ATTRIBUE.',
+                'Mise à jour : préserve l\'ID existant et n\'écrase pas la décision CF si déjà visée.',
+                'En multi-lot : sauvegarde dans parLot[lotId] sans toucher aux autres lots.',
+                'Détection des sanctions sur l\'attributaire : si l\'entreprise est listée → alerte bloquante.',
+                'Validation des taux de garanties via lib/mp-garanties-rules.js (validateTaux).'
+              ],
+              actions: [
+                'Sauvegarde via dataService',
+                'Mise à jour de l\'opération : etat → ATTRIBUE, timeline += ATTR',
+                'Navigation automatique vers la fiche du marché en cas de succès'
+              ],
+              acteurs: 'DCF (déclencheur) · Système (persistance + validation)',
+              reference: 'API : POST/PUT /api/entities/MP_ATTRIBUTION (Worker Cloudflare)',
+              dynamic: (ctx) => ({
+                modeApi: ['VISE','EN_EXEC','CLOS','RESILIE'].includes(ctx.etatMarche) ? '❌ Refusé (post-visa)' : '✓ Autorisé',
+                etatApresSauvegarde: ctx.etatMarche === 'EN_PROC' ? 'ATTRIBUE (transition)' : ctx.etatMarche,
+                multiLot: ctx.lotCourant && ctx.lotCourant !== '(mono-lot)' ? `Patch lot ${ctx.lotCourant}` : 'Mono-lot — racine'
+              })
+            })
           ])
         ])
       ])
@@ -566,7 +645,8 @@ function renderMontantsSection(montantHT, montantTTC) {
   const defaultBase = montantHT > 0 ? 'HT' : 'TTC';
   const defaultMontant = defaultBase === 'HT' ? montantHT : montantTTC;
 
-  return el('div', { className: 'card' }, [
+  // Modif #49 — Spec sur la card Montant (titre + header)
+  const sectionCard = el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, '💰 Montant du marché de base'),
       el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
@@ -602,7 +682,7 @@ function renderMontantsSection(montantHT, montantTTC) {
 
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
         // Montant saisi (HT ou TTC selon la base)
-        el('div', { className: 'form-field' }, [
+        wireSpec(el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label', id: 'label-montant-base' }, [
             defaultBase === 'HT' ? 'Montant HT (XOF)' : 'Montant TTC (XOF)',
             el('span', { className: 'required' }, '*')
@@ -617,7 +697,31 @@ function renderMontantsSection(montantHT, montantTTC) {
             step: 1,
             oninput: () => calculerMontants()
           })
-        ]),
+        ]), {
+          id: 'attr-montant-base',
+          titre: 'Montant base du marché',
+          objet: 'Montant principal saisi par l\'agent — HT ou TTC selon le choix du radio button « Base de calcul ». L\'autre valeur est calculée automatiquement.',
+          source: 'MP_ATTRIBUTION.montants.ht ou .ttc (selon la base sélectionnée). Stockage simultané dans les hidden inputs attr-montant-ht et attr-montant-ttc.',
+          type: 'Number (XOF, entier positif)',
+          conditions: {
+            visible: 'Toujours',
+            editable: 'Avant visa CF uniquement',
+            requis: 'Oui (* affiché dans le label)'
+          },
+          reglesMetier: [
+            'Doit être > 0 pour passer l\'attribution à l\'état ATTRIBUE.',
+            'Recalcul automatique de l\'autre montant (TTC ↔ HT) sur chaque saisie via la fonction calculerMontants().',
+            'Le montant initial pré-rempli vient de MP_OPERATION.montantPrevisionnel (issu du PPM).'
+          ],
+          formule: 'TTC = HT × (1 + tauxTVA/100) · HT = TTC / (1 + tauxTVA/100)',
+          actions: ['Saisie numérique directe (input number)'],
+          acteurs: 'DCF',
+          reference: 'CCAP §2.3 · Décret budgétaire',
+          dynamic: (ctx) => ({
+            valeurPPM: ctx.montantPrevisionnel ? `${ctx.montantPrevisionnel.toLocaleString('fr-FR')} XOF` : '0',
+            verrouillage: ['VISE','EN_EXEC','CLOS','RESILIE'].includes(ctx.etatMarche) ? '🔒 Lecture seule' : '✓ Modifiable'
+          })
+        }),
 
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, 'Taux TVA (%)'),
@@ -673,6 +777,42 @@ function renderMontantsSection(montantHT, montantTTC) {
       el('input', { type: 'hidden', id: 'attr-montant-ttc', value: defaultBase === 'HT' ? (defaultMontant * 1.18).toFixed(0) : defaultMontant })
     ])
   ]);
+
+  // Modif #49 — wireSpec sur la section Montants
+  wireSpec(sectionCard, {
+    id: 'attribution-section-montants',
+    titre: 'Section « Montant du marché de base »',
+    objet: 'Saisie du montant arrêté à l\'attribution. Sert de socle au calcul du montant total du marché (= base + cumul des avenants futurs).',
+    source: 'MP_ATTRIBUTION.montants = { ht: Number, ttc: Number, confidentiel: Boolean }',
+    type: 'Bloc formulaire (3 inputs synchronisés : montant base, taux TVA, montant calculé)',
+    conditions: {
+      visible: 'Toujours visible sur l\'écran Attribution',
+      editable: 'Tant que le marché n\'est pas visé (etat ∉ {VISE, EN_EXEC, CLOS, RESILIE})',
+      requis: 'Oui — un montant > 0 est obligatoire pour passer l\'attribution à ATTRIBUE'
+    },
+    reglesMetier: [
+      'L\'agent saisit l\'un des deux (HT ou TTC) et le système calcule l\'autre via le taux TVA.',
+      'Le taux TVA par défaut est 18 % (taux standard CI), modifiable jusqu\'à 100 % pour cas particuliers (exonérations, taux réduits).',
+      'Les deux champs cachés `attr-montant-ht` et `attr-montant-ttc` sont synchronisés en permanence et lus à la sauvegarde.',
+      'Les avenants en exécution se grefferont sur ce socle pour former le « Montant total du marché » — voir ECR04B-Avenant.'
+    ],
+    formule: 'Si base=HT : TTC = HT × (1 + tauxTVA/100) | Si base=TTC : HT = TTC / (1 + tauxTVA/100)',
+    exemple: 'HT 23 600 000 · TVA 18 % ⇒ TTC 27 848 000',
+    actions: [
+      'Bascule du radio button HT ↔ TTC',
+      'Saisie/modification du montant base et du taux',
+      'Recalcul automatique à chaque saisie (oninput)'
+    ],
+    acteurs: 'DCF (saisie)',
+    reference: 'Code Général des Impôts CI · Article CCAP §2.3',
+    dynamic: (ctx) => ({
+      montantInitialPrevu: ctx.montantPrevisionnel ? `${ctx.montantPrevisionnel.toLocaleString('fr-FR')} XOF (issu du PPM)` : 'non renseigné',
+      etatMarche: ctx.etatMarche,
+      verrouillage: ['VISE','EN_EXEC','CLOS','RESILIE'].includes(ctx.etatMarche) ? '🔒 Lecture seule — visa CF passé' : '✓ Saisie ouverte'
+    })
+  });
+
+  return sectionCard;
 }
 
 /**
@@ -802,12 +942,58 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
     renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false, montantsTotaux, 'cautionnement')
   );
 
-  return el('div', { className: 'card' }, [
+  const garantiesCard = el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, '🔐 Garanties et Cautionnement')
     ]),
     el('div', { className: 'card-body' }, garantiesVisibles)
   ]);
+
+  // Modif #49 — wireSpec sur la section Garanties (exemple-clé du conditionnel
+  // par mode de passation : la visibilité et l'obligation changent selon le mode).
+  wireSpec(garantiesCard, {
+    id: 'attribution-section-garanties',
+    titre: 'Section « Garanties et Cautionnement »',
+    objet: 'Déclaration des garanties contractuelles applicables au marché : avance, bonne exécution, cautionnement. Encadre les modalités de couverture juridique avant l\'exécution.',
+    source: 'MP_ATTRIBUTION.garanties = { garantieAvance, garantieBonneExec, cautionnement }. Chaque sous-objet : { existe, montant, baseCalc(HT|TTC), saisieMode(MONTANT|POURCENTAGE), dateEmission, dateEcheance, docRef }.',
+    type: 'Bloc à 3 sous-sections (avance, bonne exécution, cautionnement)',
+    conditions: {
+      visibilite: 'Conditionnée par le mode de passation — voir lib/procedure-context.js (isFieldHidden).',
+      obligation: 'Conditionnée par le mode de passation — voir lib/procedure-context.js (isFieldRequired).',
+      regle_pi: 'Si modePassation = PI : section masquée complètement (procédure d\'urgence).',
+      regle_aoo: 'Si modePassation = AOO : garantie d\'avance ET bonne exécution OBLIGATOIRES.',
+      regle_autres: 'Pour les autres modes : champs présents mais optionnels.'
+    },
+    reglesMetier: [
+      'Garantie d\'avance : 10 %–15 % du montant marché (RG011). Couvre l\'avance forfaitaire (max 15 %, Art. 100 Code MP CI).',
+      'Garantie de bonne exécution : 3 %–5 % (corrigée modif #25.1, Art. 97.3 Code MP CI).',
+      'Cautionnement : pas de plage légale standard — défini au cas par cas dans le CCAP du marché.',
+      'Les valeurs cochées ici sont une déclaration d\'INTENTION. L\'enregistrement effectif des actes bancaires se fait en ECR04C-Garanties APRÈS le visa CF.',
+      'Voir lib/mp-garanties-rules.js → validateTaux() pour la validation des plages.'
+    ],
+    formule: 'garantie.montant = montantMarche(baseCalc) × taux / 100',
+    exemple: 'Marché 100 M HT · garantie d\'avance 15 % → 15 M XOF (acte bancaire enregistré post-visa CF)',
+    actions: [
+      'Cocher/décocher chaque garantie (case "existe")',
+      'Pour chaque garantie cochée : saisie du taux ou du montant (widget DUAL), base HT/TTC, dates d\'émission/échéance, document justificatif'
+    ],
+    acteurs: 'DCF (saisie déclarative à l\'attribution) · DCF (enregistrement effectif post-visa via ECR04C) · CF (validation)',
+    reference: 'Code MP CI Art. 97, 98, 100 · RG010, RG011 du SDF · CCAP du marché',
+    dynamic: (ctx) => {
+      const mode = ctx.modePassation;
+      const piHidden = mode === 'PI';
+      const aooObligatoire = mode === 'AOO';
+      return {
+        modeCourant: mode,
+        visibilite: piHidden ? '❌ Section masquée (mode PI — procédure d\'urgence)' : '✓ Section visible',
+        avanceRequise: piHidden ? '— (section masquée)' : (aooObligatoire ? '✓ OBLIGATOIRE (mode AOO)' : 'Optionnelle'),
+        bonneExecRequise: piHidden ? '— (section masquée)' : (aooObligatoire ? '✓ OBLIGATOIRE (mode AOO)' : 'Optionnelle'),
+        cautionnement: piHidden ? '— (section masquée)' : 'Toujours optionnel (selon CCAP)'
+      };
+    }
+  });
+
+  return garantiesCard;
 }
 
 /**

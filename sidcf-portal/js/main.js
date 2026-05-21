@@ -23,6 +23,7 @@ import renderReglesV2 from './admin/regles-procedures-v2.js';
 import renderConfigEtapes from './admin/config-etapes.js';
 import renderMpEntreprisesAdmin from './admin/mp-entreprises-validation.js';
 import { mount } from './lib/dom.js';
+import { initSpecMode } from './lib/spec-mode-mp.js';
 
 // Diagnostics
 import renderHealthCheck from './diagnostics/health.js';
@@ -250,10 +251,12 @@ function checkDiagnosticMode() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     checkDiagnosticMode();
+    initSpecMode();
     boot();
   });
 } else {
   checkDiagnosticMode();
+  initSpecMode();
   boot();
 }
 
