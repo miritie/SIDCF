@@ -671,10 +671,10 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           el('select', { className: 'form-input', id: 'proc-type-dossier' }, [
             el('option', { value: '' }, '-- Sélectionner --'),
             ...(registries.TYPE_DOSSIER_APPEL || [])
-              .filter(d => !d.modes?.length || d.modes.includes(selectedMode))
+              .filter(d => !d.modes?.length || d.modes.includes(mode))
               .map(d => el('option', { value: d.code, selected: d.code === existingProc.typeDossierAppel }, d.label))
           ]),
-          el('small', { className: 'text-muted' }, `Types compatibles avec ${selectedMode || 'le mode sélectionné'}`)
+          el('small', { className: 'text-muted' }, `Types compatibles avec ${mode || 'le mode sélectionné'}`)
         ]),
 
         // Upload dossier d'appel
