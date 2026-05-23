@@ -13,6 +13,23 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-23 — Masquage durable des tuiles santé du marché sur la liste PPM
+
+> **Modif #50** — Demande client : masquer durablement la rangée de 5 tuiles « EN PROGRESSION NORMALE / À SURVEILLER / À RISQUE / BLOQUÉ / NON DÉMARRÉ » en haut de la liste PPM Marché+. Ces tuiles (Modif #36, classification santé agrégée) posaient des problèmes d'UX selon le retour client.
+
+### Approche
+
+L'appel à `renderSanteTuiles(stats.parSante, filteredOps, santeMap)` (ecr01b-ppm-unitaire.js, ligne 219) est commenté plutôt que supprimé. Cela permet :
+- **Réactivation immédiate** si le client change d'avis (décommenter une ligne).
+- **Préservation de la classification** : `santeMap` reste calculée et reste disponible pour les filtres / chips de la liste.
+- **Conservation du code** de la fonction `renderSanteTuiles()` plus bas dans le fichier — pas de suppression définitive.
+
+### Fichier touché
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` — 1 ligne commentée avec note explicative.
+
+Pas de Worker, pas de migration DB. Frontend statique. Aucun déploiement requis.
+
 ## 2026-05-21 — Mode « Spécification » bavard pour devs externes (écran pilote : Attribution)
 
 > **Modif #49** — Objectif : rendre la maquette interactive exploitable comme spécification fonctionnelle par un développeur externe qui prendra le relais sur l'implémentation. Chaque élément câblé (champ, section, bouton) expose un badge ℹ qui, au clic, ouvre une fiche latérale détaillant son **objet métier, sa source de données, son type, ses conditions de visibilité/édition, les règles métier applicables, les actions possibles, les acteurs concernés, la formule éventuelle, un exemple et la référence réglementaire**. Le mode tient compte des **éléments conditionnels et dynamiques** : chaque fiche évalue à l'ouverture les règles selon le contexte courant (mode de passation, état du marché, lot, etc.).

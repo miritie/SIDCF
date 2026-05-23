@@ -215,8 +215,11 @@ export async function renderPPMList() {
       PHASES.map(p => renderKPI(p.label, stats.parPhase[p.key], p.color, p.icon))
     ),
 
-    // Modif #36 — Tuiles santé agrégées (cliquables pour filtrer la liste)
-    renderSanteTuiles(stats.parSante, filteredOps, santeMap),
+    // Modif #50 — Tuiles santé du marché masquées sur demande client (UX gênante).
+    // La fonction renderSanteTuiles() est conservée plus bas pour réactivation
+    // éventuelle ; la classification santeMap reste calculée et exploitable
+    // côté filtres/chips si besoin futur.
+    // renderSanteTuiles(stats.parSante, filteredOps, santeMap),
 
 
     // Filters — collapsible, replié par défaut pour gagner de l'espace
