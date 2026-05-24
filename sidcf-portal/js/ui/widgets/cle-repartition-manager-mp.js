@@ -11,12 +11,28 @@ import logger from '../../lib/logger.js';
 import { renderMontantPourcentageDualInput } from './montant-pourcentage-dual-input.js';
 import { renderFormulaBadge } from './formula-tip-mp.js';
 
+// Modif #52 — Helper d'affichage du texte d'aide sous le select bailleur
+// (mise en évidence des bailleurs de la planification sans verrouillage dur).
+function planifiesSetHelpText(bailleursPlanifies) {
+  const count = (bailleursPlanifies || []).filter(Boolean).length;
+  if (count === 0) {
+    return el('small', { className: 'text-muted', style: { fontSize: '11px' } },
+      'Aucun bailleur planifié sur cette opération. Tous les bailleurs du référentiel sont disponibles.');
+  }
+  return el('small', { className: 'text-muted', style: { fontSize: '11px' } },
+    `★ ${count} bailleur${count > 1 ? 's' : ''} défini${count > 1 ? 's' : ''} dans la planification (affiché${count > 1 ? 's' : ''} en haut). Vous pouvez aussi choisir un autre bailleur si besoin.`);
+}
+
 /**
  * @param {Array} cleRepartition - Liste des lignes de répartition existantes
  * @param {Number} montantMarcheHT - Montant HT du marché (pour calcul %)
  * @param {Number} montantMarcheTTC - Montant TTC du marché (pour calcul %)
  * @param {Object} registries - Référentiels (BAILLEUR, TYPE_FINANCEMENT, NATURE_ECO, BASE_CALCUL_CLE)
  * @param {Function} onChange - Callback appelé quand la liste change: onChange(cleRepartitionList)
+ * @param {Array<string>} [bailleursPlanifies=[]] - Modif #52 : codes des bailleurs
+ *   déclarés dans la planification (PPM). Affichés en priorité dans le dropdown
+ *   (optgroup « Définis dans la planification »). Aucun verrouillage dur : les
+ *   autres bailleurs du référentiel restent disponibles dans un second optgroup.
  * @returns {HTMLElement}
  */
 export function renderCleRepartitionManager(
@@ -24,7 +40,8 @@ export function renderCleRepartitionManager(
   montantMarcheHT = 0,
   montantMarcheTTC = 0,
   registries = {},
-  onChange = null
+  onChange = null,
+  bailleursPlanifies = []
 ) {
   const container = el('div', { className: 'cle-repartition-manager' });
 
@@ -130,15 +147,54 @@ export function renderCleRepartitionManager(
           })
         ]),
 
-        // Bailleur
+        // Bailleur — Modif #52 : optgroup pour mettre en évidence ceux de la planification
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, ['Bailleur', el('span', { className: 'required' }, '*')]),
-          el('select', { className: 'form-input', id: 'ligne-bailleur', required: true }, [
-            el('option', { value: '' }, '-- Sélectionner un bailleur --'),
-            ...(registries.BAILLEUR || []).map(b =>
-              el('option', { value: b.code, selected: b.code === formData.bailleur }, b.label)
-            )
-          ])
+          (() => {
+            const select = el('select', { className: 'form-input', id: 'ligne-bailleur', required: true });
+            select.appendChild(el('option', { value: '' }, '-- Sélectionner un bailleur --'));
+
+            const all = registries.BAILLEUR || [];
+            const planifiesSet = new Set((bailleursPlanifies || []).filter(Boolean));
+            const planifies = all.filter(b => planifiesSet.has(b.code));
+            const autres = all.filter(b => !planifiesSet.has(b.code));
+
+            // Cas particulier : un bailleur déjà sauvegardé qui n'est ni dans la
+            // planification ni dans le référentiel actuel — on l'injecte tout de même
+            // pour ne pas perdre la donnée (lecture defensive sur entité existante).
+            if (formData.bailleur && !all.some(b => b.code === formData.bailleur)) {
+              select.appendChild(el('option', {
+                value: formData.bailleur, selected: true
+              }, `${formData.bailleur} (hors référentiel)`));
+            }
+
+            if (planifies.length > 0) {
+              const grp = el('optgroup', { label: '★ Définis dans la planification' });
+              planifies.forEach(b => {
+                grp.appendChild(el('option', {
+                  value: b.code,
+                  selected: b.code === formData.bailleur
+                }, b.label));
+              });
+              select.appendChild(grp);
+            }
+
+            if (autres.length > 0) {
+              const grp = el('optgroup', {
+                label: planifies.length > 0 ? 'Autres bailleurs' : 'Bailleurs'
+              });
+              autres.forEach(b => {
+                grp.appendChild(el('option', {
+                  value: b.code,
+                  selected: b.code === formData.bailleur
+                }, b.label));
+              });
+              select.appendChild(grp);
+            }
+
+            return select;
+          })(),
+          planifiesSetHelpText(bailleursPlanifies)
         ]),
 
         // Type de financement

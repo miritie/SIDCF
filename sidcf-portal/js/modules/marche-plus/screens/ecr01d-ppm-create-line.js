@@ -88,15 +88,36 @@ export async function renderPPMCreateLine(params) {
   let activiteWidget = null;
 
   async function handleSave(createAnother) {
-    // Lignes de financement (multi : montant + type + bailleur)
-    const financements = Array.from(document.querySelectorAll('.financement-row')).map(row => ({
-      montant: Number(row.querySelector('.financement-montant')?.value) || 0,
-      typeFinancement: row.querySelector('.financement-type')?.value || '',
-      bailleur: row.querySelector('.financement-bailleur')?.value || ''
-    })).filter(f => f.montant > 0 && f.typeFinancement && f.bailleur);
+    // Modif #52 — Un seul montant prévisionnel + N bailleurs (sans montant unitaire).
+    // Le partage par bailleur se précisera dans la clé de répartition.
+    const montantTotal = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+    const bailleurEntries = Array.from(document.querySelectorAll('.financement-bailleur'))
+      .map(sel => {
+        const val = (sel.value || '').trim();
+        if (!val) return null;
+        const [typeFinancement, bailleur] = val.split('|');
+        return typeFinancement && bailleur ? { typeFinancement, bailleur } : null;
+      })
+      .filter(Boolean);
 
-    const montantTotal = financements.reduce((sum, f) => sum + f.montant, 0);
-    const bailleurs = financements.map(f => f.bailleur);
+    // Dédoublonnage (un même bailleur ne doit pas être listé 2 fois)
+    const seen = new Set();
+    const dedupedBailleurs = bailleurEntries.filter(b => {
+      const key = `${b.typeFinancement}|${b.bailleur}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // Rétrocompat : on alimente `financements[]` avec montant = 0 (le partage se fera
+    // en clé de répartition). Les écrans qui lisent `financements[].montant` continuent
+    // de fonctionner mais retournent 0 pour les opérations créées sous ce nouveau mode.
+    const financements = dedupedBailleurs.map(b => ({
+      montant: 0,
+      typeFinancement: b.typeFinancement,
+      bailleur: b.bailleur
+    }));
+    const bailleurs = dedupedBailleurs.map(b => b.bailleur);
 
     const activiteCode = document.getElementById('activite')?.value || '';
     const natureEcoCode = document.getElementById('natureEco')?.value || '';
@@ -165,12 +186,12 @@ export async function renderPPMCreateLine(params) {
       alert('⚠️ Veuillez sélectionner la Nature économique');
       return;
     }
-    if (financements.length === 0) {
-      alert('⚠️ Veuillez compléter au moins une ligne de financement (montant > 0 + type + bailleur)');
+    if (montantTotal <= 0) {
+      alert('⚠️ Le montant prévisionnel doit être supérieur à 0');
       return;
     }
-    if (montantTotal <= 0) {
-      alert('⚠️ Le montant total prévisionnel doit être supérieur à 0');
+    if (dedupedBailleurs.length === 0) {
+      alert('⚠️ Veuillez déclarer au moins un bailleur pour l\'opération');
       return;
     }
 
@@ -354,21 +375,54 @@ export async function renderPPMCreateLine(params) {
         ])
       ]),
 
-      // ---- Informations financières (multi-lignes : Montant + Type + Bailleur, indicateur de dispo) ----
+      // ---- Informations financières — Modif #52 ----
+      // Un seul montant prévisionnel pour l'opération + N bailleurs (sans montant unitaire).
+      // Les bailleurs proposés sont strictement ceux ouverts sur l'activité indexée
+      // (MP_BUDGET_LINE.activiteCode = activité courante). Le partage entre bailleurs
+      // se précisera plus tard dans la clé de répartition (où ils seront priorisés).
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '💰 Informations financières'),
           el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
-            'Chaque ligne = un montant prévu pour un (Type de financement, Bailleur). L\'indicateur compare le programmé au montant initial de l\'imputation budgétaire.')
+            'Un seul montant prévisionnel pour l\'opération. Les bailleurs sont déclarés en dessous (parmi ceux ouverts sur l\'activité). Le partage par bailleur se précisera dans la clé de répartition.')
         ]),
         el('div', { className: 'card-body' }, [
-          el('div', { id: 'financements-list' }),
-          el('button', {
-            type: 'button',
-            className: 'btn btn-sm btn-accent',
-            id: 'add-financement-btn',
-            style: { marginTop: '8px' }
-          }, '+ Ajouter une ligne de financement'),
+          // Bloc montant unique
+          el('div', { style: { marginBottom: '18px' } }, [
+            el('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: '12px', alignItems: 'end' } }, [
+              el('div', { className: 'form-field' }, [
+                el('label', { className: 'form-label' }, [
+                  'Montant prévisionnel (XOF)',
+                  el('span', { className: 'required' }, ' *')
+                ]),
+                el('input', {
+                  type: 'number',
+                  className: 'form-input',
+                  id: 'montant-previsionnel',
+                  min: '0',
+                  step: '1',
+                  placeholder: '0',
+                  required: true
+                })
+              ]),
+              el('div', { id: 'montant-dispo-indicator', style: { fontSize: '13px', minHeight: '40px' } })
+            ])
+          ]),
+
+          // Bloc bailleurs (liste sans montant)
+          el('div', {}, [
+            el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' } }, '🏦 Bailleurs de l\'opération'),
+            el('p', { style: { margin: '0 0 8px', fontSize: '12px', color: '#6b7280' } },
+              'Sélectionner les bailleurs qui participeront au financement. La liste est restreinte à ceux ouverts sur l\'activité indexée.'),
+            el('div', { id: 'financements-list' }),
+            el('button', {
+              type: 'button',
+              className: 'btn btn-sm btn-accent',
+              id: 'add-financement-btn',
+              style: { marginTop: '8px' }
+            }, '+ Ajouter un bailleur')
+          ]),
+
           el('div', {
             id: 'financements-total',
             style: {
@@ -619,33 +673,75 @@ function formatXOF(n) {
   return new Intl.NumberFormat('fr-FR').format(v) + ' XOF';
 }
 
+// Modif #52 — Refonte : 1 montant unique pour l'opération + N bailleurs (sans montant unitaire).
+// Les bailleurs proposés viennent des MP_BUDGET_LINE filtrées par activité indexée.
 function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
   const list = document.getElementById('financements-list');
   const addBtn = document.getElementById('add-financement-btn');
   const totalDiv = document.getElementById('financements-total');
-  if (!list || !addBtn) return;
+  const montantInput = document.getElementById('montant-previsionnel');
+  const dispoIndicator = document.getElementById('montant-dispo-indicator');
+  if (!list || !addBtn || !montantInput) return;
 
-  const populateBailleurSelect = (typeSelect, bailleurSelect) => {
-    const previous = bailleurSelect.value;
-    const typeFin = typeSelect.value;
-    let opts = [];
-    if (typeFin === 'ETAT') {
-      opts = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'ETAT');
-    } else if (typeFin) {
-      opts = (registries.BAILLEUR || []).filter(b => b.typeFinancement === 'EXTERNE');
+  /**
+   * Retourne les tuples {typeFinancement, bailleur} ouverts sur l'activité courante
+   * — c.-à-d. les MP_BUDGET_LINE existant avec cette activité.
+   */
+  const getOptionsForActivite = (activiteCode) => {
+    if (!activiteCode) return [];
+    const seen = new Set();
+    const opts = [];
+    for (const b of (mpBudgetLines || [])) {
+      if ((b.activiteCode || '') !== activiteCode) continue;
+      const key = `${b.typeFinancement || ''}|${b.sourceFinancement || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      opts.push({
+        typeFinancement: b.typeFinancement || '',
+        bailleur: b.sourceFinancement || '',
+        ae: Number(b.ae) || 0
+      });
     }
+    return opts;
+  };
+
+  /**
+   * Peuple un select de bailleur avec uniquement ceux ouverts sur l'activité courante.
+   * Si activité non renseignée : un seul placeholder « -- Choisir l'activité d'abord -- ».
+   */
+  const populateBailleurSelect = (bailleurSelect) => {
+    const previous = bailleurSelect.value;
+    const activiteCode = document.getElementById('activite')?.value || '';
+    const opts = getOptionsForActivite(activiteCode);
+    const bailleursLabels = registries.BAILLEUR || [];
+    const typesLabels = registries.TYPE_FINANCEMENT || [];
+
     bailleurSelect.innerHTML = '';
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = opts.length === 0 ? '-- Type de financement d\'abord --' : '-- Sélectionner un bailleur --';
+    if (!activiteCode) {
+      placeholder.textContent = '-- Choisir l\'activité d\'abord --';
+    } else if (opts.length === 0) {
+      placeholder.textContent = '-- Aucun bailleur ouvert sur cette activité --';
+    } else {
+      placeholder.textContent = '-- Sélectionner un bailleur --';
+    }
     bailleurSelect.appendChild(placeholder);
-    opts.forEach(b => {
-      const o = document.createElement('option');
-      o.value = b.code;
-      o.textContent = b.label;
-      bailleurSelect.appendChild(o);
+
+    opts.forEach(o => {
+      const bLabel = bailleursLabels.find(b => b.code === o.bailleur)?.label || o.bailleur;
+      const tLabel = typesLabels.find(t => t.code === o.typeFinancement)?.label || o.typeFinancement;
+      const option = document.createElement('option');
+      option.value = `${o.typeFinancement}|${o.bailleur}`;
+      option.dataset.type = o.typeFinancement;
+      option.dataset.bailleur = o.bailleur;
+      option.textContent = `${bLabel} — ${tLabel}`;
+      bailleurSelect.appendChild(option);
     });
-    if (previous && opts.find(b => b.code === previous)) bailleurSelect.value = previous;
+
+    if (previous && Array.from(bailleurSelect.options).some(o => o.value === previous)) {
+      bailleurSelect.value = previous;
+    }
   };
 
   const buildRow = (isFirst) => {
@@ -653,63 +749,21 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
     row.className = 'financement-row';
     Object.assign(row.style, {
       border: '1px solid #e5e7eb', borderRadius: '8px',
-      padding: '12px', marginBottom: '10px', background: 'white'
-    });
-
-    const grid = document.createElement('div');
-    Object.assign(grid.style, {
-      display: 'grid',
-      gridTemplateColumns: 'minmax(180px, 1.2fr) minmax(160px, 1fr) minmax(180px, 1.3fr) auto',
-      gap: '10px', alignItems: 'end'
-    });
-
-    const mkField = (labelText, control, required) => {
-      const wrap = document.createElement('div');
-      const lbl = document.createElement('label');
-      lbl.className = 'form-label';
-      lbl.textContent = labelText;
-      if (required) {
-        const star = document.createElement('span');
-        star.className = 'required';
-        star.textContent = '*';
-        lbl.appendChild(document.createTextNode(' '));
-        lbl.appendChild(star);
-      }
-      wrap.appendChild(lbl);
-      wrap.appendChild(control);
-      return wrap;
-    };
-
-    const montantInput = document.createElement('input');
-    montantInput.type = 'number';
-    montantInput.className = 'form-input financement-montant';
-    montantInput.min = '0';
-    montantInput.step = '1';
-    montantInput.placeholder = '0';
-    if (isFirst) montantInput.required = true;
-
-    const typeSelect = document.createElement('select');
-    typeSelect.className = 'form-input financement-type';
-    if (isFirst) typeSelect.required = true;
-    typeSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-    (registries.TYPE_FINANCEMENT || []).forEach(t => {
-      const o = document.createElement('option');
-      o.value = t.code;
-      o.textContent = t.label;
-      typeSelect.appendChild(o);
+      padding: '10px', marginBottom: '8px', background: 'white',
+      display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'center'
     });
 
     const bailleurSelect = document.createElement('select');
     bailleurSelect.className = 'form-input financement-bailleur';
     if (isFirst) bailleurSelect.required = true;
-    populateBailleurSelect(typeSelect, bailleurSelect);
+    populateBailleurSelect(bailleurSelect);
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn btn-sm btn-secondary';
     removeBtn.textContent = '✕';
-    removeBtn.title = 'Retirer cette ligne';
-    Object.assign(removeBtn.style, { padding: '6px 12px', alignSelf: 'end', marginBottom: '2px' });
+    removeBtn.title = 'Retirer ce bailleur';
+    Object.assign(removeBtn.style, { padding: '6px 12px' });
     removeBtn.addEventListener('click', () => {
       if (list.querySelectorAll('.financement-row').length > 1) {
         row.remove();
@@ -717,93 +771,108 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
       }
     });
 
-    grid.appendChild(mkField('Montant prévisionnel (XOF)', montantInput, isFirst));
-    grid.appendChild(mkField('Type de financement', typeSelect, isFirst));
-    grid.appendChild(mkField('Bailleur', bailleurSelect, isFirst));
-    grid.appendChild(removeBtn);
-    row.appendChild(grid);
+    row.appendChild(bailleurSelect);
+    row.appendChild(removeBtn);
 
-    // Widget historique de la ligne budgétaire (cumul + tableau des opérations existantes)
-    // Modif #27 : remplace l'indicateur simple par le widget consolidé qui montre aussi
-    // toutes les opérations PPM déjà rattachées à cette combinaison.
-    const historyWidget = renderBudgetLineHistory({
-      activiteCode: '',
-      typeFin: '',
-      bailleur: '',
-      mpBudgetLines,
-      mpOperations,
-      currentMontant: 0,
-      registries,
-      onNavigate: (op) => {
-        if (op?.id) router.navigate('/mp/fiche-marche', { idOperation: op.id });
-      }
-    });
-    historyWidget.classList.add('financement-history');
-    row.appendChild(historyWidget);
-
-    typeSelect.addEventListener('change', () => {
-      populateBailleurSelect(typeSelect, bailleurSelect);
-      refreshAll();
-    });
     bailleurSelect.addEventListener('change', refreshAll);
-    montantInput.addEventListener('input', refreshAll);
-
     return row;
   };
 
+  /**
+   * Lit les bailleurs déclarés sur les lignes courantes.
+   * @returns {Array<{typeFinancement, bailleur, ae}>}
+   */
+  const readDeclaredBailleurs = () => {
+    const activiteCode = document.getElementById('activite')?.value || '';
+    const opts = getOptionsForActivite(activiteCode);
+    const declared = [];
+    const seen = new Set();
+    list.querySelectorAll('.financement-bailleur').forEach(sel => {
+      const val = sel.value || '';
+      if (!val) return;
+      const [type, bailleur] = val.split('|');
+      const key = `${type}|${bailleur}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const match = opts.find(o => o.typeFinancement === type && o.bailleur === bailleur);
+      declared.push({
+        typeFinancement: type,
+        bailleur,
+        ae: match?.ae || 0
+      });
+    });
+    return declared;
+  };
+
+  /**
+   * Recalcule l'indicateur de disponibilité budgétaire global et le bandeau total.
+   * Affiché en haut, sous l'input montant prévisionnel.
+   */
   const refreshAll = () => {
     const activiteCode = document.getElementById('activite')?.value || '';
-    let total = 0;
-    let anyOver = false;
+    const montant = Number(montantInput.value) || 0;
+    const declared = readDeclaredBailleurs();
 
-    list.querySelectorAll('.financement-row').forEach(row => {
-      const montant = Number(row.querySelector('.financement-montant')?.value) || 0;
-      const typeFin = row.querySelector('.financement-type')?.value || '';
-      const bailleur = row.querySelector('.financement-bailleur')?.value || '';
-      const historyEl = row.querySelector('.financement-history');
-
-      total += montant;
-
-      // Le widget gère lui-même les cas "manque d'info" et "ligne inexistante".
-      // On lui passe systématiquement le contexte courant.
-      if (historyEl?._budgetHistory) {
-        historyEl._budgetHistory.update({
-          activiteCode,
-          typeFin,
-          bailleur,
-          currentMontant: montant
-        });
-      }
-
-      // Le bord visuel de la ligne dépend du dépassement éventuel
-      if (activiteCode && typeFin && bailleur) {
-        const line = findBudgetLine(activiteCode, typeFin, bailleur, mpBudgetLines);
-        const initial = Number(line?.ae) || 0;
-        const usedOther = computeBudgetUsageOther(activiteCode, typeFin, bailleur, mpOperations);
-        const isOver = line && (initial - (usedOther + montant)) < 0;
-        if (isOver) anyOver = true;
-        row.style.borderColor = isOver ? '#fecaca' : (line ? '#d1fae5' : '#e5e7eb');
+    // Indicateur sous le montant : couverture des enveloppes vs montant saisi
+    if (dispoIndicator) {
+      if (!activiteCode) {
+        dispoIndicator.innerHTML = '<span style="color:#6b7280;">Sélectionnez l\'activité dans la section Identification pour voir la disponibilité budgétaire.</span>';
+      } else if (declared.length === 0) {
+        dispoIndicator.innerHTML = '<span style="color:#92400e;">Ajoutez au moins un bailleur ci-dessous pour évaluer la couverture.</span>';
       } else {
-        row.style.borderColor = '#e5e7eb';
+        // Somme des enveloppes AE des bailleurs déclarés
+        const totalEnveloppes = declared.reduce((s, d) => s + (d.ae || 0), 0);
+        // Cumul des autres opérations PPM sur la même activité (toutes combinaisons)
+        const usedOnActivite = (mpOperations || []).reduce((acc, op) => {
+          const opActivite = op?.chaineBudgetaire?.activiteCode || '';
+          if (opActivite !== activiteCode) return acc;
+          return acc + (Number(op.montantPrevisionnel) || 0);
+        }, 0);
+        const restant = totalEnveloppes - usedOnActivite - montant;
+        const ok = restant >= 0;
+        const color = ok ? '#065f46' : '#b91c1c';
+        const bg = ok ? '#ecfdf5' : '#fef2f2';
+        dispoIndicator.innerHTML = `
+          <div style="padding:8px 12px; background:${bg}; border-left:3px solid ${color}; border-radius:4px;">
+            <div style="color:${color}; font-weight:600;">
+              ${ok ? '✓ Couverture OK' : '⚠ Couverture insuffisante'}
+            </div>
+            <div style="color:#374151; font-size:12px; margin-top:2px;">
+              Enveloppes cumulées (${declared.length} bailleur${declared.length > 1 ? 's' : ''}) : ${formatXOF(totalEnveloppes)}
+              · Autres opérations sur l'activité : ${formatXOF(usedOnActivite)}
+              · Disponible après celle-ci : <strong>${formatXOF(restant)}</strong>
+            </div>
+          </div>
+        `;
       }
-    });
+    }
 
     if (totalDiv) {
       totalDiv.innerHTML =
-        `<strong>Montant total prévisionnel de l'opération :</strong> ` +
-        `<span style="font-size:1.05em; font-weight:700;">${formatXOF(total)}</span>` +
-        (anyOver ? ' <span style="margin-left:12px; color:#b91c1c; font-weight:600;">⚠ Au moins une ligne dépasse l\'enveloppe budgétaire</span>' : '');
-      totalDiv.style.borderLeftColor = anyOver ? '#dc2626' : '#6b7280';
-      totalDiv.style.background = anyOver ? '#fef2f2' : '#f9fafb';
+        `<strong>Montant prévisionnel de l'opération :</strong> ` +
+        `<span style="font-size:1.05em; font-weight:700;">${formatXOF(montant)}</span>` +
+        ` <span style="margin-left:12px; color:#6b7280; font-size:12px;">` +
+        `Bailleurs déclarés : ${declared.length}` +
+        `</span>`;
+      totalDiv.style.borderLeftColor = '#6b7280';
+      totalDiv.style.background = '#f9fafb';
     }
+  };
+
+  // Recalcule + repopule les selects bailleurs (à appeler quand l'activité change)
+  const repopulateAllBailleurSelects = () => {
+    list.querySelectorAll('.financement-bailleur').forEach(sel => populateBailleurSelect(sel));
+    refreshAll();
   };
 
   list.__reset = () => {
     list.innerHTML = '';
     list.appendChild(buildRow(true));
+    if (montantInput) montantInput.value = '';
     refreshAll();
   };
   list.__refresh = refreshAll;
+  list.__repopulateBailleurs = repopulateAllBailleurSelects;
 
   list.appendChild(buildRow(true));
   addBtn.addEventListener('click', () => {
@@ -811,9 +880,10 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
     refreshAll();
   });
 
-  // L'indicateur dépend de l'activité — on rafraîchit quand elle change.
+  // L'indicateur et les options dépendent de l'activité — on rafraîchit quand elle change.
   const activiteHidden = document.getElementById('activite');
-  if (activiteHidden) activiteHidden.addEventListener('change', refreshAll);
+  if (activiteHidden) activiteHidden.addEventListener('change', repopulateAllBailleurSelects);
+  if (montantInput) montantInput.addEventListener('input', refreshAll);
 
   refreshAll();
 }

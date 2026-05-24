@@ -13,6 +13,64 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-24 — Refonte « Informations financières » PPM : montant unique + bailleurs liés à l'activité + priorisation dans la clé de répartition
+
+> **Modif #52** — Demande client suite au dernier meeting : sur l'écran de création/édition d'une ligne PPM, l'utilisateur saisit **un seul montant prévisionnel** pour l'opération (les vérifications de marché précédent + disponibilité budgétaire continuent de se faire sur ce montant unique). Ensuite, il déclare **les bailleurs** un à un, mais **sans montant par bailleur** — le partage entre bailleurs se précisera plus tard dans la clé de répartition. Les bailleurs proposés sont restreints à ceux **ouverts sur la ligne budgétaire de l'activité indexée**. Ces bailleurs sont ensuite **priorisés visuellement** dans la clé de répartition, mais sans verrouillage dur (l'utilisateur peut quand même choisir un autre bailleur si besoin).
+
+### Partie 1 — Refonte de la section « Informations financières » (`ecr01d-ppm-create-line.js`)
+
+**Avant** : N lignes, chacune avec `{montant, type, bailleur}`, total calculé en bas. Le bailleur était filtré par type uniquement, à partir du référentiel global.
+
+**Après** :
+- **Bloc montant unique** en haut : 1 input « Montant prévisionnel (XOF) » + indicateur de couverture budgétaire global.
+- **Bloc bailleurs** : liste de lignes simples (1 dropdown par bailleur), bouton « + Ajouter un bailleur ». Les options du dropdown sont **strictement filtrées par l'activité indexée** : on parcourt `mpBudgetLines` pour ne proposer que les couples `(typeFinancement, sourceFinancement)` ouverts sur cette activité.
+- **Indicateur de disponibilité** sous le montant : compare la somme des enveloppes (AE) des bailleurs déclarés au montant prévisionnel saisi + cumul des autres opérations PPM sur la même activité. Pastille verte ✓ « Couverture OK » ou rouge ⚠ « Couverture insuffisante ».
+- **Bandeau total** en bas : recadré pour montrer le montant unique + le nombre de bailleurs déclarés.
+
+**Format des `<option>`** : `value="typeFinancement|bailleur"`, libellé `"Bailleur — Type"`. Le pipe `|` est utilisé comme séparateur car aucun code de référentiel ne le contient.
+
+**Réactivité** : changement d'activité (event `change` sur le hidden `#activite`) → repopulate de tous les dropdowns bailleur. Changement du montant → refresh de l'indicateur de couverture.
+
+### Partie 2 — Persistance (`handleSave`)
+
+- `montantPrevisionnel` = montant saisi en haut (un seul nombre).
+- `chaineBudgetaire.bailleurs[]` = liste des codes bailleurs déclarés.
+- `chaineBudgetaire.financements[]` = **rétrocompat préservée** : alimenté avec `{montant: 0, typeFinancement, bailleur}` par bailleur. Les écrans en lecture qui itèrent `financements[]` continuent de fonctionner, juste avec un montant unitaire à 0 (le partage se fait dans la clé de répartition).
+- Dédoublonnage : un même `(type, bailleur)` ne peut être déclaré qu'une seule fois.
+- Validation : `montantTotal > 0` ET au moins 1 bailleur.
+
+### Partie 3 — Mise en évidence dans la clé de répartition (`cle-repartition-manager-mp.js`)
+
+- Nouveau paramètre optionnel **`bailleursPlanifies`** (6ᵉ argument) sur `renderCleRepartitionManager()`.
+- Dans le `<select>` du bailleur :
+  - Si `bailleursPlanifies` est non vide → 2 `<optgroup>` :
+    - **« ★ Définis dans la planification »** en haut (bailleurs déclarés en PPM)
+    - **« Autres bailleurs »** en dessous (tout le reste du référentiel)
+  - Sinon → comportement actuel (liste plate).
+- Texte d'aide sous le select : indique le nombre de bailleurs planifiés et précise que d'autres choix restent possibles. **Pas de verrouillage dur** — conformément à la consigne client.
+- Cas particulier : si un enregistrement existant pointe sur un bailleur ni dans la planification ni dans le référentiel, on l'injecte tel quel (« hors référentiel ») pour ne pas perdre la donnée.
+
+### Partie 4 — Branchement (`ecr03a-attribution.js`)
+
+- Récupération de `operation.chaineBudgetaire.bailleurs` (filtré sur `Boolean`).
+- Passage en 6ᵉ argument au widget. Aucune autre modification dans l'écran.
+
+### Non-régression
+
+- **Données historiques** : les anciennes opérations avec `financements[]` à montants > 0 restent affichées correctement sur les autres écrans (la lecture ne change pas).
+- **Fonctions `findBudgetLine` / `computeBudgetUsageOther`** : conservées en l'état mais non utilisées par la nouvelle UI (gardées pour rétrocompat éventuelle des écrans qui les exporteraient — aucun aujourd'hui).
+- **Helper `renderBudgetLineHistory`** : non utilisé dans la nouvelle section (la vérif se fait globalement, pas par ligne). Le widget reste disponible pour réutilisation future.
+- **Module Marché classique** (`marche/`) : aucune modification — il utilise un autre widget (`cle-repartition-manager.js`, sans `-mp`).
+- **Syntaxe vérifiée** (`node --check`) sur les 3 fichiers + serving HTTP 200 confirmé.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` — refonte UI Informations financières + `handleSave` + `setupFinancementsMulti`.
+- `sidcf-portal/js/ui/widgets/cle-repartition-manager-mp.js` — paramètre `bailleursPlanifies`, optgroup + helper `planifiesSetHelpText`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — passage du paramètre au widget.
+
+Pas de Worker, pas de migration DB, pas de R2. Frontend statique. Aucun déploiement requis.
+
 ## 2026-05-24 — Liste PPM : libellé colonne « Mode de passation », séparateurs visuels et casse Title Case du Type
 
 > **Modif #51** — 3 retours client issus du dernier meeting, regroupés en une seule modif car même écran et même fichier source (la liste PPM Marché+).

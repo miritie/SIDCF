@@ -1634,6 +1634,12 @@ function initializeWidgets(operation, registries) {
     const montantHT = parseFloat(document.getElementById('attr-montant-ht')?.value) || 0;
     const montantTTC = parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0;
 
+    // Modif #52 — Récupérer les bailleurs déclarés en planification (PPM) pour
+    // les mettre en évidence dans le dropdown sans verrouiller le choix.
+    const bailleursPlanifies = Array.isArray(operation?.chaineBudgetaire?.bailleurs)
+      ? operation.chaineBudgetaire.bailleurs.filter(Boolean)
+      : [];
+
     const widget = renderCleRepartitionManager(
       cleRepartitionList,
       montantHT,
@@ -1641,7 +1647,8 @@ function initializeWidgets(operation, registries) {
       registries,
       (updatedList) => {
         cleRepartitionList = updatedList;
-      }
+      },
+      bailleursPlanifies
     );
     cleContainer.innerHTML = '';
     cleContainer.appendChild(widget);
