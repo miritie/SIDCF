@@ -198,7 +198,7 @@ export async function renderPPMCreateLine(params) {
     // Modif #53 — Évaluation conformité du mode de passation aux règles
     // (matrice ADMIN_CENTRALE). Si écart : flag procDerogation pré-positionné,
     // que l'étape Procédure (ecr02a) consommera pour exiger le justificatif.
-    const modeSuggestionCtx = computeModeSuggestion();
+    const modeSuggestionCtx = computeModeSuggestion(mpBudgetLines);
     const isDerogationPPM = modeSuggestionCtx.ready
       && modeSuggestionCtx.suggestion
       && !modeSuggestionCtx.applicableCodes.includes(formData.modePassation);
@@ -590,9 +590,10 @@ export async function renderPPMCreateLine(params) {
   setupActiviteReverseCascade(activiteIndex);
   setupNatureEcoLigneBudgetaire();
   setupFinancementsMulti(registries, mpBudgetLines, mpOperations);
-  // Modif #53 — Suggestion auto du mode de passation + alerte dérogation.
-  // À brancher APRÈS setupFinancementsMulti (qui crée #montant-previsionnel).
-  setupModePassationSuggestion(registries);
+  // Modif #53c — Suggestion auto du mode de passation basée sur le MONTANT DE LA
+  // LIGNE BUDGÉTAIRE (somme des AE des MP_BUDGET_LINE pour activité + nature),
+  // pas sur le montant prévisionnel de l'opération.
+  setupModePassationSuggestion(registries, mpBudgetLines);
   setupLocalisationCascades(registries);
 
   const livrablesContainer = document.getElementById('livrables-container');
@@ -1015,26 +1016,59 @@ function setupLocalisationCascades(registries) {
 /* ----------------------------------------------------------------------- */
 
 /**
- * Construit un payload de suggestion à partir du contexte courant lu dans le DOM.
- * @returns {Object} { ready, suggestion, applicableCodes, reason, selected }
+ * Calcule le montant total de la « ligne budgétaire » = somme des AE de toutes
+ * les MP_BUDGET_LINE matchant (activiteCode, natureCode). C'est CE montant qui
+ * pilote la recommandation de mode de passation selon le Code des MP CI,
+ * et non pas le montant prévisionnel de l'opération.
+ *
+ * Matching :
+ *   - activiteCode : match exact sur b.activiteCode
+ *   - natureCode   : préfixe de b.ligneCode (ex : nature 231 ⇒ ligneCode
+ *                    « 231100 », « 231200 », etc.)
  */
-function computeModeSuggestion() {
-  const montant = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+function computeLigneBudgetaireAmount(mpBudgetLines, activiteCode, natureCode) {
+  if (!activiteCode || !natureCode) return { total: 0, lines: [] };
+  const matches = (mpBudgetLines || []).filter(b => {
+    if ((b.activiteCode || '') !== activiteCode) return false;
+    const lc = String(b.ligneCode || '');
+    return lc.startsWith(String(natureCode));
+  });
+  const total = matches.reduce((s, b) => s + (Number(b.AE) || 0), 0);
+  return { total, lines: matches };
+}
+
+/**
+ * Construit un payload de suggestion à partir du contexte courant lu dans le DOM.
+ * Modif #53c — le montant utilisé pour la recommandation est désormais celui de
+ * la LIGNE BUDGÉTAIRE (somme des AE), pas le montant prévisionnel de l'opération.
+ *
+ * @param {Array} mpBudgetLines Liste des MP_BUDGET_LINE chargées
+ * @returns {Object} { ready, suggestion, applicableCodes, montantLigne, lignesCount, typeMarche, natureCode, selected }
+ */
+function computeModeSuggestion(mpBudgetLines) {
   const typeMarche = document.getElementById('typeMarche')?.value || '';
   const natureCode = document.getElementById('natureEco')?.value || '';
+  const activiteCode = document.getElementById('activite')?.value || '';
   const selected = document.getElementById('modePassation')?.value || '';
 
+  const { total: montantLigne, lines } = computeLigneBudgetaireAmount(mpBudgetLines, activiteCode, natureCode);
+
   // Construire une « pseudo-opération » que getSuggestedProcedures() sait consommer.
+  // On lui passe le MONTANT DE LA LIGNE, pas un montant d'opération.
   const pseudoOp = {
     typeMarche,
-    montantPrevisionnel: montant,
+    montantPrevisionnel: montantLigne,
     chaineBudgetaire: { natureCode, nature: natureCode },
     typeInstitution: 'ADMIN_CENTRALE'
   };
 
-  const ready = montant > 0 && !!typeMarche && !!natureCode;
+  const ready = montantLigne > 0 && !!typeMarche && !!natureCode;
   if (!ready) {
-    return { ready: false, suggestion: null, applicableCodes: [], reason: null, selected };
+    return {
+      ready: false, suggestion: null, applicableCodes: [],
+      selected, montantLigne, lignesCount: lines.length,
+      typeMarche, natureCode, activiteCode
+    };
   }
 
   let suggestions = [];
@@ -1045,10 +1079,12 @@ function computeModeSuggestion() {
   }
 
   const applicableCodes = suggestions.map(s => s.mode);
-  // Recommandation principale = premier de la liste (généralement le plus exigeant
-  // qui s'applique à la tranche de montant courante).
   const suggestion = suggestions[0] || null;
-  return { ready, suggestion, applicableCodes, reason: suggestion, selected, montant, typeMarche, natureCode };
+  return {
+    ready, suggestion, applicableCodes, selected,
+    montantLigne, lignesCount: lines.length,
+    typeMarche, natureCode, activiteCode
+  };
 }
 
 /**
@@ -1084,12 +1120,12 @@ function listApplicableModesForTypeNature(typeMarche, natureCode) {
  *   - Type + Nature + Montant    → recommandation précise + statut conformité
  *                                  vs mode sélectionné
  */
-function refreshModePassationRec(registries) {
+function refreshModePassationRec(registries, mpBudgetLines) {
   const box = document.getElementById('mode-passation-rec');
   const modeSelect = document.getElementById('modePassation');
   if (!box || !modeSelect) return;
 
-  const ctx = computeModeSuggestion();
+  const ctx = computeModeSuggestion(mpBudgetLines);
   const modeLabels = registries.MODE_PASSATION || [];
   const typeLabels = registries.TYPE_MARCHE || [];
   const natureLabels = registries.NATURE_ECO || [];
@@ -1097,9 +1133,9 @@ function refreshModePassationRec(registries) {
   const formatXOFInline = (n) => new Intl.NumberFormat('fr-FR').format(Number(n) || 0) + ' XOF';
   const labelFor = (list, code) => list.find(x => x.code === code)?.label || code || '—';
 
-  const typeMarche = document.getElementById('typeMarche')?.value || '';
-  const natureCode = document.getElementById('natureEco')?.value || '';
-  const montant = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+  const typeMarche = ctx.typeMarche;
+  const natureCode = ctx.natureCode;
+  const montantLigne = ctx.montantLigneLigne;
   const currentSelected = modeSelect.value;
 
   // Helper : rendu d'un tableau HTML des tranches (mode / tranche / description)
@@ -1145,12 +1181,13 @@ function refreshModePassationRec(registries) {
     return;
   }
 
-  // ----- État 2 : Type + Nature mais pas de montant -----
+  // ----- État 2 : Type + Nature OK mais la ligne budgétaire n'a pas de montant -----
+  // (cas typique : l'activité n'est pas encore renseignée, ou la combinaison
+  // activité + nature n'a aucune MP_BUDGET_LINE ouverte.)
   if (!ctx.ready) {
     const tranches = listApplicableModesForTypeNature(typeMarche, natureCode);
 
-    // Si l'utilisateur a déjà sélectionné un mode, donner du feedback sur sa
-    // tranche d'applicabilité.
+    // Feedback sur le mode déjà sélectionné (sans pouvoir vérifier la conformité)
     let modeFeedback = '';
     if (currentSelected) {
       const t = tranches.find(x => x.mode === currentSelected);
@@ -1158,7 +1195,7 @@ function refreshModePassationRec(registries) {
         const tFmt = `${t.min != null ? formatXOFInline(t.min) : '0'} – ${t.max != null ? formatXOFInline(t.max) : '∞'}`;
         modeFeedback = `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border-left:3px solid #10b981;">
           <strong>Mode sélectionné :</strong> ${currentSelected} — ${labelFor(modeLabels, currentSelected)}<br>
-          <span style="font-size:11px;">Applicable pour les marchés de la tranche <strong>${tFmt}</strong>. Renseignez le Montant prévisionnel pour confirmer la conformité.</span>
+          <span style="font-size:11px;">Applicable pour les marchés de la tranche <strong>${tFmt}</strong>. La conformité sera évaluée dès que le montant de la ligne budgétaire sera connu.</span>
         </div>`;
       } else {
         modeFeedback = `<div style="margin-top:6px; padding:6px 8px; background:rgba(220,38,38,0.08); border-left:3px solid #dc2626;">
@@ -1168,6 +1205,16 @@ function refreshModePassationRec(registries) {
       }
     }
 
+    // Diagnostic : pourquoi le montant est-il à 0 ?
+    let raisonMontant;
+    if (!ctx.activiteCode) {
+      raisonMontant = 'Renseignez l\'<strong>Activité</strong> ci-dessus pour calculer le montant de la ligne budgétaire.';
+    } else if (ctx.lignesCount === 0) {
+      raisonMontant = `Aucune ligne budgétaire ouverte pour cette combinaison (activité <code>${ctx.activiteCode}</code> + nature <code>${ctx.natureCode}</code>). Vérifiez la disponibilité budgétaire ou le choix de la nature économique.`;
+    } else {
+      raisonMontant = `Les ${ctx.lignesCount} ligne(s) budgétaire(s) trouvée(s) ont un AE total à 0 XOF.`;
+    }
+
     box.style.background = '#eff6ff';
     box.style.borderColor = '#3b82f6';
     box.style.color = '#1e3a8a';
@@ -1175,7 +1222,7 @@ function refreshModePassationRec(registries) {
       <strong>📋 Modes applicables pour ${labelFor(typeLabels, typeMarche)} / ${labelFor(natureLabels, natureCode)}</strong>
       <div style="font-size:11px; margin-top:3px;">Selon les seuils du Code des Marchés Publics CI (matrice <em>ADMIN_CENTRALE</em>) :</div>
       ${renderTranchesTable(tranches, null, 0)}
-      <div style="margin-top:6px; font-size:11px;">➡ <em>Renseignez le Montant prévisionnel ci-dessous pour la recommandation précise.</em></div>
+      <div style="margin-top:6px; font-size:11px;">➡ <em>${raisonMontant}</em></div>
       ${modeFeedback}
     `;
     return;
@@ -1186,7 +1233,7 @@ function refreshModePassationRec(registries) {
     box.style.background = '#fef3c7';
     box.style.borderColor = '#f59e0b';
     box.style.color = '#92400e';
-    box.innerHTML = `⚠ Aucun mode standard ne correspond à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> au montant <strong>${formatXOFInline(ctx.montant)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
+    box.innerHTML = `⚠ Aucun mode standard ne correspond à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> au montant <strong>${formatXOFInline(ctx.montantLigne)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
     return;
   }
 
@@ -1212,12 +1259,13 @@ function refreshModePassationRec(registries) {
     <strong>📌 Mode recommandé :</strong> <code style="background:rgba(0,0,0,0.06); padding:1px 4px; border-radius:3px;">${recommendedCode}</code> — ${recommendedLabel}<br>
     <span style="font-size:11px;">
       <strong>Pourquoi ?</strong>
-      Montant ${formatXOFInline(ctx.montant)}
+      Montant de la <strong>ligne budgétaire</strong> <strong>${formatXOFInline(ctx.montantLigne)}</strong>
+      (somme des AE de ${ctx.lignesCount} ligne${ctx.lignesCount > 1 ? 's' : ''} pour l'activité <code>${ctx.activiteCode}</code> + nature <code>${ctx.natureCode}</code>)
       · Type ${labelFor(typeLabels, ctx.typeMarche)}
-      · Nature ${labelFor(natureLabels, ctx.natureCode)}
-      ⇒ tranche ${seuilFmt} ⇒ matrice <em>ADMIN_CENTRALE</em> du Code des MP CI.
+      ⇒ tranche ${seuilFmt}
+      ⇒ matrice <em>ADMIN_CENTRALE</em> du Code des MP CI.
     </span>
-    ${renderTranchesTable(allTranches, recommendedCode, ctx.montant)}
+    ${renderTranchesTable(allTranches, recommendedCode, ctx.montantLigne)}
   `;
 
   if (isConforme) {
@@ -1252,28 +1300,31 @@ function refreshModePassationRec(registries) {
   }
 }
 
-function setupModePassationSuggestion(registries) {
+function setupModePassationSuggestion(registries, mpBudgetLines) {
   const modeSelect = document.getElementById('modePassation');
   const typeSelect = document.getElementById('typeMarche');
   const natureSelect = document.getElementById('natureEco');
-  const montantInput = document.getElementById('montant-previsionnel');
+  const activiteHidden = document.getElementById('activite');
 
   if (!modeSelect) return;
 
+  const refresh = () => refreshModePassationRec(registries, mpBudgetLines);
+
   // Tracking du choix utilisateur : à partir du moment où l'utilisateur sélectionne
-  // manuellement un mode, on cesse de l'auto-pré-sélectionner. Le 'change' utilisateur
-  // déclenche aussi un refresh pour évaluer la conformité.
+  // manuellement un mode, on cesse de l'auto-pré-sélectionner.
   modeSelect.addEventListener('change', () => {
     modeSelect.dataset.userTouched = '1';
-    refreshModePassationRec(registries);
+    refresh();
   });
 
-  if (typeSelect) typeSelect.addEventListener('change', () => refreshModePassationRec(registries));
-  if (natureSelect) natureSelect.addEventListener('change', () => refreshModePassationRec(registries));
-  if (montantInput) montantInput.addEventListener('input', () => refreshModePassationRec(registries));
+  if (typeSelect)     typeSelect.addEventListener('change', refresh);
+  if (natureSelect)   natureSelect.addEventListener('change', refresh);
+  // Modif #53c — le montant utilisé vient désormais des MP_BUDGET_LINE liées à
+  // l'activité, donc tout changement d'activité doit déclencher un refresh.
+  if (activiteHidden) activiteHidden.addEventListener('change', refresh);
 
   // Premier rendu (utile si la page est chargée avec un brouillon)
-  refreshModePassationRec(registries);
+  refresh();
 }
 
 export default renderPPMCreateLine;
