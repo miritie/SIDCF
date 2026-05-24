@@ -4,7 +4,10 @@
 
 import { el } from '../../lib/dom.js';
 import router from '../../router.js';
-import { getPhases, getPhasesAsync, hasPhase } from '../../lib/phase-helper.js';
+// Modif #56 — utiliser le helper Marché+ qui force le libellé « Approbation »
+// pour le code VISA_CF (au lieu de « Engagement » ou « Visa CF ») afin d'unifier
+// avec les boutons « SUIVI DU PROCESSUS » de la fiche de vie.
+import { getPhases, getPhasesAsync, hasPhase } from '../../lib/phase-helper-mp.js';
 
 /**
  * DEPRECATED: Configuration statique remplacée par phase-helper.js
@@ -372,63 +375,72 @@ function hasValidVisa(visasCF) {
 }
 
 /**
- * Calculer le status de chaque étape dynamiquement
+ * Calculer le status de chaque étape — Modif #56.
+ *
+ * Le statut visuel est dérivé en PRIORITÉ de l'état métier (`operation.etat`)
+ * via un mapping état → étape courante. Garantit qu'UNE SEULE étape est
+ * « current » à la fois et que toutes les étapes antérieures sont « done »,
+ * indépendamment du remplissage des entités associées (procedure, attribution,
+ * visa_cf, etc.). Évite l'effet « 2 étapes orange en même temps » que produisait
+ * l'ancienne logique purement basée sur la présence d'entités.
+ *
+ * Mapping :
+ *   PLANIFIE   → PLANIF      (current)
+ *   EN_PROC    → PROCEDURE   (current)
+ *   ATTRIBUE   → ATTRIBUTION (current)
+ *   VISE       → VISA_CF     (current — si la phase existe dans le mode, sinon EXECUTION)
+ *   EN_EXEC    → EXECUTION   (current)
+ *   CLOS       → CLOTURE     (done — terminal)
+ *   RESILIE    → EXECUTION   (done — terminal alternatif marqué comme exécuté)
  */
+const PHASE_ORDER_REF = ['PLANIF','PROCEDURE','ATTRIBUTION','VISA_CF','EXECUTION','AVENANTS','CLOTURE'];
+
+const ETAT_TO_PHASE = {
+  PLANIFIE:  'PLANIF',
+  EN_PROC:   'PROCEDURE',
+  ATTRIBUE:  'ATTRIBUTION',
+  VISE:      'VISA_CF',
+  EN_EXEC:   'EXECUTION',
+  EXECUTION: 'EXECUTION',
+  CLOS:      'CLOTURE',
+  CLOTURE:   'CLOTURE',
+  RESILIE:   'EXECUTION'
+};
+
 function calculateDynamicStepStatuses(fullData, steps) {
-  const { operation, procedure, attribution, visasCF, ordresService, avenants, cloture } = fullData;
+  const { operation } = fullData;
   const etat = operation?.etat || 'PLANIFIE';
 
-  return steps.map((step) => {
-    const code = step.code;
+  // Codes effectivement présents dans les étapes du mode courant
+  const stepCodes = steps.map(s => s.code);
+  const phaseCible = ETAT_TO_PHASE[etat] || 'PLANIF';
 
-    switch (code) {
-      case 'PLANIF':
-        return operation ? 'done' : 'current';
-
-      case 'PROCEDURE':
-        if (procedure && procedure.decisionAttributionRef) return 'done';
-        if (procedure || etat === 'EN_PROC') return 'current';
-        if (operation) return 'current';
-        return 'todo';
-
-      case 'ATTRIBUTION':
-        if (isAttributionComplete(attribution)) return 'done';
-        if (attribution || etat === 'ATTRIBUE') return 'current';
-        if (procedure && procedure.decisionAttributionRef) return 'current';
-        return 'todo';
-
-      case 'VISA_CF':
-        if (hasValidVisa(visasCF)) return 'done';
-        if (visasCF && visasCF.length > 0) return 'current';
-        if (etat === 'VISE') return 'current';
-        if (isAttributionComplete(attribution)) return 'current';
-        return 'todo';
-
-      case 'EXECUTION':
-        if (etat === 'CLOS' || (cloture && cloture.datePVD)) return 'done';
-        if (avenants && avenants.length > 0) return 'done';
-        if (ordresService && ordresService.length > 0) return 'done';
-        if (etat === 'EN_EXEC') return 'current';
-        if (hasValidVisa(visasCF)) return 'current';
-        // Si pas de VISA_CF dans les étapes, passer directement après attribution
-        if (!steps.some(s => s.code === 'VISA_CF') && isAttributionComplete(attribution)) return 'current';
-        return 'todo';
-
-      case 'AVENANTS':
-        if (avenants && avenants.length > 0) return 'done';
-        if (ordresService && ordresService.length > 0) return 'current';
-        if (etat === 'EN_EXEC') return 'current';
-        return 'todo';
-
-      case 'CLOTURE':
-        if (cloture && cloture.datePVD) return 'done';
-        if (cloture || etat === 'CLOS') return 'current';
-        if (ordresService && ordresService.length > 0) return 'todo';
-        return 'todo';
-
-      default:
-        return 'todo';
+  // Si la phase cible n'existe pas dans le mode (ex : PSD/PSC sans VISA_CF
+  // alors que etat est VISE — improbable mais defensive), on prend la phase
+  // suivante qui existe dans le mode.
+  let cibleEffective = phaseCible;
+  if (!stepCodes.includes(phaseCible)) {
+    const startIdx = PHASE_ORDER_REF.indexOf(phaseCible);
+    for (let i = startIdx + 1; i < PHASE_ORDER_REF.length; i++) {
+      if (stepCodes.includes(PHASE_ORDER_REF[i])) { cibleEffective = PHASE_ORDER_REF[i]; break; }
     }
+  }
+
+  const cibleOrder = PHASE_ORDER_REF.indexOf(cibleEffective);
+  const isTerminal = etat === 'CLOS' || etat === 'CLOTURE' || etat === 'RESILIE';
+
+  return steps.map((step) => {
+    const order = PHASE_ORDER_REF.indexOf(step.code);
+    if (order === -1) return 'todo';
+
+    // Cas terminal : tout ce qui est ≤ cible passe en « done »
+    if (isTerminal) {
+      return order <= cibleOrder ? 'done' : 'todo';
+    }
+
+    if (order < cibleOrder) return 'done';
+    if (order === cibleOrder) return 'current';
+    return 'todo';
   });
 }
 

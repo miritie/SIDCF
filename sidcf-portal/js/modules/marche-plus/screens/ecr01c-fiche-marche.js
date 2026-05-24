@@ -323,6 +323,20 @@ const PHASE_ROUTES = {
   CLOTURE: '/mp/cloture'
 };
 
+// Modif #56 — mapping état métier → phase courante. Aligné sur steps-mp.js
+// pour garantir la cohérence visuelle entre la timeline et la barre de nav.
+const ETAT_TO_CURRENT_PHASE = {
+  PLANIFIE:  'PLANIF',
+  EN_PROC:   'PROCEDURE',
+  ATTRIBUE:  'ATTRIBUTION',
+  VISE:      'VISA_CF',
+  EN_EXEC:   'EXECUTION',
+  EXECUTION: 'EXECUTION',
+  CLOS:      'CLOTURE',
+  CLOTURE:   'CLOTURE',
+  RESILIE:   'EXECUTION'
+};
+
 function renderPhaseNavButtons(phases, operation, idOperation, currentLotId) {
   if (!Array.isArray(phases) || phases.length === 0) return el('div');
 
@@ -330,22 +344,37 @@ function renderPhaseNavButtons(phases, operation, idOperation, currentLotId) {
     ? { idOperation, lotId: currentLotId }
     : { idOperation };
 
+  // Modif #56 — déterminer la phase courante depuis l'état métier
+  const etat = operation?.etat || 'PLANIFIE';
+  const phaseCibleCode = ETAT_TO_CURRENT_PHASE[etat] || 'PLANIF';
+  const phaseCodes = phases.map(p => p.code);
+  // Fallback si la phase cible n'existe pas dans le mode (cas rare)
+  let currentCode = phaseCibleCode;
+  if (!phaseCodes.includes(phaseCibleCode)) {
+    const ORDER = ['PLANIF','PROCEDURE','ATTRIBUTION','VISA_CF','EXECUTION','AVENANTS','CLOTURE'];
+    const startIdx = ORDER.indexOf(phaseCibleCode);
+    for (let i = startIdx + 1; i < ORDER.length; i++) {
+      if (phaseCodes.includes(ORDER[i])) { currentCode = ORDER[i]; break; }
+    }
+  }
+
   const buttons = phases.map(phase => {
     const route = PHASE_ROUTES[phase.code];
+    const isCurrent = phase.code === currentCode;
+    const className = isCurrent ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
     if (!route) {
-      // Phase courante (Identité / Planif) — bouton actif sans navigation
       return el('button', {
         type: 'button',
-        className: 'btn btn-sm btn-primary',
-        title: `Vous êtes sur ${phase.titre || phase.code}`
+        className,
+        title: isCurrent ? `📍 Phase courante : ${phase.titre || phase.code}` : (phase.titre || phase.code)
       }, `${phase.icon || ''} ${phase.titre || phase.code}`);
     }
     return el('button', {
       type: 'button',
-      className: 'btn btn-sm btn-secondary',
-      title: `Aller à ${phase.titre || phase.code}`,
+      className,
+      title: isCurrent ? `📍 Phase courante — cliquez pour ouvrir l'écran` : `Aller à ${phase.titre || phase.code}`,
       onclick: () => router.navigate(route, navParams)
-    }, `${phase.icon || ''} ${phase.titre || phase.code}`);
+    }, `${phase.icon || ''} ${phase.titre || phase.code}${isCurrent ? ' (en cours)' : ''}`);
   });
 
   return el('div', {
@@ -357,7 +386,7 @@ function renderPhaseNavButtons(phases, operation, idOperation, currentLotId) {
       style: { padding: '12px 16px' }
     }, [
       el('div', { style: { fontSize: '11px', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' } },
-        'Suivi du processus — cliquez sur une phase pour ouvrir l\'écran de saisie'),
+        'Suivi du processus — la phase en cours est mise en évidence. Cliquez sur une phase pour ouvrir l\'écran de saisie.'),
       el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, buttons)
     ])
   ]);
