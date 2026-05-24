@@ -195,6 +195,23 @@ export async function renderPPMCreateLine(params) {
       return;
     }
 
+    // Modif #53 — Évaluation conformité du mode de passation aux règles
+    // (matrice ADMIN_CENTRALE). Si écart : flag procDerogation pré-positionné,
+    // que l'étape Procédure (ecr02a) consommera pour exiger le justificatif.
+    const modeSuggestionCtx = computeModeSuggestion();
+    const isDerogationPPM = modeSuggestionCtx.ready
+      && modeSuggestionCtx.suggestion
+      && !modeSuggestionCtx.applicableCodes.includes(formData.modePassation);
+    const procDerogation = isDerogationPPM
+      ? {
+          isDerogation: true,
+          docId: null,
+          comment: `Dérogation déclarée à la planification : mode ${formData.modePassation} retenu au lieu du mode recommandé ${modeSuggestionCtx.suggestion.mode} (tranche ${modeSuggestionCtx.suggestion.min ?? 0}–${modeSuggestionCtx.suggestion.max ?? '∞'} XOF, matrice ADMIN_CENTRALE). À justifier à l'étape Procédure.`,
+          validatedAt: null,
+          sourceEtape: 'PLANIF'
+        }
+      : null;
+
     const newOperationId = operationId();
     const operation = {
       id: newOperationId,
@@ -204,7 +221,7 @@ export async function renderPPMCreateLine(params) {
       devise: 'XOF',
       timeline: ['PLANIF'],
       etat: 'PLANIFIE',
-      procDerogation: null,
+      procDerogation,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -353,9 +370,23 @@ export async function renderPPMCreateLine(params) {
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, ['Mode de passation', el('span', { className: 'required' }, '*')]),
               el('select', { className: 'form-input', id: 'modePassation', required: true }, [
-                el('option', { value: '' }, '-- Sélectionner --'),
+                el('option', { value: '' }, '-- Auto (selon le montant et le type) --'),
                 ...(registries.MODE_PASSATION || []).map(m => el('option', { value: m.code }, m.label))
-              ])
+              ]),
+              // Modif #53 — Encart de motivation / dérogation (mis à jour dynamiquement)
+              el('div', {
+                id: 'mode-passation-rec',
+                style: {
+                  marginTop: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  lineHeight: '1.4',
+                  background: '#f9fafb',
+                  border: '1px dashed #d1d5db',
+                  color: '#6b7280'
+                }
+              }, 'Renseignez Type de marché, Nature économique et Montant prévisionnel pour voir le mode recommandé.')
             ]),
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Revue'),
@@ -559,6 +590,9 @@ export async function renderPPMCreateLine(params) {
   setupActiviteReverseCascade(activiteIndex);
   setupNatureEcoLigneBudgetaire();
   setupFinancementsMulti(registries, mpBudgetLines, mpOperations);
+  // Modif #53 — Suggestion auto du mode de passation + alerte dérogation.
+  // À brancher APRÈS setupFinancementsMulti (qui crée #montant-previsionnel).
+  setupModePassationSuggestion(registries);
   setupLocalisationCascades(registries);
 
   const livrablesContainer = document.getElementById('livrables-container');
@@ -962,6 +996,176 @@ function setupLocalisationCascades(registries) {
       localiteSelect.disabled = false;
     }
   });
+}
+
+/* ----------------------------------------------------------------------- */
+/* Modif #53 — Suggestion automatique du Mode de Passation                 */
+/*                                                                         */
+/* À partir du montant prévisionnel, du type de marché et de la nature     */
+/* économique, on calcule le mode de passation conforme aux seuils du     */
+/* Code des Marchés Publics CI (matrice ADMIN_CENTRALE par défaut).        */
+/*                                                                         */
+/* Comportement :                                                          */
+/*   - Auto-pré-sélection du mode recommandé tant que l'utilisateur n'a    */
+/*     pas modifié manuellement le dropdown (flag _userTouched).           */
+/*   - Encart informatif sous le dropdown avec la motivation (montant +    */
+/*     type + seuil + matrice institution).                                */
+/*   - Si l'utilisateur choisit autre chose : alerte « dérogation requise »*/
+/*     et persistance dans operation.procDerogation à la sauvegarde.       */
+/* ----------------------------------------------------------------------- */
+
+/**
+ * Construit un payload de suggestion à partir du contexte courant lu dans le DOM.
+ * @returns {Object} { ready, suggestion, applicableCodes, reason, selected }
+ */
+function computeModeSuggestion() {
+  const montant = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+  const typeMarche = document.getElementById('typeMarche')?.value || '';
+  const natureCode = document.getElementById('natureEco')?.value || '';
+  const selected = document.getElementById('modePassation')?.value || '';
+
+  // Construire une « pseudo-opération » que getSuggestedProcedures() sait consommer.
+  const pseudoOp = {
+    typeMarche,
+    montantPrevisionnel: montant,
+    chaineBudgetaire: { natureCode, nature: natureCode },
+    typeInstitution: 'ADMIN_CENTRALE'
+  };
+
+  const ready = montant > 0 && !!typeMarche && !!natureCode;
+  if (!ready) {
+    return { ready: false, suggestion: null, applicableCodes: [], reason: null, selected };
+  }
+
+  let suggestions = [];
+  try {
+    suggestions = dataService.getSuggestedProcedures(pseudoOp) || [];
+  } catch (err) {
+    logger.warn('[ModeSuggestion] getSuggestedProcedures a échoué', err);
+  }
+
+  const applicableCodes = suggestions.map(s => s.mode);
+  // Recommandation principale = premier de la liste (généralement le plus exigeant
+  // qui s'applique à la tranche de montant courante).
+  const suggestion = suggestions[0] || null;
+  return { ready, suggestion, applicableCodes, reason: suggestion, selected, montant, typeMarche, natureCode };
+}
+
+/**
+ * Met à jour l'encart de recommandation et auto-sélectionne le mode si l'utilisateur
+ * n'a pas encore choisi manuellement.
+ */
+function refreshModePassationRec(registries) {
+  const box = document.getElementById('mode-passation-rec');
+  const modeSelect = document.getElementById('modePassation');
+  if (!box || !modeSelect) return;
+
+  const ctx = computeModeSuggestion();
+  const modeLabels = registries.MODE_PASSATION || [];
+  const typeLabels = registries.TYPE_MARCHE || [];
+  const natureLabels = registries.NATURE_ECO || [];
+
+  const formatXOFInline = (n) => new Intl.NumberFormat('fr-FR').format(Number(n) || 0) + ' XOF';
+  const labelFor = (list, code) => list.find(x => x.code === code)?.label || code || '—';
+
+  if (!ctx.ready) {
+    box.style.background = '#f9fafb';
+    box.style.borderColor = '#d1d5db';
+    box.style.color = '#6b7280';
+    box.innerHTML = '<em>Renseignez Type de marché, Nature économique et Montant prévisionnel pour voir le mode recommandé.</em>';
+    return;
+  }
+
+  if (!ctx.suggestion) {
+    box.style.background = '#fef3c7';
+    box.style.borderColor = '#f59e0b';
+    box.style.color = '#92400e';
+    box.innerHTML = `⚠ Aucun mode standard ne correspond à ce couple <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> + <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> + montant <strong>${formatXOFInline(ctx.montant)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
+    return;
+  }
+
+  const recommendedCode = ctx.suggestion.mode;
+  const recommendedLabel = labelFor(modeLabels, recommendedCode);
+
+  // Auto-pré-sélection initiale (l'utilisateur n'a pas encore touché le select)
+  if (!modeSelect.dataset.userTouched) {
+    if (modeSelect.value !== recommendedCode) {
+      modeSelect.value = recommendedCode;
+    }
+  }
+
+  const currentSelected = modeSelect.value;
+  const isConforme = ctx.applicableCodes.includes(currentSelected);
+
+  const seuilMin = ctx.suggestion.min;
+  const seuilMax = ctx.suggestion.max;
+  const seuilFmt = `${seuilMin != null ? formatXOFInline(seuilMin) : '0'} – ${seuilMax != null ? formatXOFInline(seuilMax) : '∞'}`;
+
+  const motivation = `
+    <strong>Mode recommandé :</strong> ${recommendedCode} — ${recommendedLabel}<br>
+    <span style="font-size:11px;">
+      <strong>Pourquoi ?</strong>
+      Montant ${formatXOFInline(ctx.montant)}
+      · Type ${labelFor(typeLabels, ctx.typeMarche)}
+      · Nature ${labelFor(natureLabels, ctx.natureCode)}
+      ⇒ tranche ${seuilFmt} ⇒ matrice <em>ADMIN_CENTRALE</em>.
+    </span>
+  `;
+
+  if (isConforme) {
+    box.style.background = '#ecfdf5';
+    box.style.borderColor = '#10b981';
+    box.style.color = '#065f46';
+    const conformLine = currentSelected === recommendedCode
+      ? '✓ Mode conforme à la recommandation.'
+      : `✓ Mode conforme (alternative également admise : ${currentSelected}).`;
+    box.innerHTML = `${motivation}<div style="margin-top:6px;">${conformLine}</div>`;
+  } else {
+    box.style.background = '#fef2f2';
+    box.style.borderColor = '#dc2626';
+    box.style.color = '#7f1d1d';
+    box.innerHTML = `
+      ${motivation}
+      <div style="margin-top:6px;">
+        ⚠ <strong>Vous avez choisi <code>${currentSelected || '(vide)'}</code></strong>.
+        Ce choix constitue une <strong>dérogation aux règles du Code des Marchés Publics CI</strong>.
+        Une justification de dérogation sera obligatoirement demandée à l'étape Procédure.
+      </div>
+      <div style="margin-top:6px;">
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-apply-recommended" style="font-size:11px; padding:3px 8px;">↩ Appliquer le mode recommandé (${recommendedCode})</button>
+      </div>
+    `;
+    const applyBtn = document.getElementById('btn-apply-recommended');
+    if (applyBtn) applyBtn.addEventListener('click', () => {
+      modeSelect.value = recommendedCode;
+      delete modeSelect.dataset.userTouched;
+      refreshModePassationRec(registries);
+    });
+  }
+}
+
+function setupModePassationSuggestion(registries) {
+  const modeSelect = document.getElementById('modePassation');
+  const typeSelect = document.getElementById('typeMarche');
+  const natureSelect = document.getElementById('natureEco');
+  const montantInput = document.getElementById('montant-previsionnel');
+
+  if (!modeSelect) return;
+
+  // Tracking du choix utilisateur : à partir du moment où l'utilisateur sélectionne
+  // manuellement un mode, on cesse de l'auto-pré-sélectionner. Le 'change' utilisateur
+  // déclenche aussi un refresh pour évaluer la conformité.
+  modeSelect.addEventListener('change', () => {
+    modeSelect.dataset.userTouched = '1';
+    refreshModePassationRec(registries);
+  });
+
+  if (typeSelect) typeSelect.addEventListener('change', () => refreshModePassationRec(registries));
+  if (natureSelect) natureSelect.addEventListener('change', () => refreshModePassationRec(registries));
+  if (montantInput) montantInput.addEventListener('input', () => refreshModePassationRec(registries));
+
+  // Premier rendu (utile si la page est chargée avec un brouillon)
+  refreshModePassationRec(registries);
 }
 
 export default renderPPMCreateLine;

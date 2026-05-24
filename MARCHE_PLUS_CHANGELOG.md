@@ -13,6 +13,49 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-24 — Suggestion automatique du Mode de Passation à la création PPM + alerte dérogation
+
+> **Modif #53** — Demande client : sur l'écran de création de ligne PPM, le **mode de passation est aujourd'hui en libre sélection** alors que selon le Code des Marchés Publics CI, ce mode est **imposé par le montant de la ligne, son type et sa nature économique**. Le système doit donc proposer automatiquement le mode adéquat, motiver le choix (montant + seuils + type), et alerter l'utilisateur si celui-ci sélectionne autre chose — en l'avertissant qu'une dérogation sera obligatoirement demandée aux étapes suivantes.
+
+### Comportement attendu et livré
+
+1. **Auto-pré-sélection** du mode recommandé dans le dropdown dès que les 3 critères sont renseignés (Montant prévisionnel + Type de marché + Nature économique). Tant que l'utilisateur n'a pas explicitement modifié le mode, le dropdown reflète la recommandation.
+2. **Encart de motivation** sous le dropdown qui explique :
+   - Le mode recommandé (code + libellé)
+   - Le « Pourquoi ? » : montant, type de marché, nature économique, tranche de seuils, matrice institution applicable
+3. **Trois états visuels** :
+   - 🟢 Vert « ✓ Mode conforme à la recommandation »
+   - 🟢 Vert « ✓ Mode conforme (alternative également admise) » — si le mode choisi est différent du recommandé mais reste dans la liste des modes applicables pour la tranche
+   - 🔴 Rouge « ⚠ Dérogation aux règles du Code des Marchés Publics CI » — si le mode choisi sort de la liste applicable. Bouton « ↩ Appliquer le mode recommandé » proposé en un clic.
+4. **Persistance** : si le mode choisi est une dérogation, le champ `operation.procDerogation` est rempli avec `{ isDerogation: true, comment: "Dérogation déclarée à la planification : mode X retenu au lieu du mode recommandé Y (tranche Z, matrice ADMIN_CENTRALE)", validatedAt: null, sourceEtape: 'PLANIF' }`. L'étape Procédure (ecr02a) consommera ce flag et exigera le justificatif comme prévu.
+
+### Réutilisation maximale de l'existant
+
+- **Aucun nouveau moteur de règles** : le helper `dataService.getSuggestedProcedures(operation)` existait déjà (utilisé par ecr02a). Il reçoit une « pseudo-opération » construite à partir des champs du formulaire courant (`typeMarche`, `montantPrevisionnel`, `chaineBudgetaire.natureCode`, `typeInstitution: 'ADMIN_CENTRALE'`).
+- **Aucune nouvelle config** : les seuils du fichier `js/config/rules-config.json` (matrice `ADMIN_CENTRALE`) sont la source de vérité unique — modifiables sans toucher au code.
+- **Mécanisme `procDerogation`** : déjà branché côté ecr02a-procedure-pv.js (ligne 877) qui lit le flag et l'utilise pour les libellés/validations. Notre flag pré-positionné se propage donc proprement en aval.
+
+### Détails d'implémentation
+
+- Nouveau placeholder du select : `'-- Auto (selon le montant et le type) --'` (auparavant : `'-- Sélectionner --'`).
+- Le tracking « touché par utilisateur » se fait via `dataset.userTouched = '1'` sur le `<select>` au premier `change` utilisateur. Cela évite d'écraser un choix explicite à chaque keystroke du montant.
+- Le bouton « Appliquer le mode recommandé » remet `dataset.userTouched` à vide → le dropdown redevient « piloté » par la recommandation jusqu'au prochain changement manuel.
+- Les libellés mode / type / nature sont résolus depuis les registries pour rester lisibles métier (au lieu d'afficher les codes bruts).
+- Si **aucun seuil ne correspond** au triplet (cas extrême, ex : type/nature incompatibles), un message orange explique que la dérogation sera de toute façon requise quel que soit le mode.
+
+### Non-régression
+
+- L'écran de procédure (ecr02a) reste la source de vérité pour la validation **bloquante** de la dérogation (qui demande le PDF justificatif). Le helper de planification ne fait que **pré-marquer** l'opération pour faciliter l'étape suivante.
+- Si l'utilisateur supprime ses valeurs (montant ou type), l'encart redevient neutre (gris « Renseignez les 3 champs... »).
+- Aucun toucher sur le module Marché classique (`marche/`) : ce dernier conserve son comportement libre.
+- Syntaxe vérifiée + HTTP 200 confirmé.
+
+### Fichier touché
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` — encart de recommandation sous le dropdown, helpers `computeModeSuggestion()` + `refreshModePassationRec()` + `setupModePassationSuggestion()`, branchement dans `handleSave` pour `procDerogation`.
+
+Pas de Worker, pas de migration DB, pas de R2. Frontend statique. Aucun déploiement requis.
+
 ## 2026-05-24 — Refonte « Informations financières » PPM : montant unique + bailleurs liés à l'activité + priorisation dans la clé de répartition
 
 > **Modif #52** — Demande client suite au dernier meeting : sur l'écran de création/édition d'une ligne PPM, l'utilisateur saisit **un seul montant prévisionnel** pour l'opération (les vérifications de marché précédent + disponibilité budgétaire continuent de se faire sur ce montant unique). Ensuite, il déclare **les bailleurs** un à un, mais **sans montant par bailleur** — le partage entre bailleurs se précisera plus tard dans la clé de répartition. Les bailleurs proposés sont restreints à ceux **ouverts sur la ligne budgétaire de l'activité indexée**. Ces bailleurs sont ensuite **priorisés visuellement** dans la clé de répartition, mais sans verrouillage dur (l'utilisateur peut quand même choisir un autre bailleur si besoin).
