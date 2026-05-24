@@ -1017,23 +1017,23 @@ function setupLocalisationCascades(registries) {
 
 /**
  * Calcule le montant total de la « ligne budgétaire » = somme des AE de toutes
- * les MP_BUDGET_LINE matchant (activiteCode, natureCode). C'est CE montant qui
- * pilote la recommandation de mode de passation selon le Code des MP CI,
- * et non pas le montant prévisionnel de l'opération.
+ * les MP_BUDGET_LINE matchant l'activiteCode courant (toutes natures confondues).
  *
- * Matching :
- *   - activiteCode : match exact sur b.activiteCode
- *   - natureCode   : préfixe de b.ligneCode (ex : nature 231 ⇒ ligneCode
- *                    « 231100 », « 231200 », etc.)
+ * Note : le modèle MP_BUDGET_LINE actuel ne stocke pas le natureCode (le champ
+ * ligne_code de la migration 015 contient « ACT_XXX-ETAT » et non un code
+ * NATURE_ECO comme « 231 »). Le matching se fait donc sur l'activité seule, ce
+ * qui correspond au plafond budgétaire de l'activité tous bailleurs confondus.
+ * Le natureCode reste utile en aval pour filtrer les seuils applicables (PSD
+ * autorise nature 22X/232/233 mais pas 231, etc.).
+ *
+ * C'est CE montant qui pilote la recommandation de mode de passation selon le
+ * Code des MP CI, pas le montant prévisionnel de l'opération.
  */
-function computeLigneBudgetaireAmount(mpBudgetLines, activiteCode, natureCode) {
-  if (!activiteCode || !natureCode) return { total: 0, lines: [] };
-  const matches = (mpBudgetLines || []).filter(b => {
-    if ((b.activiteCode || '') !== activiteCode) return false;
-    const lc = String(b.ligneCode || '');
-    return lc.startsWith(String(natureCode));
-  });
-  const total = matches.reduce((s, b) => s + (Number(b.AE) || 0), 0);
+function computeLigneBudgetaireAmount(mpBudgetLines, activiteCode) {
+  if (!activiteCode) return { total: 0, lines: [] };
+  const matches = (mpBudgetLines || []).filter(b => (b.activiteCode || '') === activiteCode);
+  // Compat données : certains imports utilisent `ae` (minuscule) au lieu de `AE`
+  const total = matches.reduce((s, b) => s + (Number(b.AE) || Number(b.ae) || 0), 0);
   return { total, lines: matches };
 }
 
@@ -1051,7 +1051,7 @@ function computeModeSuggestion(mpBudgetLines) {
   const activiteCode = document.getElementById('activite')?.value || '';
   const selected = document.getElementById('modePassation')?.value || '';
 
-  const { total: montantLigne, lines } = computeLigneBudgetaireAmount(mpBudgetLines, activiteCode, natureCode);
+  const { total: montantLigne, lines } = computeLigneBudgetaireAmount(mpBudgetLines, activiteCode);
 
   // Construire une « pseudo-opération » que getSuggestedProcedures() sait consommer.
   // On lui passe le MONTANT DE LA LIGNE, pas un montant d'opération.
@@ -1210,7 +1210,7 @@ function refreshModePassationRec(registries, mpBudgetLines) {
     if (!ctx.activiteCode) {
       raisonMontant = 'Renseignez l\'<strong>Activité</strong> ci-dessus pour calculer le montant de la ligne budgétaire.';
     } else if (ctx.lignesCount === 0) {
-      raisonMontant = `Aucune ligne budgétaire ouverte pour cette combinaison (activité <code>${ctx.activiteCode}</code> + nature <code>${ctx.natureCode}</code>). Vérifiez la disponibilité budgétaire ou le choix de la nature économique.`;
+      raisonMontant = `Aucune ligne budgétaire ouverte pour l'activité <code>${ctx.activiteCode}</code>. Vérifiez la disponibilité budgétaire.`;
     } else {
       raisonMontant = `Les ${ctx.lignesCount} ligne(s) budgétaire(s) trouvée(s) ont un AE total à 0 XOF.`;
     }
@@ -1260,8 +1260,9 @@ function refreshModePassationRec(registries, mpBudgetLines) {
     <span style="font-size:11px;">
       <strong>Pourquoi ?</strong>
       Montant de la <strong>ligne budgétaire</strong> <strong>${formatXOFInline(ctx.montantLigne)}</strong>
-      (somme des AE de ${ctx.lignesCount} ligne${ctx.lignesCount > 1 ? 's' : ''} pour l'activité <code>${ctx.activiteCode}</code> + nature <code>${ctx.natureCode}</code>)
+      (somme des AE de ${ctx.lignesCount} ligne${ctx.lignesCount > 1 ? 's' : ''} pour l'activité <code>${ctx.activiteCode}</code>, tous bailleurs confondus)
       · Type ${labelFor(typeLabels, ctx.typeMarche)}
+      · Nature ${labelFor(natureLabels, ctx.natureCode)}
       ⇒ tranche ${seuilFmt}
       ⇒ matrice <em>ADMIN_CENTRALE</em> du Code des MP CI.
     </span>
