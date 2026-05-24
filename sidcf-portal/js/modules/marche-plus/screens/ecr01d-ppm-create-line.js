@@ -1052,8 +1052,37 @@ function computeModeSuggestion() {
 }
 
 /**
- * Met à jour l'encart de recommandation et auto-sélectionne le mode si l'utilisateur
- * n'a pas encore choisi manuellement.
+ * Calcule la liste des modes applicables à un couple (typeMarche, natureCode)
+ * SANS contrainte de montant — lit directement la matrice ADMIN_CENTRALE du
+ * fichier rules-config.json. Permet d'afficher le tableau des seuils dès que
+ * Type + Nature sont renseignés (avant que le montant ne soit saisi).
+ */
+function listApplicableModesForTypeNature(typeMarche, natureCode) {
+  const rules = dataService.getRulesConfig?.() || null;
+  const matrice = rules?.matrices_procedures?.ADMIN_CENTRALE;
+  if (!matrice) return [];
+  return (matrice.seuils_montants || []).filter(seuil => {
+    const natureOK =
+      !natureCode ||
+      seuil.natureEco.includes('all') ||
+      seuil.natureEco.includes(natureCode) ||
+      seuil.natureEco.some(code => code.startsWith(natureCode)) ||
+      seuil.natureEco.some(code => natureCode.startsWith(code));
+    const typeOK =
+      !typeMarche ||
+      seuil.typeMarche.includes('all') ||
+      seuil.typeMarche.includes(typeMarche);
+    return natureOK && typeOK;
+  });
+}
+
+/**
+ * Met à jour l'encart de recommandation. Réactivité progressive :
+ *   - 0 critère renseigné        → message neutre « Renseignez… »
+ *   - Type + Nature seulement    → tableau des tranches applicables (montant
+ *                                  attendu pour préciser la recommandation)
+ *   - Type + Nature + Montant    → recommandation précise + statut conformité
+ *                                  vs mode sélectionné
  */
 function refreshModePassationRec(registries) {
   const box = document.getElementById('mode-passation-rec');
@@ -1068,57 +1097,136 @@ function refreshModePassationRec(registries) {
   const formatXOFInline = (n) => new Intl.NumberFormat('fr-FR').format(Number(n) || 0) + ' XOF';
   const labelFor = (list, code) => list.find(x => x.code === code)?.label || code || '—';
 
-  if (!ctx.ready) {
+  const typeMarche = document.getElementById('typeMarche')?.value || '';
+  const natureCode = document.getElementById('natureEco')?.value || '';
+  const montant = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+  const currentSelected = modeSelect.value;
+
+  // Helper : rendu d'un tableau HTML des tranches (mode / tranche / description)
+  const renderTranchesTable = (tranches, highlightMode = null, highlightAmount = null) => {
+    if (!tranches.length) {
+      return '<div style="margin-top:6px;">Aucune tranche standard pour cette combinaison.</div>';
+    }
+    const rows = tranches.map(t => {
+      const tranche = `${t.min != null ? formatXOFInline(t.min) : '0'} – ${t.max != null ? formatXOFInline(t.max) : '∞'}`;
+      const modeLib = labelFor(modeLabels, t.mode);
+      const isHi = highlightMode && t.mode === highlightMode;
+      const isInRange = highlightAmount > 0
+        && (t.min == null || highlightAmount >= t.min)
+        && (t.max == null || highlightAmount <= t.max);
+      const bg = isHi ? '#dcfce7' : (isInRange ? '#ecfdf5' : 'transparent');
+      const weight = isHi || isInRange ? '600' : '400';
+      return `<tr style="background:${bg};">
+        <td style="padding:3px 6px; font-weight:${weight}; font-family:monospace;">${t.mode}</td>
+        <td style="padding:3px 6px;">${modeLib}</td>
+        <td style="padding:3px 6px; text-align:right; white-space:nowrap;">${tranche}</td>
+      </tr>`;
+    }).join('');
+    return `
+      <table style="width:100%; margin-top:6px; border-collapse:collapse; font-size:11px;">
+        <thead>
+          <tr style="border-bottom:1px solid #d1d5db;">
+            <th style="padding:3px 6px; text-align:left;">Mode</th>
+            <th style="padding:3px 6px; text-align:left;">Libellé</th>
+            <th style="padding:3px 6px; text-align:right;">Tranche de montant</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  };
+
+  // ----- État 1 : rien ou presque rien de renseigné -----
+  if (!typeMarche && !natureCode) {
     box.style.background = '#f9fafb';
     box.style.borderColor = '#d1d5db';
     box.style.color = '#6b7280';
-    box.innerHTML = '<em>Renseignez Type de marché, Nature économique et Montant prévisionnel pour voir le mode recommandé.</em>';
+    box.innerHTML = '<em>💡 Renseignez le Type de marché et la Nature économique pour voir les modes applicables selon le Code des Marchés Publics CI.</em>';
     return;
   }
 
+  // ----- État 2 : Type + Nature mais pas de montant -----
+  if (!ctx.ready) {
+    const tranches = listApplicableModesForTypeNature(typeMarche, natureCode);
+
+    // Si l'utilisateur a déjà sélectionné un mode, donner du feedback sur sa
+    // tranche d'applicabilité.
+    let modeFeedback = '';
+    if (currentSelected) {
+      const t = tranches.find(x => x.mode === currentSelected);
+      if (t) {
+        const tFmt = `${t.min != null ? formatXOFInline(t.min) : '0'} – ${t.max != null ? formatXOFInline(t.max) : '∞'}`;
+        modeFeedback = `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border-left:3px solid #10b981;">
+          <strong>Mode sélectionné :</strong> ${currentSelected} — ${labelFor(modeLabels, currentSelected)}<br>
+          <span style="font-size:11px;">Applicable pour les marchés de la tranche <strong>${tFmt}</strong>. Renseignez le Montant prévisionnel pour confirmer la conformité.</span>
+        </div>`;
+      } else {
+        modeFeedback = `<div style="margin-top:6px; padding:6px 8px; background:rgba(220,38,38,0.08); border-left:3px solid #dc2626;">
+          <strong>Mode sélectionné :</strong> ${currentSelected} — ${labelFor(modeLabels, currentSelected)}<br>
+          <span style="font-size:11px;">⚠ Ce mode n'est <strong>pas listé</strong> dans les tranches standard pour ${labelFor(typeLabels, typeMarche)} / ${labelFor(natureLabels, natureCode)}. Une dérogation sera nécessairement requise.</span>
+        </div>`;
+      }
+    }
+
+    box.style.background = '#eff6ff';
+    box.style.borderColor = '#3b82f6';
+    box.style.color = '#1e3a8a';
+    box.innerHTML = `
+      <strong>📋 Modes applicables pour ${labelFor(typeLabels, typeMarche)} / ${labelFor(natureLabels, natureCode)}</strong>
+      <div style="font-size:11px; margin-top:3px;">Selon les seuils du Code des Marchés Publics CI (matrice <em>ADMIN_CENTRALE</em>) :</div>
+      ${renderTranchesTable(tranches, null, 0)}
+      <div style="margin-top:6px; font-size:11px;">➡ <em>Renseignez le Montant prévisionnel ci-dessous pour la recommandation précise.</em></div>
+      ${modeFeedback}
+    `;
+    return;
+  }
+
+  // ----- État 3 : tout renseigné mais aucune suggestion (combinaison hors barème) -----
   if (!ctx.suggestion) {
     box.style.background = '#fef3c7';
     box.style.borderColor = '#f59e0b';
     box.style.color = '#92400e';
-    box.innerHTML = `⚠ Aucun mode standard ne correspond à ce couple <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> + <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> + montant <strong>${formatXOFInline(ctx.montant)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
+    box.innerHTML = `⚠ Aucun mode standard ne correspond à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> au montant <strong>${formatXOFInline(ctx.montant)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
     return;
   }
 
+  // ----- État 4 : recommandation précise -----
   const recommendedCode = ctx.suggestion.mode;
   const recommendedLabel = labelFor(modeLabels, recommendedCode);
 
-  // Auto-pré-sélection initiale (l'utilisateur n'a pas encore touché le select)
+  // Auto-pré-sélection initiale tant que l'utilisateur n'a pas touché le select
   if (!modeSelect.dataset.userTouched) {
     if (modeSelect.value !== recommendedCode) {
       modeSelect.value = recommendedCode;
     }
   }
 
-  const currentSelected = modeSelect.value;
-  const isConforme = ctx.applicableCodes.includes(currentSelected);
-
+  const stillSelected = modeSelect.value;
+  const isConforme = ctx.applicableCodes.includes(stillSelected);
   const seuilMin = ctx.suggestion.min;
   const seuilMax = ctx.suggestion.max;
   const seuilFmt = `${seuilMin != null ? formatXOFInline(seuilMin) : '0'} – ${seuilMax != null ? formatXOFInline(seuilMax) : '∞'}`;
+  const allTranches = listApplicableModesForTypeNature(typeMarche, natureCode);
 
   const motivation = `
-    <strong>Mode recommandé :</strong> ${recommendedCode} — ${recommendedLabel}<br>
+    <strong>📌 Mode recommandé :</strong> <code style="background:rgba(0,0,0,0.06); padding:1px 4px; border-radius:3px;">${recommendedCode}</code> — ${recommendedLabel}<br>
     <span style="font-size:11px;">
       <strong>Pourquoi ?</strong>
       Montant ${formatXOFInline(ctx.montant)}
       · Type ${labelFor(typeLabels, ctx.typeMarche)}
       · Nature ${labelFor(natureLabels, ctx.natureCode)}
-      ⇒ tranche ${seuilFmt} ⇒ matrice <em>ADMIN_CENTRALE</em>.
+      ⇒ tranche ${seuilFmt} ⇒ matrice <em>ADMIN_CENTRALE</em> du Code des MP CI.
     </span>
+    ${renderTranchesTable(allTranches, recommendedCode, ctx.montant)}
   `;
 
   if (isConforme) {
     box.style.background = '#ecfdf5';
     box.style.borderColor = '#10b981';
     box.style.color = '#065f46';
-    const conformLine = currentSelected === recommendedCode
-      ? '✓ Mode conforme à la recommandation.'
-      : `✓ Mode conforme (alternative également admise : ${currentSelected}).`;
+    const conformLine = stillSelected === recommendedCode
+      ? '✓ <strong>Mode conforme à la recommandation.</strong>'
+      : `✓ <strong>Mode conforme</strong> (alternative également admise : ${stillSelected}).`;
     box.innerHTML = `${motivation}<div style="margin-top:6px;">${conformLine}</div>`;
   } else {
     box.style.background = '#fef2f2';
@@ -1127,7 +1235,7 @@ function refreshModePassationRec(registries) {
     box.innerHTML = `
       ${motivation}
       <div style="margin-top:6px;">
-        ⚠ <strong>Vous avez choisi <code>${currentSelected || '(vide)'}</code></strong>.
+        ⚠ <strong>Vous avez choisi <code style="background:rgba(0,0,0,0.06); padding:1px 4px;">${stillSelected || '(vide)'}</code></strong>.
         Ce choix constitue une <strong>dérogation aux règles du Code des Marchés Publics CI</strong>.
         Une justification de dérogation sera obligatoirement demandée à l'étape Procédure.
       </div>
