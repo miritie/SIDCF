@@ -90,6 +90,18 @@ function createButton(className, text, onClick) {
   return btn;
 }
 
+/**
+ * Title Case français — première lettre majuscule, reste minuscule pour chaque mot.
+ * Préserve les apostrophes et traits d'union (« L'Afrique de l'Ouest » → « L'Afrique De L'Ouest »
+ * conforme à la consigne « première lettre majuscule de chaque mot »).
+ */
+function toTitleCaseFr(value) {
+  if (value == null) return '-';
+  const s = String(value).trim();
+  if (!s) return '-';
+  return s.toLowerCase().replace(/(^|[\s\-'])(\p{L})/gu, (m, sep, ch) => sep + ch.toUpperCase());
+}
+
 // Filtres repliés par défaut (gain de place vertical)
 let filtersExpanded = false;
 
@@ -508,7 +520,7 @@ function renderSimpleTable(operations, registries) {
           el('th', { style: { minWidth: '180px' } }, 'Activité'),
           el('th', { style: { minWidth: '300px' } }, 'Objet'),
           el('th', { style: { minWidth: '120px' } }, 'Type'),
-          el('th', { style: { minWidth: '100px' } }, 'Mode'),
+          el('th', { style: { minWidth: '140px' } }, 'Mode de passation'),
           el('th', { style: { minWidth: '140px', textAlign: 'right' } }, 'Montant (M F CFA)'),
           el('th', { style: { minWidth: '100px' } }, 'Étape'),
           el('th', { style: { minWidth: '180px' } }, 'Actions')
@@ -539,7 +551,7 @@ function renderSimpleRow(op, registries) {
     el('td', { style: { fontWeight: '500' }, title: op.objet },
       (op.objet || '').length > 60 ? op.objet.substring(0, 60) + '...' : (op.objet || '')
     ),
-    el('td', {}, ((typeMarche?.label || op.typeMarche || '-') + '').toUpperCase()),
+    el('td', {}, toTitleCaseFr(typeMarche?.label || op.typeMarche || '-')),
     el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
     el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
     el('td', {},

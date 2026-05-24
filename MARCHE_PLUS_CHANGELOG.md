@@ -13,6 +13,65 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-24 — Liste PPM : libellé colonne « Mode de passation », séparateurs visuels et casse Title Case du Type
+
+> **Modif #51** — 3 retours client issus du dernier meeting, regroupés en une seule modif car même écran et même fichier source (la liste PPM Marché+).
+
+### a) Libellé de la colonne « Mode » → « Mode de passation »
+
+Renommage de l'en-tête de colonne pour cohérence terminologique avec le reste du module (Attribution, Procédure utilisent déjà « Mode de passation »). Largeur minimale augmentée de 100 px à 140 px pour absorber le libellé plus long sans wrap.
+
+### b) Séparateurs visuels entre cellules
+
+La classe `.data-table` (utilisée par 4 écrans Marché+ : liste PPM, échéancier, exécution OS, garanties) **n'avait aucune règle CSS dédiée** — seules les bordures par défaut du navigateur s'appliquaient (souvent invisibles). Ajout d'un bloc CSS dans `components.css` :
+
+- Bordures complètes (horizontales + verticales) sur les `th` et `td` (1 px gris-200).
+- Bordure basse renforcée (2 px gris-300) sous l'en-tête.
+- Conservation du hover de ligne (fond gris-50).
+- Conservation du padding via les variables existantes (`--spacing-3`, `--spacing-4`).
+
+L'ajout est **rétroactivement appliqué** aux 4 écrans utilisant `data-table` → cohérence visuelle accrue sur tout le module sans modification de leur code.
+
+### c) Casse du contenu de la colonne « Type »
+
+Avant : `.toUpperCase()` → « PRESTATIONS DE SERVICES »
+Après : `toTitleCaseFr()` → « Prestations De Services »
+
+Nouveau helper local `toTitleCaseFr()` :
+- Lowercase puis re-majuscule de la première lettre de chaque mot.
+- Délimiteurs reconnus : début de chaîne, espace, tiret, apostrophe.
+- Gère unicode (`\p{L}` avec flag `u`) pour les caractères accentués.
+- Strict selon la consigne client : « première lettre majuscule pour chaque mot » — pas d'exception pour « de », « et », « du » (sinon « Prestations de services » serait attendu, ce qui n'a pas été demandé).
+- Fallback `'-'` si valeur null/vide.
+
+### Validation
+
+Tests unitaires manuels sur 7 cas :
+
+| Entrée | Sortie |
+|---|---|
+| `'TRAVAUX'` | `Travaux` |
+| `'PRESTATIONS DE SERVICES'` | `Prestations De Services` |
+| `'FOURNITURES ET SERVICES'` | `Fournitures Et Services` |
+| `'ETUDE-CONTROLE'` | `Etude-Controle` |
+| `null` | `-` |
+| `''` | `-` |
+| `'  travaux  '` | `Travaux` |
+
+### Non-régression
+
+- Aucune autre `toUpperCase()` dans le même fichier — risque de cascade nul.
+- Le helper est local au fichier (pas d'impact sur d'autres écrans).
+- La nouvelle CSS `.data-table` ne masque aucune règle préexistante (la classe n'avait pas de définition CSS jusqu'ici).
+- Syntaxe JS vérifiée + fichiers servis 200.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` — renommage colonne (l. 511), nouveau helper `toTitleCaseFr()`, remplacement de `.toUpperCase()` (l. 542).
+- `sidcf-portal/css/components.css` — nouveau bloc `.data-table` (en bas, après `.table-actions`).
+
+Pas de Worker, pas de migration DB, pas de R2. Frontend statique. Aucun déploiement requis.
+
 ## 2026-05-23 — Masquage durable des tuiles santé du marché sur la liste PPM
 
 > **Modif #50** — Demande client : masquer durablement la rangée de 5 tuiles « EN PROGRESSION NORMALE / À SURVEILLER / À RISQUE / BLOQUÉ / NON DÉMARRÉ » en haut de la liste PPM Marché+. Ces tuiles (Modif #36, classification santé agrégée) posaient des problèmes d'UX selon le retour client.

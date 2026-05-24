@@ -309,6 +309,41 @@
   gap: var(--spacing-2);
 }
 
+/* === Data-table (variante avec séparateurs visuels entre cellules) ===
+   Utilisée par les écrans Marché+ : liste PPM, échéancier, exécution,
+   garanties. Bordures complètes (horizontales + verticales) pour
+   améliorer la lisibilité demandée par le client. */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  background: white;
+}
+
+.data-table thead {
+  background: var(--color-gray-50);
+}
+
+.data-table th {
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-300);
+  border-bottom-width: 2px;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-gray-200);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+  background: var(--color-gray-50);
+}
+
 /* === Forms === */
 .form-grid {
   display: grid;
