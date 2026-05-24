@@ -11,16 +11,23 @@ import logger from '../../lib/logger.js';
 import { renderMontantPourcentageDualInput } from './montant-pourcentage-dual-input.js';
 import { renderFormulaBadge } from './formula-tip-mp.js';
 
-// Modif #52 — Helper d'affichage du texte d'aide sous le select bailleur
-// (mise en évidence des bailleurs de la planification sans verrouillage dur).
-function planifiesSetHelpText(bailleursPlanifies) {
+// Modif #55 — Helper d'affichage du texte d'aide sous le select bailleur.
+// Comportement OPTION C : par défaut, seuls les bailleurs planifiés (déclarés à
+// la création de la PPM) sont mobilisables. Une porte de sortie permet à
+// l'utilisateur d'élargir explicitement la liste si une exception le justifie
+// (avec confirmation).
+function planifiesSetHelpText(bailleursPlanifies, expanded) {
   const count = (bailleursPlanifies || []).filter(Boolean).length;
   if (count === 0) {
     return el('small', { className: 'text-muted', style: { fontSize: '11px' } },
       'Aucun bailleur planifié sur cette opération. Tous les bailleurs du référentiel sont disponibles.');
   }
+  if (expanded) {
+    return el('small', { style: { fontSize: '11px', color: '#b45309' } },
+      `⚠ Liste élargie aux bailleurs hors planification (${count} planifié${count > 1 ? 's' : ''} + tous les autres du référentiel). À utiliser exceptionnellement.`);
+  }
   return el('small', { className: 'text-muted', style: { fontSize: '11px' } },
-    `★ ${count} bailleur${count > 1 ? 's' : ''} défini${count > 1 ? 's' : ''} dans la planification (affiché${count > 1 ? 's' : ''} en haut). Vous pouvez aussi choisir un autre bailleur si besoin.`);
+    `★ Seuls les ${count} bailleur${count > 1 ? 's' : ''} défini${count > 1 ? 's' : ''} dans la planification (PPM) ${count > 1 ? 'sont mobilisables' : 'est mobilisable'} par défaut. Cliquez sur « ➕ Élargir » pour autoriser un bailleur hors planification (cas exceptionnel).`);
 }
 
 /**
@@ -147,29 +154,44 @@ export function renderCleRepartitionManager(
           })
         ]),
 
-        // Bailleur — Modif #52 : optgroup pour mettre en évidence ceux de la planification
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, ['Bailleur', el('span', { className: 'required' }, '*')]),
-          (() => {
+        // Bailleur — Modif #55 : hard lock par défaut + porte de sortie (option C)
+        (() => {
+          const wrap = el('div', { className: 'form-field' });
+          wrap.appendChild(el('label', { className: 'form-label' }, ['Bailleur', el('span', { className: 'required' }, '*')]));
+
+          const all = registries.BAILLEUR || [];
+          const planifiesSet = new Set((bailleursPlanifies || []).filter(Boolean));
+          const planifies = all.filter(b => planifiesSet.has(b.code));
+          const autres = all.filter(b => !planifiesSet.has(b.code));
+
+          // État local du toggle : true ⇒ inclure les bailleurs hors planification.
+          // Si l'enregistrement chargé contient déjà un bailleur hors planification,
+          // on ouvre automatiquement le toggle pour le rendre éditable.
+          const hasPlanifies = planifies.length > 0;
+          const editedBailleurOutside = formData.bailleur
+            && hasPlanifies
+            && !planifiesSet.has(formData.bailleur);
+          let expanded = editedBailleurOutside;
+
+          const selectHost = el('div', {});
+          const helpHost = el('div', { style: { marginTop: '4px' } });
+          const toggleHost = el('div', { style: { marginTop: '6px' } });
+
+          const buildSelect = () => {
             const select = el('select', { className: 'form-input', id: 'ligne-bailleur', required: true });
             select.appendChild(el('option', { value: '' }, '-- Sélectionner un bailleur --'));
 
-            const all = registries.BAILLEUR || [];
-            const planifiesSet = new Set((bailleursPlanifies || []).filter(Boolean));
-            const planifies = all.filter(b => planifiesSet.has(b.code));
-            const autres = all.filter(b => !planifiesSet.has(b.code));
-
-            // Cas particulier : un bailleur déjà sauvegardé qui n'est ni dans la
-            // planification ni dans le référentiel actuel — on l'injecte tout de même
-            // pour ne pas perdre la donnée (lecture defensive sur entité existante).
+            // Cas defensive : un bailleur déjà sauvegardé qui n'est ni dans la
+            // planification ni dans le référentiel actuel — on l'injecte pour ne pas
+            // perdre la donnée (lecture protective sur entité existante).
             if (formData.bailleur && !all.some(b => b.code === formData.bailleur)) {
               select.appendChild(el('option', {
                 value: formData.bailleur, selected: true
               }, `${formData.bailleur} (hors référentiel)`));
             }
 
-            if (planifies.length > 0) {
-              const grp = el('optgroup', { label: '★ Définis dans la planification' });
+            if (hasPlanifies) {
+              const grp = el('optgroup', { label: '★ Définis dans la planification (PPM)' });
               planifies.forEach(b => {
                 grp.appendChild(el('option', {
                   value: b.code,
@@ -177,25 +199,83 @@ export function renderCleRepartitionManager(
                 }, b.label));
               });
               select.appendChild(grp);
-            }
 
-            if (autres.length > 0) {
-              const grp = el('optgroup', {
-                label: planifies.length > 0 ? 'Autres bailleurs' : 'Bailleurs'
-              });
-              autres.forEach(b => {
-                grp.appendChild(el('option', {
+              if (expanded && autres.length > 0) {
+                const grp2 = el('optgroup', { label: '⚠ Hors planification (exceptionnel)' });
+                autres.forEach(b => {
+                  grp2.appendChild(el('option', {
+                    value: b.code,
+                    selected: b.code === formData.bailleur
+                  }, b.label));
+                });
+                select.appendChild(grp2);
+              }
+            } else {
+              // Aucune planification : tous les bailleurs sont admis (comportement legacy)
+              all.forEach(b => {
+                select.appendChild(el('option', {
                   value: b.code,
                   selected: b.code === formData.bailleur
                 }, b.label));
               });
-              select.appendChild(grp);
             }
 
             return select;
-          })(),
-          planifiesSetHelpText(bailleursPlanifies)
-        ]),
+          };
+
+          const buildToggleButton = () => {
+            if (!hasPlanifies || autres.length === 0) return null;
+
+            const btn = el('button', {
+              type: 'button',
+              className: expanded ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-secondary',
+              style: { fontSize: '11px', padding: '3px 10px' },
+              onclick: () => {
+                if (!expanded) {
+                  const ok = confirm(
+                    'Vous êtes sur le point d\'autoriser un bailleur hors planification PPM.\n\n' +
+                    'C\'est une exception : la règle est que seuls les bailleurs déclarés à la création du PPM soient mobilisables ici.\n\n' +
+                    'Confirmer l\'élargissement de la liste ?'
+                  );
+                  if (!ok) return;
+                  expanded = true;
+                } else {
+                  // Réduction : si l'utilisateur a sélectionné un bailleur hors
+                  // planification, on l'avertit qu'il sera perdu.
+                  const currentVal = selectHost.querySelector('#ligne-bailleur')?.value || '';
+                  const isOutside = currentVal && !planifiesSet.has(currentVal);
+                  if (isOutside) {
+                    const ok = confirm(
+                      `Le bailleur actuellement sélectionné (${currentVal}) sera réinitialisé.\n\nContinuer ?`
+                    );
+                    if (!ok) return;
+                    formData.bailleur = '';
+                  }
+                  expanded = false;
+                }
+                refreshUI();
+              }
+            }, expanded ? '↩ Réduire aux bailleurs planifiés' : '➕ Élargir aux bailleurs hors planification');
+
+            return btn;
+          };
+
+          const refreshUI = () => {
+            selectHost.innerHTML = '';
+            helpHost.innerHTML = '';
+            toggleHost.innerHTML = '';
+            selectHost.appendChild(buildSelect());
+            helpHost.appendChild(planifiesSetHelpText(bailleursPlanifies, expanded));
+            const tBtn = buildToggleButton();
+            if (tBtn) toggleHost.appendChild(tBtn);
+          };
+
+          wrap.appendChild(selectHost);
+          wrap.appendChild(helpHost);
+          wrap.appendChild(toggleHost);
+          refreshUI();
+          return wrap;
+        })(),
 
         // Type de financement
         el('div', { className: 'form-field' }, [
