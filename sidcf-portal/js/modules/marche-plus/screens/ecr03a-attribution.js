@@ -556,24 +556,31 @@ function renderAttributaireSection(attributaire, registries) {
         id: 'attr-groupement',
         style: { display: singleOrGroup === 'GROUPEMENT' ? 'block' : 'none' }
       }, [
-        el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
-          el('div', { className: 'alert-icon' }, 'ℹ️'),
-          el('div', { className: 'alert-content' }, [
-            el('div', { className: 'alert-title' }, 'Groupement d\'entreprises'),
-            el('div', { className: 'alert-message' }, 'Saisissez les informations du mandataire du groupement.')
-          ])
-        ]),
+        // Modif #63 — Bandeau dynamique selon le type de groupement (CONJOINT vs SOLIDAIRE)
+        // Le contenu est rechargé par updateGroupTypeBanner() à chaque changement du dropdown
+        el('div', { id: 'attr-group-type-banner', style: { marginBottom: '16px' } }),
+
         el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
           el('label', { className: 'form-label' }, 'Type de groupement'),
           el('select', { className: 'form-input', id: 'attr-group-type' }, [
-            el('option', { value: 'CONJOINT' }, 'Groupement conjoint'),
-            el('option', { value: 'SOLIDAIRE' }, 'Groupement solidaire')
+            el('option', { value: 'CONJOINT', selected: (mandataire?.groupType || 'CONJOINT') === 'CONJOINT' }, 'Groupement conjoint'),
+            el('option', { value: 'SOLIDAIRE', selected: mandataire?.groupType === 'SOLIDAIRE' }, 'Groupement solidaire')
           ])
         ]),
-        // Modif #43.b — Picker entreprise pour le MANDATAIRE du groupement
-        el('label', { className: 'form-label' }, [
-          'Mandataire du groupement ',
-          el('span', { className: 'required' }, '*')
+
+        // Modif #43.b — Picker entreprise pour le MANDATAIRE du groupement + bouton aide
+        el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } }, [
+          el('label', { className: 'form-label', style: { margin: 0 } }, [
+            'Mandataire du groupement ',
+            el('span', { className: 'required' }, '*')
+          ]),
+          el('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-secondary',
+            style: { fontSize: '12px', padding: '3px 10px' },
+            title: 'Voir la liste des entreprises de référence disponibles',
+            onclick: (e) => { e.preventDefault(); openEntreprisesHelpDrawer(); }
+          }, '❓ Voir les entreprises disponibles')
         ]),
         el('div', { id: 'attr-mandataire-picker', style: { marginBottom: '12px' } },
           renderEntreprisePicker({
@@ -1174,6 +1181,160 @@ function toggleCoTitulairesVisibility() {
   const wrapper = document.getElementById('attr-cotitulaires-wrapper');
   const type = document.getElementById('attr-group-type')?.value || 'CONJOINT';
   if (wrapper) wrapper.style.display = (type === 'SOLIDAIRE') ? 'none' : 'block';
+  // Modif #63 — synchroniser le bandeau explicatif avec le type sélectionné
+  updateGroupTypeBanner(type);
+}
+
+/**
+ * Modif #63 — Bandeau dynamique CONJOINT vs SOLIDAIRE.
+ * Met en évidence les particularités métier de chaque type de groupement.
+ */
+function updateGroupTypeBanner(type) {
+  const host = document.getElementById('attr-group-type-banner');
+  if (!host) return;
+  const cfg = type === 'SOLIDAIRE'
+    ? {
+        bg: '#fef3c7', border: '#f59e0b', color: '#78350f',
+        icon: '🤝',
+        title: 'Groupement SOLIDAIRE — responsabilité collective',
+        body: [
+          'Tous les membres du groupement répondent <strong>collectivement et solidairement</strong> de la totalité du marché.',
+          'Le <strong>mandataire</strong> représente le groupement vis-à-vis de l\'administration et reçoit l\'intégralité des paiements.',
+          'Les <strong>cotitulaires ne sont pas saisis séparément</strong> — un seul interlocuteur juridique et financier.'
+        ]
+      }
+    : {
+        bg: '#dbeafe', border: '#3b82f6', color: '#1e40af',
+        icon: '👥',
+        title: 'Groupement CONJOINT — responsabilité individuelle par lot',
+        body: [
+          'Chaque membre du groupement est responsable <strong>uniquement de la part qu\'il exécute</strong>.',
+          'Le <strong>mandataire</strong> représente le groupement administrativement, mais chaque cotitulaire est payé pour sa part.',
+          'Vous devrez <strong>saisir les cotitulaires</strong> ci-dessous, avec leurs coordonnées et leur quote-part.'
+        ]
+      };
+
+  host.innerHTML = '';
+  host.appendChild(el('div', {
+    style: {
+      padding: '12px 14px',
+      borderLeft: `4px solid ${cfg.border}`,
+      background: cfg.bg,
+      color: cfg.color,
+      borderRadius: '6px'
+    }
+  }, [
+    el('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '10px' } }, [
+      el('div', { style: { fontSize: '22px', lineHeight: 1 } }, cfg.icon),
+      el('div', { style: { flex: 1 } }, [
+        el('div', { style: { fontWeight: 700, fontSize: '14px', marginBottom: '6px' } }, cfg.title),
+        ...cfg.body.map(t => el('div', { style: { fontSize: '12px', marginBottom: '2px', lineHeight: 1.4 }, innerHTML: '• ' + t }))
+      ])
+    ])
+  ]));
+}
+
+/**
+ * Modif #63 — Drawer d'aide listant les entreprises de référence disponibles.
+ * Permet à l'utilisateur de la maquette de connaître les NCC/raisons sociales
+ * fictives pour les démos, avec indication des sanctions éventuelles.
+ */
+async function openEntreprisesHelpDrawer() {
+  // Charger entreprises + résoudre sanctions
+  const entreprises = await dataService.query(ENTITIES.MP_ENTREPRISE).catch(() => []);
+  const visibles = (entreprises || []).filter(e => e.actif !== false && e.validationStatus !== 'MERGED');
+  const enriched = await Promise.all(visibles.map(async e => {
+    const sanction = await checkSanction({ ncc: e.ncc, raisonSociale: e.raisonSociale, rccm: e.rccm }).catch(() => null);
+    return { ...e, sanction };
+  }));
+  enriched.sort((a, b) => {
+    if (a.sanction && !b.sanction) return -1;
+    if (!a.sanction && b.sanction) return 1;
+    return (a.raisonSociale || '').localeCompare(b.raisonSociale || '');
+  });
+
+  // Construire le drawer
+  const overlay = el('div', {
+    style: {
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      zIndex: 10000, display: 'flex', justifyContent: 'flex-end'
+    },
+    onclick: (e) => { if (e.target === overlay) overlay.remove(); }
+  });
+  const panel = el('aside', {
+    style: {
+      width: '640px', maxWidth: '100vw', height: '100%',
+      background: '#fff', overflowY: 'auto', boxShadow: '-4px 0 16px rgba(0,0,0,0.2)'
+    }
+  });
+  panel.appendChild(el('div', {
+    style: {
+      position: 'sticky', top: 0, background: '#4f46e5', color: '#fff',
+      padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2
+    }
+  }, [
+    el('div', {}, [
+      el('div', { style: { fontSize: '15px', fontWeight: 700 } }, `❓ Entreprises disponibles (${enriched.length})`),
+      el('div', { style: { fontSize: '11px', opacity: 0.9, marginTop: '2px' } },
+        'Copiez un NCC ou une raison sociale dans le picker mandataire pour rappeler la fiche.')
+    ]),
+    el('button', {
+      style: { background: 'rgba(255,255,255,0.2)', border: 0, color: '#fff', fontSize: '18px', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer' },
+      onclick: () => overlay.remove()
+    }, '✕')
+  ]));
+
+  const body = el('div', { style: { padding: '14px 18px' } });
+  if (enriched.length === 0) {
+    body.appendChild(el('p', { className: 'text-muted', style: { fontStyle: 'italic' } }, 'Aucune entreprise disponible.'));
+  } else {
+    const table = el('table', { style: { width: '100%', fontSize: '12px', borderCollapse: 'collapse' } });
+    table.appendChild(el('thead', {}, [
+      el('tr', { style: { borderBottom: '2px solid #e5e7eb', background: '#f9fafb' } }, [
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Raison sociale'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'NCC'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, 'Sanction'),
+        el('th', { style: { padding: '6px 8px', textAlign: 'left' } }, '')
+      ])
+    ]));
+    const tbody = el('tbody', {});
+    enriched.forEach(e => {
+      const isSanc = !!e.sanction;
+      tbody.appendChild(el('tr', { style: { borderBottom: '1px solid #f3f4f6', background: isSanc ? '#fef2f2' : 'transparent' } }, [
+        el('td', { style: { padding: '6px 8px', fontWeight: 600 } }, e.raisonSociale || '—'),
+        el('td', { style: { padding: '6px 8px', fontFamily: 'monospace', fontSize: '11px' } }, e.ncc || '—'),
+        el('td', { style: { padding: '6px 8px' } }, isSanc
+          ? el('span', { style: { background: '#dc2626', color: '#fff', padding: '2px 6px', borderRadius: '3px', fontSize: '10px', fontWeight: 600 } }, '🚫 SANCTIONNÉE')
+          : el('span', { style: { color: '#16a34a', fontSize: '11px' } }, '✓ OK')),
+        el('td', { style: { padding: '6px 8px' } }, [
+          el('button', {
+            style: { background: '#6366f1', color: '#fff', border: 0, padding: '3px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '11px' },
+            title: 'Copier le NCC dans le presse-papier',
+            onclick: () => {
+              if (e.ncc) {
+                navigator.clipboard?.writeText(e.ncc).then(() => {
+                  // Feedback visuel discret
+                  const btn = event?.target;
+                  if (btn) {
+                    const old = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = old; }, 800);
+                  }
+                });
+              }
+            }
+          }, '📋 NCC')
+        ])
+      ]));
+    });
+    table.appendChild(tbody);
+    body.appendChild(table);
+    body.appendChild(el('p', { style: { marginTop: '12px', fontSize: '11px', color: '#6b7280', fontStyle: 'italic' } },
+      'Astuce : tapez les premières lettres de la raison sociale ou du NCC dans le picker mandataire — le système propose les entreprises correspondantes.'));
+  }
+  panel.appendChild(body);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
 }
 
 function renderCoordonneesBancairesSection(idPrefix, cb) {
