@@ -13,6 +13,66 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-25 — Fixes critiques multi-lots (anti-doublon OS, montants par lot, navigation EN_EXEC)
+
+> **Modif #72** — Audit pré-démo (3 sous-agents Explore) sur l'opération TEST-MULTI-LOTS (3 lots distincts, créée Modif #70). Personne n'avait jamais testé visuellement les écrans en condition multi-lots — trois bugs bloquants identifiés et corrigés.
+
+### Bugs corrigés
+
+**1. `ecr04a-execution-os.js:680-693` — Anti-doublon OS check global (BLOQUANT démo)**
+
+Le garde-fou anti-doublon (Modif #65) interrogeait `MP_ORDRE_SERVICE` filtré uniquement par `operationId` :
+
+```js
+const existingOS = await dataService.query(ENTITIES.MP_ORDRE_SERVICE, { operationId: idOperation });
+if (existingOS && existingOS.length > 0) { alert('OS déjà existant'); return; }
+```
+
+→ Pour TEST-MULTI-LOTS, dès qu'un OS existait sur LOT-A, **impossible d'émettre l'OS de LOT-B** (le check trouvait l'OS LOT-A et refusait). Sur une démo multi-lots, le client aurait immédiatement vu « pourquoi ça ne marche que pour le 1er lot ? ».
+
+Fix : ajout d'un filtre `os.lotId === lotId` (back-compat : OS sans lotId restent comptés en mono-lot). L'OS de démarrage est désormais unique **par (opération, lot)** et non par opération.
+
+**2. `ecr04b-avenants.js:44-47` — Cumul d'avenants calculé sur montant global**
+
+Le calcul du `% cumul avenants` lisait `operation.montantPrevisionnel` (somme des 3 lots), pas le montant du lot courant. Résultat avec lots 2,4 Md / 1,9 Md / 1,5 Md et 100 M d'avenants sur LOT-A :
+- Affichage : `100M / 5,8Md = 1,7%` (faux, et minimise le risque)
+- Attendu : `100M / 2,4Md = 4,2%` (réel pour le lot concerné)
+
+Cela faussait surtout l'alerte de seuil (25% / 30% du Code des Marchés Publics) qui ne se déclenchait jamais en multi-lots.
+
+Fix : lecture de `attributionForLot.montants.ttc` via `getLotData(attribution, currentLotId)`, fallback sur `montantPrevisionnel` en mono-lot.
+
+**3. `ecr01c-fiche-marche.js:212-217` — En-tête fiche fige le montant du 1er lot**
+
+Le bandeau sticky de la fiche marché lisait `attribution.montants.ht` / `attribution.montants.ttc` sans scoping. En multi-lots, ces champs racine contiennent soit le montant du 1er lot soit le montant agrégé. Quand l'utilisateur changeait de lot via le sélecteur, **l'en-tête ne bougeait pas** (les KPIs des accordéons étaient corrects, mais l'en-tête restait figée sur LOT-A).
+
+Même bug sur `ordresService` ligne 217 : le find pour l'OS de démarrage cherchait dans tous les OS, prenant systématiquement celui du 1er lot.
+
+Fix : scoping de l'attribution et des OS via `getLotData()` / filtre `os.lotId === currentLotId` quand `currentLotId !== 'ALL'`.
+
+**4. `ecr01c-fiche-marche.js:313` — Bouton « Modifier » muet en EN_EXEC (bonus)**
+
+`navigateToCurrentPhase()` testait `etat === 'EXECUTION'` alors que les opérations TEST-* utilisent `EN_EXEC` (cf. timeline standard). Le bouton « ✏️ Modifier » dans l'en-tête de la fiche retombait sur le fallback `/mp/procedure` au lieu de pointer vers l'écran d'exécution. Fix : accepter les deux libellés (`EN_EXEC || EXECUTION`).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` (anti-doublon par-lot)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04b-avenants.js` (montant initial scoped, import `getLotData`)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (en-tête scoped, navigateToCurrentPhase EN_EXEC)
+
+### Impact
+
+- **UI** : la démo multi-lots devient pleinement fonctionnelle. TEST-MULTI-LOTS peut être présentée sans risque.
+- **Worker** : aucun changement.
+- **DB** : aucun changement.
+
+### Action de déploiement
+
+- ❌ Pas de migration ni de `wrangler deploy`
+- ✅ Redéploiement front Vercel
+
+---
+
 ## 2026-05-25 — Fix « Page non trouvée » sur toutes les URL `/mp/*` + audit liens
 
 > **Modif #71** — Bug critique reporté en démo : un clic depuis la fiche marché vers une autre étape affichait « Page non trouvée — La route `/mp/fiche-marche` n'existe pas dans le système » avec stack trace exposée à l'utilisateur. Audit total des liens du module Marché+ déclenché.

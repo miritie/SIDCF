@@ -677,12 +677,18 @@ async function handleAddOSDemarrage(idOperation, lotId = null) {
     return;
   }
 
-  // Modif #65 — Garde-fou anti-doublon : vérifier qu'aucun OS n'existe déjà
-  // pour ce marché avant d'en créer un nouveau (l'OS de démarrage est unique
-  // par opération).
-  const existingOS = await dataService.query(ENTITIES.MP_ORDRE_SERVICE, { operationId: idOperation }).catch(() => []);
+  // Modif #65 + #72 — Garde-fou anti-doublon : vérifier qu'aucun OS n'existe
+  // déjà pour ce marché ET ce lot avant d'en créer un nouveau. L'OS de
+  // démarrage est unique par (opération, lot) — en multi-lots, chaque lot
+  // a son propre OS. Avant le fix #72 le check était global et bloquait
+  // la création d'OS pour LOT-B si LOT-A en avait déjà un.
+  const existingOSAll = await dataService.query(ENTITIES.MP_ORDRE_SERVICE, { operationId: idOperation }).catch(() => []);
+  const existingOS = lotId
+    ? (existingOSAll || []).filter(os => !os.lotId || os.lotId === lotId)
+    : (existingOSAll || []);
   if (existingOS && existingOS.length > 0) {
-    alert(`⚠️ Un Ordre de Service de démarrage existe déjà pour ce marché (n°${existingOS[0].numero || '?'}).\n\nUn seul OS de démarrage est admis par marché. Si vous souhaitez le modifier, contactez l'administration.`);
+    const lotSuffix = lotId ? ` (lot ${lotId})` : '';
+    alert(`⚠️ Un Ordre de Service de démarrage existe déjà pour ce marché${lotSuffix} (n°${existingOS[0].numero || '?'}).\n\nUn seul OS de démarrage est admis par marché et par lot. Si vous souhaitez le modifier, contactez l'administration.`);
     return;
   }
 

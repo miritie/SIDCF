@@ -209,11 +209,21 @@ function renderHeaderSticky(operation, registries, fullData, currentLotId, lots,
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === operation.modePassation);
   const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === operation.typeMarche);
 
-  const attribution = fullData.attribution;
-  const montantHT = Number(attribution?.montants?.ht) || 0;
-  const montantTTC = Number(attribution?.montants?.ttc) || Number(operation.montantPrevisionnel) || 0;
+  // Modif #72 — En multi-lots, scoper les montants et l'OS au lot
+  // sélectionné. Avant on lisait fullData.attribution.montants (= valeurs
+  // racine = montant du 1er lot ou montant global), ce qui restait
+  // identique même quand l'utilisateur changeait de lot dans le sélecteur.
+  const attributionRaw = fullData.attribution;
+  const attributionScoped = currentLotId && currentLotId !== 'ALL'
+    ? getLotData(attributionRaw, currentLotId)
+    : attributionRaw;
+  const montantHT = Number(attributionScoped?.montants?.ht) || 0;
+  const montantTTC = Number(attributionScoped?.montants?.ttc) || Number(operation.montantPrevisionnel) || 0;
 
-  const ordresService = fullData.ordresService || [];
+  const ordresServiceAll = fullData.ordresService || [];
+  const ordresService = currentLotId && currentLotId !== 'ALL'
+    ? ordresServiceAll.filter(os => !os.lotId || os.lotId === currentLotId)
+    : ordresServiceAll;
   const osDemarrage = ordresService.find(os => os.type === 'DEMARRAGE') || ordresService[0];
 
   const cloture = fullData.cloture;
@@ -310,7 +320,7 @@ function navigateToCurrentPhase(operation, idOperation) {
   if (etat === 'EN_PROC') return router.navigate('/mp/procedure', { idOperation });
   if (etat === 'ATTRIBUE') return router.navigate('/mp/attribution', { idOperation });
   if (etat === 'VISE') return router.navigate('/mp/visa-cf', { idOperation });
-  if (etat === 'EXECUTION') return router.navigate('/mp/execution', { idOperation });
+  if (etat === 'EN_EXEC' || etat === 'EXECUTION') return router.navigate('/mp/execution', { idOperation });
   if (etat === 'RESILIE' || etat === 'CLOS') return router.navigate('/mp/cloture', { idOperation });
   router.navigate('/mp/procedure', { idOperation });
 }

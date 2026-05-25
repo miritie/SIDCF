@@ -8,7 +8,7 @@ import { kpiGrid } from '../../../ui/widgets/kpis.js';
 import { dataTable } from '../../../ui/widgets/table.js';
 import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
-import { getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
+import { getLotsFromProcedure, resolveCurrentLotId, getLotData } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 
@@ -27,9 +27,10 @@ export async function renderAvenants(params) {
   const registries = dataService.getAllRegistries();
 
   // Marché+ multi-lot : on récupère les lots via la fiche d'opération full
-  // (pour avoir la procédure liée)
+  // (pour avoir la procédure + attribution liées)
   const fullData = await dataService.getMpOperationFull(idOperation);
   const procedure = fullData?.procedure;
+  const attribution = fullData?.attribution;
   const lots = getLotsFromProcedure(procedure);
   const currentLotId = resolveCurrentLotId(lots, params);
 
@@ -41,7 +42,14 @@ export async function renderAvenants(params) {
   // Check if market is already terminated (resiliée)
   const isResilie = resiliations && resiliations.length > 0;
 
-  const montantInitial = operation?.montantPrevisionnel || 0;
+  // Modif #72 — Le montant initial doit être celui du LOT courant en
+  // multi-lots (avant on lisait operation.montantPrevisionnel = somme
+  // globale, ce qui faussait le % de cumul d'avenants par lot).
+  const attributionForLot = getLotData(attribution, currentLotId);
+  const montantInitial = Number(attributionForLot?.montants?.ttc)
+    || Number(attributionForLot?.montants?.attribue)
+    || Number(operation?.montantPrevisionnel)
+    || 0;
   const totalAvenants = avenants.reduce((sum, av) => sum + (av.variationMontant || 0), 0);
   const montantActuel = montantInitial + totalAvenants;
   const pourcentage = montantInitial > 0 ? (totalAvenants / montantInitial) * 100 : 0;
