@@ -73,11 +73,13 @@ export async function renderCloture(params) {
   // Vérifier si le marché peut accéder à la clôture
   // Un marché peut être clôturé s'il est EN_EXEC, CLOS, ou s'il a des ordres de service
   const { ordresService } = fullData;
+  // Modif #61 — Standardisation timeline : accepte les deux codes 'EN_EXEC'
+  // (nouveau, cohérent avec l'état) et 'EXEC' (legacy) pour rétrocompat.
   const canAccessCloture =
     operation.etat === 'EN_EXEC' ||
     operation.etat === 'CLOS' ||
     (ordresService && ordresService.length > 0) ||
-    (operation.timeline && operation.timeline.includes('EXEC'));
+    (operation.timeline && (operation.timeline.includes('EN_EXEC') || operation.timeline.includes('EXEC')));
 
   if (!canAccessCloture) {
     mount('#app', el('div', { className: 'page' }, [

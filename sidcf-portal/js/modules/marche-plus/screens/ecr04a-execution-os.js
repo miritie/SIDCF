@@ -688,7 +688,11 @@ async function handleAddOSDemarrage(idOperation, lotId = null) {
 
   const result = await dataService.add(ENTITIES.MP_ORDRE_SERVICE, osEntity);
 
-  if (!result.success) {
+  // Modif #61 — Le Worker peut renvoyer { success, id, entity } ou directement l'entité.
+  // On accepte les deux formats pour robustesse.
+  const created = result?.entity || result;
+  const createdId = result?.id || created?.id;
+  if (result?.success === false) {
     alert('❌ Erreur lors de la création de l\'ordre de service');
     return;
   }
@@ -700,16 +704,17 @@ async function handleAddOSDemarrage(idOperation, lotId = null) {
     updatedAt: new Date().toISOString()
   };
 
-  // Si timeline existe, ajouter EXEC
+  // Modif #61 — Standardisation timeline : utiliser 'EN_EXEC' (cohérent avec
+  // l'état métier et les migrations 019/020/023) au lieu de l'ancien 'EXEC'.
   if (operation.timeline) {
-    if (!operation.timeline.includes('EXEC')) {
-      updateData.timeline = [...operation.timeline, 'EXEC'];
+    if (!operation.timeline.includes('EN_EXEC')) {
+      updateData.timeline = [...operation.timeline, 'EN_EXEC'];
     }
   }
 
   await dataService.update(ENTITIES.MP_OPERATION, idOperation, updateData);
 
-  logger.info('[Execution] OS de démarrage créé avec succès:', osId);
+  logger.info('[Execution] OS de démarrage créé avec succès:', createdId || '(id non retourné)');
   alert('✅ Ordre de service de démarrage enregistré\nLes travaux peuvent maintenant commencer.');
 
   // Reload page
