@@ -73,11 +73,13 @@ export function renderDifficultesManager({
   operationId,
   difficultes = [],
   registries = {},
+  lots = [],          // Modif #68 — liste des lots du marché (cf. getLotsFromProcedure)
   onSaved
 } = {}) {
   let items = [...difficultes];
   let filterStatut = 'TOUS';
   let filterImpact = 'TOUS';
+  let filterLot = 'TOUS';   // Modif #68 — filtre par lot
 
   const container = el('div', { className: 'difficultes-manager-mp' });
 
@@ -128,7 +130,7 @@ export function renderDifficultesManager({
   }
 
   function renderFilters() {
-    const wrap = el('div', { style: { display: 'flex', gap: '12px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } }, [
+    const children = [
       el('label', { style: { fontSize: '12px', color: '#6b7280' } }, 'Statut :'),
       el('select', {
         className: 'form-input',
@@ -147,14 +149,29 @@ export function renderDifficultesManager({
         el('option', { value: 'TOUS', selected: filterImpact === 'TOUS' }, 'Tous impacts'),
         ...IMPACT_LEVELS.map(i => el('option', { value: i.code, selected: filterImpact === i.code }, i.label))
       ])
-    ]);
-    return wrap;
+    ];
+    // Modif #68 — Filtre par lot (visible uniquement si > 1 lot)
+    if (Array.isArray(lots) && lots.length > 1) {
+      children.push(
+        el('label', { style: { fontSize: '12px', color: '#6b7280' } }, 'Lot :'),
+        el('select', {
+          className: 'form-input',
+          style: { width: '160px', padding: '4px 8px', fontSize: '12px' },
+          onchange: (e) => { filterLot = e.target.value; render(); }
+        }, [
+          el('option', { value: 'TOUS', selected: filterLot === 'TOUS' }, 'Tous lots'),
+          ...lots.map(l => el('option', { value: l.id, selected: filterLot === l.id }, l.libelle || l.id))
+        ])
+      );
+    }
+    return el('div', { style: { display: 'flex', gap: '12px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } }, children);
   }
 
   function renderTable() {
     const filtered = items.filter(d =>
       (filterStatut === 'TOUS' || d.statutTraitement === filterStatut) &&
-      (filterImpact === 'TOUS' || d.impact === filterImpact)
+      (filterImpact === 'TOUS' || d.impact === filterImpact) &&
+      (filterLot === 'TOUS' || (d.lotId || '') === filterLot)
     ).sort((a, b) => {
       // En cours d'abord, puis par impact (CRITIQUE > ELEVE > MOYEN > FAIBLE), puis par date
       const statutOrder = { EN_COURS: 0, RESOLU: 1, ABANDONNE: 2 };
@@ -245,6 +262,7 @@ export function renderDifficultesManager({
     const draft = isEdit ? { ...existing } : {
       id: null,
       operationId,
+      lotId: (lots && lots.length === 1) ? lots[0].id : null,   // Modif #68
       statutTraitement: 'EN_COURS',
       decision: '',
       probleme: '',
@@ -284,6 +302,31 @@ export function renderDifficultesManager({
 
     // Form
     const formGrid = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } });
+
+    // Modif #68 — Sélecteur de lot (visible si > 1 lot, sinon fixé au lot unique)
+    if (Array.isArray(lots) && lots.length > 1) {
+      const lotSelect = el('select', { className: 'form-input', id: 'dif-lot' }, [
+        el('option', { value: '' }, '-- Sélectionner un lot --'),
+        ...lots.map(l => el('option', { value: l.id, selected: draft.lotId === l.id }, l.libelle || l.id))
+      ]);
+      formGrid.appendChild(el('div', { style: { gridColumn: '1 / -1' } }, [
+        el('label', { className: 'form-label' }, ['Lot concerné', el('span', { className: 'required' }, '*')]),
+        lotSelect,
+        el('small', { className: 'text-muted', style: { fontSize: '11px' } },
+          'Une difficulté est toujours rattachée à un lot précis (règle métier).')
+      ]));
+    } else if (Array.isArray(lots) && lots.length === 1) {
+      // Mono-lot : affichage informatif read-only
+      formGrid.appendChild(el('div', { style: { gridColumn: '1 / -1' } }, [
+        el('label', { className: 'form-label' }, 'Lot concerné'),
+        el('div', {
+          style: {
+            padding: '6px 10px', background: '#f3f4f6', borderRadius: '4px',
+            fontSize: '12px', color: '#374151'
+          }
+        }, `📦 ${lots[0].libelle || lots[0].id} (lot unique du marché)`)
+      ]));
+    }
 
     // Impact
     const impactSelect = el('select', { className: 'form-input', id: 'dif-impact' },
@@ -395,8 +438,17 @@ export function renderDifficultesManager({
             alert('La description du problème est obligatoire');
             return;
           }
+          // Modif #68 — Récupération du lotId : depuis le select si multi-lot,
+          // sinon depuis le draft (qui contient le lot unique).
+          const lotSelectEl = document.getElementById('dif-lot');
+          const lotId = lotSelectEl ? (lotSelectEl.value || null) : (draft.lotId || null);
+          if (Array.isArray(lots) && lots.length > 1 && !lotId) {
+            alert('Veuillez sélectionner le lot concerné par la difficulté');
+            return;
+          }
           const payload = {
             ...draft,
+            lotId,
             statutTraitement: document.getElementById('dif-statut').value,
             impact: document.getElementById('dif-impact').value,
             categorieProbleme: document.getElementById('dif-categorie').value,

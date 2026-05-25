@@ -126,7 +126,7 @@ export async function renderFicheMarche(params) {
     }),
     renderHealthKPIs(fullData, currentLotId, mpDifficultes, idOperation),
     // Modif #29 : section difficultés du marché — visible en haut, structurée, exploitable
-    renderDifficultesSection(idOperation, mpDifficultes, registries),
+    renderDifficultesSection(idOperation, mpDifficultes, registries, lots),
     // Modif #34 : situation d'exécution financière (OP/Mandats). Affichée seulement si
     // le marché est en exécution ou postérieur — le widget gère lui-même l'état de
     // l'opération et affiche un message informatif sinon.
@@ -168,7 +168,7 @@ export async function renderFicheMarche(params) {
           defaultOpen: false,
           status: fullData.attribution ? 'complete' : 'empty'
         }),
-        sectionAccordion('approbation', '✅ 4. Approbation (Visa CF)', renderApprobationContent(fullData, currentLotId, registries), {
+        sectionAccordion('approbation', '🔍 4. Approbation', renderApprobationContent(fullData, currentLotId, registries), {
           modifierRoute: '/mp/visa-cf',
           modifierParams: { idOperation, lotId: currentLotId !== 'ALL' ? currentLotId : undefined },
           defaultOpen: false,
@@ -792,7 +792,7 @@ function renderSituationExecutionFinanciere(operation, mpDecomptes, attribution,
  * Visible en haut de la fiche pour priorisation, structurée pour suivi
  * et exploitable (filtres, ajout, édition, suppression).
  */
-function renderDifficultesSection(idOperation, mpDifficultes, registries) {
+function renderDifficultesSection(idOperation, mpDifficultes, registries, lots = []) {
   return el('div', {
     id: 'section-difficultes',
     className: 'card',
@@ -804,13 +804,16 @@ function renderDifficultesSection(idOperation, mpDifficultes, registries) {
     }, [
       el('h3', { className: 'card-title', style: { margin: 0 } }, '🚨 Difficultés du marché'),
       el('span', { style: { fontSize: '11px', color: '#6b7280' } },
-        'Saisie possible à tout moment du cycle de vie')
+        lots.length > 1
+          ? `Saisie par lot (${lots.length} lots) — précisez le lot concerné à chaque création`
+          : 'Saisie possible à tout moment du cycle de vie')
     ]),
     el('div', { className: 'card-body' }, [
       renderDifficultesManager({
         operationId: idOperation,
         difficultes: mpDifficultes,
-        registries
+        registries,
+        lots   // Modif #68 — pour permettre la sélection par lot
         // onSaved : pas de reload complet — le widget gère son state interne
       })
     ])
@@ -1867,7 +1870,7 @@ function collectAllDocuments(fullData, currentLotId, mpDocuments = []) {
 
   // Visa CF
   (fullData.visasCF || []).filter(inLot).forEach(v => {
-    if (v.documentRef) byPhase['Approbation'].push({ label: `Visa CF du ${fmtDate(v.dateVisa || v.date)}`, ref: v.documentRef });
+    if (v.documentRef) byPhase['Approbation'].push({ label: `Approbation du ${fmtDate(v.dateVisa || v.date)}`, ref: v.documentRef });
   });
 
   // Ordres de Service

@@ -28,6 +28,7 @@ import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-manager-mp.js';
 import { renderEntreprisePicker } from '../../../ui/widgets/entreprise-picker-mp.js';
 import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
+import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -241,16 +242,12 @@ export async function renderAttribution(params) {
     cleRepartitionList = [];
     echeancierData = { periodicite: 'LIBRE', periodiciteJours: null, items: [], total: 0, totalPourcent: 0 };
 
-    // Modif #49 — Header avec wiring spec
-    const pageHeader = el('div', { className: 'page-header' }, [
-      el('button', {
-        className: 'btn btn-secondary btn-sm',
-        onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
-      }, '← Retour fiche'),
-      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '✅ Vous êtes ici · Étape Attribution'),
-      el('h1', { className: 'page-title' }, '✅ Attribution — Attribution du marché & Garanties'),
-      el('p', { className: 'page-subtitle' }, operation.objet)
-    ]);
+    // Modif #68 — Header unifié avec badge état marché + breadcrumb
+    const pageHeader = renderPageHeaderMP({
+      idOperation, operation,
+      phaseIcon: '✅', phaseLabel: 'Attribution',
+      titre: 'Attribution du marché & Garanties'
+    });
     wireSpec(pageHeader, {
       id: 'attribution-screen',
       titre: 'Écran Attribution du marché (étape 3)',

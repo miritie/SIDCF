@@ -18,6 +18,7 @@ import {
 import { SoumissionnairesWidget } from '../../../widgets/soumissionnaires-widget.js';
 import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js';
 import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
+import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
 let _procSanctionTimer = null;
@@ -86,23 +87,12 @@ export async function renderProcedurePV(params) {
     // Timeline
     renderSteps(fullData, idOperation),
 
-    // Header — Modif #62 : titre aligné sur le libellé de la timeline + breadcrumb
-    el('div', { className: 'page-header' }, [
-      createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('div', {
-        style: {
-          marginTop: '12px',
-          marginBottom: '4px',
-          fontSize: '12px',
-          color: '#6366f1',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          fontWeight: 600
-        }
-      }, '📝 Vous êtes ici · Étape Contractualisation'),
-      el('h1', { className: 'page-title' }, '📝 Contractualisation — Procédure & Mode de Passation'),
-      el('p', { className: 'page-subtitle' }, operation.objet)
-    ]),
+    // Header — Modif #68 : remplacé par widget unifié (badge état + breadcrumb)
+    renderPageHeaderMP({
+      idOperation, operation,
+      phaseIcon: '📝', phaseLabel: 'Contractualisation',
+      titre: 'Procédure & Mode de Passation'
+    }),
 
     // Suggested procedures alert
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [

@@ -9,6 +9,7 @@ import { renderSteps } from '../../../ui/widgets/steps-mp.js';
 import logger from '../../../lib/logger.js';
 import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -81,13 +82,13 @@ export async function renderEcheancierCle(params) {
     // Timeline
     renderSteps(fullData, idOperation),
 
-    // Header
-    el('div', { className: 'page-header' }, [
-      createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '✅ Vous êtes ici · Étape Attribution (sous-écran Échéancier)'),
-      el('h1', { className: 'page-title' }, '✅ Attribution — Échéancier & Clé de Répartition'),
-      el('p', { className: 'page-subtitle' }, operation.objet)
-    ]),
+    // Header — Modif #68
+    renderPageHeaderMP({
+      idOperation, operation,
+      phaseIcon: '✅', phaseLabel: 'Attribution',
+      subEcran: 'Échéancier',
+      titre: 'Échéancier & Clé de Répartition'
+    }),
 
     // Sélecteur de lot (visible si > 1 lot)
     renderLotSelector({

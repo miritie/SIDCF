@@ -11,6 +11,7 @@ import { money } from '../../../lib/format.js';
 import logger from '../../../lib/logger.js';
 import { getLotData, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -151,7 +152,7 @@ export async function renderExecutionOS(params) {
         ])
       ]),
       el('div', { style: { marginTop: '16px' } }, [
-        createButton('btn btn-primary', '← Vers Engagement', () => router.navigate('/mp/visa-cf', { idOperation })),
+        createButton('btn btn-primary', '← Vers Approbation', () => router.navigate('/mp/visa-cf', { idOperation })),
         createButton('btn btn-secondary', '← Retour', () => router.navigate('/mp/fiche-marche', { idOperation }))
       ])
     ]));
@@ -171,13 +172,12 @@ export async function renderExecutionOS(params) {
     // Timeline
     renderSteps(fullData, idOperation),
 
-    // Header
-    el('div', { className: 'page-header' }, [
-      createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '⚙️ Vous êtes ici · Étape Exécution'),
-      el('h1', { className: 'page-title' }, '⚙️ Exécution — Ordre de service & Suivi'),
-      el('p', { className: 'page-subtitle' }, operation.objet)
-    ]),
+    // Header — Modif #68
+    renderPageHeaderMP({
+      idOperation, operation,
+      phaseIcon: '⚙️', phaseLabel: 'Exécution',
+      titre: 'Ordre de service & Suivi'
+    }),
 
     // Sélecteur de lot (visible si > 1 lot)
     renderLotSelector({
@@ -536,7 +536,7 @@ function checkDelayAlert(operation, ordresService) {
           el('div', { className: 'alert-content' }, [
             el('div', { className: 'alert-title' }, 'Délai dépassé'),
             el('div', { className: 'alert-message' }, [
-              el('p', {}, `Le visa CF a été accordé il y a ${daysSinceVisa} jours (le ${visaDate.toLocaleDateString()}).`),
+              el('p', {}, `L'approbation a été accordée il y a ${daysSinceVisa} jours (le ${visaDate.toLocaleDateString()}).`),
               el('p', { style: { marginTop: '8px', fontWeight: '600' } }, `⚠️ Délai maximal recommandé: ${maxDays} jours`)
             ])
           ])

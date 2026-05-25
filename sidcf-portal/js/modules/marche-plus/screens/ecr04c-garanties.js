@@ -9,6 +9,7 @@ import { renderSteps } from '../../../ui/widgets/steps-mp.js';
 import logger from '../../../lib/logger.js';
 import { getLotData, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-pourcentage-dual-input.js';
 
 // API exposée par le widget dual courant pour la garantie en saisie
@@ -75,7 +76,7 @@ export async function renderGaranties(params) {
         el('div', { className: 'alert-icon' }, '⚠️'),
         el('div', { className: 'alert-content' }, [
           el('div', { className: 'alert-title' }, 'Approbation non accordée'),
-          el('div', { className: 'alert-message' }, 'Les garanties ne sont requises qu\'après l\'obtention du visa CF.')
+          el('div', { className: 'alert-message' }, 'Les garanties ne sont requises qu\'après l\'obtention de l\'approbation.')
         ])
       ]),
       el('div', { style: { marginTop: '16px' } }, [
@@ -102,13 +103,13 @@ export async function renderGaranties(params) {
     // Timeline
     renderSteps(fullData, idOperation),
 
-    // Header
-    el('div', { className: 'page-header' }, [
-      createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '⚙️ Vous êtes ici · Étape Exécution (sous-écran Garanties)'),
-      el('h1', { className: 'page-title' }, '⚙️ Exécution — Gestion des Garanties'),
-      el('p', { className: 'page-subtitle' }, operation.objet)
-    ]),
+    // Header — Modif #68
+    renderPageHeaderMP({
+      idOperation, operation,
+      phaseIcon: '⚙️', phaseLabel: 'Exécution',
+      subEcran: 'Garanties',
+      titre: 'Gestion des Garanties'
+    }),
 
     // Sélecteur de lot (visible si > 1 lot)
     renderLotSelector({

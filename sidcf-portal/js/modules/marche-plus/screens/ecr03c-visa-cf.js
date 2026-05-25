@@ -88,7 +88,16 @@ export async function renderVisaCF(params) {
           className: 'btn btn-secondary btn-sm',
           onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
         }, '← Retour fiche'),
+        // Modif #68 — Header unifié (gardé inline car contexte spécial errors-fallback)
         el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '🔍 Vous êtes ici · Étape Approbation'),
+        el('div', {
+          style: {
+            display: 'inline-block', marginLeft: '12px', padding: '2px 8px',
+            background: '#d1fae5', color: '#065f46', border: '1px solid #10b981',
+            borderRadius: '10px', fontSize: '10px', fontWeight: 700,
+            textTransform: 'uppercase'
+          }
+        }, `📊 ${(operation.etat || 'PLANIFIE')}`),
         el('h1', { className: 'page-title' }, '🔍 Approbation — Organe approbateur'),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),

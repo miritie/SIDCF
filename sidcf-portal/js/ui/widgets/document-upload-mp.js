@@ -34,7 +34,7 @@ export const DOCUMENT_PHASES = [
   { code: 'PLANIF',       label: '📝 Planification (PPM)' },
   { code: 'PROCEDURE',    label: '📑 Contractualisation' },
   { code: 'ATTRIBUTION',  label: '🤝 Attribution' },
-  { code: 'APPROBATION',  label: '✅ Approbation (Visa CF)' },
+  { code: 'APPROBATION',  label: '🔍 Approbation' },
   { code: 'EXECUTION',    label: '⚙️ Exécution' },
   { code: 'CLOTURE',      label: '🏁 Clôture' },
   { code: 'AUTRE',        label: '📎 Autre (libre)' }

@@ -10,6 +10,7 @@ import router from '../../../router.js';
 import dataService, { ENTITIES } from '../../../datastore/data-service.js';
 import { getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
+import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -50,11 +51,15 @@ export async function renderAvenants(params) {
   const seuilLegal = 30;
 
   const page = el('div', { className: 'page' }, [
-    el('div', { className: 'page-header' }, [
-      createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title' }, 'Avenants & Résiliation'),
-      el('p', { className: 'page-subtitle' }, operation?.objet || idOperation)
-    ]),
+    // Modif #68 — header unifié avec état marché + breadcrumb phase
+    renderPageHeaderMP({
+      idOperation,
+      operation,
+      phaseIcon: '⚙️',
+      phaseLabel: 'Exécution',
+      subEcran: 'Avenants & Résiliation',
+      titre: 'Avenants & Résiliation'
+    }),
 
     // Sélecteur de lot (visible si > 1 lot)
     renderLotSelector({
