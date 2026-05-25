@@ -12,25 +12,18 @@
     { "code": "SERVICES_INTELLECTUELS", "label": "SERVICES INTELLECTUELS" },
     { "code": "DELEGATION_SERVICE_PUBLIC", "label": "DÉLÉGATION DE SERVICE PUBLIC" }
   ],
+  "_MODE_PASSATION_DOC": "Liste élaguée aux modes officiels du Code des Marchés Publics CI (Décret n°2009-259 du 6 août 2009, modifié par Décret n°2021-909 du 22 déc. 2021). Voir docs/MODES_PASSATION_REFERENCES.md pour la preuve juridique de chaque ligne.",
   "MODE_PASSATION": [
-    { "code": "PSD", "label": "Procédure Simplifiée d'Entente Directe (PSD)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
-    { "code": "PSC", "label": "Procédure Simplifiée de demande de Cotation (PSC)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
-    { "code": "PSL", "label": "Procédure Simplifiée à compétition Limitée (PSL)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
-    { "code": "PSO", "label": "Procédure Simplifiée à compétition Ouverte (PSO)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null },
-    { "code": "AOO", "label": "Appel d'Offres Ouvert (AOO)", "seuil": true, "famille": "CLASSIQUE", "parent": null },
-    { "code": "AOO_PREQUALIF", "label": "AOO avec préqualification", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO" },
-    { "code": "AOO_2ETAPES", "label": "AOO en deux (2) étapes", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO" },
-    { "code": "AOO_CONCOURS", "label": "AOO avec concours", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO" },
-    { "code": "AON", "label": "Appel d'Offres National (AON)", "seuil": true, "famille": "CLASSIQUE", "parent": null },
-    { "code": "AOI", "label": "Appel d'Offres International (AOI)", "seuil": true, "famille": "CLASSIQUE", "parent": null },
-    { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false, "famille": "DEROGATOIRE", "parent": null },
-    { "code": "ENTENTE_DIRECTE", "label": "Gré à gré / Entente directe", "seuil": false, "famille": "DEROGATOIRE", "parent": null },
-    { "code": "RECONDUCTION", "label": "Reconduction (Art. 79)", "seuil": false, "famille": "DEROGATOIRE", "parent": null },
-    { "code": "PI", "label": "Prestation Intellectuelle (PI)", "seuil": false, "famille": "PI", "parent": null },
-    { "code": "PI_CABINET", "label": "PI — Sélection de cabinet de consultant", "seuil": false, "famille": "PI", "parent": "PI" },
-    { "code": "PI_INDIVIDUEL", "label": "PI — Sélection de consultant individuel (Art. 62)", "seuil": false, "famille": "PI", "parent": "PI" },
-    { "code": "CI", "label": "Concours d'Ingénierie (CI)", "seuil": false, "famille": "CLASSIQUE", "parent": null },
-    { "code": "DEM", "label": "Demande d'Expression de Manifestation (DEM)", "seuil": false, "famille": "CLASSIQUE", "parent": null }
+    { "code": "PSD", "label": "Procédure Simplifiée d'Entente Directe (PSD)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Décret 2021-909 Art. 5 §1" },
+    { "code": "PSC", "label": "Procédure Simplifiée de demande de Cotation (PSC)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Décret 2021-909 Art. 5 §2" },
+    { "code": "PSL", "label": "Procédure Simplifiée à compétition Limitée (PSL)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Décret 2021-909 Art. 5 §3" },
+    { "code": "PSO", "label": "Procédure Simplifiée à compétition Ouverte (PSO)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Décret 2021-909 Art. 5 §4" },
+    { "code": "AOO", "label": "Appel d'Offres Ouvert (AOO)", "seuil": true, "famille": "CLASSIQUE", "parent": null, "ref": "Décret 2009-259 Art. 53" },
+    { "code": "AOO_PREQUALIF", "label": "AOO avec préqualification", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO", "ref": "Décret 2009-259 Art. 54" },
+    { "code": "AOO_2ETAPES", "label": "AOO en deux (2) étapes", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO", "ref": "Décret 2009-259 Art. 55" },
+    { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "Décret 2009-259 Art. 58" },
+    { "code": "PI", "label": "Prestations Intellectuelles (PI)", "seuil": false, "famille": "PI", "parent": null, "ref": "Décret 2009-259 Art. 62 et suiv." },
+    { "code": "ENTENTE_DIRECTE", "label": "Gré à gré / Entente directe (exceptionnel)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "Décret 2009-259 Art. 67" }
   ],
   "CATEGORIE_PROCEDURE": [
     { "code": "NATIONALE", "label": "Nationale" },
@@ -46,14 +39,14 @@
     { "code": "COPE", "label": "Commission de Passation et d'Évaluation (COPE)" }
   ],
   "TYPE_DOSSIER_APPEL": [
-    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOO_PREQUALIF", "AOO_2ETAPES", "AOO_CONCOURS", "AON", "AOI", "AOR"] },
-    { "code": "DTAO_PI", "label": "DTAO Prestations Intellectuelles (Décret 2013-406)", "modes": ["PI", "PI_CABINET", "PI_INDIVIDUEL"] },
-    { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["DEM", "PI_CABINET", "CI"] },
+    { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOO_PREQUALIF", "AOO_2ETAPES", "AOR"] },
+    { "code": "DTAO_PI", "label": "DTAO Prestations Intellectuelles (Décret 2013-406)", "modes": ["PI"] },
+    { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["PI"] },
     { "code": "DC", "label": "Demande de Cotation (DC) — PSC", "modes": ["PSC"] },
     { "code": "DOSSIER_CONS_PSL", "label": "Dossier de consultation — PSL", "modes": ["PSL"] },
     { "code": "DOSSIER_CONS_PSO", "label": "Dossier de consultation — PSO", "modes": ["PSO"] },
     { "code": "BC_PROFORMA", "label": "Bon de commande + Facture pro forma (PSD)", "modes": ["PSD"] },
-    { "code": "LETTRE_GAG", "label": "Lettre de marché négocié (Gré à gré)", "modes": ["ENTENTE_DIRECTE", "RECONDUCTION"] },
+    { "code": "LETTRE_GAG", "label": "Lettre de marché négocié (Gré à gré)", "modes": ["ENTENTE_DIRECTE"] },
     { "code": "AUTRE", "label": "Autre dossier", "modes": [] }
   ],
   "TYPE_LIVRABLE": [

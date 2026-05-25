@@ -859,25 +859,57 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
         // Somme des enveloppes AE des bailleurs déclarés
         const totalEnveloppes = declared.reduce((s, d) => s + (d.ae || 0), 0);
         // Cumul des autres opérations PPM sur la même activité (toutes combinaisons)
-        const usedOnActivite = (mpOperations || []).reduce((acc, op) => {
-          const opActivite = op?.chaineBudgetaire?.activiteCode || '';
-          if (opActivite !== activiteCode) return acc;
-          return acc + (Number(op.montantPrevisionnel) || 0);
-        }, 0);
+        // — Modif #66 : on collecte aussi la liste détaillée pour affichage
+        const autresOps = (mpOperations || []).filter(op =>
+          (op?.chaineBudgetaire?.activiteCode || '') === activiteCode
+        );
+        const usedOnActivite = autresOps.reduce((acc, op) => acc + (Number(op.montantPrevisionnel) || 0), 0);
         const restant = totalEnveloppes - usedOnActivite - montant;
         const ok = restant >= 0;
         const color = ok ? '#065f46' : '#b91c1c';
         const bg = ok ? '#ecfdf5' : '#fef2f2';
+
+        // Détail des autres opérations (libellé + montant) pour transparence
+        const autresOpsHTML = autresOps.length === 0
+          ? '<em style="color:#6b7280; font-size:11px;">Aucune autre opération PPM sur cette activité.</em>'
+          : `<details style="margin-top:6px;">
+              <summary style="cursor:pointer; font-size:11px; color:#374151; font-weight:600;">📑 Détail : ${autresOps.length} opération${autresOps.length > 1 ? 's' : ''} existante${autresOps.length > 1 ? 's' : ''} sur cette activité</summary>
+              <table style="width:100%; margin-top:6px; font-size:11px; border-collapse:collapse;">
+                <thead>
+                  <tr style="background:rgba(0,0,0,0.04); border-bottom:1px solid #d1d5db;">
+                    <th style="text-align:left; padding:3px 6px;">Objet</th>
+                    <th style="text-align:left; padding:3px 6px;">État</th>
+                    <th style="text-align:right; padding:3px 6px;">Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${autresOps.map(op => `
+                    <tr style="border-bottom:1px solid #f3f4f6;">
+                      <td style="padding:3px 6px;">${(op.objet || '—').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'})[c]).slice(0, 60)}</td>
+                      <td style="padding:3px 6px; font-size:10px;">${op.etat || '—'}</td>
+                      <td style="padding:3px 6px; text-align:right; font-family:monospace;">${formatXOF(op.montantPrevisionnel || 0)}</td>
+                    </tr>
+                  `).join('')}
+                  <tr style="background:rgba(0,0,0,0.04); font-weight:600;">
+                    <td style="padding:3px 6px;" colspan="2">Total autres opérations</td>
+                    <td style="padding:3px 6px; text-align:right; font-family:monospace;">${formatXOF(usedOnActivite)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </details>`;
+
         dispoIndicator.innerHTML = `
           <div style="padding:8px 12px; background:${bg}; border-left:3px solid ${color}; border-radius:4px;">
             <div style="color:${color}; font-weight:600;">
               ${ok ? '✓ Couverture OK' : '⚠ Couverture insuffisante'}
             </div>
             <div style="color:#374151; font-size:12px; margin-top:2px;">
-              Enveloppes cumulées (${declared.length} bailleur${declared.length > 1 ? 's' : ''}) : ${formatXOF(totalEnveloppes)}
-              · Autres opérations sur l'activité : ${formatXOF(usedOnActivite)}
-              · Disponible après celle-ci : <strong>${formatXOF(restant)}</strong>
+              Enveloppes cumulées (${declared.length} bailleur${declared.length > 1 ? 's' : ''} déclaré${declared.length > 1 ? 's' : ''}) : <strong>${formatXOF(totalEnveloppes)}</strong>
+              <br>− Cumul des autres opérations sur l'activité : <strong>${formatXOF(usedOnActivite)}</strong>
+              <br>− Montant de cette opération : <strong>${formatXOF(montant)}</strong>
+              <br>= <strong style="color:${color};">Disponible après celle-ci : ${formatXOF(restant)}</strong>
             </div>
+            ${autresOpsHTML}
           </div>
         `;
       }
@@ -1221,14 +1253,20 @@ function refreshModePassationRec(registries, mpBudgetLines) {
       }
     }
 
-    // Diagnostic adapté : on a besoin de l'activité pour calculer le montant ligne
+    // Modif #66 — Diagnostic adapté : on a besoin de l'activité pour calculer
+    // le montant ligne (qui pilote la recommandation). Si activité OK mais
+    // détection encore en cours, on reste neutre plutôt que d'afficher un
+    // message faux genre « AE total à 0 ».
     let raisonMontant;
     if (!ctx.activiteCode) {
       raisonMontant = '➡ <em>Renseignez l\'<strong>Activité</strong> ci-dessus pour calculer le montant de la ligne budgétaire et obtenir la recommandation précise.</em>';
     } else if (ctx.lignesCount === 0) {
-      raisonMontant = `➡ <em>Aucune ligne budgétaire ouverte pour l'activité <code>${ctx.activiteCode}</code>. Vérifiez la disponibilité budgétaire.</em>`;
+      raisonMontant = `➡ <em>Aucune ligne budgétaire ouverte pour l'activité <code>${ctx.activiteCode}</code> dans le référentiel budgétaire actuel. Vérifiez auprès du contrôleur budgétaire.</em>`;
     } else {
-      raisonMontant = `➡ <em>Les ${ctx.lignesCount} ligne(s) budgétaire(s) de cette activité ont un AE total à 0 XOF.</em>`;
+      // lignesCount > 0 mais montantLigne calculé à 0 : situation rare (timing
+      // de chargement, ou AE de toutes les lignes à 0). On affiche un message
+      // neutre invitant à patienter / vérifier.
+      raisonMontant = `➡ <em>Calcul du montant de la ligne budgétaire en cours… (${ctx.lignesCount} ligne(s) détectée(s) sur l'activité).</em>`;
     }
 
     box.style.background = '#eff6ff';
