@@ -19,6 +19,7 @@ import { getLotsFromProcedure, resolveCurrentLotId, getLotData } from '../../../
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { getOrganesApplicables, getInstitutionScope } from '../../../lib/mp-organes-approbation.js';
 import { uploadDocument } from '../../../lib/r2-storage-mp.js';
+import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 
 export async function renderVisaCF(params) {
   const { idOperation } = params;
@@ -141,6 +142,8 @@ export async function renderVisaCF(params) {
       ])
     ]);
 
+    // Modif #69 — Bouton démo « Passer à l'étape suivante »
+    page.appendChild(renderNextPhaseButton({ idOperation, operation }));
     mount('#app', page);
 
   } catch (err) {

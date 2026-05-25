@@ -19,6 +19,7 @@ import { SoumissionnairesWidget } from '../../../widgets/soumissionnaires-widget
 import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js';
 import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
+import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
 let _procSanctionTimer = null;
@@ -175,6 +176,8 @@ export async function renderProcedurePV(params) {
     ])
   ]);
 
+  // Modif #69 — Bouton démo « Passer à l'étape suivante »
+  page.appendChild(renderNextPhaseButton({ idOperation, operation }));
   mount('#app', page);
 
   // Marché+ : check sanctions sur le fournisseur retenu pré-rempli (s'il y en a un)

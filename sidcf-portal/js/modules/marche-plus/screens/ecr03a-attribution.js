@@ -29,6 +29,7 @@ import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-m
 import { renderEntreprisePicker } from '../../../ui/widgets/entreprise-picker-mp.js';
 import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
+import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -129,6 +130,81 @@ function _prefillBanqueSection(prefix, entreprise) {
   setVal(`${prefix}-banque-agence`,   b.agence);
   setVal(`${prefix}-banque-numero`,   c.numero);
   setVal(`${prefix}-banque-intitule`, c.intitule || entreprise.raisonSociale);
+}
+
+// Modif #69 — Sélection rapide d'entreprise via dropdown (fallback si picker bug)
+//
+// Au boot de l'écran, on charge toutes les mp_entreprise validées et on les
+// injecte dans les <select> #attr-quick-select et #attr-mandataire-quick-select.
+// Au choix d'une entreprise, on rappelle les coords + on alimente les hidden
+// inputs (comme le ferait le picker) + on déclenche le check sanction.
+let _quickPickCache = null;
+async function _loadEntreprisesForQuickPick() {
+  if (_quickPickCache) return _quickPickCache;
+  try {
+    const list = await dataService.query(ENTITIES.MP_ENTREPRISE);
+    _quickPickCache = (list || [])
+      .filter(e => e.actif !== false && e.validationStatus !== 'MERGED')
+      .sort((a, b) => (a.raisonSociale || '').localeCompare(b.raisonSociale || ''));
+  } catch (err) {
+    logger.error('[QuickPick] Erreur chargement entreprises :', err);
+    _quickPickCache = [];
+  }
+  return _quickPickCache;
+}
+
+async function setupQuickPickDropdowns() {
+  const list = await _loadEntreprisesForQuickPick();
+  for (const selId of ['attr-quick-select', 'attr-mandataire-quick-select']) {
+    const sel = document.getElementById(selId);
+    if (!sel) continue;
+    // Préserver la 1ʳᵉ option (placeholder), purger le reste
+    const placeholder = sel.querySelector('option');
+    sel.innerHTML = '';
+    if (placeholder) sel.appendChild(placeholder);
+    list.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      const status = e.validationStatus === 'PENDING' ? ' ⏳' : '';
+      opt.textContent = `${e.raisonSociale || '(sans nom)'}${e.ncc ? ' — NCC ' + e.ncc : ''}${status}`;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+// Appelée par les <select>#xx-quick-select au onchange — alimente les hidden
+// inputs pour le prefix donné et déclenche les vérifications.
+function quickPickEntreprise(prefix, entrepriseId) {
+  if (!entrepriseId || !_quickPickCache) return;
+  const entreprise = _quickPickCache.find(e => e.id === entrepriseId);
+  if (!entreprise) return;
+  const pickerValue = {
+    entrepriseId: entreprise.id,
+    raisonSociale: entreprise.raisonSociale || '',
+    ncc: entreprise.ncc || '',
+    rccm: entreprise.rccm || '',
+    adresse: entreprise.adresse || '',
+    telephone: entreprise.telephone || '',
+    email: entreprise.email || '',
+    banque: { ...(entreprise.banque || {}) },
+    compte: { ...(entreprise.compte || {}) },
+    validationStatus: entreprise.validationStatus || 'VALIDATED'
+  };
+  // Stocker l'état pour handleSave
+  if (prefix === 'attr') _attribSimplePick = pickerValue;
+  else if (prefix === 'attr-mandataire') _attribMandatairePick = pickerValue;
+  // Mirror hidden inputs + prefill banque + check sanctions
+  _mirrorEntrepriseToHiddenInputs(prefix, pickerValue);
+  _prefillBanqueSection(prefix, pickerValue);
+  triggerSanctionCheck();
+  // Feedback visuel : ajouter une petite info au-dessus du picker
+  const containerId = prefix === 'attr' ? 'attr-entreprise-simple-picker' : 'attr-mandataire-picker';
+  const cont = document.getElementById(containerId);
+  if (cont) {
+    cont.style.outline = '2px solid #10b981';
+    setTimeout(() => { if (cont) cont.style.outline = ''; }, 1500);
+  }
+  logger.info('[QuickPick] Entreprise sélectionnée :', entreprise.raisonSociale, '(', prefix, ')');
 }
 
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
@@ -345,10 +421,16 @@ export async function renderAttribution(params) {
       ])
     ]);
 
+    // Modif #69 — Bouton démo « Passer à l'étape suivante »
+    page.appendChild(renderNextPhaseButton({ idOperation, operation }));
     mount('#app', page);
 
     // Initialiser les widgets après montage
     setTimeout(() => initializeWidgets(operation, registries), 100);
+
+    // Modif #69 — Peupler les <select> de sélection rapide d'entreprise
+    // (fallback fiable du picker typeahead)
+    setTimeout(() => setupQuickPickDropdowns(), 100);
 
     // Déclencher la détection sanctions sur les valeurs initiales (chargement d'un attributaire existant)
     setTimeout(() => triggerSanctionCheck(), 150);
@@ -517,10 +599,21 @@ function renderAttributaireSection(attributaire, registries) {
           }, '🚫 Gérer la liste des entreprises sanctionnées')
         ]),
 
-        // Modif #43.b — Picker entreprise (lookup typeahead + autofill + création inline)
+        // Modif #43.b + #69 — Picker + dropdown fallback de sélection rapide
         el('label', { className: 'form-label' }, [
           'Identité de l\'attributaire ',
           el('span', { className: 'required' }, '*')
+        ]),
+        // Modif #69 — Sélection rapide : dropdown direct (fallback)
+        el('div', { style: { marginBottom: '8px' } }, [
+          el('select', {
+            id: 'attr-quick-select',
+            className: 'form-input',
+            style: { fontSize: '13px' },
+            onchange: (ev) => quickPickEntreprise('attr', ev.target.value)
+          }, [
+            el('option', { value: '' }, '⚡ Sélection rapide — choisir une entreprise déjà enregistrée')
+          ])
         ]),
         el('div', { id: 'attr-entreprise-simple-picker', style: { marginBottom: '8px' } },
           renderEntreprisePicker({
@@ -565,7 +658,7 @@ function renderAttributaireSection(attributaire, registries) {
           ])
         ]),
 
-        // Modif #43.b — Picker entreprise pour le MANDATAIRE du groupement + bouton aide
+        // Modif #43.b + #69 — Picker entreprise + sélection rapide (fallback garanti)
         el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } }, [
           el('label', { className: 'form-label', style: { margin: 0 } }, [
             'Mandataire du groupement ',
@@ -578,6 +671,18 @@ function renderAttributaireSection(attributaire, registries) {
             title: 'Voir la liste des entreprises de référence disponibles',
             onclick: (e) => { e.preventDefault(); openEntreprisesHelpDrawer(); }
           }, '❓ Voir les entreprises disponibles')
+        ]),
+        // Modif #69 — Sélection rapide : dropdown direct (fallback si picker
+        // typeahead bug subtilement). Garantit que la démo passe toujours.
+        el('div', { style: { marginBottom: '8px' } }, [
+          el('select', {
+            id: 'attr-mandataire-quick-select',
+            className: 'form-input',
+            style: { fontSize: '13px' },
+            onchange: (ev) => quickPickEntreprise('attr-mandataire', ev.target.value)
+          }, [
+            el('option', { value: '' }, '⚡ Sélection rapide — choisir une entreprise déjà enregistrée')
+          ])
         ]),
         el('div', { id: 'attr-mandataire-picker', style: { marginBottom: '12px' } },
           renderEntreprisePicker({

@@ -16,6 +16,7 @@ import {
 import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
+import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -322,6 +323,8 @@ export async function renderCloture(params) {
     ])
   ]);
 
+  // Modif #69 — Bouton démo « Passer à l'étape suivante »
+  page.appendChild(renderNextPhaseButton({ idOperation, operation }));
   mount('#app', page);
 }
 
