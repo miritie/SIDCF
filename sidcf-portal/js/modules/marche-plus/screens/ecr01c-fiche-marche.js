@@ -133,7 +133,13 @@ export async function renderFicheMarche(params) {
     renderSituationExecutionFinanciere(operation, mpDecomptes, fullData.attribution, fullData.avenants || [], idOperation),
     // Modif #35 : encart pluriannualité basé sur la clé de répartition multi-bailleurs
     renderPluriannualiteSection(fullData.cleRepartition, mpDecomptes, registries),
-    lots.length > 1 ? renderLotSelectorAndSummary(lots, currentLotId, fullData, registries, idOperation) : null,
+    // Modif #67 — Toujours afficher l'info lot :
+    //   - si > 1 lot : sélecteur cliquable + résumé par lot (existant)
+    //   - si 1 lot : bandeau discret « Marché à lot unique » pour rappeler
+    //     que toutes les étapes post-procédure restent attachées au lot.
+    lots.length > 1
+      ? renderLotSelectorAndSummary(lots, currentLotId, fullData, registries, idOperation)
+      : renderLotUniqueBanner(lots),
     el('div', {
       className: 'fiche-grid',
       style: {
@@ -857,6 +863,44 @@ function renderKpiCard(label, value, sub, color, formula, onPlusClick, plusTitle
       onmouseenter: (e) => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#fff'; },
       onmouseleave: (e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = color; }
     }, '+') : null
+  ]);
+}
+
+// ============================================
+// Bandeau lot unique — Modif #67
+// Toujours affiché quand un marché n'a qu'un seul lot, pour rappeler que les
+// étapes Attribution/Visa CF/Exécution/Clôture sont attachées au lot (même
+// en mono-lot — c'est la règle métier : il y a toujours ≥ 1 lot par marché).
+// ============================================
+function renderLotUniqueBanner(lots) {
+  const lot = (lots && lots[0]) || null;
+  const libelle = lot?.libelle || lot?.objet || 'Lot principal';
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '20px' }
+  }, [
+    el('div', {
+      className: 'card-body',
+      style: { padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '12px' }
+    }, [
+      el('span', { style: { fontSize: '20px' } }, '📦'),
+      el('div', { style: { flex: 1 } }, [
+        el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151' } },
+          `Marché à lot unique — ${libelle}`),
+        el('div', { style: { fontSize: '11px', color: '#6b7280', marginTop: '2px' } },
+          'Toutes les étapes post-procédure (Attribution, Approbation, Exécution, Clôture) sont attachées à ce lot.')
+      ]),
+      el('span', {
+        style: {
+          fontSize: '11px',
+          padding: '3px 8px',
+          background: '#dbeafe',
+          color: '#1e40af',
+          borderRadius: '10px',
+          fontWeight: 600
+        }
+      }, '1 lot')
+    ])
   ]);
 }
 

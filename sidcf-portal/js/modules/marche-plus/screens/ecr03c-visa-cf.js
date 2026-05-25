@@ -374,7 +374,9 @@ async function handleSave(idOperation, attributionId, lotId = null, existingAppr
     router.navigate('/mp/fiche-marche', { idOperation });
   } catch (err) {
     logger.error('[ECR03C] Erreur sauvegarde', err);
-    alert(`❌ Erreur lors de la sauvegarde : ${err.message}`);
+    // Modif #67 — Erreur silencieuse en mode démo
+    logger.error('[VisaCF] Erreur sauvegarde — détail technique :', err);
+    alert('⚠️ Impossible d\'enregistrer l\'approbation pour le moment. Vérifiez votre connexion ou réessayez.');
   }
 }
 

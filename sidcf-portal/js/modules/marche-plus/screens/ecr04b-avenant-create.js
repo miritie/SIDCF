@@ -631,7 +631,8 @@ async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel
       logger.info('[ECR04B-Create] Document uploadé avec succès', uploadResult);
     } catch (uploadError) {
       logger.error('[ECR04B-Create] Erreur upload document', uploadError);
-      alert(`❌ Erreur lors de l'upload du document : ${uploadError.message}`);
+      logger.error('[Avenant] Erreur upload document :', uploadError);
+      alert('⚠️ Impossible de téléverser le document pour le moment. Vérifiez le format/taille du PDF puis réessayez.');
       return;
     }
 
@@ -689,7 +690,8 @@ async function handleSubmit(idOperation, operation, numeroAvenant, montantActuel
 
   } catch (err) {
     logger.error('[ECR04B-Create] Erreur création avenant', err);
-    alert(`❌ Erreur : ${err.message}`);
+    logger.error('[Avenant] Erreur — détail technique :', err);
+    alert('⚠️ Impossible de créer l\'avenant pour le moment. Vérifiez la cohérence des montants ou réessayez.');
   }
 }
 

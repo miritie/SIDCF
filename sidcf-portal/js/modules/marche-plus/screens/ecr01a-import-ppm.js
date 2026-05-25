@@ -95,8 +95,9 @@ export async function renderImportPPM() {
         alert('Erreur lors de l\'import: ' + result.errors.join(', '));
       }
     } catch (error) {
-      logger.error('[ImportPPM] Import failed:', error);
-      alert('Erreur lors de l\'import: ' + error.message);
+      // Modif #67 — Erreur silencieuse : détail en console, message générique en UI
+      logger.error('[ImportPPM] Import failed — détail technique :', error);
+      alert('⚠️ Impossible de finaliser l\'import pour le moment. Vérifiez le format du fichier puis réessayez.');
     }
   }
 

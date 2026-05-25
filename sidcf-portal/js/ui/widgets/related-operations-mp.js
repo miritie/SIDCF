@@ -570,8 +570,12 @@ export function renderRelatedOperations({
         logger.info('[Relations] Mise à jour des liens', { id: workingOp.id, relations: workingOp.relations });
         if (onSaved) await onSaved({ ...workingOp });
       } catch (err) {
-        logger.error('[Relations] Erreur de persistence', err);
-        alert(`❌ Erreur lors de la sauvegarde : ${err.message}`);
+        // Modif #67 — Erreur silencieuse en mode démo : log technique en console
+        // (visible via F12) mais alerte utilisateur générique. L'utilisateur
+        // ne doit pas voir « column "relations" of relation "mp_operation"
+        // does not exist » ni autres détails techniques de la base.
+        logger.error('[Relations] Erreur de persistence — détail technique pour debug :', err);
+        alert('⚠️ Impossible d\'enregistrer la liaison pour le moment. Réessayez dans un instant ou contactez le support si le problème persiste.');
       }
     }
 

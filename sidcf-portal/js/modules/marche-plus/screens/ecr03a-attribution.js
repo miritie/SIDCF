@@ -2088,7 +2088,9 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
 
   } catch (err) {
     logger.error('[ECR03A] Erreur sauvegarde', err);
-    alert(`❌ Erreur lors de la sauvegarde : ${err.message}`);
+    // Modif #67 — Erreur silencieuse en mode démo
+    logger.error('[Attribution] Erreur sauvegarde — détail technique :', err);
+    alert('⚠️ Impossible d\'enregistrer l\'attribution pour le moment. Vérifiez votre connexion ou réessayez.');
   }
 }
 
