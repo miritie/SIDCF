@@ -13,6 +13,46 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-25 — Couverture exhaustive des données de test : modes manquants + multi-lots
+
+> **Modif #70** — Demande client : « priere faire le point des donnees. faire des tests complets et avoir une source de donnees couvrant tous les cas de figure, avec plusieurs lots, les differents modes de passation, et les differents niveaux dans le workflow ». L'audit a révélé deux lacunes critiques sur la base de démo : (1) aucune opération multi-lots, (2) 5 modes de passation officiels jamais représentés dans les données — `AOO_PREQUALIF`, `AOO_2ETAPES`, `AOR`, `PI`, `ENTENTE_DIRECTE`.
+
+### Migration `029_mp_test_couverture_modes_lots.sql`
+
+1. **Schéma** — ajout de la colonne manquante `mp_procedure.lots JSONB DEFAULT '[]'`. Cette colonne est lue côté front par `lot-data.js / getLotsFromProcedure()` mais n'avait jamais été créée en DB (les opérations mono-lot s'en passent ; les multi-lots l'exigent).
+2. **6 opérations supplémentaires** (UUIDs série 200) couvrant les cas manquants, avec workflow amont entièrement renseigné (procédure + attribution + visa CF + OS si EN_EXEC) :
+   - **201** `TEST-AOO-PREQ` — AOO avec préqualification, état **VISÉ**, mono-lot, 3,5 Md XOF
+   - **202** `TEST-MULTI-LOTS` — AOO 2 étapes, état **EN_EXEC**, **3 lots distincts** (réseau primaire / secondaire / raccordements) avec **3 attributaires différents** stockés dans `attributaire.parLot[lotId]`
+   - **203** `TEST-AOR` — Appel d'Offres Restreint, état **ATTRIBUÉ**, mono-lot, avec `procDerogation` (art. 58 — sécurité)
+   - **204** `TEST-PI` — Prestations Intellectuelles, état **EN_EXEC**, mono-lot, type de dossier `DTAO_PI`
+   - **205** `TEST-GRE-A-GRE` — Entente Directe, état **VISÉ**, mono-lot, `procDerogation` (art. 67 — monopole technique)
+   - **206** `TEST-2LOTS` — AOO, état **EN_EXEC**, **2 lots géographiques** (Nord Bouaké / Sud Abidjan) avec 2 attributaires
+3. **10 nouvelles entreprises** validées (`mp_entreprise`, statut `VALIDATED`) — une par attribution / co-lot pour garantir la cohérence des fiches liées.
+
+### Résultat de l'audit final
+
+- **Couverture modes** : 10/10 — `[]` modes manquants
+- **Couverture états** : 7/7 — PLANIFIE, EN_PROC, ATTRIBUE, VISE, EN_EXEC, CLOS, RESILIE
+- **Multi-lots** : 2 opérations (3 lots + 2 lots) → testable sur tous les écrans qui consomment `parLot[lotId]`
+- **Dérogations procédure** : 3 opérations (104 PLANIF, 203 ATTRIBUE, 205 VISE)
+
+### Fichiers touchés
+
+- `postgres/migrations/029_mp_test_couverture_modes_lots.sql` (nouveau)
+
+### Impact
+
+- **DB** : ALTER TABLE + 17 opérations TEST-* désormais en base (était 11)
+- **UI** : aucun changement de code — la maquette consomme les nouvelles données automatiquement via le PPM et la liste des marchés
+- **Worker** : aucun déploiement requis (pas de changement de code Worker)
+
+### Action de déploiement
+
+- ✅ Migration exécutée sur Neon (`node run-any.js 029_mp_test_couverture_modes_lots.sql`)
+- ❌ Pas de `wrangler deploy`
+
+---
+
 ## 2026-05-24 — Suggestion automatique du Mode de Passation à la création PPM + alerte dérogation
 
 > **Modif #53** — Demande client : sur l'écran de création de ligne PPM, le **mode de passation est aujourd'hui en libre sélection** alors que selon le Code des Marchés Publics CI, ce mode est **imposé par le montant de la ligne, son type et sa nature économique**. Le système doit donc proposer automatiquement le mode adéquat, motiver le choix (montant + seuils + type), et alerter l'utilisateur si celui-ci sélectionne autre chose — en l'avertissant qu'une dérogation sera obligatoirement demandée aux étapes suivantes.
