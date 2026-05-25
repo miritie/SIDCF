@@ -13,6 +13,52 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-25 — Hotfix démo : crash `g.taux.toFixed` + 404 handler sobre
+
+> **Modif #75** — Bug remonté EN PLEIN MEETING : la fiche d'un marché ayant des garanties faisait planter le rendu avec `TypeError: (g.taux ?? 0).toFixed is not a function`. Le router catchait l'exception et tombait sur le 404 handler, qui affichait **« Page non trouvée »** + une grosse **stack trace rouge** exposée à l'utilisateur. Très laid en démo. Le titre était trompeur (c'était un crash, pas une 404).
+
+### Correctifs
+
+**1. Crash `toFixed` sur valeurs non numériques (`ecr01c-fiche-marche.js`)**
+
+L'opérateur `??` préserve une string non-null (ex : `g.taux = "5.00"` vient ainsi de la DB JSONB). `(g.taux ?? 0).toFixed(2)` plante alors avec `toFixed is not a function`. Fix : remplacement de `(x ?? 0)` par `(Number(x) || 0)` sur 4 occurrences à risque :
+
+- ligne 1626 : `g.taux` dans le tableau des garanties (cause directe du crash)
+- ligne 613 : `it.pourcentage` dans `case 'pourcentage'`
+- ligne 1441 : `it.pourcentage` (échéancier détaillé)
+- ligne 1464 : `l.pourcentage` (clé de répartition détaillée)
+
+Les autres `.toFixed` du fichier (cumulPct calculé localement, etc.) sont déjà numériques par construction.
+
+**2. 404 handler sobre — défense en profondeur (`main.js` + `router.js`)**
+
+Avant : `${error.stack || error.message}` injecté dans un `<pre style="color: red; font-size: 12px;">…</pre>`. Toute erreur attrapée par le router produisait donc une page rouge alarmante avec trace technique.
+
+Maintenant :
+- L'erreur est **loggée dans la console** (`logger.error` avec stack) pour le dev — plus rien d'exposé à l'utilisateur final.
+- Le message devient sobre : *« Cette page n'est pas accessible. Le lien que vous avez suivi pointe vers un écran qui n'est pas disponible ici. »* (icône 🧭, pas de rouge alarmant).
+- **Rebond intelligent** selon le préfixe de la route : `/mp/*` → bouton « Liste des marchés », `/investissement/*` → « Tableau de bord Investissement », `/admin/*` → « Administration », sinon « Retour au portail ». Un second bouton « ← Revenir en arrière » utilise `history.back()`.
+- Le fallback `router.js:show404` (sans handler custom) suit la même charte.
+
+Cette défense vaut pour TOUT crash futur qui passerait par le router, pas seulement le bug `toFixed` corrigé ici. L'utilisateur ne verra plus jamais de stack trace exposée en démo.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (4 fix `Number()`)
+- `sidcf-portal/js/main.js` (404 handler refactor)
+- `sidcf-portal/js/router.js` (fallback 404 refactor)
+
+### Impact
+
+- **UI** : fini la page rouge avec stack trace. La fiche marché ne plante plus sur les garanties dont le taux est stocké en string.
+- **Worker / DB** : aucun changement.
+
+### Action de déploiement
+
+- ✅ Redéploiement front Vercel obligatoire
+
+---
+
 ## 2026-05-25 — Échéancier : remplacement du placeholder « à implémenter » par un rendu propre
 
 > **Modif #74** — Audit pré-démo : `ecr03b-echeancier-cle.js:512` injectait littéralement le texte « **Tableau échéancier à implémenter** » dans l'UI. Visible à tout démonstrateur qui clique sur l'écran Échéancier. Aussi : deux boutons « + Ajouter échéance » et « ↻ Recalculer » étaient présents mais reliés à des fonctions stubs vides — un clic ne produisait rien.

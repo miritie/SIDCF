@@ -87,20 +87,51 @@ async function boot() {
     // Diagnostics
     router.register('/diagnostics/health', renderHealthCheck);
 
-    // 404 handler
+    // 404 handler — Modif #75
+    // Avant : ce handler exposait `error.stack` en gros bloc rouge à l'écran.
+    // Démos cassées : un utilisateur tombant sur une URL non enregistrée
+    // voyait une page très inquiétante avec stack trace technique.
+    // Maintenant : message sobre, suggestion de rebond intelligente selon
+    // le préfixe de la route, et logging silencieux pour le dev.
     router.setNotFound((path, error) => {
+      if (error) {
+        logger.error('[Router] Navigation error (404)', { path, error: error.message, stack: error.stack });
+      } else {
+        logger.warn('[Router] Route inconnue', { path });
+      }
+
+      // Rebond intelligent selon le préfixe
+      let suggestionHref = '#/portal';
+      let suggestionLabel = '🏠 Retour au portail';
+      if (typeof path === 'string') {
+        if (path.startsWith('/mp/')) {
+          suggestionHref = '#/mp/ppm-list';
+          suggestionLabel = '📋 Liste des marchés (Marché+)';
+        } else if (path.startsWith('/investissement/')) {
+          suggestionHref = '#/investissement/dashboard';
+          suggestionLabel = '📊 Tableau de bord Investissement';
+        } else if (path.startsWith('/admin/')) {
+          suggestionHref = '#/admin/referentiels';
+          suggestionLabel = '⚙️ Administration';
+        }
+      }
+
       mount('#app', `
         <div class="page">
-          <div class="empty-state">
-            <div class="empty-state-icon">🔍</div>
-            <h2 class="empty-state-title">Page non trouvée</h2>
-            <p class="empty-state-message">
-              La route <strong>${path}</strong> n'existe pas dans le système.
+          <div class="empty-state" style="max-width: 480px; margin: 60px auto; text-align: center;">
+            <div class="empty-state-icon" style="font-size: 48px;">🧭</div>
+            <h2 class="empty-state-title" style="margin-top: 16px;">Cette page n'est pas accessible</h2>
+            <p class="empty-state-message" style="color: #6b7280; margin-top: 8px;">
+              Le lien que vous avez suivi pointe vers un écran qui n'est pas disponible ici.
             </p>
-            ${error ? `<pre style="color: red; font-size: 12px; margin: 16px 0;">${error.stack || error.message}</pre>` : ''}
-            <button class="btn btn-primary" onclick="window.location.hash='#/portal'">
-              Retour au portail
-            </button>
+            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="window.location.hash='${suggestionHref}'">
+                ${suggestionLabel}
+              </button>
+              <button class="btn btn-secondary" onclick="history.back()">
+                ← Revenir en arrière
+              </button>
+            </div>
           </div>
         </div>
       `);

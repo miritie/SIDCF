@@ -610,7 +610,7 @@ function openEcheancierDrilldownDrawer(items, montantInitial, idOperation) {
       switch (col.key) {
         case 'ordre':       return it.ordre != null ? it.ordre : '-';
         case 'libelle':     return it.libelle || it.type || '-';
-        case 'pourcentage': return it.pourcentage != null ? `${it.pourcentage.toFixed(1)} %` : '-';
+        case 'pourcentage': return it.pourcentage != null ? `${(Number(it.pourcentage) || 0).toFixed(1)} %` : '-';
         case 'montant':     {
           const m = it.montant != null
             ? it.montant
@@ -1438,7 +1438,7 @@ function renderEcheancierTable(items) {
       el('td', {}, it.typeEcheance || '-'),
       el('td', {}, it.baseCalc || 'TTC'),
       el('td', { style: { textAlign: 'right' } }, money(it.montant)),
-      el('td', { style: { textAlign: 'right' } }, `${(it.pourcentage || 0).toFixed(2)}%`)
+      el('td', { style: { textAlign: 'right' } }, `${(Number(it.pourcentage) || 0).toFixed(2)}%`)
     ])))
   ]);
 }
@@ -1461,7 +1461,7 @@ function renderCleRepartitionTable(lignes, registries) {
         el('td', {}, l.typeFinancement || '-'),
         el('td', {}, l.baseCalc || '-'),
         el('td', { style: { textAlign: 'right' } }, money(l.montant)),
-        el('td', { style: { textAlign: 'right' } }, `${(l.pourcentage || 0).toFixed(2)}%`)
+        el('td', { style: { textAlign: 'right' } }, `${(Number(l.pourcentage) || 0).toFixed(2)}%`)
       ]);
     }))
   ]);
@@ -1623,7 +1623,7 @@ function renderExecutionContent(fullData, currentLotId, registries) {
             return el('tr', {}, [
               el('td', { style: { fontSize: '12px' } }, typeLib),
               el('td', {}, g.baseCalc || 'TTC'),
-              el('td', { style: { textAlign: 'right' } }, `${(g.taux ?? 0).toFixed(2)}%`),
+              el('td', { style: { textAlign: 'right' } }, `${(Number(g.taux) || 0).toFixed(2)}%`),
               el('td', { style: { textAlign: 'right' } }, money(g.montant)),
               el('td', {}, fmtDate(g.dateEmission)),
               el('td', {}, fmtDate(g.dateEcheance)),

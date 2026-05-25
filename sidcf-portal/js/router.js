@@ -120,17 +120,18 @@ class Router {
     if (this.notFoundHandler) {
       this.notFoundHandler(path, error);
     } else {
+      // Modif #75 — Fallback sobre (sans stack trace exposée) au cas où
+      // aucun handler personnalisé n'aurait été câblé.
       mount('#app', `
         <div class="page">
-          <div class="empty-state">
-            <div class="empty-state-icon">🔍</div>
-            <h2 class="empty-state-title">Page non trouvée</h2>
-            <p class="empty-state-message">
-              La route <strong>${path}</strong> n'existe pas.
+          <div class="empty-state" style="max-width: 480px; margin: 60px auto; text-align: center;">
+            <div class="empty-state-icon" style="font-size: 48px;">🧭</div>
+            <h2 class="empty-state-title" style="margin-top: 16px;">Cette page n'est pas accessible</h2>
+            <p class="empty-state-message" style="color: #6b7280; margin-top: 8px;">
+              Le lien que vous avez suivi pointe vers un écran qui n'est pas disponible ici.
             </p>
-            ${error ? `<pre style="color: red; font-size: 12px;">${error.message}</pre>` : ''}
-            <button class="btn btn-primary" onclick="window.location.hash='#/portal'">
-              Retour au portail
+            <button class="btn btn-primary" style="margin-top: 24px;" onclick="window.location.hash='#/portal'">
+              🏠 Retour au portail
             </button>
           </div>
         </div>
