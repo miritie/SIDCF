@@ -1623,6 +1623,29 @@ function renderGarantieItem(id, label, garantie, required = false, montantsTotau
 /**
  * Section Réserves CF
  */
+// Modif #64 — Liste indicative des types de réserves standards du CF.
+// La VRAIE liste sera fournie par la DCF et chargée depuis un référentiel
+// configurable (`registries.TYPE_RESERVE_CF`) — cette liste fictive sert pour
+// la maquette de démonstration. Aligné sur les pratiques courantes DCF CI.
+const TYPES_RESERVE_CF_FICTIFS = [
+  { code: 'AUCUNE_RESERVE',          label: 'AUCUNE RÉSERVE — Dossier conforme' },
+  { code: 'DOCUMENT_MANQUANT',       label: 'Document manquant (pièce justificative absente)' },
+  { code: 'PIECES_INCOMPLETES',      label: 'Pièces administratives incomplètes (plusieurs)' },
+  { code: 'PROCEDURE_NON_CONFORME',  label: 'Procédure non conforme au seuil de montant' },
+  { code: 'DEROGATION_NON_JUSTIFIEE',label: 'Dérogation invoquée sans pièce justificative' },
+  { code: 'ENVELOPPE_INSUFFISANTE',  label: 'Disponibilité budgétaire insuffisante' },
+  { code: 'MONTANT_DEPASSE',         label: 'Montant supérieur au plafond autorisé' },
+  { code: 'ATTRIBUTAIRE_SANCTIONNE', label: 'Attributaire figure sur liste de sanctions' },
+  { code: 'PV_NON_CONFORME',         label: 'PV d\'ouverture ou d\'attribution non conforme' },
+  { code: 'DELAI_NON_RESPECTE',      label: 'Délai de publication ou d\'analyse non respecté' },
+  { code: 'GARANTIES_NON_CONFORMES', label: 'Taux ou montant de garantie hors plage légale' },
+  { code: 'TVA_INCOHERENT',          label: 'Calcul TVA / base HT-TTC erroné' },
+  { code: 'CLE_REPARTITION_INVALIDE',label: 'Clé de répartition multi-bailleurs incohérente' },
+  { code: 'ECHEANCIER_INCOMPLET',    label: 'Échéancier non total à 100 %' },
+  { code: 'CHAINE_BUDGETAIRE_INVALIDE', label: 'Chaîne budgétaire (activité/nature) incohérente' },
+  { code: 'AUTRE',                   label: 'Autre motif (à préciser dans le commentaire)' }
+];
+
 function renderReservesCFSection(decisionCF) {
   // Par défaut décoché, sauf si aReserves=true dans les données
   const aReserves = decisionCF.aReserves === true;
@@ -1658,15 +1681,31 @@ function renderReservesCFSection(decisionCF) {
           borderRadius: '4px'
         }
       }, [
+        // Modif #64 — Note explicite : liste fictive pour la maquette
+        el('div', {
+          style: {
+            padding: '8px 10px',
+            background: 'rgba(245,158,11,0.15)',
+            borderLeft: '3px solid #f59e0b',
+            borderRadius: '4px',
+            fontSize: '11px',
+            color: '#78350f',
+            marginBottom: '12px',
+            fontStyle: 'italic'
+          }
+        }, '💡 Liste fictive pour la maquette. Les vrais types de réserves CF seront configurables côté administration (référentiel TYPE_RESERVE_CF) — la liste validée et partagée par la DCF remplacera celle-ci.'),
+
         el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
           el('label', { className: 'form-label' }, 'Type de réserve'),
-          el('input', {
-            type: 'text',
+          el('select', {
             className: 'form-input',
-            id: 'cf-type-reserve',
-            value: decisionCF.typeReserve || '',
-            placeholder: 'Ex: DOCUMENT_MANQUANT'
-          })
+            id: 'cf-type-reserve'
+          }, [
+            el('option', { value: '' }, '-- Sélectionner --'),
+            ...TYPES_RESERVE_CF_FICTIFS.map(t =>
+              el('option', { value: t.code, selected: t.code === decisionCF.typeReserve }, t.label)
+            )
+          ])
         ]),
 
         el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
@@ -1675,7 +1714,7 @@ function renderReservesCFSection(decisionCF) {
             className: 'form-input',
             id: 'cf-commentaire',
             rows: 2,
-            placeholder: 'Commentaires additionnels...'
+            placeholder: 'Commentaires additionnels — détaillez la nature de la réserve, les pièces attendues, etc.'
           }, decisionCF.commentaire || '')
         ])
       ])
