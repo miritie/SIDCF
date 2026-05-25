@@ -261,7 +261,8 @@ export async function renderPPMCreateLine(params) {
   const page = el('div', { className: 'page' }, [
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour liste PPM', () => router.navigate('/mp/ppm-list')),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '➕ Créer une nouvelle ligne PPM'),
+      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '📋 Vous êtes ici · Étape Planification'),
+      el('h1', { className: 'page-title' }, '📋 Planification — Créer une nouvelle ligne PPM'),
       el('p', { className: 'page-subtitle' }, 'Saisie manuelle d\'une opération au Plan de Passation des Marchés')
     ]),
 

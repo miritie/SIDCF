@@ -88,7 +88,8 @@ export async function renderVisaCF(params) {
           className: 'btn btn-secondary btn-sm',
           onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
         }, '← Retour fiche'),
-        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, '✅ Approbation du marché'),
+        el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '🔍 Vous êtes ici · Étape Approbation'),
+        el('h1', { className: 'page-title' }, '🔍 Approbation — Organe approbateur'),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
 

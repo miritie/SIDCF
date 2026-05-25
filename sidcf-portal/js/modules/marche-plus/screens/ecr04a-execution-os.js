@@ -174,7 +174,8 @@ export async function renderExecutionOS(params) {
     // Header
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Exécution du marché'),
+      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '⚙️ Vous êtes ici · Étape Exécution'),
+      el('h1', { className: 'page-title' }, '⚙️ Exécution — Ordre de service & Suivi'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 

@@ -247,7 +247,8 @@ export async function renderAttribution(params) {
         className: 'btn btn-secondary btn-sm',
         onclick: () => router.navigate('/mp/fiche-marche', { idOperation })
       }, '← Retour fiche'),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Attribution du Marché'),
+      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '✅ Vous êtes ici · Étape Attribution'),
+      el('h1', { className: 'page-title' }, '✅ Attribution — Attribution du marché & Garanties'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]);
     wireSpec(pageHeader, {

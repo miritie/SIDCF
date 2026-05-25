@@ -86,10 +86,21 @@ export async function renderProcedurePV(params) {
     // Timeline
     renderSteps(fullData, idOperation),
 
-    // Header
+    // Header — Modif #62 : titre aligné sur le libellé de la timeline + breadcrumb
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Procédure & Mode de Passation'),
+      el('div', {
+        style: {
+          marginTop: '12px',
+          marginBottom: '4px',
+          fontSize: '12px',
+          color: '#6366f1',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          fontWeight: 600
+        }
+      }, '📝 Vous êtes ici · Étape Contractualisation'),
+      el('h1', { className: 'page-title' }, '📝 Contractualisation — Procédure & Mode de Passation'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 

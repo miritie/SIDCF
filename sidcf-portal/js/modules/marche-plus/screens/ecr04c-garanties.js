@@ -105,7 +105,8 @@ export async function renderGaranties(params) {
     // Header
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Gestion des Garanties'),
+      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '⚙️ Vous êtes ici · Étape Exécution (sous-écran Garanties)'),
+      el('h1', { className: 'page-title' }, '⚙️ Exécution — Gestion des Garanties'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 

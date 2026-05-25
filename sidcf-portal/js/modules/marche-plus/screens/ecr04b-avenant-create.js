@@ -83,7 +83,8 @@ export async function renderAvenantCreate(params) {
     const page = el('div', { className: 'page' }, [
       el('div', { className: 'page-header' }, [
         createButton('btn btn-secondary btn-sm', '← Retour liste avenants', () => router.navigate('/mp/avenants', { idOperation, lotId: currentLotId })),
-        el('h1', { className: 'page-title', style: { marginTop: '12px' } }, `➕ Nouvel avenant N°${numeroAvenant}`),
+        el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '⚙️ Vous êtes ici · Étape Exécution (sous-écran Avenant)'),
+        el('h1', { className: 'page-title' }, `⚙️ Exécution — Nouvel avenant N°${numeroAvenant}`),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
 

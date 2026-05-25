@@ -115,7 +115,8 @@ export async function renderCloture(params) {
 
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Clôture & Réceptions'),
+      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '🏁 Vous êtes ici · Étape Clôture'),
+      el('h1', { className: 'page-title' }, '🏁 Clôture — Réceptions provisoire & définitive'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 

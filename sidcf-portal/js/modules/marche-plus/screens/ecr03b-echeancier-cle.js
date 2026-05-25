@@ -84,7 +84,8 @@ export async function renderEcheancierCle(params) {
     // Header
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour fiche', () => router.navigate('/mp/fiche-marche', { idOperation })),
-      el('h1', { className: 'page-title', style: { marginTop: '12px' } }, 'Échéancier & Clé de Répartition'),
+      el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '✅ Vous êtes ici · Étape Attribution (sous-écran Échéancier)'),
+      el('h1', { className: 'page-title' }, '✅ Attribution — Échéancier & Clé de Répartition'),
       el('p', { className: 'page-subtitle' }, operation.objet)
     ]),
 
