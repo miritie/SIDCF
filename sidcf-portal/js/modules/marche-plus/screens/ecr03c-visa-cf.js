@@ -20,6 +20,7 @@ import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { getOrganesApplicables, getInstitutionScope } from '../../../lib/mp-organes-approbation.js';
 import { uploadDocument } from '../../../lib/r2-storage-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
+import { renderDerogationBanner } from '../../../ui/widgets/derogation-banner-mp.js';
 
 export async function renderVisaCF(params) {
   const { idOperation } = params;
@@ -102,6 +103,11 @@ export async function renderVisaCF(params) {
         el('h1', { className: 'page-title' }, '🔍 Approbation — Organe approbateur'),
         el('p', { className: 'page-subtitle' }, operation.objet)
       ]),
+
+      // Modif #73 — Rappel dérogation visible avant la décision CF. C'est
+      // l'écran le plus critique pour ce rappel : le CF ne doit jamais
+      // approuver à l'aveugle un marché dérogatoire.
+      renderDerogationBanner(operation),
 
       renderLotSelector({
         lots,

@@ -27,6 +27,7 @@ import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-p
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-manager-mp.js';
 import { renderEntreprisePicker } from '../../../ui/widgets/entreprise-picker-mp.js';
+import { renderDerogationBanner } from '../../../ui/widgets/derogation-banner-mp.js';
 import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
@@ -357,6 +358,11 @@ export async function renderAttribution(params) {
 
     const page = el('div', { className: 'page' }, [
       pageHeader,
+
+      // Modif #73 — Rappel dérogation si déclarée à la planification ou à
+      // la procédure. Doit rester visible à toutes les étapes aval pour
+      // que le CF n'attribue jamais à l'aveugle un dossier dérogatoire.
+      renderDerogationBanner(operation),
 
       // Sélecteur de lot (visible si > 1 lot)
       renderLotSelector({

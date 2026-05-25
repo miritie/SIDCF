@@ -13,6 +13,52 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-25 — Visibilité de la dérogation à l'Attribution et au Visa CF
+
+> **Modif #73** — Audit pré-démo (scénario dérogation) : la déclaration de dérogation faite à la planification (ECR01D) ou à la procédure (ECR02A) **disparaissait visuellement à tous les écrans aval** (Attribution ECR03A, Approbation ECR03C). Conséquence : le contrôleur financier pouvait approuver à l'aveugle un marché dérogatoire sans aucun rappel visuel — risque de validation aveugle relevé dans l'audit.
+
+### Correctif
+
+Nouveau widget partagé **`ui/widgets/derogation-banner-mp.js`** qui lit `operation.procDerogation` et affiche un bandeau rouge persistant :
+
+- **Bordure et fond rouges** (`#dc2626` / `#fef2f2`) avec icône ⚠️ — impossible à manquer
+- **Statut justificatif** : badge vert « ✓ Justifiée » si `docId` présent, sinon orange « ⏳ Justificatif manquant »
+- **Statut validation CF** : badge bleu « ✓ Validée le DD/MM/YYYY » si `validatedAt` rempli
+- **Phrase contextuelle** : « Procédure déclarée à la planification/procédure (mode X retenu hors recommandation du Code des Marchés Publics CI) »
+- **Commentaire de motivation** affiché en italique entre guillemets
+- **Référence du document justificatif** (📎 docId)
+
+### Intégration
+
+- **`ecr03a-attribution.js`** : bandeau injecté juste après le `pageHeader`, avant le sélecteur de lot
+- **`ecr03c-visa-cf.js`** : bandeau injecté juste après le `page-header`, avant le sélecteur de lot — c'est l'écran le plus critique pour ce rappel
+- `ecr01c-fiche-marche.js` conserve son badge orange « ⚠️ Dérogation » existant en en-tête, maintenant cohérent visuellement avec le bandeau aval
+
+### Cas de test (couverts par les opérations TEST-*)
+
+| Opération | État | Bandeau attendu |
+|---|---|---|
+| TEST-DEROG (104) | PLANIFIE | « Procédure déclarée à la planification » + ⏳ Justificatif manquant |
+| TEST-AOR (203) | ATTRIBUE | « Procédure déclarée à la procédure » + ✓ Justifiée (DOC_AOR_DEROG_203.pdf) |
+| TEST-GRE-A-GRE (205) | VISE | « Procédure déclarée à la procédure » + ✓ Justifiée (DOC_ED_DEROG_205.pdf) |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/derogation-banner-mp.js` (nouveau)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js`
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03c-visa-cf.js`
+
+### Limites connues (à traiter dans une itération suivante)
+
+- `procDerogation.validatedAt` est rempli automatiquement à la sauvegarde ECR02A — il faudrait un vrai workflow où le CF valide explicitement la dérogation au moment de l'approbation.
+- L'upload réel du document justificatif (R2) n'est pas câblé : `ecr02a:756` génère encore un `docId` mock.
+
+### Action de déploiement
+
+- ✅ Redéploiement front Vercel
+
+---
+
 ## 2026-05-25 — Fixes critiques multi-lots (anti-doublon OS, montants par lot, navigation EN_EXEC)
 
 > **Modif #72** — Audit pré-démo (3 sous-agents Explore) sur l'opération TEST-MULTI-LOTS (3 lots distincts, créée Modif #70). Personne n'avait jamais testé visuellement les écrans en condition multi-lots — trois bugs bloquants identifiés et corrigés.
