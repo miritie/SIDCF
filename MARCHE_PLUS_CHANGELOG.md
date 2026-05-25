@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-25 — Échéancier : remplacement du placeholder « à implémenter » par un rendu propre
+
+> **Modif #74** — Audit pré-démo : `ecr03b-echeancier-cle.js:512` injectait littéralement le texte « **Tableau échéancier à implémenter** » dans l'UI. Visible à tout démonstrateur qui clique sur l'écran Échéancier. Aussi : deux boutons « + Ajouter échéance » et « ↻ Recalculer » étaient présents mais reliés à des fonctions stubs vides — un clic ne produisait rien.
+
+### Correctif
+
+1. **Rendu lecture seule des échéances existantes** : `renderEcheancierTable()` produit désormais un vrai tableau (n° / libellé / date / montant / %) avec footer total, sur le même pattern que `renderCleTable()`. Si la base n'a aucune échéance pour ce lot, on affiche une cellule pointillée discrète « Aucune échéance n'a encore été saisie ».
+2. **Boutons « + Ajouter » et « ↻ Recalculer » retirés** : remplacés par un encart d'information neutre « ℹ️ La saisie pas-à-pas de l'échéancier sera disponible dans une prochaine itération. Les échéances existantes restent consultables ci-dessus. » — assume honnêtement la portée de la maquette plutôt qu'afficher des boutons morts.
+3. **Sous-titre du card mis à jour** : « consultation pour la maquette » (au lieu de « Définir les échéances ») — cohérent avec l'absence de saisie.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03b-echeancier-cle.js`
+
+### Impact
+
+- **UI** : plus aucun texte technique exposé au démonstrateur sur l'écran Échéancier.
+- **Worker / DB** : aucun changement.
+
+### Action de déploiement
+
+- ✅ Redéploiement front Vercel
+
+---
+
 ## 2026-05-25 — Visibilité de la dérogation à l'Attribution et au Visa CF
 
 > **Modif #73** — Audit pré-démo (scénario dérogation) : la déclaration de dérogation faite à la planification (ECR01D) ou à la procédure (ECR02A) **disparaissait visuellement à tous les écrans aval** (Attribution ECR03A, Approbation ECR03C). Conséquence : le contrôleur financier pouvait approuver à l'aveugle un marché dérogatoire sans aucun rappel visuel — risque de validation aveugle relevé dans l'audit.

@@ -118,12 +118,17 @@ export async function renderEcheancierCle(params) {
       ])
     ]),
 
-    // Échéancier
+    // Échéancier — Modif #74 : la saisie complète n'est pas opérationnelle
+    // dans cette version (les helpers addEcheanceItem / recalculateEcheancier
+    // sont des stubs). On affiche en consultation propre les échéances déjà
+    // présentes (depuis la base) et on signale que la saisie est en lecture
+    // seule pour la démo. Plus honnête qu'un bouton « + Ajouter » qui ne
+    // fait rien et qu'un placeholder « à implémenter ».
     el('div', { className: 'card', style: { marginBottom: '24px' }, id: 'echeancier-card' }, [
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, '📅 Échéancier de Paiement'),
         el('p', { className: 'text-small text-muted', style: { marginTop: '4px' } },
-          'Définir les échéances de paiement (périodiques ou libres)')
+          'Échéances de paiement (périodiques ou libres) — consultation pour la maquette')
       ]),
       el('div', { className: 'card-body' }, [
         el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
@@ -131,10 +136,8 @@ export async function renderEcheancierCle(params) {
           createPeriodiciteSelect(echeancier?.periodicite || 'LIBRE')
         ]),
         el('div', { id: 'echeancier-table-container' }),
-        el('div', { style: { marginTop: '16px', display: 'flex', gap: '12px' } }, [
-          createButton('btn btn-primary btn-sm', '+ Ajouter échéance', () => addEcheanceItem()),
-          createButton('btn btn-secondary btn-sm', '↻ Recalculer', () => recalculateEcheancier())
-        ]),
+        el('div', { style: { marginTop: '16px', padding: '10px 12px', background: '#f3f4f6', borderRadius: '6px', fontSize: '12px', color: '#6b7280' } },
+          'ℹ️ La saisie pas-à-pas de l\'échéancier (ajout/modification/suppression d\'échéances individuelles) sera disponible dans une prochaine itération. Les échéances existantes restent consultables ci-dessus.'),
         el('div', { id: 'echeancier-validation', style: { marginTop: '16px' } })
       ])
     ]),
@@ -502,14 +505,54 @@ function renderEcheancierTable(items, montantMarche) {
 
   if (items.length === 0) {
     container.innerHTML = '';
-    const empty = el('div', { className: 'alert alert-info' }, 'Aucune échéance définie');
+    const empty = el('div', {
+      style: {
+        padding: '14px 16px',
+        background: '#f9fafb',
+        border: '1px dashed #d1d5db',
+        borderRadius: '6px',
+        color: '#6b7280',
+        fontSize: '13px',
+        fontStyle: 'italic'
+      }
+    }, 'Aucune échéance n\'a encore été saisie pour ce marché.');
     container.appendChild(empty);
     return;
   }
 
-  // Similar implementation as CLE table
-  // For brevity, showing structure only
-  container.innerHTML = '<p class="text-muted">Tableau échéancier à implémenter</p>';
+  // Modif #74 — Rendu lecture seule des échéances existantes (cohérent
+  // avec le pattern de renderCleTable). Remplace le placeholder
+  // « Tableau échéancier à implémenter » qui apparaissait en démo.
+  container.innerHTML = '';
+  const total = items.reduce((sum, it) => sum + (Number(it.montant) || 0), 0);
+  const tbody = items.map((it, idx) => el('tr', {}, [
+    el('td', {}, String(idx + 1)),
+    el('td', {}, it.libelle || it.objet || `Échéance ${idx + 1}`),
+    el('td', {}, it.dateEcheance || it.date || '-'),
+    el('td', { style: { textAlign: 'right' } },
+      (Number(it.montant) || 0).toLocaleString('fr-FR') + ' XOF'),
+    el('td', { style: { textAlign: 'right' } },
+      montantMarche > 0
+        ? ((Number(it.montant) || 0) / montantMarche * 100).toFixed(2) + '%'
+        : '-')
+  ]));
+  const table = el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
+    el('thead', {}, [el('tr', {}, [
+      el('th', { style: { width: '40px' } }, '#'),
+      el('th', {}, 'Libellé'),
+      el('th', { style: { width: '120px' } }, 'Date prévue'),
+      el('th', { style: { width: '140px', textAlign: 'right' } }, 'Montant'),
+      el('th', { style: { width: '70px', textAlign: 'right' } }, '%')
+    ])]),
+    el('tbody', {}, tbody),
+    el('tfoot', {}, [el('tr', { style: { fontWeight: 600, background: '#f9fafb' } }, [
+      el('td', { colSpan: 3, style: { textAlign: 'right' } }, 'Total échéancier'),
+      el('td', { style: { textAlign: 'right' } }, total.toLocaleString('fr-FR') + ' XOF'),
+      el('td', { style: { textAlign: 'right' } },
+        montantMarche > 0 ? (total / montantMarche * 100).toFixed(2) + '%' : '-')
+    ])])
+  ]);
+  container.appendChild(table);
 }
 
 function addEcheanceItem() {
