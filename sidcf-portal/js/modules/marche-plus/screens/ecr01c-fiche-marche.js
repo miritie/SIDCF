@@ -500,13 +500,13 @@ function renderHealthKPIs(fullData, currentLotId, mpDifficultes = [], idOperatio
     ),
     renderKpiCard(
       'Ordres de service',
-      `${osCount}`,
-      osCount > 0 ? 'Exécution démarrée' : 'Aucun OS émis',
+      osCount === 0 ? '0' : (osCount === 1 ? '🚀 OS de démarrage' : `🚀 +${osCount - 1}`),
+      osCount === 0 ? 'Aucun OS émis' : (osCount === 1 ? 'Exécution démarrée' : `${osCount - 1} OS additionnel${osCount > 2 ? 's' : ''}`),
       osColor,
       {
         titre: 'Ordres de Service',
         formule: 'count(MP_ORDRE_SERVICE)',
-        regle: 'L\'OS de démarrage est obligatoire pour passer en phase Exécution (RG017). Date fin prévisionnelle = date OS + durée d\'exécution.',
+        regle: 'L\'OS de démarrage est obligatoire pour passer en phase Exécution (RG017). Un seul OS de démarrage par marché. D\'autres OS (arrêt, reprise, modification) peuvent venir s\'ajouter.',
         reference: 'RG017 et F016 du SDF'
       },
       () => openOrdresServiceDrilldownDrawer(ordresService, idOperation),
@@ -1448,24 +1448,81 @@ function renderExecutionContent(fullData, currentLotId, registries) {
   const avLot = currentLotId === 'ALL' ? avenants : avenants.filter(a => !a.lotId || a.lotId === currentLotId);
   const garLot = currentLotId === 'ALL' ? garanties : garanties.filter(g => !g.lotId || g.lotId === currentLotId);
 
+  // Modif #65 — OS de démarrage mis en évidence + OS additionnels en tableau
+  // Trier par date d'émission croissante pour identifier le premier (= démarrage)
+  const osSorted = [...osLot].sort((a, b) =>
+    (a.dateEmission || '').localeCompare(b.dateEmission || ''));
+  const osDemarrage = osSorted[0] || null;
+  const osAddl = osSorted.slice(1);
+
   return el('div', {}, [
-    el('h4', { style: { margin: '0 0 10px', fontSize: '14px', fontWeight: 600 } }, `📋 Ordres de Service (${osLot.length})`),
-    osLot.length === 0
-      ? el('p', { className: 'text-muted', style: { fontStyle: 'italic', fontSize: '13px' } }, 'Aucun OS émis')
-      : el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
-          el('thead', {}, [el('tr', {}, [
-            el('th', {}, 'Type'),
-            el('th', {}, 'N°'),
-            el('th', {}, 'Date émission'),
-            el('th', {}, 'Date signature')
-          ])]),
-          el('tbody', {}, osLot.map(os => el('tr', {}, [
-            el('td', {}, os.type || '-'),
-            el('td', {}, os.numero || '-'),
-            el('td', {}, fmtDate(os.dateEmission)),
-            el('td', {}, fmtDate(os.dateSignature))
-          ])))
+    // En-tête de la sous-section OS
+    el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } }, [
+      el('h4', { style: { margin: 0, fontSize: '14px', fontWeight: 600 } }, '🚀 Ordre de Service de démarrage'),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        osLot.length > 1 ? `+ ${osLot.length - 1} OS additionnel${osLot.length > 2 ? 's' : ''}` : '')
+    ]),
+
+    // Encart OS de démarrage (vert si présent, gris si absent)
+    !osDemarrage
+      ? el('div', {
+          style: {
+            padding: '12px 14px',
+            background: '#f9fafb',
+            border: '1px dashed #d1d5db',
+            borderRadius: '6px',
+            color: '#6b7280',
+            fontStyle: 'italic',
+            fontSize: '13px'
+          }
+        }, '⏳ Aucun OS de démarrage émis. L\'exécution commence à l\'émission de l\'OS.')
+      : el('div', {
+          style: {
+            padding: '12px 14px',
+            background: '#ecfdf5',
+            borderLeft: '4px solid #10b981',
+            borderRadius: '6px'
+          }
+        }, [
+          el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '12px' } }, [
+            el('div', {}, [
+              el('div', { style: { color: '#065f46', fontWeight: 600, marginBottom: '2px' } }, 'N° d\'OS'),
+              el('div', { style: { fontFamily: 'monospace', fontSize: '13px' } }, osDemarrage.numero || '—')
+            ]),
+            el('div', {}, [
+              el('div', { style: { color: '#065f46', fontWeight: 600, marginBottom: '2px' } }, 'Date d\'émission'),
+              el('div', { style: { fontSize: '13px' } }, fmtDate(osDemarrage.dateEmission))
+            ]),
+            el('div', {}, [
+              el('div', { style: { color: '#065f46', fontWeight: 600, marginBottom: '2px' } }, 'Bureau de contrôle'),
+              el('div', { style: { fontSize: '12px' } }, osDemarrage.bureauControle?.nom || '—')
+            ]),
+            el('div', {}, [
+              el('div', { style: { color: '#065f46', fontWeight: 600, marginBottom: '2px' } }, 'Bureau d\'études'),
+              el('div', { style: { fontSize: '12px' } }, osDemarrage.bureauEtudes?.nom || '—')
+            ])
+          ]),
+          osDemarrage.objet ? el('div', { style: { marginTop: '8px', fontSize: '12px', color: '#374151' } },
+            [el('strong', {}, 'Objet : '), osDemarrage.objet]) : null
         ]),
+
+    // OS additionnels (rares — généralement OS d'arrêt/reprise, OS de modification)
+    osAddl.length > 0 ? el('div', { style: { marginTop: '12px' } }, [
+      el('h4', { style: { margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#374151' } },
+        `📋 OS additionnels (${osAddl.length})`),
+      el('table', { className: 'table', style: { width: '100%', fontSize: '12px' } }, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', {}, 'N°'),
+          el('th', {}, 'Date émission'),
+          el('th', {}, 'Objet')
+        ])]),
+        el('tbody', {}, osAddl.map(os => el('tr', {}, [
+          el('td', { style: { fontFamily: 'monospace' } }, os.numero || '-'),
+          el('td', {}, fmtDate(os.dateEmission)),
+          el('td', { style: { fontSize: '12px' } }, os.objet || '-')
+        ])))
+      ])
+    ]) : null,
 
     el('h4', { style: { margin: '20px 0 10px', fontSize: '14px', fontWeight: 600 } }, `📝 Avenants (${avLot.length})`),
     avLot.length === 0

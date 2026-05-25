@@ -313,10 +313,33 @@ export async function renderExecutionOS(params) {
                 })
               ]),
 
+              // Modif #65 — Bouton anti-doublon : se désactive pendant l'appel
+              // pour empêcher les multi-clics qui généraient des doublons OS.
               el('div', { style: { marginTop: '16px', display: 'flex', justifyContent: 'flex-end' } }, [
-                createButton('btn btn-primary', '🚀 Émettre l\'OS de démarrage', async () => {
-                  await handleAddOSDemarrage(idOperation, currentLotId);
-                })
+                (() => {
+                  const btn = el('button', {
+                    type: 'button',
+                    className: 'btn btn-primary'
+                  }, '🚀 Émettre l\'OS de démarrage');
+                  btn.addEventListener('click', async () => {
+                    if (btn.disabled) return;          // garde-fou ré-entrant
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                    btn.textContent = '⏳ Enregistrement en cours…';
+                    try {
+                      await handleAddOSDemarrage(idOperation, currentLotId);
+                    } catch (err) {
+                      logger.error('[Execution] Échec création OS', err);
+                      alert('❌ Erreur : ' + (err?.message || err));
+                      btn.disabled = false;
+                      btn.style.opacity = '1';
+                      btn.textContent = '🚀 Émettre l\'OS de démarrage';
+                    }
+                    // si succès : la fonction navigate vers une nouvelle page,
+                    // donc pas besoin de réactiver le bouton.
+                  });
+                  return btn;
+                })()
               ])
             ])
       ])
@@ -648,6 +671,15 @@ async function handleAddOSDemarrage(idOperation, lotId = null) {
 
   if (!date) {
     alert('⚠️ Veuillez saisir une date d\'émission');
+    return;
+  }
+
+  // Modif #65 — Garde-fou anti-doublon : vérifier qu'aucun OS n'existe déjà
+  // pour ce marché avant d'en créer un nouveau (l'OS de démarrage est unique
+  // par opération).
+  const existingOS = await dataService.query(ENTITIES.MP_ORDRE_SERVICE, { operationId: idOperation }).catch(() => []);
+  if (existingOS && existingOS.length > 0) {
+    alert(`⚠️ Un Ordre de Service de démarrage existe déjà pour ce marché (n°${existingOS[0].numero || '?'}).\n\nUn seul OS de démarrage est admis par marché. Si vous souhaitez le modifier, contactez l'administration.`);
     return;
   }
 
