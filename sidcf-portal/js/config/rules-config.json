@@ -35,14 +35,14 @@
   },
   "matrices_procedures": {
     "ADMIN_CENTRALE": {
-      "description": "Seuils pour administrations centrales",
+      "description": "Seuils pour administrations centrales — couverture nature économique élargie à toutes les natures du référentiel (Modif #59) car le Code MP CI applique les seuils sur le montant et le type, la nature étant un attribut comptable orthogonal.",
       "seuils_montants": [
         {
           "mode": "PSD",
           "label": "Procédure Simplifiée d'Entente Directe",
           "min": 0,
           "max": 10000000,
-          "natureEco": ["221", "222", "223", "232", "233"],
+          "natureEco": ["all"],
           "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
           "description": "Montant strictement inférieur à 10M XOF"
         },
@@ -51,7 +51,7 @@
           "label": "Procédure Simplifiée de Demande de Cotation",
           "min": 10000000,
           "max": 30000000,
-          "natureEco": ["221", "222", "223", "232", "233"],
+          "natureEco": ["all"],
           "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
           "description": "Entre 10M et 30M XOF - Demande à 3 fournisseurs minimum"
         },
@@ -60,7 +60,7 @@
           "label": "Procédure Simplifiée à Compétition Limitée",
           "min": 30000000,
           "max": 50000000,
-          "natureEco": ["221", "222", "223", "232", "233"],
+          "natureEco": ["all"],
           "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
           "description": "Entre 30M et 50M XOF - Validation DGMP obligatoire"
         },
@@ -69,7 +69,7 @@
           "label": "Procédure Simplifiée à Compétition Ouverte",
           "min": 50000000,
           "max": 100000000,
-          "natureEco": ["221", "222", "223", "232", "233"],
+          "natureEco": ["all"],
           "typeMarche": ["FOURNITURES", "SERVICES_COURANTS", "TRAVAUX", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
           "description": "Entre 50M et 100M XOF - Validation DGMP + Publication obligatoire"
         },
@@ -78,7 +78,7 @@
           "label": "Appel d'Offres Ouvert",
           "min": 100000000,
           "max": null,
-          "natureEco": ["231", "232", "233"],
+          "natureEco": ["all"],
           "typeMarche": ["TRAVAUX", "FOURNITURES", "SERVICES_COURANTS", "SERVICES_INTELLECTUELS", "PRESTATIONS_INTELLECTUELLES"],
           "description": "100M XOF et plus - Validation DGMP + Publication + COJO"
         }

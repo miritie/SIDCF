@@ -1039,34 +1039,40 @@ function computeLigneBudgetaireAmount(mpBudgetLines, activiteCode) {
 
 /**
  * Construit un payload de suggestion à partir du contexte courant lu dans le DOM.
- * Modif #53c — le montant utilisé pour la recommandation est désormais celui de
- * la LIGNE BUDGÉTAIRE (somme des AE), pas le montant prévisionnel de l'opération.
+ * Modif #59 — Correction conceptuelle : la recommandation utilise désormais le
+ * MONTANT PRÉVISIONNEL SAISI pour l'opération (conforme aux seuils du Code MP CI
+ * qui s'appliquent au montant du MARCHÉ, pas à l'enveloppe budgétaire de l'activité).
+ *
+ * L'enveloppe de l'activité (somme des AE) reste affichée à titre d'information
+ * (plafond budgétaire, comme un garde-fou de cohérence) mais n'entre pas dans
+ * la matrice des seuils.
  *
  * @param {Array} mpBudgetLines Liste des MP_BUDGET_LINE chargées
- * @returns {Object} { ready, suggestion, applicableCodes, montantLigne, lignesCount, typeMarche, natureCode, selected }
+ * @returns {Object} { ready, suggestion, applicableCodes, montantOperation, enveloppeActivite, ... }
  */
 function computeModeSuggestion(mpBudgetLines) {
   const typeMarche = document.getElementById('typeMarche')?.value || '';
   const natureCode = document.getElementById('natureEco')?.value || '';
   const activiteCode = document.getElementById('activite')?.value || '';
   const selected = document.getElementById('modePassation')?.value || '';
+  const montantOperation = Number(document.getElementById('montant-previsionnel')?.value) || 0;
 
-  const { total: montantLigne, lines } = computeLigneBudgetaireAmount(mpBudgetLines, activiteCode);
+  // Enveloppe de l'activité (info de plafond)
+  const { total: enveloppeActivite, lines } = computeLigneBudgetaireAmount(mpBudgetLines, activiteCode);
 
-  // Construire une « pseudo-opération » que getSuggestedProcedures() sait consommer.
-  // On lui passe le MONTANT DE LA LIGNE, pas un montant d'opération.
+  // Construire la « pseudo-opération » avec le montant SAISI par l'utilisateur
   const pseudoOp = {
     typeMarche,
-    montantPrevisionnel: montantLigne,
+    montantPrevisionnel: montantOperation,
     chaineBudgetaire: { natureCode, nature: natureCode },
     typeInstitution: 'ADMIN_CENTRALE'
   };
 
-  const ready = montantLigne > 0 && !!typeMarche && !!natureCode;
+  const ready = montantOperation > 0 && !!typeMarche && !!natureCode;
   if (!ready) {
     return {
       ready: false, suggestion: null, applicableCodes: [],
-      selected, montantLigne, lignesCount: lines.length,
+      selected, montantOperation, enveloppeActivite, lignesCount: lines.length,
       typeMarche, natureCode, activiteCode
     };
   }
@@ -1082,7 +1088,7 @@ function computeModeSuggestion(mpBudgetLines) {
   const suggestion = suggestions[0] || null;
   return {
     ready, suggestion, applicableCodes, selected,
-    montantLigne, lignesCount: lines.length,
+    montantOperation, enveloppeActivite, lignesCount: lines.length,
     typeMarche, natureCode, activiteCode
   };
 }
@@ -1135,8 +1141,13 @@ function refreshModePassationRec(registries, mpBudgetLines) {
 
   const typeMarche = ctx.typeMarche;
   const natureCode = ctx.natureCode;
-  const montantLigne = ctx.montantLigneLigne;
   const currentSelected = modeSelect.value;
+  // Bandeau "Enveloppe activité" — info de plafond (n'entre pas dans la matrice)
+  const enveloppeNote = ctx.activiteCode && ctx.enveloppeActivite > 0
+    ? `<div style="margin-top:6px; padding:4px 8px; background:#f3f4f6; border-left:3px solid #6b7280; font-size:11px;">
+         💼 <strong>Enveloppe budgétaire de l'activité</strong> : ${formatXOFInline(ctx.enveloppeActivite)} (somme des AE des ${ctx.lignesCount} ligne${ctx.lignesCount > 1 ? 's' : ''} budgétaire${ctx.lignesCount > 1 ? 's' : ''} ouverte${ctx.lignesCount > 1 ? 's' : ''}). Sert de plafond — le montant prévisionnel de cette opération doit rester inférieur, ainsi que la somme cumulée des opérations sur l'activité.
+       </div>`
+    : '';
 
   // Helper : rendu d'un tableau HTML des tranches (mode / tranche / description)
   const renderTranchesTable = (tranches, highlightMode = null, highlightAmount = null) => {
@@ -1205,16 +1216,6 @@ function refreshModePassationRec(registries, mpBudgetLines) {
       }
     }
 
-    // Diagnostic : pourquoi le montant est-il à 0 ?
-    let raisonMontant;
-    if (!ctx.activiteCode) {
-      raisonMontant = 'Renseignez l\'<strong>Activité</strong> ci-dessus pour calculer le montant de la ligne budgétaire.';
-    } else if (ctx.lignesCount === 0) {
-      raisonMontant = `Aucune ligne budgétaire ouverte pour l'activité <code>${ctx.activiteCode}</code>. Vérifiez la disponibilité budgétaire.`;
-    } else {
-      raisonMontant = `Les ${ctx.lignesCount} ligne(s) budgétaire(s) trouvée(s) ont un AE total à 0 XOF.`;
-    }
-
     box.style.background = '#eff6ff';
     box.style.borderColor = '#3b82f6';
     box.style.color = '#1e3a8a';
@@ -1222,7 +1223,8 @@ function refreshModePassationRec(registries, mpBudgetLines) {
       <strong>📋 Modes applicables pour ${labelFor(typeLabels, typeMarche)} / ${labelFor(natureLabels, natureCode)}</strong>
       <div style="font-size:11px; margin-top:3px;">Selon les seuils du Code des Marchés Publics CI (matrice <em>ADMIN_CENTRALE</em>) :</div>
       ${renderTranchesTable(tranches, null, 0)}
-      <div style="margin-top:6px; font-size:11px;">➡ <em>${raisonMontant}</em></div>
+      <div style="margin-top:6px; font-size:11px;">➡ <em>Renseignez le <strong>Montant prévisionnel</strong> ci-dessous pour la recommandation précise.</em></div>
+      ${enveloppeNote}
       ${modeFeedback}
     `;
     return;
@@ -1233,7 +1235,7 @@ function refreshModePassationRec(registries, mpBudgetLines) {
     box.style.background = '#fef3c7';
     box.style.borderColor = '#f59e0b';
     box.style.color = '#92400e';
-    box.innerHTML = `⚠ Aucun mode standard ne correspond à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> au montant <strong>${formatXOFInline(ctx.montantLigne)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
+    box.innerHTML = `⚠ Aucun mode standard ne correspond à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> au montant <strong>${formatXOFInline(ctx.montantOperation)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
     return;
   }
 
@@ -1259,14 +1261,14 @@ function refreshModePassationRec(registries, mpBudgetLines) {
     <strong>📌 Mode recommandé :</strong> <code style="background:rgba(0,0,0,0.06); padding:1px 4px; border-radius:3px;">${recommendedCode}</code> — ${recommendedLabel}<br>
     <span style="font-size:11px;">
       <strong>Pourquoi ?</strong>
-      Montant de la <strong>ligne budgétaire</strong> <strong>${formatXOFInline(ctx.montantLigne)}</strong>
-      (somme des AE de ${ctx.lignesCount} ligne${ctx.lignesCount > 1 ? 's' : ''} pour l'activité <code>${ctx.activiteCode}</code>, tous bailleurs confondus)
+      Montant prévisionnel de l'opération <strong>${formatXOFInline(ctx.montantOperation)}</strong>
       · Type ${labelFor(typeLabels, ctx.typeMarche)}
       · Nature ${labelFor(natureLabels, ctx.natureCode)}
       ⇒ tranche ${seuilFmt}
       ⇒ matrice <em>ADMIN_CENTRALE</em> du Code des MP CI.
     </span>
-    ${renderTranchesTable(allTranches, recommendedCode, ctx.montantLigne)}
+    ${renderTranchesTable(allTranches, recommendedCode, ctx.montantOperation)}
+    ${enveloppeNote}
   `;
 
   if (isConforme) {
