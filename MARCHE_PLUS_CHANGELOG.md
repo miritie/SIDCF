@@ -13,6 +13,63 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-25 — Fix « Page non trouvée » sur toutes les URL `/mp/*` + audit liens
+
+> **Modif #71** — Bug critique reporté en démo : un clic depuis la fiche marché vers une autre étape affichait « Page non trouvée — La route `/mp/fiche-marche` n'existe pas dans le système » avec stack trace exposée à l'utilisateur. Audit total des liens du module Marché+ déclenché.
+
+### Cause racine
+
+À `sidcf-portal/js/main.js:65-70`, l'enregistrement des routes Marché et Marché+ était conditionné aux feature flags `moduleMarche` / `moduleMarchePlus` :
+
+```js
+if (dataService.getConfig()?.features?.moduleMarchePlus) {
+  registerMarchePlusRoutes();
+}
+```
+
+Le commentaire au-dessus indiquait pourtant le contraire : « les routes restent accessibles par URL directe même si la carte/sidebar est masquée ». **Le code contredisait le commentaire.**
+
+En environnement où la config n'a pas `moduleMarchePlus: true` (config par défaut, déploiement Vercel qui charge une config plus ancienne), **les 15 routes `/mp/*` n'étaient jamais enregistrées** et toute navigation hash vers le module retombait sur le 404 handler de `main.js:92-108`.
+
+### Correctif
+
+1. **`main.js`** : suppression des `if` conditionnels. Les routes Marché et Marché+ sont désormais **toujours enregistrées**. Les feature flags continuent à gérer l'affichage des cartes du portail (`portal/portal-home.js`) et des entrées de la sidebar (`ui/sidebar.js`), comme initialement prévu.
+2. **`admin/seed-import.js:160`** : bonus de l'audit — remplacement de `#/ppm-unitaire` (legacy, route jamais enregistrée) par `#/ppm-list`.
+
+### Audit complet des liens (résultat)
+
+Cross-référence exhaustive de tous les `router.navigate()`, `href: '#/…'` et `window.location.hash = …` du codebase contre toutes les routes enregistrées :
+
+| Module | Cibles trouvées | Routes enregistrées | Cassés |
+|---|---|---|---|
+| Marché+ (`/mp/*`) | 15 | 15 | 0 |
+| Marché (sans préfixe) | 15 | 15 (+1 alias `/dashboard-cf`) | 0 |
+| Admin | 4 | 7 | 0 |
+| Investissement | 4 | 11 | 0 |
+| Portal & système | 3 | 3 | 0 |
+| **Total** | **41 cibles** | **51 routes** | **1 (corrigé)** |
+
+**Aucun autre lien cassé dans le code source.** Le problème était structurel (enregistrement conditionnel) et ne nécessitait pas de toucher aux écrans individuels.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/main.js` (suppression des 2 `if` autour de `registerMarcheRoutes()` et `registerMarchePlusRoutes()`)
+- `sidcf-portal/js/admin/seed-import.js:160` (`ppm-unitaire` → `ppm-list`)
+
+### Impact
+
+- **UI** : toute URL `/mp/*` est désormais accessible quel que soit l'état du flag `moduleMarchePlus`. Plus de 404 surprise lors de la démo.
+- **Worker** : aucun changement.
+- **DB** : aucun changement.
+
+### Action de déploiement
+
+- ❌ Pas de migration
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement front Vercel obligatoire** pour que le fix prenne effet sur l'environnement de démo
+
+---
+
 ## 2026-05-25 — Couverture exhaustive des données de test : modes manquants + multi-lots
 
 > **Modif #70** — Demande client : « priere faire le point des donnees. faire des tests complets et avoir une source de donnees couvrant tous les cas de figure, avec plusieurs lots, les differents modes de passation, et les differents niveaux dans le workflow ». L'audit a révélé deux lacunes critiques sur la base de démo : (1) aucune opération multi-lots, (2) 5 modes de passation officiels jamais représentés dans les données — `AOO_PREQUALIF`, `AOO_2ETAPES`, `AOR`, `PI`, `ENTENTE_DIRECTE`.

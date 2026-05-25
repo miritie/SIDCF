@@ -157,7 +157,7 @@ async function handleImport() {
           ]),
           el('div', { style: { marginTop: '16px', textAlign: 'center' } }, [
             createButton('btn btn-primary', '🏠 Aller au Dashboard', () => window.location.hash = '#/dashboard'),
-            createButton('btn btn-secondary', '📋 Voir les opérations', () => window.location.hash = '#/ppm-unitaire', { style: { marginLeft: '12px' } })
+            createButton('btn btn-secondary', '📋 Voir les opérations', () => window.location.hash = '#/ppm-list', { style: { marginLeft: '12px' } })
           ])
         ])
       ]));

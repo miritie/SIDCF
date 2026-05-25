@@ -60,14 +60,13 @@ async function boot() {
     // Portal
     router.register('/portal', renderPortalHome);
 
-    // Modules — chaque module conditionnel sur son flag (sinon ses routes
-    // restent accessibles par URL directe même si la carte/sidebar est masquée)
-    if (dataService.getConfig()?.features?.moduleMarche) {
-      registerMarcheRoutes();
-    }
-    if (dataService.getConfig()?.features?.moduleMarchePlus) {
-      registerMarchePlusRoutes();
-    }
+    // Modules — TOUJOURS enregistrer les routes (les feature flags
+    // contrôlent uniquement l'affichage des cartes/sidebar dans portal-home
+    // et sidebar.js). Si on conditionne ici, une URL directe /mp/... tombe
+    // en 404 "Page non trouvée" quand le flag est faux/manquant — ce qui
+    // est arrivé en démo et n'est pas le comportement attendu.
+    registerMarcheRoutes();
+    registerMarchePlusRoutes();
     registerInvestissementRoutes();
     registerMatiereRoutes();
 
