@@ -13,6 +13,62 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-28 — Lot 2 CR du 26 mai 2026 : refonte du tableau PPM (colonnes + Nature économique)
+
+> **Modif #77** — Deuxième lot d'ajustements issu du CR EHOUMAN du 26 mai 2026, section « 2. Tableau PPM (liste) ». Traite les 7 retours de cette section : renommages d'entêtes, refonte de la cellule Activité, ajout d'une colonne Nature économique, alignement de l'export CSV.
+
+### Périmètre fonctionnel (7 retours validés OK par EHOUMAN)
+
+| # CR | Demande | Application |
+|---|---|---|
+| 2.a | Colonne « Activité » → « Code activité » + « Libellé » | **Précision client** : une seule colonne « Activité », contenu reformulé en « *CODE - Libellé* » à l'intérieur de la cellule (lecture `chaineBudgetaire.activiteCode` + `activiteLib`). Largeur min portée à 220px et troncature ajustée à 40 caractères pour rester lisible avec le code en préfixe. |
+| 2.b | Ajouter colonne « Nature économique » | Nouvelle colonne entre « Type de marché » et « Mode de passation ». Affiche le `label` du registre `NATURE_ECO` (qui contient déjà « *CODE - Libellé* », ex : « 223 - Achats de biens et services »). |
+| 2.c | « Objet » → « Objet / Libellé » | Renommage de l'entête. |
+| 2.d | « Type » → « Type de marché » | Renommage de l'entête + **retrait de `toTitleCaseFr()`** sur cette cellule. Avec la nouvelle typologie A/B/C (Modif #76), les libellés sont déjà bien formés (« Marchés de travaux ») ; le Title Case forçait « Marchés De Travaux » — corrigé. |
+| 2.e | « Montant » → « Montant prévisionnel (M F CFA) » | Renommage de l'entête (unité conservée entre parenthèses, comme demandé). Format `moneyMillions()` inchangé. |
+| 2.f | « Étape » → « Statut du marché » | Renommage de l'entête. Le badge affichait déjà « Infructueux » avec la couleur warning depuis la Modif #76 (lot 1, point 1.b) — pas de changement de logique nécessaire ici. |
+| 2.g | Permettre de positionner le statut « Infructueux » | **Option α retenue** : le tableau **affiche** correctement INFRUCTUEUX (badge orange) ; la **transition opérationnelle** (action qui bascule l'état d'un marché vers INFRUCTUEUX) sera implémentée dans le **lot 6 (Enregistrement de marché)** au point 6.a, en cohérence avec la consigne client *« depuis attribution qui devient enregistrement de marché. ça peut être infructueux alors le process fini »*. Cette transition s'accompagnera de la brique transversale « mini-rapport d'étape » annoncée dans la Modif #76. |
+
+### Export CSV
+
+Aligné sur les nouveaux libellés du tableau (les valeurs restent les codes bruts pour l'exploitation en tableur) :
+
+- « Objet » → « Objet / Libellé »
+- « Type Marché » → « Type de marché »
+- **Ajout « Nature économique »** (valeur = code brut `op.natureEco`)
+- « Bailleur » → « Source de financement » (cohérence avec le lot 1)
+- « État » → « Statut du marché »
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - `renderSimpleTable()` — refonte des `<th>` (7 entêtes mis à jour, 1 nouvelle entête « Nature économique »).
+  - `renderSimpleRow()` — cellule Activité reformulée en « *CODE - Libellé* », nouvelle cellule Nature économique, retrait de `toTitleCaseFr` sur Type de marché, attributs `title` (tooltip) ajoutés pour Type et Nature économique.
+  - `exportToCSV()` — entêtes alignés sur le tableau + ajout de la colonne Nature économique en position 5.
+
+### Impact
+
+- **UI** : 8 colonnes au lieu de 7 dans le tableau de la liste PPM. Largeur totale du tableau légèrement augmentée — le wrapper `overflow-x: auto` existant gère le scroll horizontal sans changement.
+- **Worker** : ❌ aucun changement.
+- **DB Neon** : ❌ aucun changement. Le champ `MP_OPERATION.natureEco` était déjà alimenté en planification.
+- **R2** : ❌ aucun changement.
+
+### Anti-régression
+
+- Les opérations sans `chaineBudgetaire.activiteCode` ou sans `activiteLib` n'affichent que la partie disponible (ou `-` si les deux manquent) — pas de tiret orphelin.
+- Les opérations sans `natureEco` affichent `-`.
+- Les opérations avec un code `natureEco` hors du registre `NATURE_ECO` affichent le code brut (fallback, pas d'écran blanc).
+- Le retrait de `toTitleCaseFr` sur la colonne Type ne casse pas l'affichage des anciens codes (TRAVAUX, FOURNITURES, …) car ils résolvent désormais leur nouveau libellé propre (« Marchés de travaux ») via les entrées `legacy` du référentiel (Modif #76).
+- L'ordre et le nombre de colonnes du CSV changent — les éventuels scripts/macros externes qui consomment ce CSV doivent être prévenus.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel** pour exposer le nouveau tableau
+
+---
+
 ## 2026-05-28 — Lot 1 CR du 26 mai 2026 : en-tête & filtres de la liste PPM/marchés
 
 > **Modif #76** — Premier lot d'ajustements issu du CR de séance EHOUMAN du 26 mai 2026 (`Documentation/retours-meets-parcours-maquette/EHOUMAN -- CR_Flash_Marches_26mai2026_v2.docx`). Couvre les 5 retours de la section « 1. En-tête — zone de filtre (liste des PPM et marchés) ». Les lots suivants (2 à 6) traiteront le tableau, la création, la contractualisation, les lots et l'enregistrement de marché.

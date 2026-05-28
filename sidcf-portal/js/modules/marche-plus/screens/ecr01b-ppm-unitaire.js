@@ -568,17 +568,21 @@ function renderKPI(label, value, color, icon) {
 
 // Tableau simplifié — Marché+ : Activité en avant (UA dans les détails),
 // pas de colonne Exercice (filtre multi-select dispo sinon)
+// Modif #77 — Lot 2 CR 26 mai 2026 : refonte des entêtes et ajout colonne
+// Nature économique. Activité reste sur une seule colonne mais affiche
+// désormais « CODE - Libellé » à l'intérieur.
 function renderSimpleTable(operations, registries) {
   const table = el('div', { style: { overflowX: 'auto' } }, [
     el('table', { className: 'data-table' }, [
       el('thead', {}, [
         el('tr', {}, [
-          el('th', { style: { minWidth: '180px' } }, 'Activité'),
-          el('th', { style: { minWidth: '300px' } }, 'Objet'),
-          el('th', { style: { minWidth: '120px' } }, 'Type'),
+          el('th', { style: { minWidth: '220px' } }, 'Activité'),                           // 2.a — contenu = code - libellé
+          el('th', { style: { minWidth: '300px' } }, 'Objet / Libellé'),                    // 2.c
+          el('th', { style: { minWidth: '160px' } }, 'Type de marché'),                     // 2.d
+          el('th', { style: { minWidth: '180px' } }, 'Nature économique'),                  // 2.b — NEW
           el('th', { style: { minWidth: '140px' } }, 'Mode de passation'),
-          el('th', { style: { minWidth: '140px', textAlign: 'right' } }, 'Montant (M F CFA)'),
-          el('th', { style: { minWidth: '100px' } }, 'Étape'),
+          el('th', { style: { minWidth: '180px', textAlign: 'right' } }, 'Montant prévisionnel (M F CFA)'), // 2.e
+          el('th', { style: { minWidth: '120px' } }, 'Statut du marché'),                   // 2.f
           el('th', { style: { minWidth: '180px' } }, 'Actions')
         ])
       ]),
@@ -595,19 +599,33 @@ function renderSimpleRow(op, registries) {
   const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === op.typeMarche);
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === op.modePassation);
   const etat = registries.ETAT_MARCHE?.find(e => e.code === op.etat);
-  const activite = op.chaineBudgetaire?.activiteLib || op.chaineBudgetaire?.activite || '-';
+  // Modif #77 — Lot 2 (2.a) — colonne Activité affiche « CODE - Libellé »
+  const activiteCode = op.chaineBudgetaire?.activiteCode || '';
+  const activiteLib  = op.chaineBudgetaire?.activiteLib || op.chaineBudgetaire?.activite || '';
+  const activiteFull = activiteCode && activiteLib
+    ? `${activiteCode} - ${activiteLib}`
+    : (activiteCode || activiteLib || '-');
+  // Modif #77 — Lot 2 (2.b) — Nature économique : libellé du registre (qui
+  // contient déjà « CODE - Libellé »), fallback sur le code brut.
+  const natureEcoEntry = registries.NATURE_ECO?.find(n => n.code === op.natureEco);
+  const natureEcoFull  = natureEcoEntry?.label || op.natureEco || '-';
+  // Modif #77 — Lot 2 (2.d) — plus de toTitleCaseFr sur le type : la
+  // nouvelle typologie A/B/C apporte déjà des libellés bien formés
+  // (ex. « Marchés de travaux »).
+  const typeMarcheLabel = typeMarche?.label || op.typeMarche || '-';
 
   return el('tr', {
     style: { cursor: 'pointer' },
     onclick: () => router.navigate('/mp/fiche-marche', { idOperation: op.id })
   }, [
-    el('td', { className: 'text-small', title: activite, style: { fontWeight: '500' } },
-      activite.length > 30 ? activite.substring(0, 30) + '...' : activite
+    el('td', { className: 'text-small', title: activiteFull, style: { fontWeight: '500' } },
+      activiteFull.length > 40 ? activiteFull.substring(0, 40) + '…' : activiteFull
     ),
     el('td', { style: { fontWeight: '500' }, title: op.objet },
-      (op.objet || '').length > 60 ? op.objet.substring(0, 60) + '...' : (op.objet || '')
+      (op.objet || '').length > 60 ? op.objet.substring(0, 60) + '…' : (op.objet || '')
     ),
-    el('td', {}, toTitleCaseFr(typeMarche?.label || op.typeMarche || '-')),
+    el('td', { title: typeMarcheLabel }, typeMarcheLabel),
+    el('td', { className: 'text-small', title: natureEcoFull }, natureEcoFull),
     el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
     el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
     el('td', {},
@@ -1094,12 +1112,18 @@ function resetFilters() {
 }
 
 function exportToCSV(operations) {
+  // Modif #77 — Lot 2 : alignement des entêtes CSV sur les nouveaux libellés
+  // du tableau. Ajout de « Nature économique » (2.b). Renommages :
+  // Objet → Objet / Libellé (2.c), Type Marché → Type de marché (2.d),
+  // Bailleur → Source de financement (cohérence lot 1), État → Statut du
+  // marché (2.f). Les valeurs restent les codes bruts pour rester
+  // exploitables en tableur (cohérent avec le reste de l'export).
   const headers = [
-    'Exercice', 'Unité Opérationnelle', 'Objet', 'Type Marché', 'Mode Passation',
-    'Revue', 'Nature Prix', 'Montant Prévisionnel', 'Type Financement', 'Bailleur',
-    'Activité', 'Activité Code', 'Ligne Budgétaire', 'Délai Execution', 'Catégorie Prestation',
-    'Bénéficiaire', 'Région', 'Département', 'Sous-Préfecture', 'Localité',
-    'Longitude', 'Latitude', 'État'
+    'Exercice', 'Unité Opérationnelle', 'Objet / Libellé', 'Type de marché', 'Nature économique',
+    'Mode Passation', 'Revue', 'Nature Prix', 'Montant Prévisionnel', 'Type Financement',
+    'Source de financement', 'Activité', 'Activité Code', 'Ligne Budgétaire', 'Délai Execution',
+    'Catégorie Prestation', 'Bénéficiaire', 'Région', 'Département', 'Sous-Préfecture',
+    'Localité', 'Longitude', 'Latitude', 'Statut du marché'
   ];
 
   const rows = operations.map(op => [
@@ -1107,6 +1131,7 @@ function exportToCSV(operations) {
     op.unite || '',
     op.objet || '',
     op.typeMarche || '',
+    op.natureEco || '',
     op.modePassation || '',
     op.revue || '',
     op.naturePrix || '',
