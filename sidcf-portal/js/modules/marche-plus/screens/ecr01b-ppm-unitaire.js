@@ -119,8 +119,48 @@ let activeFilters = {
   unite: [],
   activite: [],
   // Modif #36 — filtre santé du marché (NORMAL / SURVEILLER / A_RISQUE / BLOQUE / NON_DEMARRE)
-  sante: []
+  sante: [],
+  // Modif #76 — lot 1 (CR 26 mai 2026, point 1.e) — filtre nature économique
+  natureEco: []
 };
+
+/**
+ * Modif #76 — Normalise un code typeMarche : si c'est un ancien code legacy
+ * (TRAVAUX, FOURNITURES, …) on le ramène à son équivalent dans la nouvelle
+ * typologie A/B/C (MARCHE_TRAVAUX, MARCHE_FOURN_EQUIP, …). Permet au filtre
+ * hiérarchisé de matcher les opérations encore stockées avec les anciens
+ * codes — sans migration DB pour ce lot (option B validée).
+ */
+function normalizeTypeMarche(code, registries) {
+  if (!code) return code;
+  const map = registries?.TYPE_MARCHE_LEGACY_MAP || {};
+  return map[code] || code;
+}
+
+/**
+ * Modif #76 — Construit la liste hiérarchisée pour le widget multi-select :
+ * insère un entête de groupe A/B/C avant les types qui en relèvent. Exclut
+ * les codes legacy (rétro-compat pour l'affichage par lookup, mais hors
+ * du choix utilisateur dans le filtre).
+ */
+function buildHierarchicalTypeMarcheOptions(registries) {
+  const familles = registries.TYPE_MARCHE_FAMILLES || [];
+  const types = (registries.TYPE_MARCHE || []).filter(t => !t.legacy);
+  const out = [];
+  for (const fam of familles) {
+    const children = types.filter(t => t.parent === fam.code);
+    if (children.length === 0) continue;
+    out.push({ group: true, label: fam.label });
+    for (const t of children) out.push({ code: t.code, label: t.label });
+  }
+  // Types sans parent (au cas où) — affichés sans entête
+  const orphans = types.filter(t => !t.parent);
+  if (orphans.length > 0) {
+    out.push({ group: true, label: 'Autres' });
+    for (const t of orphans) out.push({ code: t.code, label: t.label });
+  }
+  return out;
+}
 
 // Mapping des phases (états) — utilisé pour les KPIs
 const PHASES = [
@@ -189,8 +229,9 @@ export async function renderPPMList() {
   // Régions : référentiel officiel CI (33 entrées) — pas le calcul ad hoc sur les opérations
   const regions = await _getRegionsCi();
 
-  // Apply filters (avec filtre santé qui s'appuie sur santeMap)
-  const filteredOps = applyFilters(operations, santeMap);
+  // Apply filters (avec filtre santé qui s'appuie sur santeMap
+  // et registries pour normaliser les codes typeMarche legacy)
+  const filteredOps = applyFilters(operations, santeMap, registries);
 
   // Calculate stats : total + montant + 1 KPI par phase + 1 KPI par catégorie de santé
   const stats = {
@@ -300,11 +341,11 @@ export async function renderPPMList() {
             activeFilters.activite
           ),
 
-          // Type marché (multi)
+          // Type marché (multi, hiérarchisé A/B/C) — Modif #76 lot 1, point 1.a
           renderMultiSelectFilter(
             'typeMarche',
             'Type de marché',
-            registries.TYPE_MARCHE || [],
+            buildHierarchicalTypeMarcheOptions(registries),
             activeFilters.typeMarche
           ),
 
@@ -316,10 +357,11 @@ export async function renderPPMList() {
             activeFilters.modePassation
           ),
 
-          // État (multi) — libellés Marché+ surchargés via ETAT_LABEL_MP
+          // Statut du marché (multi) — Modif #76 lot 1, point 1.c (ex « État »)
+          // Inclut désormais INFRUCTUEUX — Modif #76 lot 1, point 1.b
           renderMultiSelectFilter(
             'etat',
-            'État',
+            'Statut du marché',
             (registries.ETAT_MARCHE || []).map(e => ({ ...e, label: ETAT_LABEL_MP[e.code] || e.label })),
             activeFilters.etat
           ),
@@ -332,12 +374,22 @@ export async function renderPPMList() {
             activeFilters.typeFinancement
           ),
 
-          // Bailleur (multi)
+          // Source de financement (multi) — Modif #76 lot 1, point 1.d (ex « Bailleur »)
+          // Cohérence avec le module Budget. Clé interne 'bailleur' conservée
+          // pour éviter une migration DB ; seul le libellé évolue.
           renderMultiSelectFilter(
             'bailleur',
-            'Bailleur',
+            'Source de financement',
             registries.BAILLEUR || [],
             activeFilters.bailleur
+          ),
+
+          // Nature économique (multi) — Modif #76 lot 1, point 1.e
+          renderMultiSelectFilter(
+            'natureEco',
+            'Nature économique',
+            registries.NATURE_ECO || [],
+            activeFilters.natureEco
           ),
 
           // Catégorie prestation (multi)
@@ -422,10 +474,14 @@ function renderActiveFilterChips(filters, registries, exercices) {
   if (filters.activite?.length)         chips.push(`Activité (${filters.activite.length})`);
   if (filters.typeMarche?.length)       chips.push(`Type (${filters.typeMarche.length})`);
   if (filters.modePassation?.length)    chips.push(`Mode (${filters.modePassation.length})`);
-  if (filters.etat?.length)             chips.push(`État (${filters.etat.length})`);
+  // Modif #76 lot 1 (1.c) — « État » devient « Statut »
+  if (filters.etat?.length)             chips.push(`Statut (${filters.etat.length})`);
   if (filters.typeFinancement?.length)  chips.push(`Financement (${filters.typeFinancement.length})`);
-  if (filters.bailleur?.length)         chips.push(`Bailleur (${filters.bailleur.length})`);
+  // Modif #76 lot 1 (1.d) — « Bailleur » devient « Source de financement »
+  if (filters.bailleur?.length)         chips.push(`Source fin. (${filters.bailleur.length})`);
   if (filters.categoriePrestation?.length) chips.push(`Catégorie (${filters.categoriePrestation.length})`);
+  // Modif #76 lot 1 (1.e) — Nature économique
+  if (filters.natureEco?.length)        chips.push(`Nature éco. (${filters.natureEco.length})`);
   if (filters.region?.length)           chips.push(`Région (${filters.region.length})`);
   if (filters.unite?.length)            chips.push(`UA (${filters.unite.length})`);
   if (filters.exercice?.length)         chips.push(`Exercice (${filters.exercice.length})`);
@@ -824,7 +880,7 @@ function _matchMulti(arr, value) {
   return arr.includes(value);
 }
 
-function applyFilters(operations, santeMap = null) {
+function applyFilters(operations, santeMap = null, registries = null) {
   return operations.filter(op => {
     // Search texte libre
     if (activeFilters.search) {
@@ -838,12 +894,16 @@ function applyFilters(operations, santeMap = null) {
 
     // Filtres multi-select : array vide = aucune restriction
     if (!_matchMulti(activeFilters.exercice.map(Number), op.exercice)) return false;
-    if (!_matchMulti(activeFilters.typeMarche, op.typeMarche)) return false;
+    // Type marché : on normalise le code legacy de l'opération vers le nouveau code
+    // pour matcher la sélection faite via la liste hiérarchisée — Modif #76 lot 1
+    if (!_matchMulti(activeFilters.typeMarche, normalizeTypeMarche(op.typeMarche, registries))) return false;
     if (!_matchMulti(activeFilters.modePassation, op.modePassation)) return false;
     if (!_matchMulti(activeFilters.etat, op.etat)) return false;
     if (!_matchMulti(activeFilters.typeFinancement, op.typeFinancement)) return false;
     if (!_matchMulti(activeFilters.bailleur, op.sourceFinancement)) return false;
     if (!_matchMulti(activeFilters.categoriePrestation, op.categoriePrestation)) return false;
+    // Modif #76 lot 1 (1.e) — Nature économique
+    if (!_matchMulti(activeFilters.natureEco, op.natureEco)) return false;
     if (!_matchMulti(activeFilters.region, op.localisation?.region)) return false;
     if (!_matchMulti(activeFilters.unite, op.unite)) return false;
     if (!_matchMulti(activeFilters.activite, op.chaineBudgetaire?.activiteLib)) return false;
@@ -1027,7 +1087,8 @@ function resetFilters() {
     exercice: [],
     unite: [],
     activite: [],
-    sante: []
+    sante: [],
+    natureEco: []
   };
   renderPPMList();
 }

@@ -13,6 +13,77 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-28 — Lot 1 CR du 26 mai 2026 : en-tête & filtres de la liste PPM/marchés
+
+> **Modif #76** — Premier lot d'ajustements issu du CR de séance EHOUMAN du 26 mai 2026 (`Documentation/retours-meets-parcours-maquette/EHOUMAN -- CR_Flash_Marches_26mai2026_v2.docx`). Couvre les 5 retours de la section « 1. En-tête — zone de filtre (liste des PPM et marchés) ». Les lots suivants (2 à 6) traiteront le tableau, la création, la contractualisation, les lots et l'enregistrement de marché.
+
+### Périmètre fonctionnel (5 retours, tous validés « OK » par EHOUMAN)
+
+| # CR | Demande | Application |
+|---|---|---|
+| 1.a | Mettre en évidence l'ensemble des types de marché dans le filtre | Refonte du référentiel `TYPE_MARCHE` selon la typologie DCF (annexe du CR + fichier `Types Marches.xlsx`) : **3 familles A/B/C × 16 types**. Le widget de filtre affiche désormais une **hiérarchie** avec entêtes A/B/C non sélectionnables et types cochables en dessous. |
+| 1.b | Ajouter l'état « Infructueux » | Nouvel état `INFRUCTUEUX` (couleur orange `warning`) dans `ETAT_MARCHE` + dans `etat-labels-mp.js`. Pour ce lot, seule l'**apparition dans le filtre et le référentiel** est livrée — la transition opérationnelle (depuis l'écran « Enregistrement de marché » ex-Attribution) sera traitée avec le lot 6 (point 6.a). |
+| 1.c | Renommer « État » en « Statut du marché » | Libellé du filtre uniquement (clé interne `etat` conservée). |
+| 1.d | Renommer « Bailleur » en « Source de financement » | Libellé du filtre uniquement (clé interne `bailleur` conservée pour éviter une migration DB). Cohérence avec le module Budget. |
+| 1.e | Ajouter « Nature économique » comme critère de filtre | Nouveau multi-select branché sur le référentiel `NATURE_ECO` (déjà collecté en planification sur `MP_OPERATION.natureEco`). |
+
+### Refonte du référentiel TYPE_MARCHE
+
+**Nouveaux codes** (3 familles × 16 types) :
+
+- **A. Marchés classiques** : `MARCHE_TRAVAUX`, `MARCHE_FOURN_EQUIP`, `MARCHE_SERVICES`, `MARCHE_MIXTE`
+- **B. Marchés de type particulier** : `MARCHE_DEP_CONTROLEES`, `CONTRAT_GENIS`, `MARCHE_CLES_EN_MAIN`, `CONCEPTION_REALISATION`, `CONCEPTION_REA_EXPLOIT` *(sans sigle CREM — demande explicite EHOUMAN)*, `MARCHE_INNOVATION`, `ACCORD_CADRE`
+- **C. Marchés de prestations intellectuelles** *(sous-types des marchés de services)* : `PI_ETUDES`, `PI_ASSISTANCE`, `PI_MOD`, `PI_AMO`, `PI_MOE`
+
+**Compatibilité données existantes** (option B retenue par le client) : aucune migration SQL pour ce lot. Les anciens codes (`TRAVAUX`, `FOURNITURES`, `SERVICES_COURANTS`, `SERVICES_INTELLECTUELS`, `PRESTATIONS_INTELLECTUELLES`, `DELEGATION_SERVICE_PUBLIC`) sont :
+
+1. **Conservés dans `TYPE_MARCHE`** avec un flag `legacy: true` et leur **nouveau libellé**, pour que tout lookup `registries.TYPE_MARCHE.find(t => t.code === op.typeMarche)` continue d'afficher un libellé propre dans tous les écrans (fiche de vie, dashboard, exports, …) — **non régression visuelle**.
+2. **Masqués du filtre** (la fonction `buildHierarchicalTypeMarcheOptions` exclut les `legacy: true`).
+3. **Normalisés au moment du filtrage** via la table `TYPE_MARCHE_LEGACY_MAP` exposée dans `registries.json` et appliquée par la fonction `normalizeTypeMarche()` dans `ecr01b-ppm-unitaire.js`. Cocher « Marchés de travaux » dans le filtre matche aussi les opérations encore stockées avec `typeMarche: "TRAVAUX"`.
+
+La migration des données (réécriture des anciens codes en base) sera planifiée plus tard, vraisemblablement avec le lot 3 (création de marché).
+
+### À venir — capté du point 5 (clarification utilisateur)
+
+> *« Il y a une notion de petit rapport d'erreur ou de situation qui doit pouvoir être sorti à chaque étape. Il résume ce qui est bon et ce qui ne l'est pas. Il sera imprimé et soumis au décideur pour qu'il donne son avis. »*
+
+C'est une **brique transversale** à concevoir : à chaque étape du cycle de vie (planification, contractualisation, enregistrement de marché, exécution, clôture), produire une **synthèse imprimable** des éléments OK et des éléments en défaut/manquants, destinée au décideur (DCF / CF) — par exemple pour justifier la déclaration d'un marché comme `INFRUCTUEUX`. **Non livré dans le lot 1.** Sera spécifié et livré dans un lot dédié, probablement avec le lot 6 (Enregistrement de marché) qui en a besoin pour le 6.a.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : refonte `TYPE_MARCHE` (familles + types + entrées legacy avec nouveaux labels), ajout `TYPE_MARCHE_FAMILLES` et `TYPE_MARCHE_LEGACY_MAP`, ajout `INFRUCTUEUX` dans `ETAT_MARCHE`.
+- `sidcf-portal/js/modules/marche-plus/etat-labels-mp.js` : ajout `INFRUCTUEUX → « Infructueux »`.
+- `sidcf-portal/js/ui/widgets/multi-select-collapsible-mp.js` : support d'options `{ group: true, label }` rendues comme entêtes de famille non sélectionnables. Le bouton « Tout » ignore les groupes ; les groupes sans enfant visible après recherche sont masqués.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - ajout des helpers `normalizeTypeMarche()` et `buildHierarchicalTypeMarcheOptions()`,
+  - filtre Type de marché alimenté par la liste hiérarchisée,
+  - filtre Statut du marché (renommé) avec INFRUCTUEUX,
+  - filtre Source de financement (renommé),
+  - nouveau filtre Nature économique,
+  - normalisation legacy au moment du filtrage,
+  - extension de `activeFilters` / `resetFilters` / `renderActiveFilterChips`.
+
+### Impact
+
+- **UI** : la zone de filtre affiche désormais 11 filtres multi-select (+1 par rapport à avant : Nature économique). Le filtre Type de marché est hiérarchisé en 3 familles. Les libellés Statut et Source de financement remplacent État et Bailleur.
+- **Worker** : ❌ aucun changement.
+- **DB Neon** : ❌ aucun changement. Les anciens codes typeMarche restent en base ; le mapping côté lecture suffit pour le moment.
+- **R2** : ❌ aucun changement.
+
+### Anti-régression
+
+- Les écrans tiers (fiche de vie, dashboard, exports CSV, modal de détails) qui font `registries.TYPE_MARCHE.find(t => t.code === op.typeMarche)` continuent de renvoyer une entrée valide grâce aux entrées `legacy` du référentiel, et affichent désormais le **nouveau libellé** (ex: « Marchés de travaux » au lieu de « TRAVAUX »).
+- La clé interne `bailleur` n'a pas été renommée : tous les écrans qui lisent ou écrivent sur ce champ continuent de fonctionner identiquement.
+- L'extension du widget `multi-select-collapsible-mp` est rétro-compatible : sans option `group: true`, le comportement est identique à l'existant — les autres filtres (Mode passation, Région, Activité, etc.) ne sont pas impactés.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy` (rien à toucher côté Worker)
+- ✅ **Redéploiement frontend Vercel** pour exposer la nouvelle config et l'écran mis à jour
+
+---
+
 ## 2026-05-25 — Hotfix démo : crash `g.taux.toFixed` + 404 handler sobre
 
 > **Modif #75** — Bug remonté EN PLEIN MEETING : la fiche d'un marché ayant des garanties faisait planter le rendu avec `TypeError: (g.taux ?? 0).toFixed is not a function`. Le router catchait l'exception et tombait sur le 404 handler, qui affichait **« Page non trouvée »** + une grosse **stack trace rouge** exposée à l'utilisateur. Très laid en démo. Le titre était trompeur (c'était un crash, pas une 404).

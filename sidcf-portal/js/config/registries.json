@@ -5,13 +5,45 @@
     { "code": "PROJET", "label": "Projet" },
     { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" }
   ],
-  "TYPE_MARCHE": [
-    { "code": "TRAVAUX", "label": "TRAVAUX" },
-    { "code": "FOURNITURES", "label": "FOURNITURES" },
-    { "code": "SERVICES_COURANTS", "label": "SERVICES COURANTS" },
-    { "code": "SERVICES_INTELLECTUELS", "label": "SERVICES INTELLECTUELS" },
-    { "code": "DELEGATION_SERVICE_PUBLIC", "label": "DÉLÉGATION DE SERVICE PUBLIC" }
+  "_TYPE_MARCHE_DOC": "Typologie DCF (Modif #76, séance du 26 mai 2026) : 3 familles A/B/C × 16 types. Annotations EHOUMAN : ne pas afficher le sigle CREM ; conserver MOD/AMO. La famille C regroupe des sous-types des marchés de services (famille A).",
+  "TYPE_MARCHE_FAMILLES": [
+    { "code": "FAMILLE_A", "label": "A. Marchés classiques" },
+    { "code": "FAMILLE_B", "label": "B. Marchés de type particulier" },
+    { "code": "FAMILLE_C", "label": "C. Marchés de prestations intellectuelles" }
   ],
+  "TYPE_MARCHE": [
+    { "code": "MARCHE_TRAVAUX",         "label": "Marchés de travaux",                                            "parent": "FAMILLE_A" },
+    { "code": "MARCHE_FOURN_EQUIP",     "label": "Marchés de fournitures et équipements",                         "parent": "FAMILLE_A" },
+    { "code": "MARCHE_SERVICES",        "label": "Marchés de services",                                           "parent": "FAMILLE_A" },
+    { "code": "MARCHE_MIXTE",           "label": "Marchés mixtes",                                                "parent": "FAMILLE_A" },
+    { "code": "MARCHE_DEP_CONTROLEES",  "label": "Marchés sur dépenses contrôlées",                               "parent": "FAMILLE_B" },
+    { "code": "CONTRAT_GENIS",          "label": "Contrats GENIS",                                                "parent": "FAMILLE_B" },
+    { "code": "MARCHE_CLES_EN_MAIN",    "label": "Marchés clés en main",                                          "parent": "FAMILLE_B" },
+    { "code": "CONCEPTION_REALISATION", "label": "Marchés de conception – réalisation",                           "parent": "FAMILLE_B" },
+    { "code": "CONCEPTION_REA_EXPLOIT", "label": "Marchés de conception, réalisation, exploitation ou maintenance", "parent": "FAMILLE_B" },
+    { "code": "MARCHE_INNOVATION",      "label": "Marchés d'innovation",                                          "parent": "FAMILLE_B" },
+    { "code": "ACCORD_CADRE",           "label": "Accords-cadres",                                                "parent": "FAMILLE_B" },
+    { "code": "PI_ETUDES",              "label": "Études",                                                        "parent": "FAMILLE_C" },
+    { "code": "PI_ASSISTANCE",          "label": "Services d'assistance",                                         "parent": "FAMILLE_C" },
+    { "code": "PI_MOD",                 "label": "Maîtrise d'ouvrage déléguée (MOD)",                             "parent": "FAMILLE_C" },
+    { "code": "PI_AMO",                 "label": "Assistance à maîtrise d'ouvrage (AMO)",                         "parent": "FAMILLE_C" },
+    { "code": "PI_MOE",                 "label": "Maîtrise d'œuvre",                                              "parent": "FAMILLE_C" },
+    { "code": "TRAVAUX",                    "label": "Marchés de travaux",                            "parent": "FAMILLE_A", "legacy": true, "mapTo": "MARCHE_TRAVAUX" },
+    { "code": "FOURNITURES",                "label": "Marchés de fournitures et équipements",          "parent": "FAMILLE_A", "legacy": true, "mapTo": "MARCHE_FOURN_EQUIP" },
+    { "code": "SERVICES_COURANTS",          "label": "Marchés de services",                            "parent": "FAMILLE_A", "legacy": true, "mapTo": "MARCHE_SERVICES" },
+    { "code": "SERVICES_INTELLECTUELS",     "label": "Études",                                         "parent": "FAMILLE_C", "legacy": true, "mapTo": "PI_ETUDES" },
+    { "code": "PRESTATIONS_INTELLECTUELLES","label": "Études",                                         "parent": "FAMILLE_C", "legacy": true, "mapTo": "PI_ETUDES" },
+    { "code": "DELEGATION_SERVICE_PUBLIC",  "label": "Marchés de services",                            "parent": "FAMILLE_A", "legacy": true, "mapTo": "MARCHE_SERVICES" }
+  ],
+  "_TYPE_MARCHE_LEGACY_MAP_DOC": "Mapping des anciens codes (avant Modif #76) vers les nouveaux. Appliqué au vol côté filtre/affichage. Pas de migration DB pour l'instant.",
+  "TYPE_MARCHE_LEGACY_MAP": {
+    "TRAVAUX": "MARCHE_TRAVAUX",
+    "FOURNITURES": "MARCHE_FOURN_EQUIP",
+    "SERVICES_COURANTS": "MARCHE_SERVICES",
+    "SERVICES_INTELLECTUELS": "PI_ETUDES",
+    "PRESTATIONS_INTELLECTUELLES": "PI_ETUDES",
+    "DELEGATION_SERVICE_PUBLIC": "MARCHE_SERVICES"
+  },
   "_MODE_PASSATION_DOC": "Liste élaguée aux modes officiels du Code des Marchés Publics CI (Décret n°2009-259 du 6 août 2009, modifié par Décret n°2021-909 du 22 déc. 2021). Voir docs/MODES_PASSATION_REFERENCES.md pour la preuve juridique de chaque ligne.",
   "MODE_PASSATION": [
     { "code": "PSD", "label": "Procédure Simplifiée d'Entente Directe (PSD)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Décret 2021-909 Art. 5 §1" },
@@ -706,6 +738,7 @@
     { "code": "ATTRIBUE", "label": "Attribué", "color": "warning" },
     { "code": "VISE", "label": "Visé", "color": "primary" },
     { "code": "EXECUTION", "label": "En exécution", "color": "primary" },
+    { "code": "INFRUCTUEUX", "label": "Infructueux", "color": "warning" },
     { "code": "RESILIE", "label": "Résilié", "color": "error" },
     { "code": "CLOS", "label": "Clôturé", "color": "success" }
   ],

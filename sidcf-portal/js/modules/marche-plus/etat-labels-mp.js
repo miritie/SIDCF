@@ -12,21 +12,23 @@
    - VISE      → « Approuvé »  (étape d'approbation)
    - EN_EXEC   → « En exécution »
    - CLOS      → « Achevé »
+   - INFRUCTUEUX → « Infructueux » (Modif #76 — lot 1 CR 26 mai 2026)
 
    Les codes (PLANIFIE, EN_PROC, …) restent inchangés en base et
    dans la logique JS. Seuls les libellés d'affichage évoluent.
    ============================================ */
 
 export const ETAT_LABEL_MP = {
-  PLANIFIE:  'En Planification',
-  EN_PROC:   'En Contractualisation',
-  ATTRIBUE:  'Attribué',
-  VISE:      'Approuvé',
-  EN_EXEC:   'En exécution',
-  EXECUTION: 'En exécution',  // legacy
-  CLOS:      'Achevé',
-  CLOTURE:   'Achevé',         // legacy
-  RESILIE:   'Résilié'
+  PLANIFIE:    'En Planification',
+  EN_PROC:     'En Contractualisation',
+  ATTRIBUE:    'Attribué',
+  VISE:        'Approuvé',
+  EN_EXEC:     'En exécution',
+  EXECUTION:   'En exécution',  // legacy
+  CLOS:        'Achevé',
+  CLOTURE:     'Achevé',         // legacy
+  RESILIE:     'Résilié',
+  INFRUCTUEUX: 'Infructueux'
 };
 
 /**

@@ -11,6 +11,10 @@
 
    API : renderMultiSelectCollapsible({ id, label, options, selected, onChange })
    - options : [{ code: string, label: string }]
+       · une option avec { group: true, label: '…' } est rendue comme
+         entête de groupe non sélectionnable (utile pour grouper les
+         choix par famille — Modif #76, typologie A/B/C des types de
+         marché). Les options de type group n'ont pas besoin de code.
    - selected : string[] (codes cochés)
    - onChange(newSelected) appelé à chaque modification de sélection
    - Retourne un HTMLElement à insérer dans la page.
@@ -90,7 +94,7 @@ export function renderMultiSelectCollapsible(cfg = {}) {
 
       const summary = document.createElement('span');
       const labels = currentSelected
-        .map(code => options.find(o => o.code === code)?.label || code)
+        .map(code => options.find(o => !o.group && o.code === code)?.label || code)
         .slice(0, 2)
         .join(', ');
       const suffix = currentSelected.length > 2 ? `, +${currentSelected.length - 2}` : '';
@@ -149,13 +153,33 @@ export function renderMultiSelectCollapsible(cfg = {}) {
   const renderList = (query = '') => {
     list.innerHTML = '';
     const q = (query || '').toLowerCase().trim();
-    const filtered = options.filter(o =>
-      !q ||
-      (o.label || '').toLowerCase().includes(q) ||
-      (o.code || '').toLowerCase().includes(q)
-    );
+    // Filtre par recherche : les entêtes de groupe sont toujours conservés
+    // afin de préserver la hiérarchie visuelle ; ils seront masqués plus
+    // bas s'ils n'ont aucun enfant visible après filtrage.
+    const filtered = options.filter(o => {
+      if (o.group) return true;
+      if (!q) return true;
+      return (o.label || '').toLowerCase().includes(q) ||
+             (o.code || '').toLowerCase().includes(q);
+    });
 
-    if (filtered.length === 0) {
+    // Masquer les entêtes de groupe qui n'ont aucun enfant visible juste
+    // après eux (avant le prochain groupe ou la fin).
+    const visible = [];
+    for (let i = 0; i < filtered.length; i++) {
+      const o = filtered[i];
+      if (o.group) {
+        let hasChild = false;
+        for (let j = i + 1; j < filtered.length && !filtered[j].group; j++) {
+          if (!filtered[j].group) { hasChild = true; break; }
+        }
+        if (hasChild) visible.push(o);
+      } else {
+        visible.push(o);
+      }
+    }
+
+    if (visible.length === 0 || visible.every(o => o.group)) {
       const empty = document.createElement('div');
       empty.textContent = 'Aucun résultat';
       Object.assign(empty.style, { padding: '12px', color: '#9ca3af', fontSize: '13px', textAlign: 'center' });
@@ -163,12 +187,29 @@ export function renderMultiSelectCollapsible(cfg = {}) {
       return;
     }
 
-    filtered.forEach(opt => {
+    visible.forEach(opt => {
+      // Entête de groupe (famille) — non sélectionnable
+      if (opt.group) {
+        const header = document.createElement('div');
+        header.className = 'mp-ms-group-header';
+        Object.assign(header.style, {
+          padding: '8px 6px 4px', marginTop: '4px',
+          fontSize: '11px', fontWeight: '700',
+          color: '#0f5132', textTransform: 'uppercase', letterSpacing: '0.4px',
+          borderTop: '1px solid #e5e7eb',
+          background: '#f9fafb',
+          userSelect: 'none'
+        });
+        header.textContent = opt.label;
+        list.appendChild(header);
+        return;
+      }
+
       const row = document.createElement('label');
       row.className = 'mp-ms-row';
       Object.assign(row.style, {
         display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '5px 6px', cursor: 'pointer', borderRadius: '4px',
+        padding: '5px 6px 5px 18px', cursor: 'pointer', borderRadius: '4px',
         fontSize: '13px', color: '#374151'
       });
       row.addEventListener('mouseenter', () => { row.style.background = '#f3f4f6'; });
@@ -222,7 +263,7 @@ export function renderMultiSelectCollapsible(cfg = {}) {
   allBtn.className = 'btn btn-sm btn-secondary';
   Object.assign(allBtn.style, { fontSize: '11px', padding: '4px 10px' });
   allBtn.addEventListener('click', () => {
-    currentSelected = options.map(o => o.code);
+    currentSelected = options.filter(o => !o.group).map(o => o.code);
     renderList(searchInput.value);
     renderToggleContent();
     if (onChange) onChange([...currentSelected]);
