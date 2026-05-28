@@ -55,7 +55,10 @@
     { "code": "AOO_2ETAPES", "label": "AOO en deux (2) étapes", "seuil": true, "famille": "CLASSIQUE", "parent": "AOO", "ref": "Décret 2009-259 Art. 55" },
     { "code": "AOR", "label": "Appel d'Offres Restreint (AOR)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "Décret 2009-259 Art. 58" },
     { "code": "PI", "label": "Prestations Intellectuelles (PI)", "seuil": false, "famille": "PI", "parent": null, "ref": "Décret 2009-259 Art. 62 et suiv." },
-    { "code": "ENTENTE_DIRECTE", "label": "Gré à gré / Entente directe (exceptionnel)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "Décret 2009-259 Art. 67" }
+    { "code": "ENTENTE_DIRECTE", "label": "Gré à gré / Entente directe (exceptionnel)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "Décret 2009-259 Art. 67" },
+    { "code": "CFN", "label": "Consultation de Fournisseurs Nationaux (CFN)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Conforme à une Demande de Cotation — CR DCF 26 mai 2026" },
+    { "code": "CONVENTION", "label": "Convention", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "CR DCF 26 mai 2026" },
+    { "code": "LETTRE_COMMANDE_MARCHE", "label": "Lettre de commande valant marché", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "CR DCF 26 mai 2026" }
   ],
   "CATEGORIE_PROCEDURE": [
     { "code": "NATIONALE", "label": "Nationale" },

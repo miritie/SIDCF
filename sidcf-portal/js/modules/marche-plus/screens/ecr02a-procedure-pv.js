@@ -74,10 +74,36 @@ export async function renderProcedurePV(params) {
   // Check if current mode is a derogation
   const isDerogation = operation.modePassation && !suggestedCodes.includes(operation.modePassation);
 
+  // Modif #79 (4.e) — Mode de passation planifié (figé à la création PPM).
+  // Fallback sur operation.modePassation pour les opérations antérieures à
+  // la Modif #79 qui n'ont pas le champ modePassationPlanifie.
+  const modePlanifieCode = operation.modePassationPlanifie || operation.modePassation || '';
+  const modePlanifieEntry = registries.MODE_PASSATION?.find(m => m.code === modePlanifieCode);
+  const modePlanifieLabel = modePlanifieEntry?.label || modePlanifieCode || '(non défini)';
+
+  // Modif #79 (4.d) — Bailleurs liés au marché : restreint la liste proposée
+  // dans le champ « Source de dérogation » lorsqu'on coche « Bailleur ». On
+  // accepte plusieurs structures historiques (financements[] ou bailleurs[]).
+  const operationBailleurs = (() => {
+    const fromFinancements = Array.isArray(operation.financements)
+      ? operation.financements.map(f => f?.bailleur).filter(Boolean)
+      : [];
+    const fromBailleursList = Array.isArray(operation.bailleurs)
+      ? operation.bailleurs.filter(Boolean)
+      : [];
+    const set = new Set([...fromFinancements, ...fromBailleursList]);
+    return Array.from(set);
+  })();
+
   // State for form
   let selectedMode = operation.modePassation || '';
   let derogationJustif = operation.procDerogation?.docId || null;
   let derogationComment = operation.procDerogation?.comment || '';
+  // Modif #79 (4.d) — Nouveaux champs dérogation : demandeur + source
+  let derogationDemandeur     = operation.procDerogation?.demandeur     || '';
+  let derogationDemandeurAutre = operation.procDerogation?.demandeurAutre || '';
+  let derogationSourceType    = operation.procDerogation?.source?.type || ''; // 'ETAT' | 'BAILLEUR'
+  let derogationSourceBailleur = operation.procDerogation?.source?.bailleur || '';
 
   // Widgets instances
   let soumissionnairesWidget = null;
@@ -128,6 +154,30 @@ export async function renderProcedurePV(params) {
       ])
     ]),
 
+    // Modif #79 (4.e) — Rappel du mode de passation planifié à la création
+    // PPM. Bandeau d'information neutre (pas une alerte). Permet au chargé
+    // d'études de confirmer ou de motiver une dérogation au moment de la
+    // contractualisation.
+    modePlanifieCode ? el('div', {
+      style: {
+        marginBottom: '16px', padding: '12px 16px',
+        background: '#eff6ff', border: '1px solid #3b82f6', borderRadius: '6px',
+        display: 'flex', alignItems: 'center', gap: '12px'
+      }
+    }, [
+      el('span', { style: { fontSize: '18px' } }, '📌'),
+      el('div', { style: { flex: 1 } }, [
+        el('div', { style: { fontSize: '11px', fontWeight: 700, color: '#1e3a8a', letterSpacing: '0.5px', textTransform: 'uppercase' } }, 'Mode de passation planifiée'),
+        el('div', { style: { fontSize: '14px', fontWeight: 600, color: '#1e3a8a', marginTop: '2px' } }, [
+          el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' } }, modePlanifieCode),
+          ' — ',
+          modePlanifieLabel
+        ]),
+        el('div', { style: { fontSize: '11px', color: '#6b7280', marginTop: '4px', fontStyle: 'italic' } },
+          'Simple information : mode retenu lors de la planification.')
+      ])
+    ]) : null,
+
     // Mode selection form
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
@@ -141,7 +191,7 @@ export async function renderProcedurePV(params) {
           ]),
           createModeSelect(registries.MODE_PASSATION, selectedMode, (value) => {
             selectedMode = value;
-            updateDerogationAlert(value, suggestedCodes);
+            updateDerogationAlertLocal(value);
             updateContextualSections(value, procedure);
           })
         ])
@@ -169,7 +219,14 @@ export async function renderProcedurePV(params) {
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
           createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/fiche-marche', { idOperation })),
           createButton('btn btn-primary', 'Enregistrer & Continuer', async () => {
-            await handleSave(idOperation, selectedMode, derogationJustif, derogationComment, suggestedCodes, soumissionnairesWidget, lotsState);
+            await handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, {
+              justif: derogationJustif,
+              comment: derogationComment,
+              demandeur: derogationDemandeur,
+              demandeurAutre: derogationDemandeurAutre,
+              sourceType: derogationSourceType,
+              sourceBailleur: derogationSourceBailleur
+            });
           })
         ])
       ])
@@ -185,8 +242,210 @@ export async function renderProcedurePV(params) {
 
   // Initial derogation check and contextual sections
   if (selectedMode) {
-    updateDerogationAlert(selectedMode, suggestedCodes);
+    updateDerogationAlertLocal(selectedMode);
     updateContextualSections(selectedMode, procedure);
+  }
+
+  /**
+   * Modif #79 (4.d + 4.f) — Refonte de l'affichage de la dérogation.
+   *
+   * Sémantique selon le CR du 26 mai 2026 :
+   * - Si le mode sélectionné est dans la liste des modes admissibles
+   *   (suggestedCodes), aucune action n'est exigée : on affiche un simple
+   *   encart vert de confirmation.
+   * - Sinon (mode hors barème) on demande :
+   *     · le demandeur de la dérogation (DCF / DGMP / Chargé d'études / Autre)
+   *     · la source (État / Bailleur), avec sélection du bailleur restreinte
+   *       aux bailleurs déclarés à la création PPM si Source = Bailleur
+   *     · la pièce justificative (PDF/DOC) — non bloquant au save (4.g) mais
+   *       remontée en avertissement et notée sur la fiche de vie (4.h).
+   *     · un commentaire / motif libre
+   * - Si le mode diffère du mode planifié à la création (modePlanifieCode),
+   *   on l'indique explicitement dans l'encart pour rappel.
+   */
+  function updateDerogationAlertLocal(mode) {
+    const container = document.getElementById('derogation-alert-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!mode) return;
+
+    const isDerog = !suggestedCodes.includes(mode);
+    const isChanged = modePlanifieCode && mode !== modePlanifieCode;
+
+    // Cas conforme : pas de dérogation requise. Encart de confirmation simple.
+    if (!isDerog) {
+      const conforme = el('div', {
+        style: {
+          marginBottom: '24px', padding: '12px 16px',
+          background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '6px',
+          color: '#065f46', display: 'flex', gap: '12px', alignItems: 'center'
+        }
+      }, [
+        el('span', { style: { fontSize: '18px' } }, '✓'),
+        el('div', { style: { flex: 1 } }, [
+          el('div', { style: { fontWeight: 600, fontSize: '14px' } },
+            isChanged ? 'Mode confirmé (changement par rapport au mode planifié)'
+                      : 'Mode conforme — aucune action supplémentaire requise'),
+          isChanged ? el('div', { style: { fontSize: '12px', marginTop: '4px' } }, [
+            'Mode planifié : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, modePlanifieCode),
+            ' → mode retenu : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, mode),
+            ' (les deux figurent dans la liste des modes admissibles).'
+          ]) : null
+        ])
+      ]);
+      container.appendChild(conforme);
+      return;
+    }
+
+    // Cas dérogation : on demande les informations justifiant la dérogation.
+    const sourceBailleurOptions = (() => {
+      const all = registries.BAILLEUR || [];
+      const filtered = all.filter(b => operationBailleurs.includes(b.code));
+      // Si aucun bailleur n'a été déclaré au PPM, on n'a rien à proposer
+      // dans le select — on permet alors la saisie libre du nom du bailleur.
+      return { filtered, hasAnyDeclared: filtered.length > 0 };
+    })();
+
+    const block = el('div', { className: 'card', style: { marginBottom: '24px', borderColor: 'var(--color-warning, #f59e0b)' } }, [
+      el('div', { className: 'card-header', style: { background: '#fffbeb' } }, [
+        el('h3', { className: 'card-title', style: { color: '#92400e' } }, '⚠️ Dérogation au barème — justification requise')
+      ]),
+      el('div', { className: 'card-body' }, [
+        // Rappel du changement de mode si applicable
+        isChanged ? el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+          el('div', { className: 'alert-icon' }, 'ℹ️'),
+          el('div', { className: 'alert-content' }, [
+            el('div', { className: 'alert-message' }, [
+              'Mode planifié à la création : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, modePlanifieCode),
+              ' · Mode retenu maintenant : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, mode), '.'
+            ])
+          ])
+        ]) : null,
+
+        el('p', { style: { margin: '0 0 12px', fontSize: '13px', color: '#374151' } },
+          'Le mode sélectionné ne figure pas dans la liste des modes admissibles selon le Code MP CI. Indiquez le demandeur et la source de la dérogation, puis joignez la pièce justificative.'),
+
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } }, [
+
+          // Demandeur (4.d)
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, ['Demandeur de la dérogation', el('span', { className: 'required' }, '*')]),
+            (() => {
+              const sel = el('select', { className: 'form-input', id: 'derogation-demandeur' }, [
+                el('option', { value: '' }, '-- Sélectionner --'),
+                el('option', { value: 'DCF', selected: derogationDemandeur === 'DCF' }, 'DCF (Direction du Contrôle Financier)'),
+                el('option', { value: 'DGMP', selected: derogationDemandeur === 'DGMP' }, 'DGMP'),
+                el('option', { value: 'CHARGE_ETUDES', selected: derogationDemandeur === 'CHARGE_ETUDES' }, 'Chargé d\'études'),
+                el('option', { value: 'AUTRE', selected: derogationDemandeur === 'AUTRE' }, 'Autre')
+              ]);
+              sel.addEventListener('change', (e) => {
+                derogationDemandeur = e.target.value;
+                const autre = document.getElementById('derogation-demandeur-autre-wrap');
+                if (autre) autre.style.display = derogationDemandeur === 'AUTRE' ? '' : 'none';
+              });
+              return sel;
+            })()
+          ]),
+
+          // Texte libre si Demandeur = Autre
+          el('div', {
+            className: 'form-field',
+            id: 'derogation-demandeur-autre-wrap',
+            style: { display: derogationDemandeur === 'AUTRE' ? '' : 'none' }
+          }, [
+            el('label', { className: 'form-label' }, 'Préciser le demandeur'),
+            (() => {
+              const inp = el('input', {
+                type: 'text', className: 'form-input', id: 'derogation-demandeur-autre',
+                placeholder: 'Ex : direction métier, autorité de tutelle…', value: derogationDemandeurAutre
+              });
+              inp.addEventListener('input', (e) => { derogationDemandeurAutre = e.target.value; });
+              return inp;
+            })()
+          ]),
+
+          // Source de dérogation (4.d)
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, ['Source de la dérogation', el('span', { className: 'required' }, '*')]),
+            (() => {
+              const sel = el('select', { className: 'form-input', id: 'derogation-source-type' }, [
+                el('option', { value: '' }, '-- Sélectionner --'),
+                el('option', { value: 'ETAT', selected: derogationSourceType === 'ETAT' }, 'État'),
+                el('option', { value: 'BAILLEUR', selected: derogationSourceType === 'BAILLEUR' }, 'Bailleur')
+              ]);
+              sel.addEventListener('change', (e) => {
+                derogationSourceType = e.target.value;
+                const bw = document.getElementById('derogation-source-bailleur-wrap');
+                if (bw) bw.style.display = derogationSourceType === 'BAILLEUR' ? '' : 'none';
+              });
+              return sel;
+            })()
+          ]),
+
+          // Bailleur (si Source = Bailleur) — restreint aux bailleurs du marché
+          el('div', {
+            className: 'form-field',
+            id: 'derogation-source-bailleur-wrap',
+            style: { display: derogationSourceType === 'BAILLEUR' ? '' : 'none' }
+          }, [
+            el('label', { className: 'form-label' }, [
+              'Bailleur concerné',
+              !sourceBailleurOptions.hasAnyDeclared
+                ? el('span', { style: { fontSize: '11px', color: '#92400e', marginLeft: '6px', fontWeight: 'normal' } }, '(aucun bailleur déclaré au PPM)')
+                : null
+            ]),
+            sourceBailleurOptions.hasAnyDeclared
+              ? (() => {
+                  const sel = el('select', { className: 'form-input', id: 'derogation-source-bailleur' }, [
+                    el('option', { value: '' }, '-- Sélectionner --'),
+                    ...sourceBailleurOptions.filtered.map(b =>
+                      el('option', { value: b.code, selected: derogationSourceBailleur === b.code }, b.label)
+                    )
+                  ]);
+                  sel.addEventListener('change', (e) => { derogationSourceBailleur = e.target.value; });
+                  return sel;
+                })()
+              : (() => {
+                  // Pas de bailleur déclaré au PPM : on autorise la saisie libre
+                  // pour ne pas bloquer le métier (cas rare).
+                  const inp = el('input', {
+                    type: 'text', className: 'form-input', id: 'derogation-source-bailleur',
+                    placeholder: 'Nom du bailleur', value: derogationSourceBailleur
+                  });
+                  inp.addEventListener('input', (e) => { derogationSourceBailleur = e.target.value; });
+                  return inp;
+                })()
+          ])
+        ]),
+
+        // Document justificatif
+        el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
+          el('label', { className: 'form-label' }, [
+            'Document justificatif (décision, note, autorisation, etc.)'
+          ]),
+          el('input', { type: 'file', className: 'form-input', id: 'derogation-doc', accept: '.pdf,.doc,.docx' }),
+          // Modif #79 (4.g) — pièce non bloquante au save. Avertissement seul.
+          el('small', { className: 'text-muted', style: { display: 'block', marginTop: '6px' } },
+            'Sans pièce, la dérogation sera enregistrée avec un avertissement sur la fiche de vie (à corriger ultérieurement).')
+        ]),
+
+        // Commentaire / Motif
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Commentaire / Motif'),
+          (() => {
+            const ta = el('textarea', {
+              className: 'form-input', id: 'derogation-comment', rows: 3,
+              placeholder: 'Expliquez les raisons de cette dérogation…'
+            });
+            ta.value = derogationComment;
+            ta.addEventListener('input', (e) => { derogationComment = e.target.value; });
+            return ta;
+          })()
+        ])
+      ])
+    ]);
+
+    container.appendChild(block);
   }
 
   /**
@@ -343,66 +602,11 @@ function createModeSelect(modes, selectedValue, onChange) {
   return select;
 }
 
-/**
- * Update derogation alert based on selected mode
- */
-function updateDerogationAlert(selectedMode, suggestedCodes) {
-  const container = document.getElementById('derogation-alert-container');
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  if (!selectedMode) return;
-
-  const isDerogation = !suggestedCodes.includes(selectedMode);
-
-  if (isDerogation) {
-    const alert = el('div', { className: 'card', style: { marginBottom: '24px', borderColor: 'var(--color-error)' } }, [
-      el('div', { className: 'card-header', style: { background: 'var(--color-error-100)' } }, [
-        el('h3', { className: 'card-title', style: { color: 'var(--color-error-700)' } }, [
-          el('span', {}, '⚠️ DÉROGATION DÉTECTÉE')
-        ])
-      ]),
-      el('div', { className: 'card-body' }, [
-        el('div', { className: 'alert alert-error' }, [
-          el('div', { className: 'alert-icon' }, '🚫'),
-          el('div', { className: 'alert-content' }, [
-            el('div', { className: 'alert-title' }, 'Procédure non conforme au barème'),
-            el('div', { className: 'alert-message' }, [
-              el('p', {}, 'Le mode de passation sélectionné ne figure pas dans la liste des procédures admissibles.'),
-              el('p', { style: { marginTop: '8px', fontWeight: '600' } }, 'Un document justificatif est OBLIGATOIRE pour continuer.')
-            ])
-          ])
-        ]),
-
-        el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
-          el('label', { className: 'form-label' }, [
-            'Document justificatif (décision, note, etc.)',
-            el('span', { className: 'required' }, '*')
-          ]),
-          el('input', {
-            type: 'file',
-            className: 'form-input',
-            id: 'derogation-doc',
-            accept: '.pdf,.doc,.docx'
-          })
-        ]),
-
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Commentaire / Motif'),
-          el('textarea', {
-            className: 'form-input',
-            id: 'derogation-comment',
-            rows: 3,
-            placeholder: 'Expliquez les raisons de cette dérogation...'
-          })
-        ])
-      ])
-    ]);
-
-    container.appendChild(alert);
-  }
-}
+// Modif #79 (4.d + 4.f) — l'ancienne fonction externe updateDerogationAlert
+// a été remplacée par la closure updateDerogationAlertLocal définie dans
+// renderProcedurePV, qui a accès aux variables d'état du formulaire
+// (derogationDemandeur, derogationSourceType, etc.) et aux bailleurs liés
+// au marché. Voir la fonction interne pour la sémantique CR 26 mai 2026.
 
 /**
  * Render procedure details form based on mode
@@ -414,17 +618,21 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   const existingProc = procedure || {};
 
   // PSD - Procédure Simplifiée d'Entente Directe
+  // Modif #79 (4.j) — Tous les libellés utilisateur contenant « devis » sont
+  // remplacés par « devis / facture proforma » (CR 26 mai 2026). Les IDs
+  // techniques et noms de champs en base restent inchangés (proc-ref-devis,
+  // refDevis, docDevis, …) pour préserver les données existantes.
   if (mode === 'PSD' || mode === 'ENTENTE_DIRECTE') {
     return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, '📋 Validation du devis')
+        el('h3', { className: 'card-title' }, '📋 Validation du devis / facture proforma')
       ]),
       el('div', { className: 'card-body' }, [
         el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
           el('div', { className: 'alert-icon' }, 'ℹ️'),
           el('div', { className: 'alert-content' }, [
             el('div', { className: 'alert-title' }, 'Procédure simplifiée'),
-            el('div', { className: 'alert-message' }, 'Pour les marchés < 10M XOF, une simple validation du devis suffit. Pas de commission ni de PV requis.')
+            el('div', { className: 'alert-message' }, 'Pour les marchés < 10M XOF, une simple validation du devis / facture proforma suffit. Pas de commission ni de PV requis.')
           ])
         ]),
 
@@ -441,21 +649,21 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             })
           ]),
 
-          // Référence devis
+          // Référence devis / facture proforma
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Référence devis', el('span', { className: 'required' }, '*')]),
+            el('label', { className: 'form-label' }, ['Référence devis / facture proforma', el('span', { className: 'required' }, '*')]),
             el('input', {
               type: 'text',
               className: 'form-input',
               id: 'proc-ref-devis',
-              placeholder: 'Ex: DEV-2024-001',
+              placeholder: 'Ex : DEV-2024-001 ou FP-2024-001',
               value: existingProc.refDevis || ''
             })
           ]),
 
-          // Date du devis
+          // Date du devis / facture proforma
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Date du devis'),
+            el('label', { className: 'form-label' }, 'Date du devis / facture proforma'),
             el('input', {
               type: 'date',
               className: 'form-input',
@@ -464,9 +672,9 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             })
           ]),
 
-          // Document devis
+          // Document devis / facture proforma
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Document devis (PDF)', el('span', { className: 'required' }, '*')]),
+            el('label', { className: 'form-label' }, ['Document devis / facture proforma (PDF)', el('span', { className: 'required' }, '*')]),
             el('input', {
               type: 'file',
               className: 'form-input',
@@ -524,16 +732,20 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
 
   // PSC - Procédure Simplifiée de Cotation
   if (mode === 'PSC') {
+    // Modif #79 (4.j + 4.k + 4.l) — Renommages « devis » → « devis / facture
+    // proforma ». Suppression des champs « Nombre de devis reçus » (4.k) et
+    // « Tableau comparatif » (4.l) — les données existantes sont préservées
+    // côté base via le merge dans handleSave.
     return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, '📋 Comparaison de devis')
+        el('h3', { className: 'card-title' }, '📋 Comparaison de devis / facture proforma')
       ]),
       el('div', { className: 'card-body' }, [
         el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
           el('div', { className: 'alert-icon' }, 'ℹ️'),
           el('div', { className: 'alert-content' }, [
             el('div', { className: 'alert-title' }, 'Procédure de cotation'),
-            el('div', { className: 'alert-message' }, 'Pour les marchés entre 10M et 30M XOF, une comparaison d\'au moins 3 devis est requise. Pas de COJO formel.')
+            el('div', { className: 'alert-message' }, 'Pour les marchés entre 10M et 30M XOF, une comparaison d\'au moins 3 devis / factures proforma est requise. Pas de COJO formel.')
           ])
         ]),
 
@@ -551,18 +763,6 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             el('small', { className: 'text-muted' }, 'Minimum 3 fournisseurs')
           ]),
 
-          // Nombre de devis reçus
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Nombre de devis reçus'),
-            el('input', {
-              type: 'number',
-              className: 'form-input',
-              id: 'proc-nb-devis-recus',
-              min: 0,
-              value: existingProc.nbDevisRecus || 0
-            })
-          ]),
-
           // Date comparaison
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Date de comparaison'),
@@ -572,18 +772,6 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
               id: 'proc-date-comparaison',
               value: existingProc.dateComparaison ? existingProc.dateComparaison.split('T')[0] : ''
             })
-          ]),
-
-          // Tableau comparatif
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Tableau comparatif (PDF)', el('span', { className: 'required' }, '*')]),
-            el('input', {
-              type: 'file',
-              className: 'form-input',
-              id: 'proc-tableau-comparatif',
-              accept: '.pdf,.xlsx,.xls'
-            }),
-            existingProc.tableauComparatif ? el('small', { className: 'text-success' }, `✓ ${existingProc.tableauComparatif}`) : null
           ])
         ]),
 
@@ -716,8 +904,15 @@ function renderField(label, value) {
 
 /**
  * Handle save
+ *
+ * Modif #79 (4.f + 4.g + 4.i) — Signature étendue : reçoit derogationState
+ * qui agrège tous les champs du formulaire dérogation (demandeur, source,
+ * justification). La pièce justificative n'est plus bloquante : son absence
+ * est remontée comme avertissement et conservée pour la fiche de vie.
+ *
+ * @param {Object} derogationState — { justif, comment, demandeur, demandeurAutre, sourceType, sourceBailleur }
  */
-async function handleSave(idOperation, selectedMode, derogationJustif, derogationComment, suggestedCodes, soumissionnairesWidget, lotsState) {
+async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, derogationState = {}) {
   if (!selectedMode) {
     alert('Veuillez sélectionner un mode de passation');
     return;
@@ -741,23 +936,36 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
 
   const isDerogation = !suggestedCodes.includes(selectedMode);
 
-  // Check derogation document if needed
+  // Modif #79 (4.f + 4.g) — Gestion de la dérogation :
+  //   · si dérogation : on enregistre les infos saisies (demandeur, source,
+  //     pièce, motif). La pièce manquante n'est PLUS BLOQUANTE — on remonte
+  //     juste un avertissement à la fiche de vie via
+  //     operation.contractualisationWarnings.derogationPieceManquante.
+  let derogationJustif    = derogationState.justif || null;
+  let derogationComment   = derogationState.comment || '';
+  let derogationDemandeur = derogationState.demandeur || '';
+  let derogationDemandeurAutre = derogationState.demandeurAutre || '';
+  let derogationSourceType = derogationState.sourceType || '';
+  let derogationSourceBailleur = derogationState.sourceBailleur || '';
+  let derogationPieceManquante = false;
+
   if (isDerogation) {
     const docInput = document.getElementById('derogation-doc');
     const commentInput = document.getElementById('derogation-comment');
 
-    if (!docInput?.files?.[0] && !derogationJustif) {
-      alert('⚠️ Un document justificatif est obligatoire pour une dérogation');
-      return;
-    }
-
-    // Simulate doc upload (in real app, upload to server/storage)
     if (docInput?.files?.[0]) {
+      // Simulate doc upload (in real app, upload to server/storage)
       derogationJustif = 'DOC_DEROG_' + Date.now() + '.pdf';
       logger.info('[Procedure] Document dérogation uploadé:', derogationJustif);
+    } else if (!derogationJustif) {
+      // Modif #79 (4.g) — pièce manquante = warning non bloquant
+      derogationPieceManquante = true;
+      logger.warn('[Procedure] Dérogation enregistrée sans pièce justificative — à corriger ultérieurement');
     }
 
-    derogationComment = commentInput?.value || '';
+    // Permet à l'utilisateur de continuer à taper dans le textarea après
+    // le dernier onInput : on prend la valeur la plus à jour du DOM.
+    derogationComment = commentInput?.value ?? derogationComment;
   }
 
   // Collect procedure details based on mode
@@ -772,7 +980,14 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     const refDevis = document.getElementById('proc-ref-devis')?.value?.trim();
 
     if (!fournisseur || !refDevis) {
-      alert('⚠️ Le fournisseur et la référence du devis sont obligatoires');
+      alert('⚠️ Le fournisseur et la référence du devis / facture proforma sont obligatoires');
+      return;
+    }
+
+    // Modif #79 (4.i) — Si le fournisseur retenu est sanctionné : REJET, save bloqué.
+    const sanction = await checkSanction({ raisonSociale: fournisseur });
+    if (sanction) {
+      alert(`🚫 REJET\n\nLe fournisseur « ${fournisseur} » fait l'objet d'une sanction (${sanction.typeSanction || 'sanction enregistrée'}).\n\nMotif : ${sanction.motif || '(non précisé)'}\n\nVeuillez choisir un autre fournisseur ou faire lever la sanction.`);
       return;
     }
 
@@ -802,12 +1017,20 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
       return;
     }
 
+    // Modif #79 (4.i) — Sanction sur l'attributaire = REJET bloquant.
+    const sanction = await checkSanction({ raisonSociale: fournisseurRetenu });
+    if (sanction) {
+      alert(`🚫 REJET\n\nLe fournisseur retenu « ${fournisseurRetenu} » fait l'objet d'une sanction (${sanction.typeSanction || 'sanction enregistrée'}).\n\nMotif : ${sanction.motif || '(non précisé)'}\n\nVeuillez choisir un autre fournisseur ou faire lever la sanction.`);
+      return;
+    }
+
+    // Modif #79 (4.k + 4.l) — champs « Nombre de devis reçus » et « Tableau
+    // comparatif » retirés de l'UI. On préserve les valeurs existantes en base
+    // (existingProc) via le merge ci-dessous pour ne pas perdre l'historique.
     procedureData = {
       ...procedureData,
       nbFournisseursConsultes: nbFournisseurs,
-      nbDevisRecus: Number(document.getElementById('proc-nb-devis-recus')?.value) || 0,
       dateComparaison: document.getElementById('proc-date-comparaison')?.value || null,
-      tableauComparatif: document.getElementById('proc-tableau-comparatif')?.files?.[0] ? 'TABLEAU_' + Date.now() + '.pdf' : null,
       fournisseurRetenu: fournisseurRetenu,
       motifSelection: document.getElementById('proc-motif-selection')?.value || 'MOINS_DISANT',
       noteSelection: document.getElementById('proc-note-selection')?.files?.[0] ? 'NOTE_SEL_' + Date.now() + '.pdf' : null
@@ -875,6 +1098,20 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     }
   }
 
+  // Pré-fetch de l'opération pour pouvoir merger contractualisationWarnings
+  const operation = await dataService.get(ENTITIES.MP_OPERATION, idOperation);
+
+  // Modif #79 (4.d + 4.g + 4.h) — Construction du payload procDerogation et
+  // des warnings contractualisation (consommés par la fiche de vie).
+  const existingWarnings = operation?.contractualisationWarnings || {};
+  const contractualisationWarnings = { ...existingWarnings };
+  if (isDerogation) {
+    contractualisationWarnings.derogationPieceManquante = derogationPieceManquante;
+  } else {
+    // Mode désormais conforme : on retire toute notification résiduelle.
+    delete contractualisationWarnings.derogationPieceManquante;
+  }
+
   // Update operation
   const updateData = {
     modePassation: selectedMode,
@@ -882,12 +1119,22 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
       isDerogation: true,
       docId: derogationJustif,
       comment: derogationComment,
-      validatedAt: new Date().toISOString()
-    } : null
+      demandeur: derogationDemandeur,
+      demandeurAutre: derogationDemandeur === 'AUTRE' ? derogationDemandeurAutre : null,
+      source: derogationSourceType ? {
+        type: derogationSourceType,
+        bailleur: derogationSourceType === 'BAILLEUR' ? derogationSourceBailleur : null
+      } : null,
+      pieceManquante: derogationPieceManquante,
+      validatedAt: new Date().toISOString(),
+      sourceEtape: 'PROC'
+    } : null,
+    contractualisationWarnings: Object.keys(contractualisationWarnings).length > 0
+      ? contractualisationWarnings
+      : null
   };
 
   // Add PROC to timeline if not present
-  const operation = await dataService.get(ENTITIES.MP_OPERATION, idOperation);
   if (!operation.timeline.includes('PROC')) {
     updateData.timeline = [...operation.timeline, 'PROC'];
     updateData.etat = 'EN_PROC';
@@ -914,6 +1161,8 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
   // si non ré-uploadés). La logique per-lot pour les PVs/dates est gérée par
   // le widget renderLotsProcedureMP côté UI (chaque PV file est conservé tant
   // qu'il n'est pas explicitement remplacé).
+  // Modif #79 (4.k + 4.l) — Les champs nbDevisRecus et tableauComparatif ont
+  // été retirés de l'UI. On les conserve depuis la base s'ils existaient.
   if (existingProcedure) {
     if (procedureData.docDevis === null && existingProcedure.docDevis) {
       procedureData.docDevis = existingProcedure.docDevis;
@@ -921,8 +1170,11 @@ async function handleSave(idOperation, selectedMode, derogationJustif, derogatio
     if (procedureData.docBC === null && existingProcedure.docBC) {
       procedureData.docBC = existingProcedure.docBC;
     }
-    if (procedureData.tableauComparatif === null && existingProcedure.tableauComparatif) {
+    if (procedureData.tableauComparatif === undefined && existingProcedure.tableauComparatif) {
       procedureData.tableauComparatif = existingProcedure.tableauComparatif;
+    }
+    if (procedureData.nbDevisRecus === undefined && existingProcedure.nbDevisRecus != null) {
+      procedureData.nbDevisRecus = existingProcedure.nbDevisRecus;
     }
     if (procedureData.noteSelection === null && existingProcedure.noteSelection) {
       procedureData.noteSelection = existingProcedure.noteSelection;

@@ -221,6 +221,12 @@ export async function renderPPMCreateLine(params) {
       planId: null,
       budgetLineId: null,
       ...formData,
+      // Modif #79 (4.e) — Mode de passation planifié : on fige à la création
+      // le mode choisi lors de la planification. Il sera affiché en bandeau
+      // « MODE DE PASSATION PLANIFIÉE » sur l'écran Contractualisation (ecr02a)
+      // pour rappeler au chargé d'études le choix initial avant d'éventuelle
+      // confirmation ou dérogation.
+      modePassationPlanifie: formData.modePassation,
       devise: 'XOF',
       timeline: ['PLANIF'],
       etat: 'PLANIFIE',

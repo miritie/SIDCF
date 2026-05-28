@@ -13,6 +13,72 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-28 — Lot 4 CR du 26 mai 2026 : Contractualisation (modes, dérogation, devis)
+
+> **Modif #79** — Quatrième lot d'ajustements du CR EHOUMAN du 26 mai 2026, section « 4. Contractualisation ». Traite 11 des 12 retours (le 4.b « variables associées aux modes de passation » est laissé pour une séance dédiée à la demande du client). Touche le référentiel des modes, le moteur de règles, l'écran de contractualisation, la création PPM et la fiche de vie.
+
+### Périmètre fonctionnel
+
+| # CR | Demande | Application |
+|---|---|---|
+| **4.a** | Ajouter CFN (conforme à une Demande de Cotation), Convention, Lettre de commande valant marché | Trois nouveaux modes dans `registries.MODE_PASSATION` : `CFN` (famille SIMPLIFIEE), `CONVENTION` et `LETTRE_COMMANDE_MARCHE` (famille DEROGATOIRE). Tous avec référence « CR DCF 26 mai 2026 ». |
+| **4.b** | Variables/documentation par mode | **Laissé en attente** sur demande du client (« on reparlera de 4b »). À traiter dans une séance dédiée. |
+| **4.c** | Types parents/enfants pris en compte | Adaptation de `RulesEngine` (`getSuggestedProcedures` + `checkProcedure`) : matching en cascade **exact → mapping legacy ↔ nouveau → code famille parent (A/B/C)**. Permet de matcher la matrice ADMIN_CENTRALE quel que soit le code stocké sur l'opération. Aucune modification de `rules-config.json` (option B recommandée). |
+| **4.d** | Indiquer demandeur + source de dérogation | Nouveaux champs dans le bloc dérogation : <ul><li>**Demandeur** (select : DCF / DGMP / Chargé d'études / Autre — avec champ texte si « Autre »)</li><li>**Source** (select : État / Bailleur)</li><li>**Bailleur concerné** : si Source = Bailleur, dropdown **restreint aux bailleurs déclarés à la création PPM** (lus depuis `operation.financements[].bailleur` ou `operation.bailleurs[]`). Si aucun bailleur n'a été déclaré, on autorise la saisie libre.</li></ul>Persistés dans `operation.procDerogation.demandeur`, `.demandeurAutre`, `.source.{type, bailleur}`. |
+| **4.e** | « MODE DE PASSATION PLANIFIÉE » | Persistance d'un nouveau champ `operation.modePassationPlanifie` à la création PPM (`ecr01d`) — figé. Affichage d'un **bandeau bleu d'information** en haut de l'écran procédure (`ecr02a`) avec le code + libellé + mention « simple information ». Fallback sur `operation.modePassation` pour les opérations antérieures à la Modif #79. |
+| **4.f** | Mode = planifié sans dérogation → rien ; sinon → exiger justification | Refonte de l'encart dérogation : <ul><li>**Mode conforme** → encart vert « Mode conforme — aucune action supplémentaire requise »</li><li>**Mode conforme mais différent du planifié** → encart vert « Mode confirmé (changement par rapport au planifié) » + détail des 2 codes</li><li>**Mode hors barème** → bloc orange « Dérogation au barème — justification requise » avec rappel du mode planifié si applicable + tous les champs de 4.d</li></ul> |
+| **4.g** | Absence de pièce dérogative = warning non bloquant | Le save n'**alerte plus** et ne **bloque plus** quand le doc justificatif manque. Au lieu de ça, on persiste `operation.contractualisationWarnings.derogationPieceManquante = true` (4.h). |
+| **4.h** | Notification sur la fiche de vie | Bandeau orange « ⚠️ Pièce justificative de dérogation manquante » en tête de la section « Contractualisation » de la fiche de vie (`ecr01c`) lorsque `contractualisationWarnings.derogationPieceManquante === true` (ou `procDerogation.pieceManquante`). Rappelle le demandeur et la source pour faciliter la régularisation. |
+| **4.i** | Sanction sur attributaire = REJET | Dans `handleSave`, **avant** l'enregistrement de la procédure, on appelle `checkSanction({ raisonSociale })` sur le fournisseur (PSD/ENTENTE_DIRECTE) ou le fournisseur retenu (PSC). Si une sanction est trouvée → **alerte rouge « 🚫 REJET »** détaillant le type, le motif, et **save bloqué**. Le bandeau live existant reste affiché en parallèle pour le feedback à la saisie. |
+| **4.j** | Renommage « devis » → « devis / facture proforma » | Tous les libellés utilisateur impactés : titre `📋 Validation du devis / facture proforma`, libellé `Référence devis / facture proforma`, `Date du devis / facture proforma`, `Document devis / facture proforma (PDF)`, `📋 Comparaison de devis / facture proforma`, ainsi que le message d'aide PSC et l'alerte de validation. **IDs techniques et noms de champs en base inchangés** (`refDevis`, `docDevis`, `dateDevis`, `proc-ref-devis`…) pour préserver les données existantes. |
+| **4.k** | Retirer « Nombre de devis reçus » | Champ supprimé de l'UI PSC. **Donnée préservée en base** : si une procédure existante contient `nbDevisRecus`, la valeur est conservée au save via le merge avec `existingProcedure` (lecture toujours possible). |
+| **4.l** | Retirer « Tableau comparatif » | Même traitement que 4.k. Donnée `tableauComparatif` préservée en base si déjà présente. |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : +3 entrées dans `MODE_PASSATION` (CFN, CONVENTION, LETTRE_COMMANDE_MARCHE).
+- `sidcf-portal/js/datastore/rules-engine.js` : constructor pré-calcule `_newToLegacy` et `_typeParent` ; nouvelle méthode `_typeMarcheMatches()` ; les 2 sites de matching `typeMarche` (checkProcedure + getSuggestedProcedures) l'utilisent désormais.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` : ajout `modePassationPlanifie` à la création.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - lecture de `modePassationPlanifie`, `operationBailleurs` (financements/bailleurs déclarés),
+  - état du formulaire dérogation enrichi (demandeur, demandeurAutre, sourceType, sourceBailleur),
+  - bandeau « MODE DE PASSATION PLANIFIÉE »,
+  - nouvelle closure `updateDerogationAlertLocal(mode)` qui remplace l'ancienne `updateDerogationAlert` externe (supprimée),
+  - refonte `handleSave` : signature reçoit `derogationState`, ajout du check sanction REJET sur PSD/ENTENTE_DIRECTE et PSC, gestion non bloquante de la pièce, persistance `procDerogation.{demandeur, source, pieceManquante}` + `operation.contractualisationWarnings`,
+  - libellés « devis » → « devis / facture proforma »,
+  - retrait des champs PSC « Nb devis reçus » et « Tableau comparatif » (UI seulement).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` : signature `renderContractualisationContent` reçoit `operation` ; bandeau « pièce justificative manquante » en tête de la section.
+
+### Impact
+
+- **UI** : écran de contractualisation enrichi (mode planifié, demandeur, source) + dédouanage des alertes (mode conforme = vert apaisant, dérogation = orange informatif). Fiche de vie : rappel visible de la pièce manquante.
+- **Worker** : ❌ aucun changement.
+- **DB Neon** : ❌ aucun changement de schéma. Les nouveaux champs (`modePassationPlanifie`, `procDerogation.*`, `contractualisationWarnings`) vivent dans les colonnes JSON existantes de `mp_operation`. Pas de migration.
+- **R2** : ❌ aucun changement (l'upload du doc dérogation reste simulé comme avant).
+
+### Anti-régression
+
+- **Modes legacy** sur opérations existantes : continuent de fonctionner via `_typeMarcheMatches` (cascade exact → legacy → famille).
+- **Champ `mode planifié` absent** sur les opérations créées avant Modif #79 : fallback explicite sur `operation.modePassation` (pas de bandeau vide).
+- **Pièce dérogative manquante** : ne bloque plus le save (4.g) — comportement intentionnel selon CR. La trace passe par `contractualisationWarnings` + `procDerogation.pieceManquante` → visible sur la fiche de vie (4.h).
+- **Champs PSC `nbDevisRecus` / `tableauComparatif`** : disparaissent de l'UI mais sont **préservés en base** via le merge avec `existingProcedure` (utilisation de `undefined` pour ne pas écraser).
+- **`handleSave` signature changée** : seul appelant local (le bouton « Enregistrer & Continuer ») mis à jour en cohérence.
+- **Fonction externe `updateDerogationAlert` supprimée** : aucune référence restante (vérifié par grep).
+- **`renderContractualisationContent`** : signature étendue (paramètre `operation` ajouté) ; un seul appelant interne mis à jour.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel** pour exposer les changements
+
+### Reste à faire
+
+- **4.b** — Variables/documentation associées à chaque mode : à traiter en séance dédiée (référentiel à construire avec la DCF, large impact sur la contextualité des écrans).
+- **Lot 6 / 6.a** — Transition opérationnelle vers `INFRUCTUEUX` depuis l'écran d'enregistrement de marché, accompagnée de la brique transversale « mini-rapport d'étape ».
+
+---
+
 ## 2026-05-28 — Lot 3 CR du 26 mai 2026 : création de marché + action Voir contextuelle
 
 > **Modif #78** — Troisième lot d'ajustements du CR EHOUMAN du 26 mai 2026, section « 3. Création du marché ». Traite les 5 retours : neutralisation des alertes mode passation, séparateurs de milliers dans la saisie du montant, libellés mis à jour, action « Voir » contextuelle dans la liste PPM.

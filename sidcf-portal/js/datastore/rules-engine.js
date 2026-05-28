@@ -9,7 +9,45 @@ export class RulesEngine {
     this.rules = rulesConfig;
     this.matrice = piecesMatrice;
     this.registries = registries;
+
+    // Modif #79 — Lot 4 CR 26 mai 2026 (4.c) — pour matcher la matrice des modes
+    // de passation que l'opération porte un code legacy (TRAVAUX, FOURNITURES, …)
+    // ou un nouveau code typologie A/B/C (MARCHE_TRAVAUX, MARCHE_FOURN_EQUIP, …),
+    // on construit une fois pour toutes :
+    //   - newToLegacy : nouveau → ancien (réciproque de TYPE_MARCHE_LEGACY_MAP)
+    //   - typeParent  : code → code famille (ex MARCHE_TRAVAUX → FAMILLE_A)
+    const legacyMap = registries?.TYPE_MARCHE_LEGACY_MAP || {};
+    this._newToLegacy = {};
+    for (const [legacy, nouveau] of Object.entries(legacyMap)) {
+      if (!this._newToLegacy[nouveau]) this._newToLegacy[nouveau] = legacy;
+    }
+    this._typeParent = {};
+    for (const t of (registries?.TYPE_MARCHE || [])) {
+      if (t.parent) this._typeParent[t.code] = t.parent;
+    }
+
     logger.info('[RulesEngine] Initialized with config');
+  }
+
+  /**
+   * Modif #79 (4.c) — Vrai si le code typeMarche de l'opération matche la
+   * liste de codes admis dans une ligne de la matrice (seuil.typeMarche).
+   * Stratégie en cascade : exact → "all" → mapping legacy ↔ nouveau →
+   * code famille parent (A/B/C). Sans rien renseigné côté opération, on
+   * reste lenient (true).
+   */
+  _typeMarcheMatches(seuilTypes, opTypeMarche) {
+    if (!opTypeMarche) return true;
+    if (!Array.isArray(seuilTypes)) return false;
+    if (seuilTypes.includes('all')) return true;
+    if (seuilTypes.includes(opTypeMarche)) return true;
+    // Nouveau code → essayer son équivalent legacy (MARCHE_TRAVAUX → TRAVAUX)
+    const legacyEq = this._newToLegacy[opTypeMarche];
+    if (legacyEq && seuilTypes.includes(legacyEq)) return true;
+    // Fallback famille parent (ex. MARCHE_INNOVATION → FAMILLE_B)
+    const parent = this._typeParent[opTypeMarche];
+    if (parent && seuilTypes.includes(parent)) return true;
+    return false;
   }
 
   /**
@@ -72,9 +110,8 @@ export class RulesEngine {
         seuil.natureEco.includes('all') ||
         seuil.natureEco.includes(operation.chaineBudgetaire?.nature);
 
-      const typeOK =
-        seuil.typeMarche.includes('all') ||
-        seuil.typeMarche.includes(operation.typeMarche);
+      // Modif #79 (4.c) — matching legacy + famille parent
+      const typeOK = this._typeMarcheMatches(seuil.typeMarche, operation.typeMarche);
 
       return montantOK && natureOK && typeOK;
     });
@@ -359,11 +396,8 @@ export class RulesEngine {
         seuil.natureEco.some(code => code.startsWith(operationNature)) ||
         seuil.natureEco.some(code => operationNature.startsWith(code));
 
-      // Type : lenient si non renseigné.
-      const typeOK =
-        !operation.typeMarche ||
-        seuil.typeMarche.includes('all') ||
-        seuil.typeMarche.includes(operation.typeMarche);
+      // Type : Modif #79 (4.c) — matching legacy + famille parent
+      const typeOK = this._typeMarcheMatches(seuil.typeMarche, operation.typeMarche);
 
       return montantOK && natureOK && typeOK;
     });

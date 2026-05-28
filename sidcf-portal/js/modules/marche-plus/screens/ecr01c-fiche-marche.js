@@ -156,7 +156,7 @@ export async function renderFicheMarche(params) {
           defaultOpen: true,
           status: 'complete'
         }),
-        sectionAccordion('contractualisation', '📑 2. Contractualisation', renderContractualisationContent(procedure, currentLotId, lots, registries), {
+        sectionAccordion('contractualisation', '📑 2. Contractualisation', renderContractualisationContent(procedure, currentLotId, lots, registries, operation), {
           modifierRoute: '/mp/procedure',
           modifierParams: { idOperation },
           defaultOpen: false,
@@ -1207,7 +1207,7 @@ function renderLivrablesTable(livrables, registries) {
 // Section 2 — Contractualisation
 // ============================================
 
-function renderContractualisationContent(procedure, currentLotId, lots, registries) {
+function renderContractualisationContent(procedure, currentLotId, lots, registries, operation) {
   if (!procedure) {
     return el('p', { className: 'text-muted', style: { fontStyle: 'italic' } }, 'Phase de contractualisation non encore renseignée.');
   }
@@ -1219,7 +1219,35 @@ function renderContractualisationContent(procedure, currentLotId, lots, registri
   // Filtrer les lots affichés selon currentLotId
   const lotsFiltered = currentLotId === 'ALL' ? lots : lots.filter(l => l.id === currentLotId);
 
+  // Modif #79 (4.h) — Notification "pièce justificative manquante" lorsqu'une
+  // dérogation a été enregistrée sans pièce justificative. Sert de rappel
+  // pour correction future (cf. 4.g — pièce non bloquante au save).
+  const pieceManquante =
+    operation?.contractualisationWarnings?.derogationPieceManquante === true
+    || operation?.procDerogation?.pieceManquante === true;
+  const derog = operation?.procDerogation;
+
   return el('div', {}, [
+    // Bandeau warning si pièce dérogative manquante
+    pieceManquante ? el('div', {
+      style: {
+        marginBottom: '12px', padding: '10px 14px',
+        background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px',
+        display: 'flex', gap: '10px', alignItems: 'flex-start'
+      }
+    }, [
+      el('span', { style: { fontSize: '16px' } }, '⚠️'),
+      el('div', { style: { flex: 1, fontSize: '13px', color: '#92400e' } }, [
+        el('div', { style: { fontWeight: 600 } }, 'Pièce justificative de dérogation manquante'),
+        el('div', { style: { fontSize: '12px', marginTop: '3px' } }, [
+          'La dérogation au barème a été enregistrée sans pièce justificative. ',
+          derog?.demandeur ? `Demandeur : ${derog.demandeur === 'AUTRE' ? (derog.demandeurAutre || 'Autre') : derog.demandeur}. ` : '',
+          derog?.source?.type ? `Source : ${derog.source.type === 'BAILLEUR' ? `Bailleur (${derog.source.bailleur || '-'})` : 'État'}. ` : '',
+          'À régulariser depuis l\'écran Contractualisation.'
+        ])
+      ])
+    ]) : null,
+
     renderInfoGrid([
       { label: 'Mode de passation', value: modePassation?.label || procedure.modePassation },
       { label: 'Type de dossier', value: typeDossier?.label || procedure.typeDossierAppel || '-' },
