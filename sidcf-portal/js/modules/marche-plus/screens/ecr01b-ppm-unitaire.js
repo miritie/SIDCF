@@ -125,6 +125,32 @@ let activeFilters = {
 };
 
 /**
+ * Modif #78 — Lot 3 CR 26 mai 2026 (3.e) — Action « Voir » contextuelle.
+ * Renvoie la route vers laquelle naviguer depuis la liste PPM en fonction
+ * de l'étape courante du marché. Gère les états legacy (EXECUTION,
+ * CLOTURE) pour rétro-compat des données existantes. Fallback : fiche
+ * de vie (utile au moins en exploration).
+ *
+ * @param {string} etat — code d'état stocké sur op.etat
+ * @returns {string} route /mp/...
+ */
+function getRouteForEtape(etat) {
+  switch (etat) {
+    case 'PLANIFIE':    return '/mp/fiche-marche';
+    case 'EN_PROC':     return '/mp/procedure';
+    case 'ATTRIBUE':    return '/mp/attribution';
+    case 'VISE':        return '/mp/visa-cf';
+    case 'EN_EXEC':
+    case 'EXECUTION':   return '/mp/execution';   // EXECUTION = code legacy
+    case 'CLOS':
+    case 'CLOTURE':     return '/mp/cloture';     // CLOTURE = code legacy
+    case 'RESILIE':     return '/mp/cloture';     // fin de vie : on va à la clôture
+    case 'INFRUCTUEUX': return '/mp/attribution'; // écran d'enregistrement (lot 6)
+    default:            return '/mp/fiche-marche';
+  }
+}
+
+/**
  * Modif #76 — Normalise un code typeMarche : si c'est un ancien code legacy
  * (TRAVAUX, FOURNITURES, …) on le ramène à son équivalent dans la nouvelle
  * typologie A/B/C (MARCHE_TRAVAUX, MARCHE_FOURN_EQUIP, …). Permet au filtre
@@ -635,9 +661,13 @@ function renderSimpleRow(op, registries) {
       }, ETAT_LABEL_MP[op.etat] || etat?.label || op.etat)
     ),
     el('td', {}, [
+      // Modif #78 (3.e) — bouton « Voir » contextuel : navigation vers
+      // l'écran correspondant à l'étape courante du marché (mapping dans
+      // getRouteForEtape). Le bouton « Fiche de vie » conserve l'accès
+      // direct à la vue globale ; le bouton « Détails » ouvre le modal.
       createButton('btn btn-sm btn-secondary', '👁️ Voir', (e) => {
         e.stopPropagation();
-        router.navigate('/mp/fiche-marche', { idOperation: op.id });
+        router.navigate(getRouteForEtape(op.etat), { idOperation: op.id });
       }),
       createButton('btn btn-sm btn-primary', '📋 Fiche de vie', (e) => {
         e.stopPropagation();

@@ -10,6 +10,8 @@ import logger from '../../../lib/logger.js';
 import { renderLivrableManagerMP } from '../../../ui/widgets/livrable-manager-mp.js';
 import { renderSearchableSelect } from '../../../ui/widgets/searchable-select.js';
 import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
+// Modif #78 — Lot 3 CR 26 mai 2026 (3.b) — séparateur de milliers
+import { setupThousandSeparator, parseFormattedNumber } from '../../../lib/format.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -90,7 +92,8 @@ export async function renderPPMCreateLine(params) {
   async function handleSave(createAnother) {
     // Modif #52 — Un seul montant prévisionnel + N bailleurs (sans montant unitaire).
     // Le partage par bailleur se précisera dans la clé de répartition.
-    const montantTotal = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+    // Modif #78 (3.b) — le montant est désormais formaté avec séparateurs (« 1 234 567 »).
+    const montantTotal = parseFormattedNumber(document.getElementById('montant-previsionnel'));
     const bailleurEntries = Array.from(document.querySelectorAll('.financement-bailleur'))
       .map(sel => {
         const val = (sel.value || '').trim();
@@ -427,12 +430,16 @@ export async function renderPPMCreateLine(params) {
                   'Montant prévisionnel (XOF)',
                   el('span', { className: 'required' }, ' *')
                 ]),
+                // Modif #78 (3.b) — séparateur de milliers visible à la saisie
+                // (fr-FR : « 1 234 567 »). On passe en type="text" + inputmode
+                // "numeric" pour rester compatible mobiles. La valeur numérique
+                // est relue via parseFormattedNumber().
                 el('input', {
-                  type: 'number',
+                  type: 'text',
+                  inputmode: 'numeric',
                   className: 'form-input',
                   id: 'montant-previsionnel',
-                  min: '0',
-                  step: '1',
+                  autocomplete: 'off',
                   placeholder: '0',
                   required: true
                 })
@@ -465,10 +472,11 @@ export async function renderPPMCreateLine(params) {
         ])
       ]),
 
-      // ---- Informations techniques ----
+      // ---- Information technique prévisionnelle ----
+      // Modif #78 (3.d) — renommé selon CR 26 mai 2026
       el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
-          el('h3', { className: 'card-title' }, '⚙️ Informations techniques')
+          el('h3', { className: 'card-title' }, '⚙️ Information technique prévisionnelle')
         ]),
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
@@ -483,7 +491,9 @@ export async function renderPPMCreateLine(params) {
               })
             ]),
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'Catégorie de prestation'),
+              // Modif #78 (3.c) — mention « à préciser » selon CR 26 mai 2026
+              // (libellé et contenu du référentiel restent à arrêter avec la DCF).
+              el('label', { className: 'form-label' }, 'Catégorie de prestation (à préciser : libellé et contenu)'),
               el('select', { className: 'form-input', id: 'categoriePrestation' }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
                 ...(registries.CATEGORIE_PRESTATION || []).map(c => el('option', { value: c.code }, c.label))
@@ -590,6 +600,10 @@ export async function renderPPMCreateLine(params) {
 
   setupActiviteReverseCascade(activiteIndex);
   setupNatureEcoLigneBudgetaire();
+  // Modif #78 (3.b) — activer le formatage avec séparateur de milliers
+  // AVANT setupFinancementsMulti, pour que le reformatage s'exécute avant
+  // le listener d'indicateur de disponibilité budgétaire (ordre d'attache).
+  setupThousandSeparator(document.getElementById('montant-previsionnel'));
   setupFinancementsMulti(registries, mpBudgetLines, mpOperations);
   // Modif #53c — Suggestion auto du mode de passation basée sur le MONTANT DE LA
   // LIGNE BUDGÉTAIRE (somme des AE des MP_BUDGET_LINE pour activité + nature),
@@ -846,7 +860,8 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
    */
   const refreshAll = () => {
     const activiteCode = document.getElementById('activite')?.value || '';
-    const montant = Number(montantInput.value) || 0;
+    // Modif #78 (3.b) — input formaté avec séparateurs : tolérer les espaces
+    const montant = parseFormattedNumber(montantInput);
     const declared = readDeclaredBailleurs();
 
     // Indicateur sous le montant : couverture des enveloppes vs montant saisi
@@ -1086,7 +1101,8 @@ function computeModeSuggestion(mpBudgetLines) {
   const natureCode = document.getElementById('natureEco')?.value || '';
   const activiteCode = document.getElementById('activite')?.value || '';
   const selected = document.getElementById('modePassation')?.value || '';
-  const montantOperation = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+  // Modif #78 (3.b) — input formaté : utiliser le helper de lecture
+  const montantOperation = parseFormattedNumber(document.getElementById('montant-previsionnel'));
 
   // Montant de la ligne budgétaire = somme des AE de l'activité
   const { total: montantLigne, lines } = computeLigneBudgetaireAmount(mpBudgetLines, activiteCode);
@@ -1174,7 +1190,8 @@ function refreshModePassationRec(registries, mpBudgetLines) {
   const natureCode = ctx.natureCode;
   const currentSelected = modeSelect.value;
   // Bandeau "Plafond ligne budgétaire" — sanity-check du montant saisi vs ligne
-  const montantOperation = Number(document.getElementById('montant-previsionnel')?.value) || 0;
+  // Modif #78 (3.b) — input formaté : utiliser le helper de lecture
+  const montantOperation = parseFormattedNumber(document.getElementById('montant-previsionnel'));
   let plafondNote = '';
   if (ctx.montantLigne > 0 && montantOperation > 0) {
     const depasse = montantOperation > ctx.montantLigne;
@@ -1246,9 +1263,12 @@ function refreshModePassationRec(registries, mpBudgetLines) {
           <span style="font-size:11px;">Applicable pour les marchés de la tranche <strong>${tFmt}</strong>. La conformité sera évaluée dès que le montant de la ligne budgétaire sera connu.</span>
         </div>`;
       } else {
-        modeFeedback = `<div style="margin-top:6px; padding:6px 8px; background:rgba(220,38,38,0.08); border-left:3px solid #dc2626;">
+        // Modif #78 (3.a) — pas d'alerte d'inadéquation à la création : encart
+        // neutre informatif. La pertinence du mode sera examinée à l'étape
+        // Procédure (cf. lot 4 du CR 26 mai 2026).
+        modeFeedback = `<div style="margin-top:6px; padding:6px 8px; background:rgba(59,130,246,0.06); border-left:3px solid #3b82f6;">
           <strong>Mode sélectionné :</strong> ${currentSelected} — ${labelFor(modeLabels, currentSelected)}<br>
-          <span style="font-size:11px;">⚠ Ce mode n'est <strong>pas listé</strong> dans les tranches standard pour ${labelFor(typeLabels, typeMarche)} / ${labelFor(natureLabels, natureCode)}. Une dérogation sera nécessairement requise.</span>
+          <span style="font-size:11px;">💡 Ce mode n'est pas listé dans les tranches standard pour ${labelFor(typeLabels, typeMarche)} / ${labelFor(natureLabels, natureCode)}. Sa pertinence sera examinée à l'étape Procédure.</span>
         </div>`;
       }
     }
@@ -1283,11 +1303,13 @@ function refreshModePassationRec(registries, mpBudgetLines) {
   }
 
   // ----- État 3 : tout renseigné mais aucune suggestion (combinaison hors barème) -----
+  // Modif #78 (3.a) — pas d'alerte d'inadéquation à la création : encart neutre
+  // informatif. Le choix du mode sera examiné à l'étape Procédure.
   if (!ctx.suggestion) {
-    box.style.background = '#fef3c7';
-    box.style.borderColor = '#f59e0b';
-    box.style.color = '#92400e';
-    box.innerHTML = `⚠ Aucun mode standard ne correspond à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> pour une ligne budgétaire de <strong>${formatXOFInline(ctx.montantLigne)}</strong>. Une dérogation sera nécessairement requise quel que soit le mode choisi.`;
+    box.style.background = '#eff6ff';
+    box.style.borderColor = '#3b82f6';
+    box.style.color = '#1e3a8a';
+    box.innerHTML = `💡 Aucun mode standard ne correspond précisément à <strong>${labelFor(typeLabels, ctx.typeMarche)}</strong> / <strong>${labelFor(natureLabels, ctx.natureCode)}</strong> pour une ligne budgétaire de <strong>${formatXOFInline(ctx.montantLigne)}</strong>. Le choix du mode sera examiné à l'étape Procédure.`;
     return;
   }
 
@@ -1333,15 +1355,19 @@ function refreshModePassationRec(registries, mpBudgetLines) {
       : `✓ <strong>Mode conforme</strong> (alternative également admise : ${stillSelected}).`;
     box.innerHTML = `${motivation}<div style="margin-top:6px;">${conformLine}</div>`;
   } else {
-    box.style.background = '#fef2f2';
-    box.style.borderColor = '#dc2626';
-    box.style.color = '#7f1d1d';
+    // Modif #78 (3.a) — pas d'alerte rouge à la création : encart bleu pâle
+    // informatif. La dérogation reste enregistrée silencieusement au save
+    // (isDerogationPPM) et sera examinée à l'étape Procédure. Le bouton
+    // « Appliquer le mode recommandé » est conservé : il aide l'utilisateur
+    // sans le bloquer ni l'alarmer.
+    box.style.background = '#eff6ff';
+    box.style.borderColor = '#3b82f6';
+    box.style.color = '#1e3a8a';
     box.innerHTML = `
       ${motivation}
       <div style="margin-top:6px;">
-        ⚠ <strong>Vous avez choisi <code style="background:rgba(0,0,0,0.06); padding:1px 4px;">${stillSelected || '(vide)'}</code></strong>.
-        Ce choix constitue une <strong>dérogation aux règles du Code des Marchés Publics CI</strong>.
-        Une justification de dérogation sera obligatoirement demandée à l'étape Procédure.
+        💡 <strong>Vous avez choisi <code style="background:rgba(0,0,0,0.06); padding:1px 4px;">${stillSelected || '(vide)'}</code></strong>
+        au lieu du mode recommandé. La justification éventuelle sera demandée à l'étape Procédure.
       </div>
       <div style="margin-top:6px;">
         <button type="button" class="btn btn-sm btn-secondary" id="btn-apply-recommended" style="font-size:11px; padding:3px 8px;">↩ Appliquer le mode recommandé (${recommendedCode})</button>

@@ -13,6 +13,57 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-28 — Lot 3 CR du 26 mai 2026 : création de marché + action Voir contextuelle
+
+> **Modif #78** — Troisième lot d'ajustements du CR EHOUMAN du 26 mai 2026, section « 3. Création du marché ». Traite les 5 retours : neutralisation des alertes mode passation, séparateurs de milliers dans la saisie du montant, libellés mis à jour, action « Voir » contextuelle dans la liste PPM.
+
+### Périmètre fonctionnel (5 retours validés OK ou À clarifier par EHOUMAN)
+
+| # CR | Demande | Application |
+|---|---|---|
+| **3.a** | « Aucune alerte à ce stade sur l'adéquation du mode de passation ; ne pas signaler d'inadéquation. » | Refonte de `refreshModePassationRec` : les 3 variantes d'alerte (état 2 mode hors barème, état 3 aucune correspondance, état 4b mode divergent) sont remplacées par des encarts **informatifs neutres** (fond bleu pâle, icône 💡). Suppression des ⚠ et des formulations « dérogation nécessairement requise ». La **suggestion automatique** du mode recommandé et l'encart explicatif « pourquoi ce mode » sont **conservés**. Le bouton « Appliquer le mode recommandé » reste disponible (aide, pas obligation). **La logique métier `isDerogationPPM` au save reste inchangée** — la dérogation continue d'être enregistrée silencieusement sur l'opération et sera examinée à l'étape Procédure (cf. lot 4, points 4.d–4.g). |
+| **3.b** | « Appliquer le séparateur de milliers dans les zones de saisie. » | Nouveau helper `setupThousandSeparator(input)` dans `lib/format.js` qui formate live au format fr-FR (espaces). Champ `montant-previsionnel` passé de `type="number"` à `type="text" inputmode="numeric"`. Toutes les lectures de cette valeur (handleSave, indicateur de couverture des bailleurs, suggestion mode passation, bandeau plafond ligne budgétaire) utilisent désormais `parseFormattedNumber(input)` qui tolère les séparateurs. Curseur préservé à la saisie. |
+| **3.c** | Catégorie de prestation — ajouter « (à préciser : libellé et contenu) » | Label mis à jour. Mention indique au métier que le contenu du référentiel reste à arrêter avec la DCF. |
+| **3.d** | « Informations techniques » → « Information technique prévisionnelle » | Titre de la `card-header` renommé. |
+| **3.e** | « Ne pas ouvrir directement la fiche de vie ; donner accès à l'ensemble des informations utiles en fonction de l'étape. » | **Option 2 retenue** (navigation contextuelle directe). Le bouton « 👁️ Voir » de la liste PPM (`ecr01b-ppm-unitaire.js`) navigue désormais vers l'écran correspondant à l'étape courante du marché via le helper `getRouteForEtape(etat)` : <ul><li>PLANIFIE → `/mp/fiche-marche`</li><li>EN_PROC → `/mp/procedure`</li><li>ATTRIBUE → `/mp/attribution`</li><li>VISE → `/mp/visa-cf`</li><li>EN_EXEC, EXECUTION (legacy) → `/mp/execution`</li><li>CLOS, CLOTURE (legacy) → `/mp/cloture`</li><li>RESILIE → `/mp/cloture`</li><li>INFRUCTUEUX → `/mp/attribution` (écran d'enregistrement, lot 6)</li><li>fallback → `/mp/fiche-marche`</li></ul>Les boutons « 📋 Fiche de vie » et « ℹ️ Détails » sont conservés (accès direct à la vue globale et au modal résumé). Le clic sur la ligne entière reste sur la fiche de vie pour ne pas surprendre. |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/format.js` : ajout des helpers `setupThousandSeparator()` et `parseFormattedNumber()`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` :
+  - import des helpers,
+  - `<input id="montant-previsionnel">` passé en `type="text"` + `inputmode="numeric"`,
+  - activation de `setupThousandSeparator()` après mount, avant `setupFinancementsMulti` (ordre d'attache),
+  - 4 lectures de la valeur converties en `parseFormattedNumber()` (handleSave, refreshAll de l'indicateur, computeModeSuggestion, plafond ligne budgétaire),
+  - label « Catégorie de prestation (à préciser : libellé et contenu) »,
+  - titre « ⚙️ Information technique prévisionnelle »,
+  - refonte des 3 variantes d'alerte de `refreshModePassationRec` (neutres, bleu pâle, sans ⚠ ni « dérogation requise »).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : nouvel helper `getRouteForEtape()` et navigation contextuelle du bouton « Voir » dans `renderSimpleRow`.
+
+### Impact
+
+- **UI** : moins d'effet d'alerte visuelle à la création (encarts bleus neutres au lieu de fond rouge). Saisie du montant plus lisible avec séparateurs. Action « Voir » plus utile en fonction du contexte.
+- **Worker** : ❌ aucun changement.
+- **DB Neon** : ❌ aucun changement. Le champ `montantPrevisionnel` est toujours stocké comme nombre (la conversion se fait à la lecture du DOM).
+- **R2** : ❌ aucun changement.
+
+### Anti-régression
+
+- **Donnée stockée inchangée** : le nettoyage des séparateurs est effectué à la lecture du DOM dans toutes les fonctions concernées ; aucune valeur formatée ne part en base.
+- **Logique de dérogation** : la fonction `isDerogationPPM` au save est conservée — l'opération continue d'être marquée comme dérogation si le mode choisi diverge du mode recommandé. Seul l'affichage d'alerte est neutralisé.
+- **Bouton « Appliquer mode recommandé »** : conservé pour donner à l'utilisateur un moyen rapide de revenir à la recommandation sans le forcer.
+- **Action « Voir » avec état inconnu** : fallback sur `/mp/fiche-marche` (vue d'ensemble), pas de 404.
+- **Action « Voir » avec états legacy** (`EXECUTION`, `CLOTURE`) : mappés vers leurs écrans respectifs comme les états modernes (`EN_EXEC`, `CLOS`).
+- **Position du curseur** : préservée à la saisie du montant (calculée en nombre de chiffres à gauche du curseur, pas en position de caractère brute).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel** pour exposer les changements UI
+
+---
+
 ## 2026-05-28 — Lot 2 CR du 26 mai 2026 : refonte du tableau PPM (colonnes + Nature économique)
 
 > **Modif #77** — Deuxième lot d'ajustements issu du CR EHOUMAN du 26 mai 2026, section « 2. Tableau PPM (liste) ». Traite les 7 retours de cette section : renommages d'entêtes, refonte de la cellule Activité, ajout d'une colonne Nature économique, alignement de l'export CSV.

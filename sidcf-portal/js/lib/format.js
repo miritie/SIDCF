@@ -184,3 +184,70 @@ export function moneyMillions(amount) {
     maximumFractionDigits: 2
   }).format(millions);
 }
+
+/**
+ * Active le formatage avec séparateur de milliers (espaces fr-FR) sur un
+ * <input type="text"> destiné à saisir un montant entier.
+ *
+ * À chaque frappe :
+ *   1. les caractères non numériques sont retirés ;
+ *   2. la valeur est reformatée en « 1 234 567 » via Intl ;
+ *   3. la position du curseur est réajustée pour rester cohérente quand
+ *      un nouveau séparateur s'insère.
+ *
+ * Pour relire la valeur numérique, utiliser parseFormattedNumber(input).
+ *
+ * Modif #78 — Lot 3 CR 26 mai 2026 (point 3.b).
+ *
+ * @param {HTMLInputElement} input
+ */
+export function setupThousandSeparator(input) {
+  if (!input) return;
+
+  const reformat = () => {
+    const rawBefore = input.value || '';
+    const digitsOnly = rawBefore.replace(/\D/g, '');
+    if (!digitsOnly) {
+      input.value = '';
+      return;
+    }
+
+    // Position du curseur exprimée en nombre de chiffres à sa gauche.
+    const caretBefore = input.selectionStart ?? rawBefore.length;
+    const digitsLeftOfCaret = rawBefore.slice(0, caretBefore).replace(/\D/g, '').length;
+
+    const formatted = new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(Number(digitsOnly));
+    input.value = formatted;
+
+    // Replacer le curseur après le même nombre de chiffres.
+    let newCaret = 0;
+    let digitsSeen = 0;
+    while (newCaret < formatted.length && digitsSeen < digitsLeftOfCaret) {
+      if (/\d/.test(formatted[newCaret])) digitsSeen++;
+      newCaret++;
+    }
+    try { input.setSelectionRange(newCaret, newCaret); } catch (_) { /* noop si type incompatible */ }
+  };
+
+  input.addEventListener('input', reformat);
+  input.addEventListener('blur', reformat);
+
+  // Reformater immédiatement si une valeur initiale est déjà présente.
+  if (input.value) reformat();
+}
+
+/**
+ * Lit la valeur entière d'un input formaté avec setupThousandSeparator.
+ * Accepte aussi une chaîne brute. Retourne 0 si vide ou non parsable.
+ *
+ * @param {HTMLInputElement|string|null|undefined} target
+ * @returns {number}
+ */
+export function parseFormattedNumber(target) {
+  const v = typeof target === 'string' ? target : (target?.value || '');
+  const cleaned = v.replace(/\D/g, '');
+  return cleaned ? Number(cleaned) : 0;
+}
