@@ -617,19 +617,31 @@ function renderKPI(label, value, color, icon) {
 // Nature économique. Activité reste sur une seule colonne mais affiche
 // désormais « CODE - Libellé » à l'intérieur.
 function renderSimpleTable(operations, registries) {
-  const table = el('div', { style: { overflowX: 'auto' } }, [
-    el('table', { className: 'data-table' }, [
+  // Modif #93 — toutes les colonnes visibles sans défilement horizontal :
+  // table-layout fixe + largeurs proportionnelles (∑ = 100 %) + en-têtes
+  // autorisés à passer sur plusieurs lignes (whiteSpace normal).
+  const cols = [
+    { label: 'Activité',                        w: '14%', align: 'left'  }, // 2.a — code - libellé
+    { label: 'Objet / Libellé',                 w: '19%', align: 'left'  }, // 2.c
+    { label: 'Type de marché',                  w: '11%', align: 'left'  }, // 2.d
+    { label: 'Nature économique',               w: '13%', align: 'left'  }, // 2.b
+    { label: 'Mode de passation',               w: '12%', align: 'left'  },
+    { label: 'Montant prévisionnel (M F CFA)',  w: '10%', align: 'right' }, // 2.e
+    { label: 'Statut du marché',                w: '9%',  align: 'left'  }, // 2.f
+    { label: 'Actions',                         w: '12%', align: 'left'  }
+  ];
+  const table = el('div', { style: { width: '100%' } }, [
+    el('table', { className: 'data-table', style: { width: '100%', tableLayout: 'fixed' } }, [
       el('thead', {}, [
-        el('tr', {}, [
-          el('th', { style: { minWidth: '220px' } }, 'Activité'),                           // 2.a — contenu = code - libellé
-          el('th', { style: { minWidth: '300px' } }, 'Objet / Libellé'),                    // 2.c
-          el('th', { style: { minWidth: '160px' } }, 'Type de marché'),                     // 2.d
-          el('th', { style: { minWidth: '180px' } }, 'Nature économique'),                  // 2.b — NEW
-          el('th', { style: { minWidth: '140px' } }, 'Mode de passation'),
-          el('th', { style: { minWidth: '180px', textAlign: 'right' } }, 'Montant prévisionnel (M F CFA)'), // 2.e
-          el('th', { style: { minWidth: '120px' } }, 'Statut du marché'),                   // 2.f
-          el('th', { style: { minWidth: '180px' } }, 'Actions')
-        ])
+        el('tr', {},
+          cols.map(c => el('th', {
+            style: {
+              width: c.w, textAlign: c.align,
+              whiteSpace: 'normal', wordBreak: 'break-word',
+              verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25'
+            }
+          }, c.label))
+        )
       ]),
       el('tbody', {},
         operations.map(op => renderSimpleRow(op, registries))

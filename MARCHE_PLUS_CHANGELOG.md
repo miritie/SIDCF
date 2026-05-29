@@ -13,6 +13,43 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 6 (6.c) : « Attribution » → « Enregistrement de marché » sur les timelines de la fiche
+
+> **Modif #92** — Complément de la Modif #90 : les deux timelines de la fiche de vie (grande frise + barre de chips « SUIVI DU PROCESSUS ») affichaient encore « Attribution ». Ces libellés viennent de la config de phases (`phase-helper-mp.js` → `/api/config/phases`, table `phase_config`), pas de `steps-mp`. Le libellé est désormais forcé côté UI à « Enregistrement de marché » (même mécanisme que `VISA_CF → Approbation`).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/phase-helper-mp.js` :
+  - `fetchPhasesFromAPI` force `ATTRIBUTION → titre « Enregistrement de marché »` / sous-titre « Attributaire & garanties » quel que soit le libellé stocké en base ;
+  - `DEFAULT_PHASE_CONFIG` (fallback) mis à jour de même.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` : phrase d'aide multi-lots alignée.
+
+### Impact / Anti-régression
+
+- **UI** : les deux timelines de la fiche affichent « Enregistrement de marché » (vérifié). Codes techniques (`ATTRIBUTION`) inchangés.
+- **Worker / DB** : ❌ aucun changement (override UI, pas de migration `phase_config` — cohérent avec le traitement de VISA_CF).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
+## 2026-05-29 — Liste PPM : toutes les colonnes visibles (sans scroll horizontal)
+
+> **Modif #93** — Le tableau des marchés débordait (colonnes Statut/Actions coupées, défilement horizontal). Refonte en `table-layout: fixed` + largeurs proportionnelles (∑ = 100 %) + en-têtes autorisés à passer sur plusieurs lignes (notamment « Montant prévisionnel (M F CFA) » et « Statut du marché »).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : `renderSimpleTable` — conteneur `width:100%` (plus d'`overflowX`), table `width:100%; table-layout:fixed`, 8 colonnes en pourcentages, en-têtes `white-space:normal` (override du `nowrap` global `.data-table th`).
+
+### Impact / Anti-régression
+
+- **UI** : les 8 colonnes (jusqu'à Statut + Actions) sont visibles sans défilement ; les libellés longs s'affichent sur plusieurs lignes ; le contenu des cellules s'enroule (table-layout fixe).
+- **Worker / DB** : ❌ aucun changement.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-05-29 — Migration 030 : cohérence des données de démo
 
 > **Migration 030** (`postgres/migrations/030_mp_coherence_donnees_demo.sql`) — Passe de cohérence sur les données Neon pour une démo propre : nature économique alimentée et cohérente, opérations « clones » incohérentes recadrées, et ajout d'un cas de dérogation visible à la Contractualisation.
