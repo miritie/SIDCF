@@ -12,6 +12,7 @@ import { renderSearchableSelect } from '../../../ui/widgets/searchable-select.js
 import { renderBudgetLineHistory } from '../../../ui/widgets/budget-line-history-mp.js';
 // Modif #78 — Lot 3 CR 26 mai 2026 (3.b) — séparateur de milliers
 import { setupThousandSeparator, parseFormattedNumber } from '../../../lib/format.js';
+import { isSpecMode } from '../../../lib/spec-mode-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -384,9 +385,15 @@ export async function renderPPMCreateLine(params) {
                 ...(registries.MODE_PASSATION || []).map(m => el('option', { value: m.code }, m.label))
               ]),
               // Modif #53 — Encart de motivation / dérogation (mis à jour dynamiquement)
+              // Modif #81 — Cet encart de recommandation/diagnostic du mode de
+              // passation est une aide destinée aux devs : visible uniquement en
+              // Mode Spécification (?spec=1). Masqué par défaut en mode
+              // utilisateur ordinaire (display:none) — le calcul continue de
+              // tourner pour l'auto-pré-sélection du mode recommandé.
               el('div', {
                 id: 'mode-passation-rec',
                 style: {
+                  display: isSpecMode() ? 'block' : 'none',
                   marginTop: '8px',
                   padding: '8px 10px',
                   borderRadius: '6px',
@@ -1183,6 +1190,11 @@ function refreshModePassationRec(registries, mpBudgetLines) {
   const box = document.getElementById('mode-passation-rec');
   const modeSelect = document.getElementById('modePassation');
   if (!box || !modeSelect) return;
+
+  // Modif #81 — L'encart n'est visible qu'en Mode Spécification. On laisse
+  // toutefois la fonction calculer la suggestion ci-dessous (auto-pré-sélection
+  // du mode recommandé en état 4) : seul l'affichage de la box est conditionné.
+  box.style.display = isSpecMode() ? 'block' : 'none';
 
   const ctx = computeModeSuggestion(mpBudgetLines);
   const modeLabels = registries.MODE_PASSATION || [];

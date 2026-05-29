@@ -13,6 +13,43 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Encart de recommandation du mode de passation réservé au Mode Spécification
+
+> **Modif #81** — Retour client (29 mai 2026) sur l'écran de création PPM (`ecr01d`, section « Classification du marché ») : l'encart bleu de recommandation/diagnostic du mode de passation (qui pouvait changer de couleur et « alerter ») n'est **pas utile en mode utilisateur ordinaire**. Il doit rester réservé au **Mode Spécification** (`?spec=1`) destiné aux devs (cf. Modif #49).
+
+### Périmètre fonctionnel
+
+| Demande | Application |
+|---|---|
+| L'encart ne doit plus sortir en mode ordinaire | L'encart `#mode-passation-rec` est masqué (`display:none`) par défaut. Il n'est rendu visible qu'en Mode Spécification via `isSpecMode()` (`lib/spec-mode-mp.js`). |
+| Le garder en mode développeur | En `?spec=1`, l'encart réapparaît normalement (avec ses états 1→4 et le tableau des tranches), aux côtés de la bannière violette « MODE SPÉCIFICATION ACTIF ». |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` :
+  - import de `isSpecMode` depuis `lib/spec-mode-mp.js`,
+  - `display: isSpecMode() ? 'block' : 'none'` posé dès la création de l'élément `#mode-passation-rec` (évite tout flash du texte par défaut),
+  - resynchronisation du `display` en tête de `refreshModePassationRec()` à chaque rafraîchissement.
+
+### Impact
+
+- **UI** : écran de création PPM épuré en mode ordinaire (plus d'encart sous « Mode de passation »). Encart toujours disponible aux devs via `?spec=1`.
+- **Worker / DB / R2** : ❌ aucun changement.
+
+### Anti-régression
+
+- **Auto-pré-sélection du mode recommandé** (état 4 de `refreshModePassationRec`) : **préservée** — la fonction continue de calculer la suggestion, seul l'affichage de la box est conditionné.
+- **Mode Spécification** : comportement inchangé, l'encart s'affiche comme avant en `?spec=1`.
+- Vérifié par test visuel headless (mode ordinaire = encart masqué ; `?spec=1` = encart visible).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Mode de passation figé à la contractualisation
 
 > **Modif #80** — Retour client (29 mai 2026) sur l'écran Procédure (`ecr02a`) : le mode de passation **ne doit plus être sélectionnable** à la contractualisation. Le mode est figé sur la planification ; la dérogation se déduit désormais de l'écart **barème ↔ planification** (et non plus d'un choix de l'utilisateur, qui n'existe plus à cette étape).
