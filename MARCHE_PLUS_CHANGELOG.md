@@ -13,6 +13,40 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — « Voir » sur un dossier EN PLANIFICATION → édition de la ligne PPM
+
+> **Modif #94** — Sur la liste PPM, le bouton « Voir » d'un dossier **EN PLANIFICATION** ouvrait la fiche de vie. Il ouvre désormais l'écran **« Ligne PPM » (ecr01d) en mode édition pré-rempli** : l'utilisateur consulte/modifie les aspects de planification de l'opération et enregistre les modifications.
+
+### Périmètre fonctionnel
+
+| Élément | Application |
+|---|---|
+| Routage « Voir » (PLANIFIE) | `getRouteForEtape('PLANIFIE')` → `/mp/ppm-create-line` (au lieu de `/mp/fiche-marche`), avec `idOperation`. |
+| Mode édition de `ecr01d` | Si `params.idOperation` : chargement de l'opération, **pré-remplissage** de tous les champs (activité + cascade UA/Programme/Section, nature économique, objet, type, mode, montant formaté, bailleurs/financements, durée, catégorie, bénéficiaire, livrables, localisation), titre « Planification — Ligne PPM », bouton unique « 💾 Enregistrer les modifications ». |
+| Enregistrement | `handleSave` met à jour l'opération existante (`dataService.update`) en **préservant** id, état (PLANIFIE), timeline et date de création ; re-fige le mode planifié et recalcule la dérogation. |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : `getRouteForEtape('PLANIFIE')` → `/mp/ppm-create-line`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01d-ppm-create-line.js` :
+  - détection `isEdit` (chargement de l'op via `params.idOperation`) ;
+  - titre / sous-titre / boutons conditionnels ;
+  - branche `update` dans `handleSave` ;
+  - fonction `prefillEditForm(op)` (post-init des widgets) ;
+  - nouvelle API `__setEntries` sur les lignes de financement (reconstruction depuis `financements[]`).
+
+### Impact / Anti-régression
+
+- **UI** : « Voir » sur PLANIFIE = édition de la ligne PPM ; le mode création (sans `idOperation`) est **inchangé**.
+- **Worker / DB / R2** : ❌ aucun changement (update sur entité existante).
+- Vérifié (CDP) : pré-remplissage complet sur `TEST-PLANIF` (activité, montant, mode, nature, bailleur, etc.).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ Auto-déploiement Vercel
+
+---
+
 ## 2026-05-29 — Lot 6 (6.c) : « Attribution » → « Enregistrement de marché » sur les timelines de la fiche
 
 > **Modif #92** — Complément de la Modif #90 : les deux timelines de la fiche de vie (grande frise + barre de chips « SUIVI DU PROCESSUS ») affichaient encore « Attribution ». Ces libellés viennent de la config de phases (`phase-helper-mp.js` → `/api/config/phases`, table `phase_config`), pas de `steps-mp`. Le libellé est désormais forcé côté UI à « Enregistrement de marché » (même mécanisme que `VISA_CF → Approbation`).

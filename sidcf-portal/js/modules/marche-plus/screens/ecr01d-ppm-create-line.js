@@ -87,7 +87,16 @@ export async function renderPPMCreateLine(params) {
     logger.warn('[PPM Create] Failed to load budget lines / operations for indicator', err);
   }
 
-  let livrablesList = [];
+  // Modif #94 — Mode édition : « Voir » sur un dossier EN PLANIFICATION ouvre
+  // cet écran pré-rempli avec l'opération existante (au lieu de la fiche de vie).
+  const editOp = params?.idOperation
+    ? await dataService.get(ENTITIES.MP_OPERATION, params.idOperation).catch(() => null)
+    : null;
+  const isEdit = !!editOp;
+
+  let livrablesList = isEdit && Array.isArray(editOp.livrables)
+    ? editOp.livrables.map(l => ({ ...l }))
+    : [];
   let activiteWidget = null;
 
   async function handleSave(createAnother) {
@@ -216,6 +225,28 @@ export async function renderPPMCreateLine(params) {
         }
       : null;
 
+    // Modif #94 — Mode édition : mise à jour de l'opération existante (on
+    // préserve identité, état, timeline, dates de création ; on re-fige le
+    // mode planifié sur le mode courant et on recalcule la dérogation).
+    if (isEdit) {
+      const updated = {
+        ...editOp,
+        ...formData,
+        modePassationPlanifie: formData.modePassation,
+        procDerogation,
+        updatedAt: new Date().toISOString()
+      };
+      const res = await dataService.update(ENTITIES.MP_OPERATION, editOp.id, updated);
+      if (!res.success) {
+        alert('❌ Erreur lors de la mise à jour de la ligne PPM');
+        logger.error('[PPM Edit] Failed to update operation', res.error);
+        return;
+      }
+      alert('✅ Ligne PPM mise à jour');
+      router.navigate('/mp/ppm-list');
+      return;
+    }
+
     const newOperationId = operationId();
     const operation = {
       id: newOperationId,
@@ -272,8 +303,10 @@ export async function renderPPMCreateLine(params) {
     el('div', { className: 'page-header' }, [
       createButton('btn btn-secondary btn-sm', '← Retour liste PPM', () => router.navigate('/mp/ppm-list')),
       el('div', { style: { marginTop: '12px', marginBottom: '4px', fontSize: '12px', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 } }, '📋 Vous êtes ici · Étape Planification'),
-      el('h1', { className: 'page-title' }, '📋 Planification — Créer une nouvelle ligne PPM'),
-      el('p', { className: 'page-subtitle' }, 'Saisie manuelle d\'une opération au Plan de Passation des Marchés')
+      el('h1', { className: 'page-title' },
+        isEdit ? '📋 Planification — Ligne PPM' : '📋 Planification — Créer une nouvelle ligne PPM'),
+      el('p', { className: 'page-subtitle' },
+        isEdit ? 'Consultation / modification de la ligne PPM de l\'opération' : 'Saisie manuelle d\'une opération au Plan de Passation des Marchés')
     ]),
 
     el('form', { id: 'form-ppm-line', onsubmit: (e) => e.preventDefault() }, [
@@ -582,10 +615,15 @@ export async function renderPPMCreateLine(params) {
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'space-between' } }, [
             createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/ppm-list')),
-            el('div', { style: { display: 'flex', gap: '12px' } }, [
-              createButton('btn btn-accent', 'Enregistrer et créer nouveau', () => handleSave(true)),
-              createButton('btn btn-primary', '✓ Enregistrer', () => handleSave(false))
-            ])
+            el('div', { style: { display: 'flex', gap: '12px' } },
+              // Modif #94 — en mode édition : un seul bouton « Enregistrer les modifications »
+              isEdit
+                ? [ createButton('btn btn-primary', '💾 Enregistrer les modifications', () => handleSave(false)) ]
+                : [
+                    createButton('btn btn-accent', 'Enregistrer et créer nouveau', () => handleSave(true)),
+                    createButton('btn btn-primary', '✓ Enregistrer', () => handleSave(false))
+                  ]
+            )
           ])
         ])
       ])
@@ -630,6 +668,67 @@ export async function renderPPMCreateLine(params) {
       livrablesList = updatedList;
     });
     livrablesContainer.appendChild(livrableWidget);
+  }
+
+  // Modif #94 — Mode édition : pré-remplissage du formulaire après init des widgets.
+  if (isEdit) prefillEditForm(editOp);
+
+  function prefillEditForm(op) {
+    const setVal = (id, v) => {
+      const e = document.getElementById(id);
+      if (e && v != null) e.value = v;
+    };
+    setVal('exercice', op.exercice);
+    setVal('objet', op.objet);
+    setVal('typeMarche', op.typeMarche);
+    setVal('naturePrix', op.naturePrix);
+    setVal('revue', op.revue || '');
+    setVal('categoriePrestation', op.categoriePrestation || '');
+    setVal('beneficiaire', op.beneficiaire || '');
+    setVal('delaiExecution', op.delaiExecution || op.dureePrevisionnelle || '');
+
+    const cb = op.chaineBudgetaire || {};
+    // Activité (déclenche la cascade UA / Programme / Section)
+    if (cb.activiteCode && activiteWidget) activiteWidget.setValue(cb.activiteCode);
+    // Nature économique (calcule la ligne budgétaire)
+    if (cb.natureCode) {
+      const ne = document.getElementById('natureEco');
+      if (ne) { ne.value = cb.natureCode; ne.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+
+    // Montant prévisionnel (réapplique le formatage avec séparateurs)
+    const mt = document.getElementById('montant-previsionnel');
+    if (mt && op.montantPrevisionnel != null) {
+      mt.value = String(op.montantPrevisionnel);
+      mt.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Financements (bailleurs) — après l'activité (options dépendantes)
+    const finList = document.getElementById('financements-list');
+    const fin = (Array.isArray(cb.financements) && cb.financements.length)
+      ? cb.financements
+      : (cb.bailleurs || []).map(b => ({ typeFinancement: op.typeFinancement, bailleur: b }));
+    if (finList && finList.__setEntries) finList.__setEntries(fin);
+
+    // Mode de passation (en dernier, pour ne pas être écrasé par la suggestion auto)
+    const ms = document.getElementById('modePassation');
+    if (ms && op.modePassation) {
+      ms.value = op.modePassation;
+      ms.dataset.userTouched = '1';
+      ms.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Localisation (best-effort — cascades région → département → sous-préfecture)
+    const loc = op.localisation || {};
+    const reg = document.getElementById('region');
+    if (reg && loc.regionCode) { reg.value = loc.regionCode; reg.dispatchEvent(new Event('change', { bubbles: true })); }
+    const dep = document.getElementById('departement');
+    if (dep && loc.departementCode) { dep.value = loc.departementCode; dep.dispatchEvent(new Event('change', { bubbles: true })); }
+    const sp = document.getElementById('sousPrefecture');
+    if (sp && loc.sousPrefectureCode) sp.value = loc.sousPrefectureCode;
+    setVal('localite', loc.localite || '');
+    setVal('longitude', loc.longitude != null ? loc.longitude : '');
+    setVal('latitude', loc.latitude != null ? loc.latitude : '');
   }
 }
 
@@ -969,6 +1068,29 @@ function setupFinancementsMulti(registries, mpBudgetLines, mpOperations) {
   };
   list.__refresh = refreshAll;
   list.__repopulateBailleurs = repopulateAllBailleurSelects;
+
+  // Modif #94 — Pré-remplissage (mode édition) : reconstruit les lignes de
+  // financement à partir d'une liste [{ typeFinancement, bailleur }].
+  list.__setEntries = (entries) => {
+    const rows = Array.isArray(entries) ? entries.filter(Boolean) : [];
+    list.innerHTML = '';
+    if (rows.length === 0) { list.appendChild(buildRow(true)); refreshAll(); return; }
+    rows.forEach((entry, i) => {
+      const row = buildRow(i === 0);
+      list.appendChild(row);
+      const sel = row.querySelector('.financement-bailleur');
+      if (!sel) return;
+      const v = `${entry.typeFinancement}|${entry.bailleur}`;
+      if (![...sel.options].some(o => o.value === v)) {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = entry.bailleur;
+        sel.appendChild(opt);
+      }
+      sel.value = v;
+    });
+    refreshAll();
+  };
 
   list.appendChild(buildRow(true));
   addBtn.addEventListener('click', () => {

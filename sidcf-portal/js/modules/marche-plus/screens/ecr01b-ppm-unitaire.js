@@ -136,7 +136,7 @@ let activeFilters = {
  */
 function getRouteForEtape(etat) {
   switch (etat) {
-    case 'PLANIFIE':    return '/mp/fiche-marche';
+    case 'PLANIFIE':    return '/mp/ppm-create-line'; // Modif #94 — édition de la ligne PPM (pas la fiche de vie)
     case 'EN_PROC':     return '/mp/procedure';
     case 'ATTRIBUE':    return '/mp/attribution';
     case 'VISE':        return '/mp/visa-cf';
