@@ -104,8 +104,7 @@ export async function renderProcedurePV(params) {
   let derogationJustif = operation.procDerogation?.docId || null;
   let derogationComment = operation.procDerogation?.comment || '';
   // Modif #79 (4.d) — Nouveaux champs dérogation : demandeur + source
-  let derogationDemandeur     = operation.procDerogation?.demandeur     || '';
-  let derogationDemandeurAutre = operation.procDerogation?.demandeurAutre || '';
+  // Modif #96 — champ « Demandeur » retiré. Seule la source (État ou bailleur) est demandée.
   let derogationSourceType    = operation.procDerogation?.source?.type || ''; // 'ETAT' | 'BAILLEUR'
   let derogationSourceBailleur = operation.procDerogation?.source?.bailleur || '';
 
@@ -213,8 +212,6 @@ export async function renderProcedurePV(params) {
             await handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, {
               justif: derogationJustif,
               comment: derogationComment,
-              demandeur: derogationDemandeur,
-              demandeurAutre: derogationDemandeurAutre,
               sourceType: derogationSourceType,
               sourceBailleur: derogationSourceBailleur
             });
@@ -284,14 +281,14 @@ export async function renderProcedurePV(params) {
       return;
     }
 
-    // Cas dérogation : on demande les informations justifiant la dérogation.
-    const sourceBailleurOptions = (() => {
-      const all = registries.BAILLEUR || [];
-      const filtered = all.filter(b => operationBailleurs.includes(b.code));
-      // Si aucun bailleur n'a été déclaré au PPM, on n'a rien à proposer
-      // dans le select — on permet alors la saisie libre du nom du bailleur.
-      return { filtered, hasAnyDeclared: filtered.length > 0 };
-    })();
+    // Cas dérogation : on demande la source justifiant la dérogation.
+    // Modif #96 — « Source de la dérogation » = liste sélectionnable (État +
+    // bailleurs). Le champ « Demandeur » a été retiré (sans objet).
+    // « Bailleur concerné » = liste : les bailleurs déclarés au PPM sont mis en
+    // évidence (1er groupe), avec extension possible aux autres bailleurs.
+    const allBailleurs = (registries.BAILLEUR || []).filter(b => b.typeFinancement !== 'ETAT');
+    const declaredBailleurs = allBailleurs.filter(b => operationBailleurs.includes(b.code));
+    const otherBailleurs = allBailleurs.filter(b => !operationBailleurs.includes(b.code));
 
     const block = el('div', { className: 'card', style: { marginBottom: '24px', borderColor: 'var(--color-warning, #f59e0b)' } }, [
       el('div', { className: 'card-header', style: { background: '#fffbeb' } }, [
@@ -299,56 +296,21 @@ export async function renderProcedurePV(params) {
       ]),
       el('div', { className: 'card-body' }, [
         el('p', { style: { margin: '0 0 12px', fontSize: '13px', color: '#374151' } },
-          'Le mode de passation planifié ne figure pas dans la liste des modes admissibles selon le barème (Code MP CI). Une dérogation est donc requise : indiquez le demandeur et la source, puis joignez la pièce justificative.'),
+          'Le mode de passation planifié ne figure pas dans la liste des modes admissibles selon le barème (Code MP CI). Une dérogation est donc requise : indiquez la source, puis joignez la pièce justificative.'),
 
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } }, [
 
-          // Demandeur (4.d)
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Demandeur de la dérogation', el('span', { className: 'required' }, '*')]),
-            (() => {
-              const sel = el('select', { className: 'form-input', id: 'derogation-demandeur' }, [
-                el('option', { value: '' }, '-- Sélectionner --'),
-                el('option', { value: 'DCF', selected: derogationDemandeur === 'DCF' }, 'DCF (Direction du Contrôle Financier)'),
-                el('option', { value: 'DGMP', selected: derogationDemandeur === 'DGMP' }, 'DGMP'),
-                el('option', { value: 'CHARGE_ETUDES', selected: derogationDemandeur === 'CHARGE_ETUDES' }, 'Chargé d\'études'),
-                el('option', { value: 'AUTRE', selected: derogationDemandeur === 'AUTRE' }, 'Autre')
-              ]);
-              sel.addEventListener('change', (e) => {
-                derogationDemandeur = e.target.value;
-                const autre = document.getElementById('derogation-demandeur-autre-wrap');
-                if (autre) autre.style.display = derogationDemandeur === 'AUTRE' ? '' : 'none';
-              });
-              return sel;
-            })()
-          ]),
-
-          // Texte libre si Demandeur = Autre
-          el('div', {
-            className: 'form-field',
-            id: 'derogation-demandeur-autre-wrap',
-            style: { display: derogationDemandeur === 'AUTRE' ? '' : 'none' }
-          }, [
-            el('label', { className: 'form-label' }, 'Préciser le demandeur'),
-            (() => {
-              const inp = el('input', {
-                type: 'text', className: 'form-input', id: 'derogation-demandeur-autre',
-                placeholder: 'Ex : direction métier, autorité de tutelle…', value: derogationDemandeurAutre
-              });
-              inp.addEventListener('input', (e) => { derogationDemandeurAutre = e.target.value; });
-              return inp;
-            })()
-          ]),
-
-          // Source de dérogation (4.d)
+          // Modif #96 — Source de la dérogation (État / Bailleur). Le champ
+          // « Demandeur » a été retiré.
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, ['Source de la dérogation', el('span', { className: 'required' }, '*')]),
             (() => {
               const sel = el('select', { className: 'form-input', id: 'derogation-source-type' }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                el('option', { value: 'ETAT', selected: derogationSourceType === 'ETAT' }, 'État'),
-                el('option', { value: 'BAILLEUR', selected: derogationSourceType === 'BAILLEUR' }, 'Bailleur')
+                el('option', { value: 'ETAT' }, 'État'),
+                el('option', { value: 'BAILLEUR' }, 'Bailleur')
               ]);
+              sel.value = derogationSourceType || '';
               sel.addEventListener('change', (e) => {
                 derogationSourceType = e.target.value;
                 const bw = document.getElementById('derogation-source-bailleur-wrap');
@@ -358,39 +320,29 @@ export async function renderProcedurePV(params) {
             })()
           ]),
 
-          // Bailleur (si Source = Bailleur) — restreint aux bailleurs du marché
+          // Bailleur concerné — liste : déclarés au PPM en évidence + autres
           el('div', {
             className: 'form-field',
             id: 'derogation-source-bailleur-wrap',
             style: { display: derogationSourceType === 'BAILLEUR' ? '' : 'none' }
           }, [
-            el('label', { className: 'form-label' }, [
-              'Bailleur concerné',
-              !sourceBailleurOptions.hasAnyDeclared
-                ? el('span', { style: { fontSize: '11px', color: '#92400e', marginLeft: '6px', fontWeight: 'normal' } }, '(aucun bailleur déclaré au PPM)')
-                : null
-            ]),
-            sourceBailleurOptions.hasAnyDeclared
-              ? (() => {
-                  const sel = el('select', { className: 'form-input', id: 'derogation-source-bailleur' }, [
-                    el('option', { value: '' }, '-- Sélectionner --'),
-                    ...sourceBailleurOptions.filtered.map(b =>
-                      el('option', { value: b.code, selected: derogationSourceBailleur === b.code }, b.label)
-                    )
-                  ]);
-                  sel.addEventListener('change', (e) => { derogationSourceBailleur = e.target.value; });
-                  return sel;
-                })()
-              : (() => {
-                  // Pas de bailleur déclaré au PPM : on autorise la saisie libre
-                  // pour ne pas bloquer le métier (cas rare).
-                  const inp = el('input', {
-                    type: 'text', className: 'form-input', id: 'derogation-source-bailleur',
-                    placeholder: 'Nom du bailleur', value: derogationSourceBailleur
-                  });
-                  inp.addEventListener('input', (e) => { derogationSourceBailleur = e.target.value; });
-                  return inp;
-                })()
+            el('label', { className: 'form-label' }, 'Bailleur concerné'),
+            (() => {
+              const children = [el('option', { value: '' }, '-- Sélectionner --')];
+              if (declaredBailleurs.length) {
+                children.push(el('optgroup', { label: '★ Bailleurs du marché (planifiés)' },
+                  declaredBailleurs.map(b => el('option', { value: b.code }, `${b.label} — déclaré au PPM`))));
+              }
+              if (otherBailleurs.length) {
+                children.push(el('optgroup', { label: declaredBailleurs.length ? 'Autres bailleurs' : 'Bailleurs' },
+                  otherBailleurs.map(b => el('option', { value: b.code }, b.label))));
+              }
+              const sel = el('select', { className: 'form-input', id: 'derogation-source-bailleur' }, children);
+              // .value après construction (évite le bug el()/attribut selected)
+              sel.value = derogationSourceBailleur || '';
+              sel.addEventListener('change', (e) => { derogationSourceBailleur = e.target.value; });
+              return sel;
+            })()
           ])
         ]),
 
@@ -897,8 +849,6 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   //     operation.contractualisationWarnings.derogationPieceManquante.
   let derogationJustif    = derogationState.justif || null;
   let derogationComment   = derogationState.comment || '';
-  let derogationDemandeur = derogationState.demandeur || '';
-  let derogationDemandeurAutre = derogationState.demandeurAutre || '';
   let derogationSourceType = derogationState.sourceType || '';
   let derogationSourceBailleur = derogationState.sourceBailleur || '';
   let derogationPieceManquante = false;
@@ -1073,8 +1023,7 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       isDerogation: true,
       docId: derogationJustif,
       comment: derogationComment,
-      demandeur: derogationDemandeur,
-      demandeurAutre: derogationDemandeur === 'AUTRE' ? derogationDemandeurAutre : null,
+      // Modif #96 — champ « demandeur » retiré ; seule la source est conservée.
       source: derogationSourceType ? {
         type: derogationSourceType,
         bailleur: derogationSourceType === 'BAILLEUR' ? derogationSourceBailleur : null

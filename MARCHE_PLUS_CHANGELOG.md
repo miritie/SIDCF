@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Bloc dérogation : retrait du « Demandeur » + bailleur en liste déroulante
+
+> **Modif #96** — Écran Procédure (`ecr02a`), bloc « Dérogation au barème » : le champ **« Demandeur de la dérogation » est retiré** (sans objet). On conserve les deux selects **« Source de la dérogation » (État / Bailleur)** et **« Bailleur concerné »**, mais ce dernier devient une **liste déroulante** : les bailleurs **déclarés au PPM sont mis en évidence** (groupe « ★ Bailleurs du marché (planifiés) »), avec extension possible aux autres bailleurs (« Autres bailleurs »). Plus de saisie libre.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - suppression du champ « Demandeur » (UI, état, `derogationState`, persistance `procDerogation.demandeur`) ;
+  - « Bailleur concerné » : `<select>` avec `<optgroup>` — déclarés au PPM en tête (mis en évidence), puis les autres bailleurs externes ; sélection posée via `.value` (évite le bug `el()`/attribut `selected`) ;
+  - intro reformulée (« indiquez la source »).
+
+### Impact / Anti-régression
+
+- **UI** : un champ en moins (Demandeur) ; bailleur désormais choisi dans une liste (plus de saisie libre).
+- **Persistance** : `procDerogation.source.{type,bailleur}` **inchangée** → pas de régression. Le champ `demandeur` n'est plus écrit (la fiche de vie l'affiche de façon conditionnelle : rien pour les nouvelles dérogations, conservé pour les anciennes).
+- **Worker / DB** : ❌ aucun changement.
+- Vérifié (CDP) : Demandeur absent ; Source État/Bailleur présent ; « Bailleur concerné » = liste (groupe « ★ planifiés » si déclarés, sinon liste complète).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-05-29 — Timeline : étape « Procédure » → « Contractualisation »
 
 > **Modif #95** — Dans la timeline (frise des étapes, ex. écran Procédure), la 2ᵉ étape s'affichait « Procédure » pour PSC/PSL/PSO/AOO/PI, alors que le bandeau, le titre et le badge disent « Contractualisation ». Harmonisé en **« Contractualisation »** pour tous les modes.
