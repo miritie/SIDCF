@@ -34,21 +34,21 @@ const DEFAULT_PHASE_CONFIG = {
   'PSD': [
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Contractualisation', sous_titre: 'Sélection directe du prestataire', icon: '📝', color: 'orange', order: 2 },
-    { code: 'ATTRIBUTION', titre: 'Attribution', sous_titre: 'Bon de commande & Facture', icon: '✅', color: 'green', order: 3 },
+    { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Bon de commande & Facture', icon: '✅', color: 'green', order: 3 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'Ordre de service & Suivi', icon: '⚙️', color: 'purple', order: 4 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions provisoire & définitive', icon: '🏁', color: 'gray', order: 5 }
   ],
   'PSC': [
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Procédure', sous_titre: 'Demande de cotation (3 fournisseurs)', icon: '📝', color: 'orange', order: 2 },
-    { code: 'ATTRIBUTION', titre: 'Attribution', sous_titre: 'Sélection & Attribution', icon: '✅', color: 'green', order: 3 },
+    { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Sélection & Attribution', icon: '✅', color: 'green', order: 3 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Suivi des travaux', icon: '⚙️', color: 'purple', order: 4 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & PV', icon: '🏁', color: 'gray', order: 5 }
   ],
   'PSL': [
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Procédure', sous_titre: 'Validation DGMP & Commission COJO', icon: '📝', color: 'orange', order: 2 },
-    { code: 'ATTRIBUTION', titre: 'Attribution', sous_titre: 'Attribution & Garanties', icon: '✅', color: 'green', order: 3 },
+    { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Attributaire & garanties', icon: '✅', color: 'green', order: 3 },
     { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Avenants', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & Clôture', icon: '🏁', color: 'gray', order: 6 }
@@ -56,7 +56,7 @@ const DEFAULT_PHASE_CONFIG = {
   'PSO': [
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Procédure', sous_titre: 'Validation DGMP & Commission COJO', icon: '📝', color: 'orange', order: 2 },
-    { code: 'ATTRIBUTION', titre: 'Attribution', sous_titre: 'Attribution & Garanties', icon: '✅', color: 'green', order: 3 },
+    { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Attributaire & garanties', icon: '✅', color: 'green', order: 3 },
     { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Avenants', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & Clôture', icon: '🏁', color: 'gray', order: 6 }
@@ -64,7 +64,7 @@ const DEFAULT_PHASE_CONFIG = {
   'AOO': [
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Procédure', sous_titre: 'DAO validé DGMP & Commission COJO', icon: '📝', color: 'orange', order: 2 },
-    { code: 'ATTRIBUTION', titre: 'Attribution', sous_titre: 'Attribution & Garanties', icon: '✅', color: 'green', order: 3 },
+    { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Attributaire & garanties', icon: '✅', color: 'green', order: 3 },
     { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Suivi', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & Clôture', icon: '🏁', color: 'gray', order: 6 }
@@ -72,7 +72,7 @@ const DEFAULT_PHASE_CONFIG = {
   'PI': [
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Procédure', sous_titre: 'AMI/DP & Sélection technique', icon: '📝', color: 'orange', order: 2 },
-    { code: 'ATTRIBUTION', titre: 'Attribution', sous_titre: 'Contrat de prestation', icon: '✅', color: 'green', order: 3 },
+    { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Contrat de prestation', icon: '✅', color: 'green', order: 3 },
     { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'Ordre de service & Suivi', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réception des livrables', icon: '🏁', color: 'gray', order: 6 }
@@ -99,10 +99,14 @@ async function fetchPhasesFromAPI(modePassation) {
     // « Visa CF »…), on force « Approbation » côté UI Marché+.
     return phases.map(p => {
       const isApprobation = p.phaseCode === 'VISA_CF';
+      // Modif #92 — CR 6.c : l'étape ATTRIBUTION s'affiche « Enregistrement de
+      // marché » quel que soit le libellé stocké en base (même logique que
+      // VISA_CF → « Approbation »).
+      const isEnregistrement = p.phaseCode === 'ATTRIBUTION';
       return {
         code: p.phaseCode,
-        titre: isApprobation ? 'Approbation' : p.titre,
-        sous_titre: isApprobation ? 'Organe approbateur' : p.sousTitre,
+        titre: isApprobation ? 'Approbation' : (isEnregistrement ? 'Enregistrement de marché' : p.titre),
+        sous_titre: isApprobation ? 'Organe approbateur' : (isEnregistrement ? 'Attributaire & garanties' : p.sousTitre),
         icon: p.icon,
         color: p.color,
         order: p.phaseOrder,

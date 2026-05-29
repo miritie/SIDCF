@@ -901,7 +901,7 @@ function renderLotUniqueBanner(lots) {
         el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151' } },
           `Marché à lot unique — ${libelle}`),
         el('div', { style: { fontSize: '11px', color: '#6b7280', marginTop: '2px' } },
-          'Toutes les étapes post-procédure (Attribution, Approbation, Exécution, Clôture) sont attachées à ce lot.')
+          'Toutes les étapes post-procédure (Enregistrement de marché, Approbation, Exécution, Clôture) sont attachées à ce lot.')
       ]),
       el('span', {
         style: {
