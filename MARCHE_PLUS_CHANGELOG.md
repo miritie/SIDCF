@@ -13,6 +13,43 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 6-A (CR 6.b) : Informations sur le marché approuvé
+
+> **Modif #86** — Premier lot du point 6 (CR 26 mai 2026) sur l'écran d'enregistrement (`ecr03a`). Ajoute la section « Informations sur le marché approuvé » : **N° du marché approuvé**, **exonération de TVA** (pilote le taux TVA) et **durée contractuelle**. (6.c renommage et 6.d COJO/COPE volontairement exclus : 6.d est déjà traité à l'étape Procédure ; 6.c reporté.)
+
+### Périmètre fonctionnel
+
+| Élément | Application |
+|---|---|
+| **N° du marché approuvé** | Champ texte `attr-numero-marche`, persisté dans `MP_ATTRIBUTION.numeroMarcheApprouve`. |
+| **Exonéré OUI/NON → TVA** | Case « Marché exonéré de TVA ». Si cochée → le taux TVA est forcé à **0 %** et le champ verrouillé ; la TVA du montant devient nulle. Persisté dans `MP_ATTRIBUTION.exonereTVA`. |
+| **Durée contractuelle** | Saisie valeur + unité (Mois/Jours), persistée dans `MP_ATTRIBUTION.dates.delaiExecution` / `delaiUnite` (auparavant figés à 0/MOIS). Pré-remplissage depuis la durée existante ou `operation.dureePrevisionnelle`. |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` :
+  - nouvelle section `renderInfosMarcheSection(existingAttr, operation)` insérée entre Attributaire et Montant ;
+  - `toggleExonerationTVA(checked)` (force taux 0 / restaure) ;
+  - `renderMontantsSection` reçoit `exonereTVA` (taux initial 0 + verrouillé si exonéré) ;
+  - `handleSave` collecte et persiste `numeroMarcheApprouve`, `exonereTVA`, durée (`delaiExecution`/`delaiUnite`) ;
+  - synchro post-montage des montants (recalcul avec taux 0 si exonération préchargée).
+
+### Corrections de fond (anti-régression)
+
+- **`calculerMontants`** : `parseFloat(taux) || 18` transformait un taux **0** (exonération) en 18. Remplacé par `Number.isFinite()` pour honorer 0. Comportement inchangé pour taux 18 ou champ vide.
+- **Champ taux désactivé** : `el()` fait `setAttribute('disabled', value)` → `disabled:false` désactivait à tort le champ. Le `disabled` est désormais posé **en propriété** (`inp.disabled = exonereTVA`).
+
+### Impact
+
+- **UI** : nouvelle section d'enregistrement ; exonération pilote la TVA en direct.
+- **Worker / DB / R2** : ❌ aucun changement. Les nouveaux champs vivent dans les colonnes JSONB de `MP_ATTRIBUTION` — **pas de migration**.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Lot : retrait du champ « Nombre d'offres classées »
 
 > **Modif #85** — Retour client (29 mai 2026) : dans la saisie d'un lot (écran Procédure), le champ **« Nombre d'offres classées »** n'est pas utile et doit être retiré. Le champ « Nombre d'offres reçues » est conservé.

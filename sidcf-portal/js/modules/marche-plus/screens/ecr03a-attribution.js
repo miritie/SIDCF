@@ -441,6 +441,10 @@ export async function renderAttribution(params) {
     // Déclencher la détection sanctions sur les valeurs initiales (chargement d'un attributaire existant)
     setTimeout(() => triggerSanctionCheck(), 150);
 
+    // Modif #86 — synchroniser l'affichage des montants (utile si l'exonération
+    // de TVA est préchargée : force le recalcul avec taux 0).
+    setTimeout(() => { try { calculerMontants(); } catch (_) {} }, 160);
+
     // Marché+ : remplir les selects banques (entreprise simple + mandataire) en async
     setTimeout(() => {
       populateBanqueSelect('attr-banque');
@@ -507,8 +511,11 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Attributaire (NOUVELLE)
     renderAttributaireSection(existingAttr.attributaire || {}, registries),
 
+    // Modif #86 (CR 6.b) — Informations sur le marché approuvé (N°, exonération TVA, durée)
+    renderInfosMarcheSection(existingAttr, operation),
+
     // Section Montants
-    renderMontantsSection(montantHT, montantTTC),
+    renderMontantsSection(montantHT, montantTTC, existingAttr.exonereTVA === true),
 
     // Section Garanties (contextuelle) — Marché+ : on passe HT et TTC pour que le widget
     // dual montant/% puisse calculer les pourcentages selon la base choisie par garantie.
@@ -756,7 +763,83 @@ function toggleAttributaireType(type) {
 /**
  * Section Montants
  */
-function renderMontantsSection(montantHT, montantTTC) {
+/**
+ * Modif #86 (CR 6.b) — Section « Informations sur le marché approuvé ».
+ * Regroupe le N° du marché approuvé, l'exonération de TVA (qui pilote le taux
+ * TVA de la section Montant) et la durée contractuelle.
+ */
+function renderInfosMarcheSection(existingAttr, operation) {
+  const numero = existingAttr.numeroMarcheApprouve || '';
+  const exonere = existingAttr.exonereTVA === true;
+  const dureeValeur = existingAttr.dates?.delaiExecution || operation.dureePrevisionnelle || '';
+  const dureeUnite = existingAttr.dates?.delaiUnite || 'MOIS';
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '📋 Informations sur le marché approuvé')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
+        // N° du marché approuvé
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'N° du marché approuvé'),
+          el('input', {
+            type: 'text', className: 'form-input', id: 'attr-numero-marche',
+            value: numero, placeholder: 'Ex : 2026/DCF/001'
+          })
+        ]),
+        // Durée contractuelle
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Durée contractuelle'),
+          el('div', { style: { display: 'flex', gap: '8px' } }, [
+            el('input', {
+              type: 'number', className: 'form-input', id: 'attr-duree-valeur',
+              value: dureeValeur, min: 0, step: 1, style: { flex: '2' }
+            }),
+            el('select', { className: 'form-input', id: 'attr-duree-unite', style: { flex: '1' } }, [
+              el('option', { value: 'MOIS', selected: dureeUnite === 'MOIS' }, 'Mois'),
+              el('option', { value: 'JOURS', selected: dureeUnite === 'JOURS' }, 'Jours')
+            ])
+          ])
+        ])
+      ]),
+      // Exonération de TVA
+      el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+          (() => {
+            const cb = el('input', { type: 'checkbox', id: 'attr-exonere-tva' });
+            cb.checked = exonere;
+            cb.addEventListener('change', (e) => toggleExonerationTVA(e.target.checked));
+            return cb;
+          })(),
+          el('span', {}, 'Marché exonéré de TVA')
+        ]),
+        el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
+          'Si coché, le taux de TVA est forcé à 0 % et la TVA du montant devient nulle.')
+      ])
+    ])
+  ]);
+}
+
+/**
+ * Modif #86 — Bascule de l'exonération de TVA : force le taux TVA à 0 (et
+ * désactive le champ) quand l'exonération est cochée ; restaure sinon.
+ */
+function toggleExonerationTVA(checked) {
+  const taux = document.getElementById('attr-taux-tva');
+  if (!taux) return;
+  if (checked) {
+    if (taux.value !== '0') taux.dataset.prevTaux = taux.value;
+    taux.value = '0';
+    taux.disabled = true;
+  } else {
+    taux.value = taux.dataset.prevTaux || '18';
+    taux.disabled = false;
+  }
+  calculerMontants();
+}
+
+function renderMontantsSection(montantHT, montantTTC, exonereTVA = false) {
   // Déterminer la base par défaut (HT si disponible, sinon TTC)
   const defaultBase = montantHT > 0 ? 'HT' : 'TTC';
   const defaultMontant = defaultBase === 'HT' ? montantHT : montantTTC;
@@ -841,17 +924,24 @@ function renderMontantsSection(montantHT, montantTTC) {
 
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, 'Taux TVA (%)'),
-          el('input', {
-            type: 'number',
-            className: 'form-input',
-            id: 'attr-taux-tva',
-            value: 18,
-            min: 0,
-            max: 100,
-            step: 0.01,
-            oninput: () => calculerMontants()
-          }),
-          el('small', { className: 'text-muted' }, 'Taux standard Côte d\'Ivoire: 18%')
+          (() => {
+            const inp = el('input', {
+              type: 'number',
+              className: 'form-input',
+              id: 'attr-taux-tva',
+              value: exonereTVA ? 0 : 18,
+              min: 0,
+              max: 100,
+              step: 0.01,
+              oninput: () => calculerMontants()
+            });
+            // Propriété (et non attribut) : `el()` ferait setAttribute('disabled','false')
+            // ce qui désactiverait à tort le champ quand exonereTVA est faux.
+            inp.disabled = exonereTVA;
+            return inp;
+          })(),
+          el('small', { className: 'text-muted' },
+            exonereTVA ? 'Marché exonéré — TVA à 0 %' : 'Taux standard Côte d\'Ivoire: 18%')
         ]),
 
         // Montant calculé (TTC ou HT selon la base)
@@ -973,7 +1063,10 @@ function updateMontantsDisplay() {
 function calculerMontants() {
   const base = document.querySelector('input[name="base-calcul"]:checked')?.value || 'HT';
   const montantBase = parseFloat(document.getElementById('attr-montant-base')?.value) || 0;
-  const tauxTVA = parseFloat(document.getElementById('attr-taux-tva')?.value) || 18;
+  // Modif #86 — un taux à 0 (exonération) ne doit PAS retomber sur 18 : on
+  // distingue « 0 saisi » de « champ vide » via Number.isFinite.
+  const rawTaux = parseFloat(document.getElementById('attr-taux-tva')?.value);
+  const tauxTVA = Number.isFinite(rawTaux) ? rawTaux : 18;
 
   let montantHT, montantTTC, montantTVA;
 
@@ -2118,9 +2211,18 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     const existingAttrs = await dataService.query(ENTITIES.MP_ATTRIBUTION, { operationId: idOperation });
     const existingAttr = (existingAttrs && existingAttrs.length > 0) ? existingAttrs[0] : (rawAttribution || null);
 
+    // Modif #86 (CR 6.b) — Informations sur le marché approuvé
+    const numeroMarcheApprouve = document.getElementById('attr-numero-marche')?.value?.trim() || null;
+    const exonereTVA = document.getElementById('attr-exonere-tva')?.checked === true;
+    const dureeValeur = parseInt(document.getElementById('attr-duree-valeur')?.value, 10) || 0;
+    const dureeUnite = document.getElementById('attr-duree-unite')?.value || 'MOIS';
+
     // Champs métier (per-lot ou racine selon lotId)
     const lotFields = {
       attributaire: attributaireData,
+      // Modif #86 — N° du marché approuvé + exonération de TVA
+      numeroMarcheApprouve,
+      exonereTVA,
       montants: {
         ht: montantHT,
         ttc: montantTTC,
@@ -2130,8 +2232,9 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
         signatureTitulaire: null,
         signatureAC: null,
         approbation: null,
-        delaiExecution: 0,
-        delaiUnite: 'MOIS'
+        // Modif #86 — durée contractuelle saisie
+        delaiExecution: dureeValeur,
+        delaiUnite: dureeUnite
       },
       decision_cf: {
         etat: null,
