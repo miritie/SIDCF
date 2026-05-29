@@ -309,13 +309,19 @@ export async function renderPPMList() {
       // Chips synthétiques (pour voir les filtres actifs sans déplier)
       const chips = renderActiveFilterChips(activeFilters, registries, exercices);
 
-      return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+      // Modif #82 — overflow:visible sur la carte des filtres : le panneau
+      // déroulant des multi-sélecteurs (position:absolute) était rogné par le
+      // `overflow:hidden` global de `.card`. Comme `.card-header` compte sur ce
+      // clipping pour arrondir ses coins hauts, on rétablit explicitement le
+      // border-radius haut du header ci-dessous.
+      return el('div', { className: 'card', style: { marginBottom: '24px', overflow: 'visible' } }, [
         // Header cliquable : toggle expand/collapse
         el('div', {
           className: 'card-header',
           style: {
             display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center',
-            cursor: 'pointer', userSelect: 'none'
+            cursor: 'pointer', userSelect: 'none',
+            borderTopLeftRadius: 'var(--radius-lg)', borderTopRightRadius: 'var(--radius-lg)'
           },
           onclick: (e) => {
             // Ne pas toggler si l'utilisateur clique sur un bouton

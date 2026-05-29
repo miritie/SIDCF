@@ -13,6 +13,45 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Dropdown des filtres rogné par la carte (liste PPM)
+
+> **Modif #82** — Retour client (29 mai 2026) sur la liste PPM (`ecr01b`, zone de filtres) : le panneau déroulant des multi-sélecteurs (Nature économique, Mode de passation…) était **coupé par les limites de la carte** des filtres. Il faut que le dropdown soit entièrement visible.
+
+### Périmètre fonctionnel
+
+| Demande | Application |
+|---|---|
+| Le dropdown ne doit plus être rogné dans sa zone | La carte des filtres passe en `overflow: visible`. Le panneau (`position:absolute`, `z-index:9999`) peut désormais déborder par-dessus le contenu situé en dessous (tableau Résultats) et s'afficher en entier. |
+
+### Cause racine
+
+- `.card { overflow: hidden }` (global, `css/components.css:10`) clippait le panneau absolu des widgets `multi-select-collapsible-mp`. Le correctif est **ciblé sur la seule carte des filtres** pour ne pas impacter les autres cartes de l'app (où `overflow:hidden` sert à clipper images/tableaux aux coins arrondis).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - `overflow: 'visible'` ajouté au style inline de la carte des filtres,
+  - `.card-header` comptant sur l'`overflow:hidden` du parent pour arrondir ses coins hauts, rétablissement explicite de `borderTopLeftRadius` / `borderTopRightRadius: var(--radius-lg)` sur le header (sinon coins carrés).
+
+### Impact
+
+- **UI** : dropdowns de filtres pleinement visibles (débordent au-dessus du tableau). Aucun changement sur les autres cartes.
+- **Worker / DB / R2** : ❌ aucun changement.
+
+### Anti-régression
+
+- **Coins arrondis de la carte des filtres** : préservés via le border-radius explicite du header (vérifié visuellement, pas de coin carré).
+- **Autres cartes de l'app** : non touchées (`.card` global inchangé).
+- Vérifié par test CDP (clic réel : dépli des filtres + ouverture du dropdown « Nature économique » → panneau entier visible par-dessus les résultats).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Encart de recommandation du mode de passation réservé au Mode Spécification
 
 > **Modif #81** — Retour client (29 mai 2026) sur l'écran de création PPM (`ecr01d`, section « Classification du marché ») : l'encart bleu de recommandation/diagnostic du mode de passation (qui pouvait changer de couleur et « alerter ») n'est **pas utile en mode utilisateur ordinaire**. Il doit rester réservé au **Mode Spécification** (`?spec=1`) destiné aux devs (cf. Modif #49).
