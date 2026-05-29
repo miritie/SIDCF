@@ -21,7 +21,7 @@ import logger from '../../lib/logger.js';
 // Transitions autorisées et phase code correspondante dans la timeline
 const TRANSITIONS = {
   PLANIFIE:  { nextEtat: 'EN_PROC',   timelineCode: 'EN_PROC',   label: 'Contractualisation' },
-  EN_PROC:   { nextEtat: 'ATTRIBUE',  timelineCode: 'ATTRIBUE',  label: 'Attribution' },
+  EN_PROC:   { nextEtat: 'ATTRIBUE',  timelineCode: 'ATTRIBUE',  label: 'Enregistrement de marché' },
   ATTRIBUE:  { nextEtat: 'VISE',      timelineCode: 'VISE',      label: 'Approbation' },
   VISE:      { nextEtat: 'EN_EXEC',   timelineCode: 'EN_EXEC',   label: 'Exécution' },
   EN_EXEC:   { nextEtat: 'CLOS',      timelineCode: 'CLOS',      label: 'Clôture (Achevé)' },

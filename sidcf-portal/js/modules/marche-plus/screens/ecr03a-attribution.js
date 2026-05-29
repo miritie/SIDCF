@@ -326,12 +326,12 @@ export async function renderAttribution(params) {
     // Modif #68 — Header unifié avec badge état marché + breadcrumb
     const pageHeader = renderPageHeaderMP({
       idOperation, operation,
-      phaseIcon: '✅', phaseLabel: 'Attribution',
-      titre: 'Attribution du marché & Garanties'
+      phaseIcon: '✅', phaseLabel: 'Enregistrement de marché',
+      titre: 'Attributaire, montant & garanties'
     });
     wireSpec(pageHeader, {
       id: 'attribution-screen',
-      titre: 'Écran Attribution du marché (étape 3)',
+      titre: 'Écran Enregistrement de marché (étape 3)',
       objet: 'Saisie et persistance de l\'attribution du marché : titulaire (entreprise simple ou groupement), montants HT/TTC, garanties, sous-traitance, clé de répartition multi-bailleurs et échéancier de paiement.',
       source: 'MP_ATTRIBUTION (entité principale). Liée à MP_OPERATION via operationId. Multi-lot : champ parLot[lotId] pour scoping. Liens vers MP_CLE_REPARTITION, MP_ECHEANCIER, MP_GARANTIE.',
       type: 'Écran formulaire en plusieurs sections',

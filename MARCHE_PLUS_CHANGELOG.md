@@ -13,6 +13,39 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 6 (CR 6.c) : renommage de l'étape « Attribution » → « Enregistrement de marché »
+
+> **Modif #90** — Point 6.c du CR 26 mai 2026 : l'étape « Attribution » est renommée **« Enregistrement de marché »**, et l'en-tête de l'écran (auparavant « Attribution — Attribution du marché & Garanties », redondant et trop gros) est allégé. Les **codes techniques** (`ATTRIBUTION`, `ATTRIBUE`, routes `/mp/attribution`) restent inchangés.
+
+### Périmètre fonctionnel
+
+| Emplacement | Avant | Après |
+|---|---|---|
+| En-tête écran (`ecr03a`) | « ✅ Attribution — Attribution du marché & Garanties » | « ✅ Enregistrement de marché — Attributaire, montant & garanties » |
+| Breadcrumb « Vous êtes ici · Étape » | Attribution | Enregistrement de marché |
+| Timeline (`steps-mp`) | Attribution | Enregistrement de marché |
+| Bouton « passer à l'étape suivante » (`next-phase-button-mp`) | Attribution | Enregistrement de marché |
+| Accordéon fiche de vie (`ecr01c`) | « 🤝 3. Attribution » | « 🤝 3. Enregistrement de marché » |
+| Titre Mode Spécification | Écran Attribution du marché (étape 3) | Écran Enregistrement de marché (étape 3) |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` (en-tête + spec)
+- `sidcf-portal/js/ui/widgets/steps-mp.js` (libellé timeline)
+- `sidcf-portal/js/ui/widgets/next-phase-button-mp.js` (libellé transition)
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` (titre accordéon)
+
+### Impact / Anti-régression
+
+- **UI** : libellés uniquement. Aucun code technique, route, état ou clé de données modifié → zéro régression fonctionnelle.
+- **Worker / DB / R2** : ❌ aucun changement.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Lot 6-C (CR 6.b) : avance de démarrage (toggle + flag)
 
 > **Modif #89** — Écran d'enregistrement (`ecr03a`) : case « Avance de démarrage prévue » dans la section « Informations sur le marché approuvé ». Conformément à l'arbitrage retenu : **toggle + flag uniquement** ; le calibrage effectif du « Décompte 00 » sera honoré à l'étape Exécution.

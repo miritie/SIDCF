@@ -30,7 +30,7 @@ export const LIFECYCLE_STEPS = [
   },
   {
     code: 'ATTRIBUTION',
-    label: 'Attribution',
+    label: 'Enregistrement de marché',
     icon: '✅',
     route: '/mp/attribution',
     description: 'Attributaire & garanties'

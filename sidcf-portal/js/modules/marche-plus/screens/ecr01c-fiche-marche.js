@@ -162,7 +162,7 @@ export async function renderFicheMarche(params) {
           defaultOpen: false,
           status: procedure ? 'complete' : 'empty'
         }),
-        sectionAccordion('attribution', '🤝 3. Attribution', renderAttributionContent(fullData, currentLotId, registries), {
+        sectionAccordion('attribution', '🤝 3. Enregistrement de marché', renderAttributionContent(fullData, currentLotId, registries), {
           modifierRoute: '/mp/attribution',
           modifierParams: { idOperation, lotId: currentLotId !== 'ALL' ? currentLotId : undefined },
           defaultOpen: false,
