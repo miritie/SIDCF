@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Liste PPM : nature économique alimentée (fallback natureCode)
+
+> **Modif #91** — La colonne et le filtre « Nature économique » affichaient « - » : le champ `operation.natureEco` n'est jamais alimenté ; la nature réelle vit dans `operation.chaineBudgetaire.natureCode`. L'affichage et le filtre lisent désormais `natureEco` puis, à défaut, `chaineBudgetaire.natureCode`.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : lecture de la nature économique (affichage `renderSimpleRow` + filtre `applyFilters`) avec fallback sur `chaineBudgetaire.natureCode`.
+
+### Impact / Anti-régression
+
+- **UI** : la colonne « Nature économique » est désormais renseignée pour toutes les opérations disposant d'un `natureCode` (les 17 ops TEST). Le filtre matche sur la même valeur effective.
+- **Worker / DB / R2** : ❌ aucun changement (les clones sans `natureCode` seront backfillés par la migration 030).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ **Auto-déploiement Vercel au push**
+
+---
+
 ## 2026-05-29 — Lot 6 (CR 6.c) : renommage de l'étape « Attribution » → « Enregistrement de marché »
 
 > **Modif #90** — Point 6.c du CR 26 mai 2026 : l'étape « Attribution » est renommée **« Enregistrement de marché »**, et l'en-tête de l'écran (auparavant « Attribution — Attribution du marché & Garanties », redondant et trop gros) est allégé. Les **codes techniques** (`ATTRIBUTION`, `ATTRIBUE`, routes `/mp/attribution`) restent inchangés.

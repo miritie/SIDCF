@@ -652,8 +652,12 @@ function renderSimpleRow(op, registries) {
     : (activiteCode || activiteLib || '-');
   // Modif #77 — Lot 2 (2.b) — Nature économique : libellé du registre (qui
   // contient déjà « CODE - Libellé »), fallback sur le code brut.
-  const natureEcoEntry = registries.NATURE_ECO?.find(n => n.code === op.natureEco);
-  const natureEcoFull  = natureEcoEntry?.label || op.natureEco || '-';
+  // Modif #91 — La nature économique vit en réalité dans
+  // chaineBudgetaire.natureCode (source autoritaire) ; le champ natureEco n'est
+  // pas alimenté. On lit donc l'un puis l'autre.
+  const natureEcoCode  = op.natureEco || op.chaineBudgetaire?.natureCode || '';
+  const natureEcoEntry = registries.NATURE_ECO?.find(n => n.code === natureEcoCode);
+  const natureEcoFull  = natureEcoEntry?.label || natureEcoCode || '-';
   // Modif #77 — Lot 2 (2.d) — plus de toTitleCaseFr sur le type : la
   // nouvelle typologie A/B/C apporte déjà des libellés bien formés
   // (ex. « Marchés de travaux »).
@@ -987,7 +991,8 @@ function applyFilters(operations, santeMap = null, registries = null) {
     if (!_matchMulti(activeFilters.bailleur, op.sourceFinancement)) return false;
     if (!_matchMulti(activeFilters.categoriePrestation, op.categoriePrestation)) return false;
     // Modif #76 lot 1 (1.e) — Nature économique
-    if (!_matchMulti(activeFilters.natureEco, op.natureEco)) return false;
+    // Modif #91 — fallback sur chaineBudgetaire.natureCode (source réelle)
+    if (!_matchMulti(activeFilters.natureEco, op.natureEco || op.chaineBudgetaire?.natureCode)) return false;
     if (!_matchMulti(activeFilters.region, op.localisation?.region)) return false;
     if (!_matchMulti(activeFilters.unite, op.unite)) return false;
     if (!_matchMulti(activeFilters.activite, op.chaineBudgetaire?.activiteLib)) return false;
