@@ -96,7 +96,11 @@ export async function renderProcedurePV(params) {
   })();
 
   // State for form
-  let selectedMode = operation.modePassation || '';
+  // Modif #80 — Le mode de passation n'est plus sélectionnable à la
+  // contractualisation : il est FIGÉ sur le mode planifié (4.e). La dérogation
+  // est désormais déterminée par l'écart barème ↔ planification (et non plus
+  // par un choix de l'utilisateur, qui n'existe plus ici).
+  let selectedMode = modePlanifieCode || operation.modePassation || '';
   let derogationJustif = operation.procDerogation?.docId || null;
   let derogationComment = operation.procDerogation?.comment || '';
   // Modif #79 (4.d) — Nouveaux champs dérogation : demandeur + source
@@ -178,25 +182,12 @@ export async function renderProcedurePV(params) {
       ])
     ]) : null,
 
-    // Mode selection form
-    el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, 'Mode de passation')
-      ]),
-      el('div', { className: 'card-body' }, [
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, [
-            'Mode de passation',
-            el('span', { className: 'required' }, '*')
-          ]),
-          createModeSelect(registries.MODE_PASSATION, selectedMode, (value) => {
-            selectedMode = value;
-            updateDerogationAlertLocal(value);
-            updateContextualSections(value, procedure);
-          })
-        ])
-      ])
-    ]),
+    // Modif #80 — La carte « Mode de passation » (avec son dropdown de
+    // sélection) a été retirée : le mode n'est plus modifiable à la
+    // contractualisation. L'information est déjà portée par le bandeau
+    // « Mode de passation planifiée » ci-dessus. En cas d'incohérence
+    // barème ↔ planification, les éléments de dérogation apparaissent
+    // automatiquement dans l'encart ci-dessous.
 
     // Derogation alert (shown dynamically)
     el('div', { id: 'derogation-alert-container' }),
@@ -260,8 +251,11 @@ export async function renderProcedurePV(params) {
    *     · la pièce justificative (PDF/DOC) — non bloquant au save (4.g) mais
    *       remontée en avertissement et notée sur la fiche de vie (4.h).
    *     · un commentaire / motif libre
-   * - Si le mode diffère du mode planifié à la création (modePlanifieCode),
-   *   on l'indique explicitement dans l'encart pour rappel.
+   *
+   * Modif #80 — Le mode étant désormais figé sur la planification, la
+   * comparaison se fait toujours entre le mode planifié et le barème. La
+   * notion de « changement de mode » (mode retenu ≠ mode planifié) a donc
+   * disparu : ses branches d'affichage ont été retirées.
    */
   function updateDerogationAlertLocal(mode) {
     const container = document.getElementById('derogation-alert-container');
@@ -270,7 +264,6 @@ export async function renderProcedurePV(params) {
     if (!mode) return;
 
     const isDerog = !suggestedCodes.includes(mode);
-    const isChanged = modePlanifieCode && mode !== modePlanifieCode;
 
     // Cas conforme : pas de dérogation requise. Encart de confirmation simple.
     if (!isDerog) {
@@ -284,13 +277,7 @@ export async function renderProcedurePV(params) {
         el('span', { style: { fontSize: '18px' } }, '✓'),
         el('div', { style: { flex: 1 } }, [
           el('div', { style: { fontWeight: 600, fontSize: '14px' } },
-            isChanged ? 'Mode confirmé (changement par rapport au mode planifié)'
-                      : 'Mode conforme — aucune action supplémentaire requise'),
-          isChanged ? el('div', { style: { fontSize: '12px', marginTop: '4px' } }, [
-            'Mode planifié : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, modePlanifieCode),
-            ' → mode retenu : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, mode),
-            ' (les deux figurent dans la liste des modes admissibles).'
-          ]) : null
+            'Mode conforme au barème — aucune action supplémentaire requise')
         ])
       ]);
       container.appendChild(conforme);
@@ -311,19 +298,8 @@ export async function renderProcedurePV(params) {
         el('h3', { className: 'card-title', style: { color: '#92400e' } }, '⚠️ Dérogation au barème — justification requise')
       ]),
       el('div', { className: 'card-body' }, [
-        // Rappel du changement de mode si applicable
-        isChanged ? el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
-          el('div', { className: 'alert-icon' }, 'ℹ️'),
-          el('div', { className: 'alert-content' }, [
-            el('div', { className: 'alert-message' }, [
-              'Mode planifié à la création : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, modePlanifieCode),
-              ' · Mode retenu maintenant : ', el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 4px' } }, mode), '.'
-            ])
-          ])
-        ]) : null,
-
         el('p', { style: { margin: '0 0 12px', fontSize: '13px', color: '#374151' } },
-          'Le mode sélectionné ne figure pas dans la liste des modes admissibles selon le Code MP CI. Indiquez le demandeur et la source de la dérogation, puis joignez la pièce justificative.'),
+          'Le mode de passation planifié ne figure pas dans la liste des modes admissibles selon le barème (Code MP CI). Une dérogation est donc requise : indiquez le demandeur et la source, puis joignez la pièce justificative.'),
 
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } }, [
 
@@ -576,31 +552,9 @@ export async function renderProcedurePV(params) {
   }
 }
 
-/**
- * Create mode selection dropdown
- */
-function createModeSelect(modes, selectedValue, onChange) {
-  const select = el('select', { className: 'form-input' });
-
-  // Empty option
-  const emptyOption = el('option', { value: '' }, '-- Sélectionnez un mode --');
-  select.appendChild(emptyOption);
-
-  // Mode options
-  modes.forEach(mode => {
-    const option = el('option', { value: mode.code }, mode.label);
-    if (mode.code === selectedValue) {
-      option.selected = true;
-    }
-    select.appendChild(option);
-  });
-
-  select.addEventListener('change', (e) => {
-    onChange(e.target.value);
-  });
-
-  return select;
-}
+// Modif #80 — la fonction createModeSelect (dropdown de sélection du mode de
+// passation) a été retirée : le mode est désormais figé sur la planification
+// et affiché en lecture seule à la contractualisation.
 
 // Modif #79 (4.d + 4.f) — l'ancienne fonction externe updateDerogationAlert
 // a été remplacée par la closure updateDerogationAlertLocal définie dans

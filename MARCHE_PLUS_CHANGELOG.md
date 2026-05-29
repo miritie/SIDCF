@@ -13,6 +13,46 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Mode de passation figé à la contractualisation
+
+> **Modif #80** — Retour client (29 mai 2026) sur l'écran Procédure (`ecr02a`) : le mode de passation **ne doit plus être sélectionnable** à la contractualisation. Le mode est figé sur la planification ; la dérogation se déduit désormais de l'écart **barème ↔ planification** (et non plus d'un choix de l'utilisateur, qui n'existe plus à cette étape).
+
+### Périmètre fonctionnel
+
+| Demande | Application |
+|---|---|
+| Ne plus permettre de sélectionner le mode de passation ici | Suppression de la carte « Mode de passation » et de son dropdown (fonction `createModeSelect` retirée). L'information du mode reste portée par le bandeau **📌 « Mode de passation planifiée »** déjà présent juste au-dessus — pas de doublon. |
+| Si incohérence barème / planification → exiger systématiquement les éléments de dérogation | `selectedMode` est désormais figé sur `modePassationPlanifie` (fallback `modePassation` pour les opérations antérieures). L'encart de dérogation se déclenche dès que ce mode n'est pas dans les procédures admissibles : <ul><li>**mode conforme** → encart vert « Mode conforme au barème — aucune action supplémentaire requise »</li><li>**mode hors barème** → bloc orange « Dérogation au barème — justification requise » (demandeur, source, pièce, motif)</li></ul> |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `selectedMode` initialisé sur `modePlanifieCode` (mode planifié figé) au lieu de `operation.modePassation`,
+  - suppression de la carte « Mode de passation » + dropdown (et de la fonction `createModeSelect`, devenue morte),
+  - `updateDerogationAlertLocal` simplifiée : la notion de « changement de mode » (mode retenu ≠ mode planifié) devenant impossible, ses branches d'affichage ont été retirées (encart vert simplifié, alerte « mode planifié → mode retenu » supprimée, texte de l'encart dérogation reformulé pour viser « le mode de passation planifié »).
+
+### Impact
+
+- **UI** : écran Procédure allégé (un encart en moins) ; le mode n'est plus modifiable, la dérogation apparaît automatiquement en cas d'inadéquation.
+- **Worker** : ❌ aucun changement.
+- **DB Neon** : ❌ aucun changement de schéma.
+- **R2** : ❌ aucun changement.
+
+### Anti-régression
+
+- **Opérations sans `modePassationPlanifie`** (antérieures à la Modif #79) : `modePlanifieCode` retombe sur `operation.modePassation` — le mode affiché et la logique de dérogation restent cohérents.
+- **`handleSave`** : inchangé ; il reçoit toujours `selectedMode` (désormais = mode planifié) et calcule `isDerogation` sur la même base que l'affichage.
+- **Champs de dérogation** (demandeur, source, pièce, motif) et **check sanction REJET (4.i)** : non touchés.
+- Vérifié par grep : plus aucune référence à `createModeSelect` ni à `isChanged`. Test visuel headless OK (cas conforme PSC 15M + cas dérogation AOO/PSD).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel** pour exposer le changement
+
+---
+
 ## 2026-05-28 — Lot 4 CR du 26 mai 2026 : Contractualisation (modes, dérogation, devis)
 
 > **Modif #79** — Quatrième lot d'ajustements du CR EHOUMAN du 26 mai 2026, section « 4. Contractualisation ». Traite 11 des 12 retours (le 4.b « variables associées aux modes de passation » est laissé pour une séance dédiée à la demande du client). Touche le référentiel des modes, le moteur de règles, l'écran de contractualisation, la création PPM et la fiche de vie.
