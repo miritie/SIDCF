@@ -830,6 +830,20 @@ function renderInfosMarcheSection(existingAttr, operation) {
         ]),
         el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
           'Si coché, le taux de TVA est forcé à 0 % et la TVA du montant devient nulle.')
+      ]),
+      // Modif #89 (CR 6.b) — Avance de démarrage (toggle + flag ; le calibrage
+      // « Décompte 00 » sera honoré à l'étape Exécution).
+      el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+          (() => {
+            const cb = el('input', { type: 'checkbox', id: 'attr-avance-demarrage' });
+            cb.checked = (existingAttr.avanceDemarrage === true);
+            return cb;
+          })(),
+          el('span', {}, 'Avance de démarrage prévue')
+        ]),
+        el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
+          'Si oui, le premier décompte sera calibré en « Décompte 00 » lors de l\'exécution.')
       ])
     ])
   ]);
@@ -2289,6 +2303,7 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     // Modif #86 (CR 6.b) — Informations sur le marché approuvé
     const numeroMarcheApprouve = document.getElementById('attr-numero-marche')?.value?.trim() || null;
     const exonereTVA = document.getElementById('attr-exonere-tva')?.checked === true;
+    const avanceDemarrage = document.getElementById('attr-avance-demarrage')?.checked === true;
     const dureeValeur = parseInt(document.getElementById('attr-duree-valeur')?.value, 10) || 0;
     const dureeUnite = document.getElementById('attr-duree-unite')?.value || 'MOIS';
 
@@ -2298,6 +2313,8 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       // Modif #86 — N° du marché approuvé + exonération de TVA
       numeroMarcheApprouve,
       exonereTVA,
+      // Modif #89 — avance de démarrage (flag ; calibrage Décompte 00 à l'exécution)
+      avanceDemarrage,
       montants: {
         ht: montantHT,
         ttc: montantTTC,

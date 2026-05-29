@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 6-C (CR 6.b) : avance de démarrage (toggle + flag)
+
+> **Modif #89** — Écran d'enregistrement (`ecr03a`) : case « Avance de démarrage prévue » dans la section « Informations sur le marché approuvé ». Conformément à l'arbitrage retenu : **toggle + flag uniquement** ; le calibrage effectif du « Décompte 00 » sera honoré à l'étape Exécution.
+
+### Périmètre fonctionnel
+
+| Élément | Application |
+|---|---|
+| Avance de démarrage OUI/NON | Case `attr-avance-demarrage`, persistée dans `MP_ATTRIBUTION.avanceDemarrage`. Mention : « le premier décompte sera calibré en Décompte 00 lors de l'exécution ». |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : case dans `renderInfosMarcheSection`, collecte + persistance dans `handleSave` (`avanceDemarrage`).
+
+### Impact
+
+- **UI** : nouvelle case. **Worker / DB / R2** : ❌ aucun (flag dans JSONB `MP_ATTRIBUTION`).
+- **Reste à faire (6-C)** : calibrage « Décompte 00 » côté module Exécution (consommera ce flag).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Lot 6-A (CR 6.b) : rappel + ajustement des livrables
 
 > **Modif #88** — Écran d'enregistrement (`ecr03a`) : section « Livrables du marché » qui **rappelle** les livrables saisis à la planification (`operation.livrables`) et permet de les **ajuster** (réutilisation du widget `renderLivrableManagerMP` de la création PPM). Conforme à la décision : pas de nouvelle capture géographique, simple rappel + ajustement.
