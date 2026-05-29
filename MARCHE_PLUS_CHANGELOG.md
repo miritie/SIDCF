@@ -13,6 +13,34 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 6-B (CR 6.b) : contrôle d'écart du montant approuvé
+
+> **Modif #87** — Écran d'enregistrement (`ecr03a`) : contrôle entre le **montant du marché approuvé** saisi et le **montant attribué à la contractualisation** (référence = `operation.montantPrevisionnel`). Alerte **non bloquante** affichée en cas d'écart.
+
+### Périmètre fonctionnel
+
+| Élément | Application |
+|---|---|
+| Contrôle d'écart + alerte | À chaque saisie du montant, comparaison avec la référence. Si écart ≥ 1 XOF : bandeau d'avertissement (montant approuvé vs référence, écart en valeur et en %), couleur rouge si hausse / orange si baisse. **Non bloquant** (le save reste possible). Masqué si les montants coïncident. |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` :
+  - `renderMontantsSection` reçoit `montantRef` → conteneur `#montant-ecart-alert` + input caché `#attr-montant-ref` ;
+  - `calculerMontants` calcule et affiche l'écart à chaque recalcul.
+
+### Impact / Anti-régression
+
+- **UI** : avertissement live, non bloquant. Aucun impact si pas d'écart.
+- **Worker / DB / R2** : ❌ aucun changement.
+- *À valider :* la référence retenue est `montantPrevisionnel` (PPM) ; à ajuster si le « montant attribué à la contractualisation » doit provenir d'une autre source.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Lot 6-A (CR 6.b) : Informations sur le marché approuvé
 
 > **Modif #86** — Premier lot du point 6 (CR 26 mai 2026) sur l'écran d'enregistrement (`ecr03a`). Ajoute la section « Informations sur le marché approuvé » : **N° du marché approuvé**, **exonération de TVA** (pilote le taux TVA) et **durée contractuelle**. (6.c renommage et 6.d COJO/COPE volontairement exclus : 6.d est déjà traité à l'étape Procédure ; 6.c reporté.)

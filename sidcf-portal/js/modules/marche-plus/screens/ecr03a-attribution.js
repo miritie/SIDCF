@@ -515,7 +515,7 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     renderInfosMarcheSection(existingAttr, operation),
 
     // Section Montants
-    renderMontantsSection(montantHT, montantTTC, existingAttr.exonereTVA === true),
+    renderMontantsSection(montantHT, montantTTC, existingAttr.exonereTVA === true, operation.montantPrevisionnel || 0),
 
     // Section Garanties (contextuelle) — Marché+ : on passe HT et TTC pour que le widget
     // dual montant/% puisse calculer les pourcentages selon la base choisie par garantie.
@@ -839,7 +839,7 @@ function toggleExonerationTVA(checked) {
   calculerMontants();
 }
 
-function renderMontantsSection(montantHT, montantTTC, exonereTVA = false) {
+function renderMontantsSection(montantHT, montantTTC, exonereTVA = false, montantRef = 0) {
   // Déterminer la base par défaut (HT si disponible, sinon TTC)
   const defaultBase = montantHT > 0 ? 'HT' : 'TTC';
   const defaultMontant = defaultBase === 'HT' ? montantHT : montantTTC;
@@ -978,6 +978,12 @@ function renderMontantsSection(montantHT, montantTTC, exonereTVA = false) {
         ])
       ]),
 
+      // Modif #87 (CR 6.b) — Alerte d'écart entre le montant du marché approuvé
+      // saisi et le montant attribué à la contractualisation (réf. = montant
+      // prévisionnel du PPM). Non bloquant : simple avertissement.
+      el('div', { id: 'montant-ecart-alert', style: { display: 'none', marginTop: '12px' } }),
+      el('input', { type: 'hidden', id: 'attr-montant-ref', value: String(montantRef || 0) }),
+
       // Champs cachés pour stocker HT et TTC
       el('input', { type: 'hidden', id: 'attr-montant-ht', value: defaultBase === 'HT' ? defaultMontant : (defaultMontant / 1.18).toFixed(0) }),
       el('input', { type: 'hidden', id: 'attr-montant-ttc', value: defaultBase === 'HT' ? (defaultMontant * 1.18).toFixed(0) : defaultMontant })
@@ -1098,6 +1104,33 @@ function calculerMontants() {
   if (resumeHT) resumeHT.textContent = formatMoney(montantHT);
   if (resumeTVA) resumeTVA.textContent = formatMoney(montantTVA);
   if (resumeTTC) resumeTTC.textContent = formatMoney(montantTTC);
+
+  // Modif #87 (CR 6.b) — Contrôle d'écart entre le montant du marché approuvé
+  // (montant de base saisi) et le montant attribué à la contractualisation
+  // (référence = montant prévisionnel du PPM). Avertissement non bloquant.
+  const alertEl = document.getElementById('montant-ecart-alert');
+  const ref = parseFloat(document.getElementById('attr-montant-ref')?.value) || 0;
+  if (alertEl) {
+    const montantApprouve = base === 'HT' ? montantHT : montantTTC;
+    const ecart = montantApprouve - ref;
+    if (ref > 0 && Math.abs(ecart) >= 1) {
+      const pct = (ecart / ref) * 100;
+      const hausse = ecart > 0;
+      alertEl.style.display = '';
+      alertEl.innerHTML = `
+        <div style="padding:10px 14px; border-radius:8px; border-left:4px solid ${hausse ? '#dc2626' : '#d97706'};
+                    background:${hausse ? '#fef2f2' : '#fffbeb'}; color:#374151; font-size:13px;">
+          ⚠️ <strong>Écart détecté</strong> entre le montant du marché approuvé
+          (<strong>${formatMoney(montantApprouve)}</strong>) et le montant attribué à la contractualisation
+          (<strong>${formatMoney(ref)}</strong>) :
+          <strong style="color:${hausse ? '#dc2626' : '#d97706'};">${hausse ? '+' : ''}${formatMoney(ecart)} (${hausse ? '+' : ''}${pct.toFixed(1)} %)</strong>.
+          <span style="color:#6b7280;">Vérifiez la cohérence avant validation (avertissement non bloquant).</span>
+        </div>`;
+    } else {
+      alertEl.style.display = 'none';
+      alertEl.innerHTML = '';
+    }
+  }
 }
 
 /**
