@@ -184,7 +184,10 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       return w;
     };
     gridOffres.appendChild(mkNb('Nombre d\'offres reçues', 'nbOffresRecues'));
-    gridOffres.appendChild(mkNb('Nombre d\'offres classées', 'nbOffresClassees'));
+    // Modif #85 — champ « Nombre d'offres classées » retiré de l'UI (non utile).
+    // La donnée reste préservée en base via normalizeLot (spread de rawLot +
+    // nbOffresClassees conservé dans l'état), donc les valeurs existantes ne
+    // sont pas écrasées.
     card.appendChild(gridOffres);
 
     // Dates (4)

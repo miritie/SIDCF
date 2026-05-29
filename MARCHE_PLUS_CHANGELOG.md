@@ -13,6 +13,39 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot : retrait du champ « Nombre d'offres classées »
+
+> **Modif #85** — Retour client (29 mai 2026) : dans la saisie d'un lot (écran Procédure), le champ **« Nombre d'offres classées »** n'est pas utile et doit être retiré. Le champ « Nombre d'offres reçues » est conservé.
+
+### Périmètre fonctionnel
+
+| Demande | Application |
+|---|---|
+| Retirer « Nombre d'offres classées » de la saisie d'un lot | Champ supprimé de l'UI du widget `lots-procedure-mp`. La donnée `nbOffresClassees` est **préservée en base** : `normalizeLot` spread `rawLot` et conserve la valeur existante dans l'état du lot, donc aucune valeur n'est écrasée. |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : retrait du champ de saisie « Nombre d'offres classées » (UI seulement).
+
+### Impact
+
+- **UI** : la carte de lot n'affiche plus que « Nombre d'offres reçues ».
+- **Worker / DB / R2** : ❌ aucun changement. `nbOffresClassees` reste dans le modèle et est préservé.
+
+### Anti-régression
+
+- **Donnée préservée** : `normalizeLot` conserve `nbOffresClassees` (lecture toujours possible) ; les lots existants ne perdent pas la valeur.
+- **Lecture aval** : aucun écran ne dépend de l'édition de ce champ (vérifié par grep : usages limités au widget et à l'init de `ecr02a`).
+- Vérifié par test visuel headless (PSC) : seul « Nombre d'offres reçues » subsiste.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Lot 5 (CR 26 mai) point 5.c : libellé de lot « Objet / Libellé »
 
 > **Modif #84** — Lot 5 du CR EHOUMAN du 26 mai 2026, point **5.c** (partiel) : alignement du libellé du champ de lot sur **« Objet / Libellé »**, par cohérence avec le renommage de la colonne du tableau PPM (Lot 2, point 2.c). Les points **5.a** (PSD sans lots) sont déjà couverts depuis le 06/05 ; le point **5.b** (champs de lot adaptés au mode de passation) reste à traiter, lié au référentiel par mode (cf. 4.b différé).
