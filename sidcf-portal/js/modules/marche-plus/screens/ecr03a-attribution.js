@@ -27,6 +27,7 @@ import { renderMontantPourcentageDualInput } from '../../../ui/widgets/montant-p
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { renderSousTraitantsManager } from '../../../ui/widgets/sous-traitants-manager-mp.js';
 import { renderEntreprisePicker } from '../../../ui/widgets/entreprise-picker-mp.js';
+import { renderLivrableManagerMP } from '../../../ui/widgets/livrable-manager-mp.js';
 import { renderDerogationBanner } from '../../../ui/widgets/derogation-banner-mp.js';
 import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
@@ -66,6 +67,9 @@ async function getBanques() {
 // État global pour les widgets
 let cleRepartitionList = [];
 let echeancierData = null;
+// Modif #88 (CR 6.b) — Livrables du marché rappelés + ajustables à l'enregistrement.
+let _livrablesState = [];
+let _livrablesInitialized = false;
 // Marché+ multi-lot : lot courant pour cet écran
 let currentLotId = null;
 
@@ -531,6 +535,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     renderTVASection(existingAttr.tvaEtat || {}),
 
     // Section Clé de Répartition
+    // Modif #88 (CR 6.b) — Rappel + ajustement des livrables du marché
+    renderLivrablesSection(),
+
     renderCleRepartitionSection(montantHT, montantTTC, operation.livrables || [], registries),
 
     // Section Échéancier
@@ -796,10 +803,17 @@ function renderInfosMarcheSection(existingAttr, operation) {
               type: 'number', className: 'form-input', id: 'attr-duree-valeur',
               value: dureeValeur, min: 0, step: 1, style: { flex: '2' }
             }),
-            el('select', { className: 'form-input', id: 'attr-duree-unite', style: { flex: '1' } }, [
-              el('option', { value: 'MOIS', selected: dureeUnite === 'MOIS' }, 'Mois'),
-              el('option', { value: 'JOURS', selected: dureeUnite === 'JOURS' }, 'Jours')
-            ])
+            (() => {
+              // .value plutôt que l'attribut `selected` : el() ferait
+              // setAttribute('selected', false) qui sélectionne quand même
+              // l'option (présence de l'attribut) → la dernière l'emporterait.
+              const sel = el('select', { className: 'form-input', id: 'attr-duree-unite', style: { flex: '1' } }, [
+                el('option', { value: 'MOIS' }, 'Mois'),
+                el('option', { value: 'JOURS' }, 'Jours')
+              ]);
+              sel.value = dureeUnite === 'JOURS' ? 'JOURS' : 'MOIS';
+              return sel;
+            })()
           ])
         ])
       ]),
@@ -2047,6 +2061,22 @@ function renderCleRepartitionSection(montantHT, montantTTC, livrables, registrie
 }
 
 /**
+ * Modif #88 (CR 6.b) — Section « Livrables du marché ».
+ * Rappelle les livrables saisis à la planification (operation.livrables) et
+ * permet de les ajuster (réutilise le widget de la création PPM).
+ */
+function renderLivrablesSection() {
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '📦 Livrables du marché'),
+      el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+        'Repris de la planification (PPM) — ajustables ici si nécessaire.')
+    ]),
+    el('div', { className: 'card-body', id: 'livrables-marche-container' })
+  ]);
+}
+
+/**
  * Section Échéancier
  */
 function renderEcheancierSection(montantMarcheTotal, livrables, registries) {
@@ -2104,6 +2134,18 @@ function initializeWidgets(operation, registries) {
     );
     echeancierContainer.innerHTML = '';
     echeancierContainer.appendChild(widget);
+  }
+
+  // Modif #88 — Livrables du marché : rappel + ajustement (réutilise le widget PPM)
+  const livrablesContainer = document.getElementById('livrables-marche-container');
+  if (livrablesContainer) {
+    _livrablesState = Array.isArray(operation.livrables) ? [...operation.livrables] : [];
+    _livrablesInitialized = true;
+    const widget = renderLivrableManagerMP(_livrablesState, registries, (updatedList) => {
+      _livrablesState = Array.isArray(updatedList) ? [...updatedList] : [];
+    });
+    livrablesContainer.innerHTML = '';
+    livrablesContainer.appendChild(widget);
   }
 }
 
@@ -2315,6 +2357,12 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     const updateOp = {
       montantFinal: montantTTC
     };
+
+    // Modif #88 — Persister les livrables ajustés (uniquement si le widget a
+    // bien été initialisé, pour ne jamais écraser operation.livrables par erreur).
+    if (_livrablesInitialized) {
+      updateOp.livrables = [..._livrablesState];
+    }
 
     if (!operation.timeline.includes('ATTR')) {
       updateOp.timeline = [...operation.timeline, 'ATTR'];

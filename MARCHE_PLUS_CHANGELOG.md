@@ -13,6 +13,36 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 6-A (CR 6.b) : rappel + ajustement des livrables
+
+> **Modif #88** — Écran d'enregistrement (`ecr03a`) : section « Livrables du marché » qui **rappelle** les livrables saisis à la planification (`operation.livrables`) et permet de les **ajuster** (réutilisation du widget `renderLivrableManagerMP` de la création PPM). Conforme à la décision : pas de nouvelle capture géographique, simple rappel + ajustement.
+
+### Périmètre fonctionnel
+
+| Élément | Application |
+|---|---|
+| Rappel + ajustement des livrables | Nouvelle section, widget pré-rempli avec `operation.livrables`. Les ajustements sont persistés dans `operation.livrables` à l'enregistrement (uniquement si le widget a été initialisé — garde anti-écrasement). |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` :
+  - import `renderLivrableManagerMP` ; section `renderLivrablesSection()` ; init dans `initializeWidgets` (états `_livrablesState` / `_livrablesInitialized`) ; persistance dans le patch opération de `handleSave`.
+
+### Correction (anti-régression)
+
+- **Select « durée (unité) »** (Modif #86) : `el()` posait `selected` en attribut sur les deux `<option>` → la dernière (Jours) l'emportait. Sélection désormais via `.value` → défaut **Mois** correct.
+
+### Impact
+
+- **UI** : livrables consultables et ajustables à l'enregistrement.
+- **Worker / DB / R2** : ❌ aucun changement (livrables déjà dans `MP_OPERATION.livrables`, JSONB).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL · ❌ Pas de `wrangler deploy` · ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Lot 6-B (CR 6.b) : contrôle d'écart du montant approuvé
 
 > **Modif #87** — Écran d'enregistrement (`ecr03a`) : contrôle entre le **montant du marché approuvé** saisi et le **montant attribué à la contractualisation** (référence = `operation.montantPrevisionnel`). Alerte **non bloquante** affichée en cas d'écart.
