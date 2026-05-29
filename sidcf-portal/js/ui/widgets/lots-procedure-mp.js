@@ -144,7 +144,10 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     libWrap.style.marginBottom = '12px';
     const libLabel = document.createElement('label');
     libLabel.className = 'form-label';
-    libLabel.textContent = 'Libellé du lot';
+    // Modif #84 (CR 5.c) — « Objet / Libellé » par cohérence avec le renommage
+    // de la colonne du tableau PPM (Lot 2). Pour un lot unique, prend par défaut
+    // le nom du marché ; pour un marché multi-lots, on le définit par lot.
+    libLabel.textContent = 'Objet / Libellé du lot';
     libWrap.appendChild(libLabel);
     const libInput = document.createElement('input');
     libInput.type = 'text';

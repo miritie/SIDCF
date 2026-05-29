@@ -13,6 +13,37 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Lot 5 (CR 26 mai) point 5.c : libellé de lot « Objet / Libellé »
+
+> **Modif #84** — Lot 5 du CR EHOUMAN du 26 mai 2026, point **5.c** (partiel) : alignement du libellé du champ de lot sur **« Objet / Libellé »**, par cohérence avec le renommage de la colonne du tableau PPM (Lot 2, point 2.c). Les points **5.a** (PSD sans lots) sont déjà couverts depuis le 06/05 ; le point **5.b** (champs de lot adaptés au mode de passation) reste à traiter, lié au référentiel par mode (cf. 4.b différé).
+
+### Périmètre fonctionnel
+
+| # CR | Demande | Application |
+|---|---|---|
+| **5.c** | Définir un libellé de lot pour les marchés multi-lots ; maintenir toutes les variables pour les lots uniques | Le label du champ de lot passe de « Libellé du lot » à **« Objet / Libellé du lot »**. Comportement inchangé : pour un lot unique, le champ prend par défaut le nom du marché ; pour un marché multi-lots, il se définit par lot. Le lot unique conserve l'ensemble des champs (offres, dates, PVs). |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : libellé du champ de lot renommé « Objet / Libellé du lot ».
+
+### Impact
+
+- **UI** : libellé du champ de lot harmonisé. Aucun changement de donnée (les clés `libelle` / `objet` du lot sont inchangées).
+- **Worker / DB / R2** : ❌ aucun changement.
+
+### Reste à faire (Lot 5)
+
+- **5.b** — Champs de lot adaptés au mode de passation retenu : non implémenté. Le widget affiche un jeu de champs fixe quel que soit le mode et ne reçoit pas le mode en paramètre. Chantier à cadrer avec le référentiel des variables par mode (pendant « lots » du point 4.b différé).
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Source de financement dépendante du Type financement (filtres liste PPM)
 
 > **Modif #83** — Retour client (29 mai 2026) sur la zone de filtres de la liste PPM (`ecr01b`) : le filtre « Source de financement » doit dépendre du « Type financement » sélectionné. Quand on prend **ÉTAT**, la seule source possible devient **TRÉSOR** ; quand on prend **DON** ou **EMPRUNT**, on voit tous les bailleurs **hors TRÉSOR**.
