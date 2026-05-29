@@ -13,6 +13,46 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Source de financement dépendante du Type financement (filtres liste PPM)
+
+> **Modif #83** — Retour client (29 mai 2026) sur la zone de filtres de la liste PPM (`ecr01b`) : le filtre « Source de financement » doit dépendre du « Type financement » sélectionné. Quand on prend **ÉTAT**, la seule source possible devient **TRÉSOR** ; quand on prend **DON** ou **EMPRUNT**, on voit tous les bailleurs **hors TRÉSOR**.
+
+### Périmètre fonctionnel
+
+| Type financement sélectionné | Sources de financement proposées |
+|---|---|
+| **ÉTAT** | **Trésor Public (CI)** uniquement (bailleur `typeFinancement === 'ETAT'`) |
+| **DON** et/ou **EMPRUNT** | Tous les bailleurs externes (`typeFinancement === 'EXTERNE'`), Trésor exclu |
+| ÉTAT **+** (DON ou EMPRUNT) | Union : Trésor **et** bailleurs externes |
+| Aucun type sélectionné | Toutes les sources (comportement par défaut inchangé) |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - nouveau helper `getSourceFinancementOptions(registries)` : filtre `registries.BAILLEUR` selon `activeFilters.typeFinancement`, en s'appuyant sur le champ `typeFinancement` du référentiel (`'ETAT'` pour le Trésor, `'EXTERNE'` pour les bailleurs),
+  - le filtre « Source de financement » utilise désormais ces options dynamiques (au lieu de `registries.BAILLEUR` brut),
+  - **élagage** des sources sélectionnées devenues incompatibles, effectué **avant** `applyFilters` (évite un filtre fantôme qui viderait la liste et tout décalage d'un rendu).
+
+### Impact
+
+- **UI** : la liste déroulante « Source de financement » s'adapte au type de financement choisi. Le re-rendu est automatique (l'`onChange` des multi-sélecteurs rappelle `renderPPMList`).
+- **Worker / DB / R2** : ❌ aucun changement. Le champ `typeFinancement` du référentiel `BAILLEUR` était déjà présent ; aucune migration.
+
+### Anti-régression
+
+- **Sans type financement sélectionné** : toutes les sources restent proposées (aucune restriction surprise).
+- **Sélection incompatible** (ex : Trésor coché puis bascule sur DON) : la source invalide est silencieusement retirée d'`activeFilters.bailleur` avant le filtrage des résultats — pas de liste vide inexpliquée.
+- **Clé interne `bailleur`** : inchangée (pas de migration DB ; cohérent avec Modif #76 lot 1, 1.d).
+- Vérifié par test CDP (clic réel) : ÉTAT → `["Trésor Public (CI)"]` ; DON → 14 bailleurs externes, sans Trésor.
+
+### Action de déploiement
+
+- ❌ Pas de migration SQL
+- ❌ Pas de `wrangler deploy`
+- ✅ **Redéploiement frontend Vercel**
+
+---
+
 ## 2026-05-29 — Dropdown des filtres rogné par la carte (liste PPM)
 
 > **Modif #82** — Retour client (29 mai 2026) sur la liste PPM (`ecr01b`, zone de filtres) : le panneau déroulant des multi-sélecteurs (Nature économique, Mode de passation…) était **coupé par les limites de la carte** des filtres. Il faut que le dropdown soit entièrement visible.

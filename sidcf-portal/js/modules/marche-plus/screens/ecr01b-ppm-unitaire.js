@@ -255,6 +255,17 @@ export async function renderPPMList() {
   // Régions : référentiel officiel CI (33 entrées) — pas le calcul ad hoc sur les opérations
   const regions = await _getRegionsCi();
 
+  // Modif #83 — Élaguer les sources de financement sélectionnées devenues
+  // incompatibles avec le type de financement courant (évite un filtre fantôme
+  // qui viderait la liste). Fait avant applyFilters pour éviter tout décalage
+  // d'un rendu.
+  {
+    const allowed = new Set(getSourceFinancementOptions(registries).map(b => b.code));
+    if (Array.isArray(activeFilters.bailleur) && activeFilters.bailleur.some(c => !allowed.has(c))) {
+      activeFilters.bailleur = activeFilters.bailleur.filter(c => allowed.has(c));
+    }
+  }
+
   // Apply filters (avec filtre santé qui s'appuie sur santeMap
   // et registries pour normaliser les codes typeMarche legacy)
   const filteredOps = applyFilters(operations, santeMap, registries);
@@ -409,10 +420,12 @@ export async function renderPPMList() {
           // Source de financement (multi) — Modif #76 lot 1, point 1.d (ex « Bailleur »)
           // Cohérence avec le module Budget. Clé interne 'bailleur' conservée
           // pour éviter une migration DB ; seul le libellé évolue.
+          // Modif #83 — options dépendantes du Type financement (ÉTAT→TRÉSOR,
+          // DON/EMPRUNT→bailleurs externes).
           renderMultiSelectFilter(
             'bailleur',
             'Source de financement',
-            registries.BAILLEUR || [],
+            getSourceFinancementOptions(registries),
             activeFilters.bailleur
           ),
 
@@ -932,6 +945,23 @@ function closeDetailModal() {
 function _matchMulti(arr, value) {
   if (!arr || arr.length === 0) return true;
   return arr.includes(value);
+}
+
+/**
+ * Modif #83 — Options de « Source de financement » dépendantes du « Type
+ * financement » sélectionné dans les filtres :
+ *   · ÉTAT          → seule source possible = TRÉSOR (bailleur typeFinancement 'ETAT')
+ *   · DON / EMPRUNT → bailleurs externes (tout sauf TRÉSOR)
+ * Le référentiel BAILLEUR porte `typeFinancement` ('ETAT' pour le Trésor,
+ * 'EXTERNE' pour les bailleurs). Sans type sélectionné : toutes les sources.
+ */
+function getSourceFinancementOptions(registries) {
+  const all = registries?.BAILLEUR || [];
+  const selTypes = activeFilters.typeFinancement || [];
+  if (selTypes.length === 0) return all;
+  const allowEtat = selTypes.includes('ETAT');
+  const allowExterne = selTypes.some(t => t === 'DON' || t === 'EMPRUNT');
+  return all.filter(b => b.typeFinancement === 'ETAT' ? allowEtat : allowExterne);
 }
 
 function applyFilters(operations, santeMap = null, registries = null) {
