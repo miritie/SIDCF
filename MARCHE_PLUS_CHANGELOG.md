@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Migration 030 : cohérence des données de démo
+
+> **Migration 030** (`postgres/migrations/030_mp_coherence_donnees_demo.sql`) — Passe de cohérence sur les données Neon pour une démo propre : nature économique alimentée et cohérente, opérations « clones » incohérentes recadrées, et ajout d'un cas de dérogation visible à la Contractualisation.
+
+### Contenu
+
+| # | Action | Détail |
+|---|---|---|
+| 1 | **Nature économique cohérente** (32→33 ops) | `chaine_budgetaire.natureCode` + `.nature` recalés sur le type de marché : TRAVAUX→231, FOURNITURES→232, SERVICES_INTELLECTUELS/PI→233, SERVICES_COURANTS→221, SERVICES→223 (raffinement maintenance/réparation/nettoyage→222). **Sans impact barème** : pour ADMIN_CENTRALE les seuils sont `['all']` (mode piloté par le montant seul) → scénarios conforme/dérogation préservés. |
+| 2 | **Recadrage de 4 clones à cascade incohérente** | 4 opérations dont l'état devançait les données (entités de stades antérieurs manquantes) remises à **PLANIFIE** + suppression des entités aval orphelines (procédure/attribution/visa/OS…). Garantit « toutes les étapes précédentes alimentées ». |
+| 3 | **Cas de dérogation à la Contractualisation** | Nouvelle op `…190000000099` — *TEST-EN_PROC-DEROG* (FOURNITURES, 8 M, mode **AOO** alors que le barème recommande **PSD**), état **EN_PROC** + sa procédure. Sur l'écran Procédure, le bloc « Dérogation au barème — justification requise » s'affiche → démontre le parcours dérogation. |
+
+### Lien avec le code
+
+- Complète **Modif #91** (lecture de la nature économique depuis `chaineBudgetaire.natureCode`). Ensemble : la colonne « Nature économique » est désormais renseignée et cohérente pour les 33 opérations.
+
+### Application
+
+- ✅ **Appliquée sur Neon** via `node postgres/migrations/run-any.js 030_mp_coherence_donnees_demo.sql`.
+- Donnée live (lue directement par le front) → visible immédiatement, sans redéploiement.
+- Vérifié : 33 ops, 0 sans natureCode ; cas dérogation EN_PROC/AOO/8M opérationnel ; 4 clones en PLANIFIE.
+
+---
+
 ## 2026-05-29 — Liste PPM : nature économique alimentée (fallback natureCode)
 
 > **Modif #91** — La colonne et le filtre « Nature économique » affichaient « - » : le champ `operation.natureEco` n'est jamais alimenté ; la nature réelle vit dans `operation.chaineBudgetaire.natureCode`. L'affichage et le filtre lisent désormais `natureEco` puis, à défaut, `chaineBudgetaire.natureCode`.
