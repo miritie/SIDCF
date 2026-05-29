@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-05-29 — Timeline : étape « Procédure » → « Contractualisation »
+
+> **Modif #95** — Dans la timeline (frise des étapes, ex. écran Procédure), la 2ᵉ étape s'affichait « Procédure » pour PSC/PSL/PSO/AOO/PI, alors que le bandeau, le titre et le badge disent « Contractualisation ». Harmonisé en **« Contractualisation »** pour tous les modes.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/phase-helper-mp.js` :
+  - `DEFAULT_PHASE_CONFIG` : `PROCEDURE.titre` « Procédure » → « Contractualisation » (5 modes ; PSD l'était déjà) ;
+  - `fetchPhasesFromAPI` : la phase `PROCEDURE` est forcée à « Contractualisation » quel que soit le libellé stocké en base (même mécanisme que VISA_CF → Approbation et ATTRIBUTION → Enregistrement de marché).
+
+### Impact / Anti-régression
+
+- **UI** : timeline cohérente — Planification · **Contractualisation** · Enregistrement de marché · Exécution · Clôture. Sous-titres et codes techniques (`PROCEDURE`) inchangés. *(Le sous-titre de l'étape Enregistrement n'est pas modifié, sur demande.)*
+- **Worker / DB** : ❌ aucun changement.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-05-29 — « Voir » sur un dossier EN PLANIFICATION → édition de la ligne PPM
 
 > **Modif #94** — Sur la liste PPM, le bouton « Voir » d'un dossier **EN PLANIFICATION** ouvrait la fiche de vie. Il ouvre désormais l'écran **« Ligne PPM » (ecr01d) en mode édition pré-rempli** : l'utilisateur consulte/modifie les aspects de planification de l'opération et enregistre les modifications.
