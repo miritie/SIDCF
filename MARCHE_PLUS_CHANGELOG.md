@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : action « Déclarer infructueux »
+
+> **Modif #107** — Section B, points **C-4 et C-12**. La contractualisation peut ne pas aboutir à une attribution. Ajout d'un **bouton dédié « 🚫 Déclarer infructueux »** (à côté d'« Enregistrer & Continuer »), avec **confirmation**, qui sauvegarde la procédure puis pose le statut du marché à **INFRUCTUEUX**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - bouton « Déclarer infructueux » (`btn-warning`) → `handleSave(..., { issue: 'INFRUCTUEUX' })` après `window.confirm` ;
+  - `handleSave` reçoit `options` ; si `issue === 'INFRUCTUEUX'`, `updateData.etat = 'INFRUCTUEUX'` ; message de succès adapté.
+
+### Impact / Anti-régression
+
+- **UI / Workflow** : nouvelle issue terminale à la contractualisation ; le statut INFRUCTUEUX (déjà au référentiel + filtre + carte hors-cycle) est désormais **atteignable depuis l'écran**.
+- **Garde-fou** : action protégée par confirmation ; le reste du flux (Enregistrer & Continuer → ATTRIBUE via bouton d'étape) est inchangé.
+- **DB / Worker** : ❌ aucun changement de schéma (mise à jour de `etat`).
+- **Vérifié (CDP)** : bouton présent (`btn-warning`), confirmation refusée → aucune navigation/mutation (la transition réelle n'a pas été exécutée contre la base live).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : bloc « Pièce d'engagement de l'étape »
 
 > **Modif #106** — Section B, points **C-2 et C-3**. Ajout en **tête de l'étape** d'un bloc **« Pièce d'engagement de l'étape »** mis en évidence (bordure bleue). Il marque la pièce qui ouvre la contractualisation, avec **type / référence / date / pièce jointe**. Les types proposés s'adaptent au mode : **Courrier d'invitation · Mandat de représentation · PV d'ouverture** pour les modes concurrentiels (le PV capte la participation du CF au COJO/COPE) ; **Bon de commande · Devis / facture proforma** pour **PSD/PSC/entente directe** (CF non systématique).

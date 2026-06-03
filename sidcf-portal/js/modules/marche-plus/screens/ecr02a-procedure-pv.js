@@ -212,6 +212,16 @@ export async function renderProcedurePV(params) {
       el('div', { className: 'card-body' }, [
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
           createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/fiche-marche', { idOperation })),
+          // Modif #107 — C-4/C-12 : issue alternative « Infructueux ».
+          createButton('btn btn-warning', '🚫 Déclarer infructueux', async () => {
+            if (!window.confirm('Déclarer cette contractualisation INFRUCTUEUSE ?\nLe marché passera au statut « Infructueux ».')) return;
+            await handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, {
+              justif: derogationJustif,
+              comment: derogationComment,
+              sourceType: derogationSourceType,
+              sourceBailleur: derogationSourceBailleur
+            }, { issue: 'INFRUCTUEUX' });
+          }),
           createButton('btn btn-primary', 'Enregistrer & Continuer', async () => {
             await handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, {
               justif: derogationJustif,
@@ -947,7 +957,7 @@ function renderField(label, value) {
  *
  * @param {Object} derogationState — { justif, comment, demandeur, demandeurAutre, sourceType, sourceBailleur }
  */
-async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, derogationState = {}) {
+async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, derogationState = {}, options = {}) {
   if (!selectedMode) {
     alert('Veuillez sélectionner un mode de passation');
     return;
@@ -1171,6 +1181,11 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     updateData.timeline = [...operation.timeline, 'PROC'];
     updateData.etat = 'EN_PROC';
   }
+  // Modif #107 — C-4/C-12 : issue « Infructueux » → statut INFRUCTUEUX
+  // (la contractualisation peut ne pas aboutir à une attribution).
+  if (options.issue === 'INFRUCTUEUX') {
+    updateData.etat = 'INFRUCTUEUX';
+  }
 
   const operationResult = await dataService.update(ENTITIES.MP_OPERATION, idOperation, updateData);
 
@@ -1239,7 +1254,9 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
 
   if (procedureResult.success) {
     logger.info('[Procedure] Procédure enregistrée avec succès');
-    let msg = '✅ Procédure enregistrée' + (isDerogation ? ' (avec dérogation)' : '');
+    let msg = options.issue === 'INFRUCTUEUX'
+      ? '🚫 Contractualisation déclarée INFRUCTUEUSE — le marché passe au statut « Infructueux ».'
+      : '✅ Procédure enregistrée' + (isDerogation ? ' (avec dérogation)' : '');
     const warnings = window.__mpProcedureWarnings;
     if (Array.isArray(warnings) && warnings.length > 0) {
       msg += '\n\n⚠️ Champs incomplets ou incohérents (non bloquants) :\n• ' + warnings.join('\n• ');
