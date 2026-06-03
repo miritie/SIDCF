@@ -224,7 +224,7 @@ const MODE_PASSATION_FAMILLES = [
   { label: 'Appel d\'offres',             codes: ['AOO', 'AOO_PREQUALIF', 'AOO_2ETAPES'] },
   { label: 'Procédures simplifiées',      codes: ['PSD', 'PSC', 'PSL', 'PSO'] },
   { label: 'Prestations intellectuelles', codes: ['PI'] },
-  { label: 'Procédures dérogatoires',     codes: ['AOR', 'ENTENTE_DIRECTE', 'CFN', 'CONVENTION', 'LETTRE_COMMANDE_MARCHE'] }
+  { label: 'Procédures dérogatoires',     codes: ['AOR', 'ENTENTE_DIRECTE', 'CFN', 'CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCTION'] }
 ];
 
 function buildGroupedModePassationOptions(registries) {

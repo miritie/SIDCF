@@ -482,10 +482,11 @@ export async function renderProcedurePV(params) {
     // Couvre ainsi PSC/PSL/PSO/AOO/PI (config explicite) ET CI/AOR/DEM/
     // ENTENTE_DIRECTE qui n'ont pas info_lots configuré dans rules-config.
     const lotsContainer = document.getElementById('lots-container');
-    // Modif #108 — C-10 : le gré à gré / entente directe est une attribution
-    // directe (pas de PV, pas de notion de lot) → pas de section lots.
-    // (Codes data : ENTENTE_DIRECTE et GRE.)
-    const shouldShowLots = mode && !['PSD', 'ENTENTE_DIRECTE', 'GRE'].includes(mode);
+    // Modif #108/#110 — C-10/C-11 : attribution directe (gré à gré, convention,
+    // lettre de commande, reconduction) → pas de PV, pas de notion de lot.
+    const shouldShowLots = mode
+      && !['PSD', 'ENTENTE_DIRECTE', 'GRE'].includes(mode)
+      && !MODES_CONTRAT_DIRECT.includes(mode);
     if (shouldShowLots) {
       lotsContainer.innerHTML = '';
 
@@ -611,7 +612,13 @@ export async function renderProcedurePV(params) {
 // PSD/PSC/ENTENTE_DIRECTE (CF non systématique) → bon de commande / devis.
 // Concurrentiel (PSL/PSO/AOO/PI/AOR…) → courrier / mandat / PV d'ouverture.
 const MODES_PIECE_DIRECTE = ['PSD', 'PSC', 'ENTENTE_DIRECTE', 'GRE'];
+// Modif #110 — C-11 vague 2 : modes à contrat direct (la pièce d'engagement
+// EST le document du contrat ; pas de PV, pas de lots ; attribution directe).
+const MODES_CONTRAT_DIRECT = ['CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCTION'];
 function getPieceEngagementOptions(mode) {
+  if (mode === 'CONVENTION') return [{ code: 'CONVENTION', label: 'Convention' }];
+  if (mode === 'LETTRE_COMMANDE_MARCHE') return [{ code: 'LETTRE_COMMANDE', label: 'Lettre de commande valant marché' }];
+  if (mode === 'RECONDUCTION') return [{ code: 'CONTRAT_RECONDUCTION', label: 'Contrat de reconduction' }];
   return MODES_PIECE_DIRECTE.includes(mode)
     ? [
         { code: 'BON_COMMANDE', label: 'Bon de commande' },
@@ -654,9 +661,11 @@ function renderPieceEngagementBlock(mode, existingProc) {
       el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
         el('div', { className: 'alert-icon' }, 'ℹ️'),
         el('div', { className: 'alert-content' },
-          isDirect
-            ? 'Pour ce mode (PSD/PSC/entente directe), la contractualisation débute par la prise en compte du bon de commande ou du devis / facture proforma.'
-            : "La contractualisation débute par le courrier d'invitation, le mandat de représentation ou le PV d'ouverture. Le PV d'ouverture capte la participation du CF au COJO/COPE.")
+          MODES_CONTRAT_DIRECT.includes(mode)
+            ? "Attribution directe : la dépense arrive au paiement (prise en charge au module marché). Enregistrez et chargez le document du contrat ci-dessous."
+            : isDirect
+              ? 'Pour ce mode (PSD/PSC/entente directe), la contractualisation débute par la prise en compte du bon de commande ou du devis / facture proforma.'
+              : "La contractualisation débute par le courrier d'invitation, le mandat de représentation ou le PV d'ouverture. Le PV d'ouverture capte la participation du CF au COJO/COPE.")
       ]),
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
         el('div', { className: 'form-field' }, [
@@ -949,6 +958,58 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             }),
             existingProc.noteSelection ? el('small', { className: 'text-success' }, `✓ ${existingProc.noteSelection}`) : null
           ])
+        ])
+      ])
+    ]);
+  }
+
+  // Modif #110 — C-11 vague 2 : Reconduction (services courants). Attribution
+  // directe ; le document est chargé dans la pièce d'engagement. Point de
+  // contrôle : autorisation DGMP requise au-delà de 2 ans de reconduction.
+  if (mode === 'RECONDUCTION') {
+    const ctrl = existingProc.reconductionControl || {};
+    return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+      el('div', { className: 'card-header' }, [
+        el('h3', { className: 'card-title' }, '🔁 Reconduction — contrôle DGMP')
+      ]),
+      el('div', { className: 'card-body' }, [
+        el('div', { className: 'alert alert-warning', style: { marginBottom: '16px' } }, [
+          el('div', { className: 'alert-icon' }, '⚠️'),
+          el('div', { className: 'alert-content' }, "Au-delà de 2 ans de reconduction, une autorisation de la DGMP est requise.")
+        ]),
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Nombre d\'années de reconduction'),
+            el('input', { type: 'number', className: 'form-input', id: 'proc-recond-annees', min: 0, step: 1, value: ctrl.nbAnnees != null ? ctrl.nbAnnees : '' })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Référence autorisation DGMP'),
+            el('input', { type: 'text', className: 'form-input', id: 'proc-recond-dgmp-ref', value: ctrl.dgmpRef || '', placeholder: 'N° / réf. autorisation (si > 2 ans)' })
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Autorisation DGMP (PDF)'),
+            el('input', { type: 'file', className: 'form-input', id: 'proc-recond-dgmp-doc', accept: '.pdf' }),
+            ctrl.dgmpDoc ? el('small', { className: 'text-success' }, `✓ ${ctrl.dgmpDoc}`) : null
+          ])
+        ])
+      ])
+    ]);
+  }
+
+  // Modif #110 — C-11 vague 2 : Convention / Lettre de commande valant marché.
+  // Attribution directe : document chargé dans la pièce d'engagement, attributaire
+  // et montant saisis dans le bloc « Attribution ». Pas de formulaire COJO.
+  if (mode === 'CONVENTION' || mode === 'LETTRE_COMMANDE_MARCHE') {
+    const libelle = mode === 'CONVENTION' ? 'la convention' : 'la lettre de commande valant marché';
+    return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+      el('div', { className: 'card-header' }, [
+        el('h3', { className: 'card-title' }, '📄 Attribution directe')
+      ]),
+      el('div', { className: 'card-body' }, [
+        el('div', { className: 'alert alert-info' }, [
+          el('div', { className: 'alert-icon' }, 'ℹ️'),
+          el('div', { className: 'alert-content' },
+            `Attribution directe : chargez ${libelle} dans le bloc « Pièce d'engagement » ci-dessus, puis renseignez l'attributaire et le montant dans le bloc « Attribution » en bas.`)
         ])
       ])
     ]);
@@ -1298,6 +1359,17 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       raisonSociale: document.getElementById('proc-attr-rs')?.value?.trim() || null,
       ncc: document.getElementById('proc-attr-ncc')?.value?.trim() || null,
       montantAttribue: montantAttr ? Number(montantAttr) : null
+    };
+  }
+  // Modif #110 — C-11 vague 2 : contrôle reconduction (autorisation DGMP > 2 ans).
+  if (document.getElementById('proc-recond-annees')) {
+    const annees = document.getElementById('proc-recond-annees')?.value;
+    procedureData.reconductionControl = {
+      nbAnnees: annees !== '' && annees != null ? Number(annees) : null,
+      dgmpRef: document.getElementById('proc-recond-dgmp-ref')?.value?.trim() || null,
+      dgmpDoc: document.getElementById('proc-recond-dgmp-doc')?.files?.[0]
+        ? 'DGMP_RECOND_' + Date.now() + '.pdf'
+        : (existingProc?.reconductionControl?.dgmpDoc || null)
     };
   }
   // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (doc préservé si non ré-uploadé).

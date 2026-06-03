@@ -13,6 +13,34 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : C-11 vague 2 (AOR + modes à contrat direct)
+
+> **Modif #110** — Section B, point **C-11 (vague 2)**.
+> - **AOR** : déjà aligné par la vague 1 (formulaire concurrentiel + PV de jugement par lot + bloc Attribution) — aucun changement nécessaire.
+> - **Convention · Lettre de commande valant marché · Reconduction** : traités comme **attributions directes** (la dépense arrive au paiement → prise en charge au module marché). La **pièce d'engagement** devient le **document du contrat** (Convention / Lettre / Contrat de reconduction) ; **pas de lots ni de PV** ; l'attributaire + montant se saisissent dans le bloc « Attribution ».
+> - **Reconduction** : bloc dédié avec **contrôle DGMP** (autorisation requise au-delà de 2 ans : nombre d'années + référence + upload).
+> - Ajout du mode **RECONDUCTION** au référentiel `MODE_PASSATION` (famille dérogatoire) et au filtre PPM groupé.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : `MODE_PASSATION` += `RECONDUCTION`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : `RECONDUCTION` ajouté à la famille « Procédures dérogatoires » du filtre.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `MODES_CONTRAT_DIRECT` ; options de pièce d'engagement spécifiques (Convention/Lettre/Contrat de reconduction) + note adaptée ;
+  - `shouldShowLots` exclut les modes à contrat direct ;
+  - branches `RECONDUCTION` (contrôle DGMP) et `CONVENTION/LETTRE_COMMANDE_MARCHE` (info attribution directe) dans le formulaire ;
+  - persistance `procedureData.reconductionControl = { nbAnnees, dgmpRef, dgmpDoc }`.
+
+### Impact / Anti-régression
+
+- **UI** : les 3 modes directs n'affichent plus le formulaire COJO ni les lots ; reconduction a son contrôle DGMP.
+- **Données** : `reconductionControl` ajouté à `MP_PROCEDURE` (JSONB — pas de migration) ; `RECONDUCTION` au référentiel statique (cache `localStorage` à vider si présent).
+- **Vérifié (CDP)** : RECONDUCTION chargé au référentiel + présent au filtre PPM (dérogatoires). Branches de formulaire des 3 modes directs validées par revue de code (aucune opération de ces modes en base pour un test live).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : C-11 vague 1 (attribution + routage CFN/GRE)
 
 > **Modif #109** — Section B, point **C-11 (vague 1 : PSD, PSC/CFN, PSL/PSO/AOO)**. Alignement sur le référentiel des champs par mode (24/05) :

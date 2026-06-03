@@ -58,7 +58,8 @@
     { "code": "ENTENTE_DIRECTE", "label": "Gré à gré / Entente directe (exceptionnel)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "Décret 2009-259 Art. 67" },
     { "code": "CFN", "label": "Consultation de Fournisseurs Nationaux (CFN)", "seuil": true, "famille": "SIMPLIFIEE", "parent": null, "ref": "Conforme à une Demande de Cotation — CR DCF 26 mai 2026" },
     { "code": "CONVENTION", "label": "Convention", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "CR DCF 26 mai 2026" },
-    { "code": "LETTRE_COMMANDE_MARCHE", "label": "Lettre de commande valant marché", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "CR DCF 26 mai 2026" }
+    { "code": "LETTRE_COMMANDE_MARCHE", "label": "Lettre de commande valant marché", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "CR DCF 26 mai 2026" },
+    { "code": "RECONDUCTION", "label": "Reconduction (services courants)", "seuil": false, "famille": "DEROGATOIRE", "parent": null, "ref": "C-11 — référentiel 24/05/2026" }
   ],
   "CATEGORIE_PROCEDURE": [
     { "code": "NATIONALE", "label": "Nationale" },
