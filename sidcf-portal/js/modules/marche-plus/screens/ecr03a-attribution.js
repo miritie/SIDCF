@@ -327,7 +327,7 @@ export async function renderAttribution(params) {
     const pageHeader = renderPageHeaderMP({
       idOperation, operation,
       phaseIcon: '✅', phaseLabel: 'Enregistrement de marché',
-      titre: 'Attributaire, montant & garanties'
+      titre: 'Conditions contractuelles du marché'
     });
     wireSpec(pageHeader, {
       id: 'attribution-screen',
@@ -779,11 +779,12 @@ function renderInfosMarcheSection(existingAttr, operation) {
   const numero = existingAttr.numeroMarcheApprouve || '';
   const exonere = existingAttr.exonereTVA === true;
   const dureeValeur = existingAttr.dates?.delaiExecution || operation.dureePrevisionnelle || '';
-  const dureeUnite = existingAttr.dates?.delaiUnite || 'MOIS';
+  // Modif #116 (E-14) — unité par défaut « Jours » (sauf valeur déjà enregistrée).
+  const dureeUnite = existingAttr.dates?.delaiUnite || 'JOURS';
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, '📋 Informations sur le marché approuvé')
+      el('h3', { className: 'card-title' }, '📋 Informations sur le Marché/Contrat approuvé')
     ]),
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
@@ -808,10 +809,11 @@ function renderInfosMarcheSection(existingAttr, operation) {
               // setAttribute('selected', false) qui sélectionne quand même
               // l'option (présence de l'attribut) → la dernière l'emporterait.
               const sel = el('select', { className: 'form-input', id: 'attr-duree-unite', style: { flex: '1' } }, [
-                el('option', { value: 'MOIS' }, 'Mois'),
-                el('option', { value: 'JOURS' }, 'Jours')
+                el('option', { value: 'JOURS' }, 'Jours'),
+                el('option', { value: 'MOIS' }, 'Mois')
               ]);
-              sel.value = dureeUnite === 'JOURS' ? 'JOURS' : 'MOIS';
+              // Modif #116 (E-14) — unité par défaut « Jours » (le client a précisé l'unité en jours).
+              sel.value = dureeUnite === 'MOIS' ? 'MOIS' : 'JOURS';
               return sel;
             })()
           ])

@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Enregistrement : Section C lot 1 (libellés)
+
+> **Modif #116** — Section C (Enregistrement, `ecr03a`), **lot 1 — libellés** :
+> - **E-11** : titre de l'écran « Attributaire, montant & garanties » → **« Conditions contractuelles du marché »**.
+> - **E-14** : section « Informations sur le marché approuvé » → **« Informations sur le Marché/Contrat approuvé »** ; **durée contractuelle par défaut en « Jours »** (sauf valeur déjà enregistrée).
+> *(E-4 « Autorité décisionnelle » différé : pas de champ « Nom du décideur » aujourd'hui — il arrivera avec le bloc « difficultés ».)*
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : `titre` du page-header ; titre de `renderInfosMarcheSection` ; fallback `dureeUnite` → `'JOURS'` + ordre des options du select (Jours en tête).
+
+### Impact / Anti-régression
+
+- **UI** : libellés uniquement + unité de durée par défaut « Jours ». Aucun changement de logique/persistance.
+- **DB / Worker** : ❌ aucun changement.
+- **Vérifié (CDP)** : titre écran, titre section et durée par défaut « Jours » corrects ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : attributaire en recherche simple (autocomplétion)
 
 > **Modif #115** — Retour métier : pour une **entreprise attributaire unique**, on doit pouvoir faire une **recherche simple** / rappeler depuis la base, plutôt que parcourir un long menu déroulant. Le `<select>` d'attributaire (#114) devient un **champ de recherche avec autocomplétion** (`<input list>` + `<datalist>`) sur la base des entreprises. La **saisie filtre** les suggestions ; le **NCC reste auto-déduit**. La source demeure : **liste restreinte** (AMI→DP) sinon **toutes les entreprises** (`MP_ENTREPRISE`).
