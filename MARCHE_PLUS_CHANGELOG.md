@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : refonte du bloc en « Pièces à joindre (facultatif) »
+
+> **Modif #113** — Retour métier sur l'ancien bloc « Pièce d'engagement de l'étape » (#106) : ces pièces **ne sont pas indispensables**, **plusieurs peuvent coexister** (courrier **ET** mandat — pas un choix exclusif), et **le PV d'ouverture est déjà saisi au niveau du lot** (donc retiré d'ici). Le bloc devient **« 📎 Pièces à joindre (facultatif) »**, sobre, avec des **uploads indépendants** :
+> - **Concurrentiel** (PSL/PSO/AOO/AOR/PI) : Courrier d'invitation + Mandat de représentation (chacun facultatif). **Plus de PV ici, plus de select unique, plus de champs N°/Date.**
+> - **Contrat direct** (Convention/Lettre/Reconduction) : un upload « Document du contrat ».
+> - **PSD/PSC** : pas de slot de pièce (leurs documents sont dans le formulaire du mode) ; seule la case **« sans CF »** reste.
+> - **Gré à gré simple** (ENTENTE_DIRECTE/GRE) : **plus de bloc du tout**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `renderPieceEngagementBlock` + `getPieceEngagementOptions` + `MODES_PIECE_DIRECTE` **supprimés** → `renderPiecesAJoindreBlock(mode, existingProc)` (retourne `null` si rien à afficher) ;
+  - point d'appel avec garde `null` ;
+  - persistance `procedureData.piecesJointes = { courrierDoc, mandatDoc, contratDoc }` (chaque doc préservé si non ré-uploadé) ; ancien `pieceEngagement` retiré.
+
+### Impact / Anti-régression
+
+- **UI** : bloc allégé et facultatif ; gré à gré sans bloc. La case « sans CF » et le masquage associé restent fonctionnels.
+- **Données** : nouveau champ `piecesJointes` (JSONB — pas de migration) ; l'ancien `pieceEngagement` éventuel reste en base sans gêner (non lu).
+- **Vérifié (CDP)** : AOO/PI → Courrier + Mandat (2 uploads), pas de PV/select/N°/Date ; PSC/PSD → case sans-CF seule ; ENTENTE_DIRECTE/GRE → aucun bloc ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Liste PPM : « Mode de passation » uniformisé en « CODE — Libellé »
 
 > **Modif #112** — Uniformisation de l'affichage du mode de passation (écart relevé en Section A). Le tableau retirait le code (« Procédure Simplifiée… ») tandis que le filtre affichait « … (PSD) ». Désormais **les deux affichent le même format « CODE — Libellé »** (ex. « PSD — Procédure Simplifiée d'Entente Directe »), **cohérent avec les colonnes Activité et Nature économique** (code en tête). Le « (CODE) » final redondant du libellé est retiré.

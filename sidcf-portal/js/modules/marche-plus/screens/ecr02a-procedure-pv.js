@@ -418,11 +418,12 @@ export async function renderProcedurePV(params) {
       return;
     }
 
-    // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (mise en évidence).
+    // Modif #106/#113 — Pièces à joindre (facultatives) + case « sans CF ».
     const engagementContainer = document.getElementById('engagement-container');
     if (engagementContainer) {
       engagementContainer.innerHTML = '';
-      engagementContainer.appendChild(renderPieceEngagementBlock(mode, procedureData || {}));
+      const piecesBlock = renderPiecesAJoindreBlock(mode, procedureData || {});
+      if (piecesBlock) engagementContainer.appendChild(piecesBlock);
     }
 
     // Render procedure details form based on mode
@@ -637,93 +638,72 @@ export async function renderProcedurePV(params) {
  * - PSC: Comparaison de devis
  * - PSL/PSO/AOO/PI: Full form with COJO, dates, PV
  */
-// Modif #106 — C-2/C-3 : options de la pièce d'engagement selon le mode.
-// PSD/PSC/ENTENTE_DIRECTE (CF non systématique) → bon de commande / devis.
-// Concurrentiel (PSL/PSO/AOO/PI/AOR…) → courrier / mandat / PV d'ouverture.
-const MODES_PIECE_DIRECTE = ['PSD', 'PSC', 'ENTENTE_DIRECTE', 'GRE'];
-// Modif #110 — C-11 vague 2 : modes à contrat direct (la pièce d'engagement
-// EST le document du contrat ; pas de PV, pas de lots ; attribution directe).
+// Modif #110 — C-11 vague 2 : modes à contrat direct (le document du contrat
+// se charge ici ; pas de PV, pas de lots ; attribution directe).
 const MODES_CONTRAT_DIRECT = ['CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCTION'];
-function getPieceEngagementOptions(mode) {
-  if (mode === 'CONVENTION') return [{ code: 'CONVENTION', label: 'Convention' }];
-  if (mode === 'LETTRE_COMMANDE_MARCHE') return [{ code: 'LETTRE_COMMANDE', label: 'Lettre de commande valant marché' }];
-  if (mode === 'RECONDUCTION') return [{ code: 'CONTRAT_RECONDUCTION', label: 'Contrat de reconduction' }];
-  return MODES_PIECE_DIRECTE.includes(mode)
-    ? [
-        { code: 'BON_COMMANDE', label: 'Bon de commande' },
-        { code: 'DEVIS_PROFORMA', label: 'Devis / facture proforma' }
-      ]
-    : [
-        { code: 'COURRIER_INVITATION', label: "Courrier d'invitation" },
-        { code: 'MANDAT_REPRESENTATION', label: 'Mandat de représentation' },
-        { code: 'PV_OUVERTURE', label: "PV d'ouverture" }
-      ];
-}
 
 /**
- * Modif #106 — C-2/C-3 : bloc « pièce d'engagement de l'étape », mis en
- * évidence en tête de la contractualisation. Marque la pièce qui ouvre
- * l'étape (et, pour un PV d'ouverture, la participation du CF au COJO/COPE).
+ * Modif #113 — Refonte (retour métier) : les pièces de la contractualisation
+ * sont FACULTATIVES et MULTIPLES (on peut joindre courrier ET mandat), pas un
+ * passage obligé ni un choix exclusif. Le PV d'ouverture n'est PAS ici : il
+ * est saisi au niveau du lot. Pour les modes à contrat direct, on charge le
+ * document du contrat. La case « sans CF » (PSD/PSC) reste portée par ce bloc.
+ * Retourne null s'il n'y a rien à afficher (ex. gré à gré simple).
  */
-function renderPieceEngagementBlock(mode, existingProc) {
-  const pe = existingProc.pieceEngagement || {};
-  const isDirect = MODES_PIECE_DIRECTE.includes(mode);
-  const opts = getPieceEngagementOptions(mode);
-  // Modif #108 — C-5 : « contractualisation sans CF » réservée aux PSD/PSC.
+function renderPiecesAJoindreBlock(mode, existingProc) {
+  const pj = existingProc.piecesJointes || {};
   const allowSansCF = ['PSD', 'PSC'].includes(mode);
+  const isContrat = MODES_CONTRAT_DIRECT.includes(mode);
+  const isDirectSimple = ['PSD', 'PSC', 'ENTENTE_DIRECTE', 'GRE'].includes(mode);
 
-  const typeSelect = el('select', { className: 'form-input', id: 'eng-type' }, [
-    el('option', { value: '' }, '-- Sélectionner --'),
-    ...opts.map(o => el('option', { value: o.code }, o.label))
-  ]);
-  // .value après construction (évite le bug el()/attribut selected)
-  typeSelect.value = pe.type || '';
+  let slots = [];
+  if (isContrat) {
+    const lbl = mode === 'CONVENTION' ? 'Convention'
+      : mode === 'RECONDUCTION' ? 'Contrat de reconduction'
+      : 'Lettre de commande valant marché';
+    slots = [{ id: 'pj-contrat', label: lbl, doc: pj.contratDoc }];
+  } else if (!isDirectSimple) {
+    // Concurrentiel : courrier et/ou mandat (facultatifs, indépendants ; pas de PV).
+    slots = [
+      { id: 'pj-courrier', label: "Courrier d'invitation", doc: pj.courrierDoc },
+      { id: 'pj-mandat', label: 'Mandat de représentation', doc: pj.mandatDoc }
+    ];
+  }
 
-  return el('div', {
-    className: 'card',
-    style: { marginBottom: '24px', border: '2px solid #0d6efd', boxShadow: '0 0 0 3px rgba(13,110,253,0.08)' }
-  }, [
-    el('div', { className: 'card-header', style: { background: '#eff6ff' } }, [
-      el('h3', { className: 'card-title', style: { color: '#1e3a8a' } }, "🚀 Pièce d'engagement de l'étape")
+  if (slots.length === 0 && !allowSansCF) return null;
+
+  const body = [];
+  if (slots.length > 0) {
+    body.push(el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+      el('div', { className: 'alert-icon' }, 'ℹ️'),
+      el('div', { className: 'alert-content' },
+        isContrat
+          ? 'Attribution directe : chargez le document du contrat.'
+          : 'Pièces facultatives à joindre au marché (vous pouvez en joindre plusieurs).')
+    ]));
+    body.push(el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } },
+      slots.map(s => el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, s.label),
+        el('input', { type: 'file', className: 'form-input', id: s.id, accept: '.pdf' }),
+        s.doc ? el('small', { className: 'text-success' }, `✓ ${s.doc}`) : null
+      ]))
+    ));
+  }
+  if (allowSansCF) {
+    body.push(el('div', { className: 'form-field', style: { marginTop: slots.length ? '14px' : '0', borderTop: slots.length ? '1px dashed #e5e7eb' : 'none', paddingTop: slots.length ? '12px' : '0' } }, [
+      el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+        (() => { const cb = el('input', { type: 'checkbox', id: 'proc-sans-cf', onchange: () => applySansCFVisibility() }); cb.checked = !!existingProc.sansCF; return cb; })(),
+        el('span', {}, "Contractualisation sans CF (le Contrôleur Financier n'est pas impliqué)")
+      ]),
+      el('small', { className: 'text-muted' }, 'Allège la saisie : masque les soumissionnaires, les lots et la réserve CF.')
+    ]));
+  }
+
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, isContrat ? '📄 Document du contrat' : '📎 Pièces à joindre (facultatif)')
     ]),
-    el('div', { className: 'card-body' }, [
-      el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
-        el('div', { className: 'alert-icon' }, 'ℹ️'),
-        el('div', { className: 'alert-content' },
-          MODES_CONTRAT_DIRECT.includes(mode)
-            ? "Attribution directe : la dépense arrive au paiement (prise en charge au module marché). Enregistrez et chargez le document du contrat ci-dessous."
-            : isDirect
-              ? 'Pour ce mode (PSD/PSC/entente directe), la contractualisation débute par la prise en compte du bon de commande ou du devis / facture proforma.'
-              : "La contractualisation débute par le courrier d'invitation, le mandat de représentation ou le PV d'ouverture. Le PV d'ouverture capte la participation du CF au COJO/COPE.")
-      ]),
-      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Type de pièce'),
-          typeSelect
-        ]),
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'N° / Référence'),
-          el('input', { type: 'text', className: 'form-input', id: 'eng-ref', value: pe.reference || '', placeholder: 'Réf. de la pièce' })
-        ]),
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Date'),
-          el('input', { type: 'date', className: 'form-input', id: 'eng-date', value: pe.date ? pe.date.split('T')[0] : '' })
-        ]),
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Pièce jointe (PDF)'),
-          el('input', { type: 'file', className: 'form-input', id: 'eng-doc', accept: '.pdf' }),
-          pe.doc ? el('small', { className: 'text-success' }, `✓ ${pe.doc}`) : null
-        ])
-      ]),
-      // Modif #108 — C-5 : option « sans CF » (PSD/PSC) — allège la saisie.
-      allowSansCF ? el('div', { className: 'form-field', style: { marginTop: '14px', borderTop: '1px dashed #e5e7eb', paddingTop: '12px' } }, [
-        el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
-          (() => { const cb = el('input', { type: 'checkbox', id: 'proc-sans-cf', onchange: () => applySansCFVisibility() }); cb.checked = !!existingProc.sansCF; return cb; })(),
-          el('span', {}, "Contractualisation sans CF (le Contrôleur Financier n'est pas impliqué)")
-        ]),
-        el('small', { className: 'text-muted' }, 'Allège la saisie : masque les soumissionnaires, les lots et la réserve CF.')
-      ]) : null
-    ])
+    el('div', { className: 'card-body' }, body)
   ]);
 }
 
@@ -1481,16 +1461,20 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
         : (existingProc?.reconductionControl?.dgmpDoc || null)
     };
   }
-  // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (doc préservé si non ré-uploadé).
-  if (document.getElementById('eng-type')) {
-    procedureData.pieceEngagement = {
-      type: document.getElementById('eng-type')?.value || null,
-      reference: document.getElementById('eng-ref')?.value?.trim() || null,
-      date: document.getElementById('eng-date')?.value || null,
-      doc: document.getElementById('eng-doc')?.files?.[0]
-        ? 'ENGAGEMENT_' + Date.now() + '.pdf'
-        : (existingProc?.pieceEngagement?.doc || null)
-    };
+  // Modif #113 — Pièces à joindre (facultatives, multiples) : courrier, mandat,
+  // ou document de contrat. Chaque doc est préservé s'il n'est pas ré-uploadé.
+  {
+    const pjExisting = existingProc?.piecesJointes || {};
+    const slotMap = { 'pj-courrier': 'courrierDoc', 'pj-mandat': 'mandatDoc', 'pj-contrat': 'contratDoc' };
+    const pj = {};
+    let any = false;
+    for (const [inputId, key] of Object.entries(slotMap)) {
+      const inp = document.getElementById(inputId);
+      if (!inp) continue;
+      any = true;
+      pj[key] = inp.files?.[0] ? key.toUpperCase() + '_' + Date.now() + '.pdf' : (pjExisting[key] || null);
+    }
+    if (any) procedureData.piecesJointes = pj;
   }
 
   // Merge with existing data if updating (préserve documents PSD/PSC/dossier
