@@ -77,6 +77,8 @@
     { "code": "DAO", "label": "Dossier d'Appel d'Offres (DAO)", "modes": ["AOO", "AOO_PREQUALIF", "AOO_2ETAPES", "AOR"] },
     { "code": "DTAO_PI", "label": "DTAO Prestations Intellectuelles (Décret 2013-406)", "modes": ["PI"] },
     { "code": "AMI", "label": "Avis à Manifestation d'Intérêt (AMI)", "modes": ["PI"] },
+    { "code": "DP_DDP", "label": "Demande de Proposition (DP / DDP)", "modes": ["PI"] },
+    { "code": "TDR", "label": "Termes de Référence (TDR)", "modes": ["PI"] },
     { "code": "DC", "label": "Demande de Cotation (DC) — PSC", "modes": ["PSC"] },
     { "code": "DOSSIER_CONS_PSL", "label": "Dossier de consultation — PSL", "modes": ["PSL"] },
     { "code": "DOSSIER_CONS_PSO", "label": "Dossier de consultation — PSO", "modes": ["PSO"] },

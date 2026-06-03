@@ -13,6 +13,23 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : types de dossier d'appel « DP/DDP » et « TDR »
+
+> **Modif #104** — Section B, point **C-6**. Complément de la liste « Type de dossier d'appel » : ajout de **« Demande de Proposition (DP / DDP) »** et **« Termes de Référence (TDR) »**, associés aux **Prestations Intellectuelles (PI)**. (« Demande de cotation » = `DC` et « AMI » étaient déjà présents.)
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : `TYPE_DOSSIER_APPEL` += `DP_DDP` et `TDR` (modes `["PI"]`).
+
+### Impact / Anti-régression
+
+- **UI** : 2 options supplémentaires dans le select « Type de dossier d'appel » lorsque le mode est PI (filtrage par mode déjà en place dans `ecr02a`).
+- **DB / Worker** : ❌ aucun changement (référentiel statique ; cache `localStorage` à vider si présent).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : libellés d'étape « Procédure » → « Contractualisation »
 
 > **Modif #103** — Section B, point **C-1**. Finalisation du renommage de l'étape : au-delà de la timeline API (#95), il restait des libellés statiques « Procédure ». Corrigés : le **label d'étape** dans la frise statique (`steps-mp.js`), le **titre de l'écran** (« Procédure & Mode de Passation » → « Contractualisation & mode de passation ») et le **titre du formulaire** (« Détails de la procédure » → « Détails de la contractualisation »). Les usages métier légitimes du mot « procédure » (procédure de passation, procédure par lot) sont conservés.
