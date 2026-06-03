@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Tableau PPM : tri + recherche texte libre par colonne (en-têtes)
+
+> **Modif #101** — CR du 01/06/2026, points **P-2 et P-3**. Le DCF demande des filtres directement sur les en-têtes du tableau. Chaque colonne du tableau PPM (hors « Actions ») dispose désormais : (1) d'un **tri** ascendant/descendant au clic sur le titre (indicateur ▲/▼), et (2) d'un **champ de recherche en texte libre** (2ᵉ rangée d'en-tête). Le filtrage et le tri s'opèrent **côté DOM** (sans re-render de la page) → le focus de saisie est préservé. La recherche s'appuie sur le texte affiché (libellé complet via `title` si tronqué) : la colonne **Activité** montrant « CODE - Libellé », sa recherche porte bien sur le **code-activité** (P-3).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - état module `tableSort` / `tableColSearch` (persistés entre re-renders) ;
+  - `renderSimpleTable()` : 2 rangées d'en-tête (titres triables + inputs de recherche), tri numérique pour la colonne Montant via `tr._op` ;
+  - `applyTableView()` : applique recherches (ET logique inter-colonnes) + tri sur les `<tr>` ;
+  - `resetFilters()` réinitialise aussi tri et recherches par colonne.
+
+### Impact / Anti-régression
+
+- **UI** : en-têtes triables + ligne de recherche ; le clic sur une ligne (→ fiche) et les boutons d'action restent inchangés.
+- **Données / Worker / DB** : ❌ aucun changement (tout est client-side).
+- **Vérifié (CDP, headless Chrome)** : 33 lignes, 7 inputs de recherche, recherche absurde → 0 ligne / vidée → 33, tri montant ascendant puis descendant corrects.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Filtre « Mode de passation » regroupé par famille
 
 > **Modif #100** — CR du 01/06/2026, point **P-4**. Le filtre « Mode de passation » de la liste PPM présentait les 13 modes à plat. Ils sont désormais **regroupés en 4 familles** (en-têtes de groupe), à l'image de la typologie des types de marché : **Appel d'offres** (AOO, AOO préqualif, AOO 2 étapes) · **Procédures simplifiées** (PSD, PSC, PSL, PSO) · **Prestations intellectuelles** (PI) · **Procédures dérogatoires** (AOR, Gré à gré/Entente directe, CFN, Convention, Lettre de commande valant marché).

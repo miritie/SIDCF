@@ -105,6 +105,12 @@ function toTitleCaseFr(value) {
 // Filtres repliés par défaut (gain de place vertical)
 let filtersExpanded = false;
 
+// Modif #101 — P-2/P-3 (CR 01/06/2026) : état du tri et des recherches par
+// colonne du tableau. Appliqués côté DOM (sans re-render de la liste) pour
+// préserver le focus de saisie ; persistés entre les re-renders.
+let tableSort = { col: -1, dir: 0 };   // col = index colonne, dir = 1 (asc) / -1 (desc) / 0 (aucun)
+let tableColSearch = {};               // { [indexColonne]: terme en minuscules }
+
 // État global des filtres — Marché+ : multi-select (arrays), array vide = tous
 let activeFilters = {
   search: '',
@@ -661,36 +667,131 @@ function renderSimpleTable(operations, registries) {
   // Modif #93 — toutes les colonnes visibles sans défilement horizontal :
   // table-layout fixe + largeurs proportionnelles (∑ = 100 %) + en-têtes
   // autorisés à passer sur plusieurs lignes (whiteSpace normal).
+  // Modif #101 — P-2/P-3 (CR 01/06/2026) : tri (clic sur l'en-tête) +
+  // recherche texte libre par colonne (2e rangée d'en-tête). Filtrage et
+  // tri opérés côté DOM par applyTableView() — pas de re-render de page, le
+  // focus de saisie est préservé. La recherche s'appuie sur le texte affiché
+  // (title complet si tronqué) : la colonne Activité montrant « CODE - Libellé »,
+  // sa recherche porte bien sur le code-activité (P-3).
   const cols = [
     { label: 'Activité',                        w: '14%', align: 'left'  }, // 2.a — code - libellé
     { label: 'Objet / Libellé',                 w: '19%', align: 'left'  }, // 2.c
     { label: 'Type de marché',                  w: '11%', align: 'left'  }, // 2.d
     { label: 'Nature économique',               w: '13%', align: 'left'  }, // 2.b
     { label: 'Mode de passation',               w: '12%', align: 'left'  },
-    { label: 'Montant prévisionnel (M F CFA)',  w: '10%', align: 'right' }, // 2.e
+    { label: 'Montant prévisionnel (M F CFA)',  w: '10%', align: 'right', numeric: true }, // 2.e
     { label: 'Statut du marché',                w: '9%',  align: 'left'  }, // 2.f
-    { label: 'Actions',                         w: '12%', align: 'left'  }
+    { label: 'Actions',                         w: '12%', align: 'left', noFilter: true }
   ];
+
+  const rows = operations.map(op => {
+    const tr = renderSimpleRow(op, registries);
+    tr._op = op; // pour le tri numérique (montant) sans reparser le libellé formaté
+    return tr;
+  });
+  const tbody = el('tbody', {}, rows);
+
+  const sortIndicator = (ci) =>
+    tableSort.col === ci && tableSort.dir !== 0 ? (tableSort.dir > 0 ? ' ▲' : ' ▼') : '';
+
+  // Rangée 1 — titres cliquables (tri)
+  const headTitles = el('tr', {},
+    cols.map((c, ci) => {
+      const thAttrs = {
+        style: {
+          width: c.w, textAlign: c.align,
+          whiteSpace: 'normal', wordBreak: 'break-word',
+          verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25',
+          cursor: c.noFilter ? 'default' : 'pointer', userSelect: 'none'
+        }
+      };
+      if (!c.noFilter) {
+        thAttrs.title = 'Cliquer pour trier';
+        thAttrs.onclick = () => {
+          if (tableSort.col === ci) tableSort.dir = tableSort.dir > 0 ? -1 : 1;
+          else { tableSort.col = ci; tableSort.dir = 1; }
+          headTitles.querySelectorAll('[data-sort-ind]').forEach(s => {
+            s.textContent = sortIndicator(Number(s.getAttribute('data-sort-ind')));
+          });
+          applyTableView(tbody, cols);
+        };
+      }
+      return el('th', thAttrs, [
+        el('span', {}, c.label),
+        el('span', { 'data-sort-ind': String(ci), style: { color: '#0d6efd', fontWeight: '700' } }, sortIndicator(ci))
+      ]);
+    })
+  );
+
+  // Rangée 2 — recherche texte libre par colonne
+  const headSearch = el('tr', {},
+    cols.map((c, ci) => el('th', { style: { padding: '4px', verticalAlign: 'top' } },
+      c.noFilter ? null : el('input', {
+        type: 'text',
+        className: 'form-input',
+        value: tableColSearch[ci] || '',
+        placeholder: '🔎 filtrer',
+        style: { width: '100%', fontSize: '11px', padding: '3px 6px', fontWeight: 'normal' },
+        oninput: (e) => {
+          const v = e.target.value.trim().toLowerCase();
+          if (v) tableColSearch[ci] = v; else delete tableColSearch[ci];
+          applyTableView(tbody, cols);
+        }
+      })
+    ))
+  );
+
   const table = el('div', { style: { width: '100%' } }, [
     el('table', { className: 'data-table', style: { width: '100%', tableLayout: 'fixed' } }, [
-      el('thead', {}, [
-        el('tr', {},
-          cols.map(c => el('th', {
-            style: {
-              width: c.w, textAlign: c.align,
-              whiteSpace: 'normal', wordBreak: 'break-word',
-              verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25'
-            }
-          }, c.label))
-        )
-      ]),
-      el('tbody', {},
-        operations.map(op => renderSimpleRow(op, registries))
-      )
+      el('thead', {}, [headTitles, headSearch]),
+      tbody
     ])
   ]);
 
+  // Réappliquer l'état tri/recherche persisté (après un re-render de la liste)
+  applyTableView(tbody, cols);
+
   return table;
+}
+
+/**
+ * Modif #101 — P-2/P-3 : applique tri + recherches par colonne directement
+ * sur les <tr> du tbody (display none/'' + réordonnancement), sans re-render
+ * de la page. Lit le texte affiché (title complet en priorité, sinon
+ * textContent) ; tri numérique pour les colonnes `numeric` via tr._op.
+ */
+function applyTableView(tbody, cols) {
+  const rows = Array.from(tbody.children);
+  const cellText = (tr, ci) => {
+    const td = tr.children[ci];
+    return td ? ((td.getAttribute('title') || td.textContent) || '').toLowerCase() : '';
+  };
+
+  // 1) Recherche par colonne (ET logique entre colonnes)
+  for (const tr of rows) {
+    let visible = true;
+    for (const ci of Object.keys(tableColSearch)) {
+      const term = tableColSearch[ci];
+      if (term && !cellText(tr, Number(ci)).includes(term)) { visible = false; break; }
+    }
+    tr.style.display = visible ? '' : 'none';
+  }
+
+  // 2) Tri sur la colonne active
+  if (tableSort.col >= 0 && tableSort.dir !== 0) {
+    const ci = tableSort.col;
+    const numeric = !!cols[ci]?.numeric;
+    const visibleRows = rows.filter(tr => tr.style.display !== 'none');
+    visibleRows.sort((a, b) => {
+      if (numeric) {
+        const va = Number(a._op?.montantPrevisionnel) || 0;
+        const vb = Number(b._op?.montantPrevisionnel) || 0;
+        return (va - vb) * tableSort.dir;
+      }
+      return cellText(a, ci).localeCompare(cellText(b, ci), 'fr') * tableSort.dir;
+    });
+    for (const tr of visibleRows) tbody.appendChild(tr); // réordonne (les masqués restent en place)
+  }
 }
 
 function renderSimpleRow(op, registries) {
@@ -1232,6 +1333,9 @@ function resetFilters() {
     sante: [],
     natureEco: []
   };
+  // Modif #101 — réinitialise aussi le tri et les recherches par colonne
+  tableSort = { col: -1, dir: 0 };
+  tableColSearch = {};
   renderPPMList();
 }
 
