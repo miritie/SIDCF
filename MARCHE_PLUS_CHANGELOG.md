@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : C-11 vague 1 (attribution + routage CFN/GRE)
+
+> **Modif #109** — Section B, point **C-11 (vague 1 : PSD, PSC/CFN, PSL/PSO/AOO)**. Alignement sur le référentiel des champs par mode (24/05) :
+> - **Bloc « Attribution de la contractualisation »** (attributaire raison sociale + **NCC** + **montant attribué**) ajouté pour tous les modes concluant par une attribution. Le montant attribué alimentera le **contrôle d'écart** à l'enregistrement du marché approuvé. *(Non affiché pour PI/AMI — issue « liste restreinte » traitée en vague 3 / C-9.)*
+> - **CFN** suit désormais le **formulaire de sélection** (comme PSC) au lieu du formulaire générique.
+> - **GRE** (gré à gré) suit le **formulaire direct** (comme PSD/entente directe), sans lots ni PV.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - branche formulaire `PSC || CFN` ; branche directe `PSD || ENTENTE_DIRECTE || GRE` ;
+  - conteneur `#attribution-container` + `renderAttributionBlock(mode, existingProc)` (affiché si `mode !== 'PI'`) ;
+  - persistance `procedureData.attribution = { raisonSociale, ncc, montantAttribue }`.
+
+### Impact / Anti-régression
+
+- **UI** : nouveau bloc Attribution (vert) en bas de la contractualisation ; CFN/GRE basculent vers le bon formulaire.
+- **Données** : `attribution` ajouté à `MP_PROCEDURE` (JSONB — pas de migration).
+- **Vérifié (CDP)** : AOO/PSC/GRE → Attribution présente ; GRE → formulaire direct sans lots ; PSC → formulaire de sélection ; PI → pas d'Attribution. Routage CFN→PSC confirmé par code (aucune op CFN en base).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : gré à gré (attribution directe) + option « sans CF »
 
 > **Modif #108** — Section B, points **C-10 et C-5**.

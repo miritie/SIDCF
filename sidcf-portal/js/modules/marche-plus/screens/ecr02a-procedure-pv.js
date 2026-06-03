@@ -207,6 +207,10 @@ export async function renderProcedurePV(params) {
     // Lots widget (contextual - shown for PSC+)
     el('div', { id: 'lots-container' }),
 
+    // Modif #109 — C-11 vague 1 : bloc « Attribution » (issue de la
+    // contractualisation : attributaire + NCC + montant attribué).
+    el('div', { id: 'attribution-container' }),
+
     // Actions
     el('div', { className: 'card' }, [
       el('div', { className: 'card-body' }, [
@@ -401,6 +405,7 @@ export async function renderProcedurePV(params) {
       document.getElementById('procedure-details-container').innerHTML = '';
       document.getElementById('soumissionnaires-container').innerHTML = '';
       document.getElementById('lots-container').innerHTML = '';
+      document.getElementById('attribution-container').innerHTML = '';
       return;
     }
 
@@ -572,6 +577,15 @@ export async function renderProcedurePV(params) {
       lotsState = [];
     }
 
+    // Modif #109 — C-11 vague 1 : bloc Attribution (sauf PI/AMI, vague 3).
+    const attributionContainer = document.getElementById('attribution-container');
+    if (attributionContainer) {
+      attributionContainer.innerHTML = '';
+      if (mode !== 'PI') {
+        attributionContainer.appendChild(renderAttributionBlock(mode, procedureData || {}));
+      }
+    }
+
     // Modif #108 — C-5 : applique l'état initial « sans CF » (PSD/PSC).
     applySansCFVisibility();
   }
@@ -690,6 +704,43 @@ function applySansCFVisibility() {
   });
 }
 
+/**
+ * Modif #109 — C-11 vague 1 : bloc « Attribution » (issue de la
+ * contractualisation). Désigne l'attributaire (raison sociale + NCC) et le
+ * montant attribué — repris et contrôlé à l'enregistrement du marché approuvé.
+ * Affiché pour tous les modes concluant par une attribution (pas l'AMI/PI,
+ * dont l'issue « liste restreinte » sera traitée en vague 3 / C-9).
+ */
+function renderAttributionBlock(mode, existingProc) {
+  const a = existingProc.attribution || {};
+  return el('div', { className: 'card', style: { marginBottom: '24px', border: '1px solid #16a34a' } }, [
+    el('div', { className: 'card-header', style: { background: '#f0fdf4' } }, [
+      el('h3', { className: 'card-title', style: { color: '#166534' } }, "🏆 Attribution de la contractualisation")
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+        el('div', { className: 'alert-icon' }, 'ℹ️'),
+        el('div', { className: 'alert-content' },
+          "Désignez l'attributaire et le montant attribué. Ce montant sera contrôlé à l'enregistrement du marché approuvé (alerte en cas d'écart).")
+      ]),
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Attributaire (raison sociale)'),
+          el('input', { type: 'text', className: 'form-input', id: 'proc-attr-rs', value: a.raisonSociale || '', placeholder: "Entreprise attributaire" })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'NCC'),
+          el('input', { type: 'text', className: 'form-input', id: 'proc-attr-ncc', value: a.ncc || '', placeholder: 'N° Compte Contribuable' })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Montant attribué (XOF)'),
+          el('input', { type: 'number', className: 'form-input', id: 'proc-attr-montant', min: 0, step: 1, value: a.montantAttribue != null ? a.montantAttribue : '', placeholder: "Montant de l'attribution" })
+        ])
+      ])
+    ])
+  ]);
+}
+
 function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   const existingProc = procedure || {};
 
@@ -698,7 +749,7 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   // remplacés par « devis / facture proforma » (CR 26 mai 2026). Les IDs
   // techniques et noms de champs en base restent inchangés (proc-ref-devis,
   // refDevis, docDevis, …) pour préserver les données existantes.
-  if (mode === 'PSD' || mode === 'ENTENTE_DIRECTE') {
+  if (mode === 'PSD' || mode === 'ENTENTE_DIRECTE' || mode === 'GRE') {
     return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, '📋 Validation du devis / facture proforma')
@@ -807,7 +858,8 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   }
 
   // PSC - Procédure Simplifiée de Cotation
-  if (mode === 'PSC') {
+  // Modif #109 — C-11 vague 1 : CFN suit le formulaire de sélection (comme PSC).
+  if (mode === 'PSC' || mode === 'CFN') {
     // Modif #79 (4.j + 4.k + 4.l) — Renommages « devis » → « devis / facture
     // proforma ». Suppression des champs « Nombre de devis reçus » (4.k) et
     // « Tableau comparatif » (4.l) — les données existantes sont préservées
@@ -1239,6 +1291,15 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';
   // Modif #108 — C-5 : indicateur « contractualisation sans CF » (PSD/PSC).
   procedureData.sansCF = !!document.getElementById('proc-sans-cf')?.checked;
+  // Modif #109 — C-11 vague 1 : attribution (attributaire + NCC + montant attribué).
+  if (document.getElementById('proc-attr-rs')) {
+    const montantAttr = document.getElementById('proc-attr-montant')?.value;
+    procedureData.attribution = {
+      raisonSociale: document.getElementById('proc-attr-rs')?.value?.trim() || null,
+      ncc: document.getElementById('proc-attr-ncc')?.value?.trim() || null,
+      montantAttribue: montantAttr ? Number(montantAttr) : null
+    };
+  }
   // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (doc préservé si non ré-uploadé).
   if (document.getElementById('eng-type')) {
     procedureData.pieceEngagement = {
