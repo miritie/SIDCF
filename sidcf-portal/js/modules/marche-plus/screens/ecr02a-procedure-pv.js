@@ -1,5 +1,5 @@
 /* ============================================
-   ECR02A - Procédure & Choix Mode de Passation
+   ECR02A - Contractualisation & Choix Mode de Passation
    ============================================ */
 
 import { el, mount } from '../../../lib/dom.js';
@@ -121,7 +121,7 @@ export async function renderProcedurePV(params) {
     renderPageHeaderMP({
       idOperation, operation,
       phaseIcon: '📝', phaseLabel: 'Contractualisation',
-      titre: 'Procédure & Mode de Passation'
+      titre: 'Contractualisation & mode de passation'
     }),
 
     // Suggested procedures alert
@@ -735,7 +735,7 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   // PSL, PSO, AOO, PI - Procédures avec COJO/COPE
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, '📋 Détails de la procédure')
+      el('h3', { className: 'card-title' }, '📋 Détails de la contractualisation')
     ]),
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [

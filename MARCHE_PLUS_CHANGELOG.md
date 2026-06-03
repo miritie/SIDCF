@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : libellés d'étape « Procédure » → « Contractualisation »
+
+> **Modif #103** — Section B, point **C-1**. Finalisation du renommage de l'étape : au-delà de la timeline API (#95), il restait des libellés statiques « Procédure ». Corrigés : le **label d'étape** dans la frise statique (`steps-mp.js`), le **titre de l'écran** (« Procédure & Mode de Passation » → « Contractualisation & mode de passation ») et le **titre du formulaire** (« Détails de la procédure » → « Détails de la contractualisation »). Les usages métier légitimes du mot « procédure » (procédure de passation, procédure par lot) sont conservés.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/steps-mp.js` : step `PROCEDURE` label → « Contractualisation ».
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : titre d'écran + titre du formulaire défaut + en-tête de fichier.
+
+### Impact / Anti-régression
+
+- **UI** : libellés homogènes « Contractualisation » (timeline statique + API). Codes d'étape (`PROCEDURE`, `EN_PROC`) inchangés → aucune régression de logique/route.
+- **DB / Worker** : ❌ aucun changement.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Cohérence « Activité » : filtre aligné sur la colonne (code + libellé)
 
 > **Modif #102** — Prolongement de P-3 (cohérence affichage ↔ filtre). La colonne « Activité » affiche « CODE - Libellé », mais le **filtre multi-select** du haut n'affichait que le **libellé** et, surtout, n'extrayait que `chaineBudgetaire.activiteLib` — **ratant les opérations** dont le libellé est stocké dans `chaineBudgetaire.activite`. Introduction d'une **source unique `activiteOf(op)`** (représentation « CODE - Libellé ») utilisée par **le tableau, le filtre ET le match** → cohérence totale et couverture complète. *(Vérification : la colonne « Nature économique » était déjà cohérente — même registre `NATURE_ECO` (labels « CODE - Libellé ») côté tableau et côté filtre.)*

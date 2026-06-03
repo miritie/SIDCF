@@ -23,7 +23,7 @@ export const LIFECYCLE_STEPS = [
   },
   {
     code: 'PROCEDURE',
-    label: 'Procédure',
+    label: 'Contractualisation',
     icon: '📝',
     route: '/mp/procedure',
     description: 'Passation & PV'
