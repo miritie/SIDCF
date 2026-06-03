@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Statut du marché : « Approuvé » → « Attribué/Approuvé »
+
+> **Modif #98** — CR du 01/06/2026, point **P-5**. Le client rejette le statut « Approuvé » seul : un marché enregistré est **d'office attribué ET approuvé / visé CF**. Le libellé de l'état `VISE` passe donc de **« Approuvé »** à **« Attribué/Approuvé »**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/etat-labels-mp.js` : `ETAT_LABEL_MP.VISE = 'Attribué/Approuvé'` (source unique de vérité, utilisée par badges, modal détail, liste, fiche de vie — 26 points d'usage).
+
+### Impact / Anti-régression
+
+- **UI** : tous les affichages de l'état `VISE` montrent désormais « Attribué/Approuvé ».
+- **Code / DB** : le **code d'état `VISE` est inchangé** en base et dans la logique → aucune régression fonctionnelle, seul le libellé évolue.
+- *NB* : le statut `APPROUVE` du widget OP/mandat (`op-mandat-manager-mp.js`) relève du workflow d'engagement (OP), **non concerné**, laissé tel quel.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Liste PPM : 6e carte KPI « Résilié »
 
 > **Modif #97** — CR « OBSERVATIONS SUR LES ECRANS » du 01/06/2026, point **P-1**. Le total planifié affiché (33) ne correspondait pas à la somme des cartes KPI (7+4+10+7+4 = 32) : les marchés au statut **RESILIE** n'étaient comptés dans aucune carte de phase. Ajout d'une **6e carte « Résilié »** (états `['RESILIE']`) → couverture complète des états « cycle de vie », somme des cartes = total.

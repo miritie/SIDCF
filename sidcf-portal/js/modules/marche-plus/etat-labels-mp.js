@@ -9,7 +9,9 @@
    - PLANIFIE  → « En Planification »
    - EN_PROC   → « En Contractualisation »
    - ATTRIBUE  → « Attribué »
-   - VISE      → « Approuvé »  (étape d'approbation)
+   - VISE      → « Attribué/Approuvé »  (Modif #98 / P-5 — le marché
+                 enregistré est d'office attribué ET approuvé/visé CF ;
+                 « Approuvé » seul est rejeté par le client)
    - EN_EXEC   → « En exécution »
    - CLOS      → « Achevé »
    - INFRUCTUEUX → « Infructueux » (Modif #76 — lot 1 CR 26 mai 2026)
@@ -22,7 +24,7 @@ export const ETAT_LABEL_MP = {
   PLANIFIE:    'En Planification',
   EN_PROC:     'En Contractualisation',
   ATTRIBUE:    'Attribué',
-  VISE:        'Approuvé',
+  VISE:        'Attribué/Approuvé',
   EN_EXEC:     'En exécution',
   EXECUTION:   'En exécution',  // legacy
   CLOS:        'Achevé',
