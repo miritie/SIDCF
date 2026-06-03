@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Liste PPM : « Mode de passation » uniformisé en « CODE — Libellé »
+
+> **Modif #112** — Uniformisation de l'affichage du mode de passation (écart relevé en Section A). Le tableau retirait le code (« Procédure Simplifiée… ») tandis que le filtre affichait « … (PSD) ». Désormais **les deux affichent le même format « CODE — Libellé »** (ex. « PSD — Procédure Simplifiée d'Entente Directe »), **cohérent avec les colonnes Activité et Nature économique** (code en tête). Le « (CODE) » final redondant du libellé est retiré.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - helper `formatModeLabel(modeEntry)` (« CODE — Libellé », retrait du « (CODE) » final) ;
+  - colonne « Mode de passation » du tableau + options du filtre groupé consomment `formatModeLabel`.
+
+### Impact / Anti-régression
+
+- **UI** : représentation homogène du mode (tableau ↔ filtre) ; `title` du tableau conserve le libellé d'origine. Recherche interne du filtre porte aussi sur le code.
+- **Données / Worker / DB** : ❌ aucun changement.
+- **Vérifié (CDP)** : tableau et filtre affichent tous deux « CODE — Libellé » (formats validés).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : C-11 vague 3 + C-9 (sous-procédures PI & liste restreinte)
 
 > **Modif #111** — Section B, point **C-11 (vague 3)** et **C-9**. Pour les **Prestations Intellectuelles (PI)**, ajout d'un **sélecteur de sous-procédure** qui pilote l'issue :

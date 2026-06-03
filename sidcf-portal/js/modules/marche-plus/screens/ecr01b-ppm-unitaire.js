@@ -227,6 +227,19 @@ const MODE_PASSATION_FAMILLES = [
   { label: 'Procédures dérogatoires',     codes: ['AOR', 'ENTENTE_DIRECTE', 'CFN', 'CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCTION'] }
 ];
 
+/**
+ * Modif #112 — Format unifié du mode de passation « CODE — Libellé », utilisé
+ * À LA FOIS dans la colonne du tableau et dans le filtre (cohérence avec les
+ * colonnes Activité / Nature économique). On retire un éventuel « (CODE) »
+ * final du libellé pour éviter la redite.
+ */
+function formatModeLabel(modeEntry) {
+  if (!modeEntry) return '';
+  const code = modeEntry.code || '';
+  const lib = (modeEntry.label || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+  return (code && lib) ? `${code} — ${lib}` : (lib || code || '');
+}
+
 function buildGroupedModePassationOptions(registries) {
   const modes = registries.MODE_PASSATION || [];
   const byCode = new Map(modes.map(m => [m.code, m]));
@@ -236,12 +249,12 @@ function buildGroupedModePassationOptions(registries) {
     const children = fam.codes.map(c => byCode.get(c)).filter(Boolean);
     if (children.length === 0) continue;
     out.push({ group: true, label: fam.label });
-    for (const m of children) { out.push({ code: m.code, label: m.label }); used.add(m.code); }
+    for (const m of children) { out.push({ code: m.code, label: formatModeLabel(m) }); used.add(m.code); }
   }
   const orphans = modes.filter(m => !used.has(m.code));
   if (orphans.length > 0) {
     out.push({ group: true, label: 'Autres' });
-    for (const m of orphans) out.push({ code: m.code, label: m.label });
+    for (const m of orphans) out.push({ code: m.code, label: formatModeLabel(m) });
   }
   return out;
 }
@@ -852,7 +865,7 @@ function renderSimpleRow(op, registries) {
     ),
     el('td', { title: typeMarcheLabel }, typeMarcheLabel),
     el('td', { className: 'text-small', title: natureEcoFull }, natureEcoFull),
-    el('td', { className: 'text-small' }, modePassation?.label?.split('(')[0]?.trim() || op.modePassation || '-'),
+    el('td', { className: 'text-small', title: modePassation?.label || op.modePassation || '' }, formatModeLabel(modePassation) || op.modePassation || '-'),
     el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
     el('td', {},
       el('span', {
