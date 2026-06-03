@@ -477,7 +477,10 @@ export async function renderProcedurePV(params) {
     // Couvre ainsi PSC/PSL/PSO/AOO/PI (config explicite) ET CI/AOR/DEM/
     // ENTENTE_DIRECTE qui n'ont pas info_lots configuré dans rules-config.
     const lotsContainer = document.getElementById('lots-container');
-    const shouldShowLots = mode && mode !== 'PSD';
+    // Modif #108 — C-10 : le gré à gré / entente directe est une attribution
+    // directe (pas de PV, pas de notion de lot) → pas de section lots.
+    // (Codes data : ENTENTE_DIRECTE et GRE.)
+    const shouldShowLots = mode && !['PSD', 'ENTENTE_DIRECTE', 'GRE'].includes(mode);
     if (shouldShowLots) {
       lotsContainer.innerHTML = '';
 
@@ -568,6 +571,9 @@ export async function renderProcedurePV(params) {
       lotsContainer.innerHTML = '';
       lotsState = [];
     }
+
+    // Modif #108 — C-5 : applique l'état initial « sans CF » (PSD/PSC).
+    applySansCFVisibility();
   }
 }
 
@@ -590,7 +596,7 @@ export async function renderProcedurePV(params) {
 // Modif #106 — C-2/C-3 : options de la pièce d'engagement selon le mode.
 // PSD/PSC/ENTENTE_DIRECTE (CF non systématique) → bon de commande / devis.
 // Concurrentiel (PSL/PSO/AOO/PI/AOR…) → courrier / mandat / PV d'ouverture.
-const MODES_PIECE_DIRECTE = ['PSD', 'PSC', 'ENTENTE_DIRECTE'];
+const MODES_PIECE_DIRECTE = ['PSD', 'PSC', 'ENTENTE_DIRECTE', 'GRE'];
 function getPieceEngagementOptions(mode) {
   return MODES_PIECE_DIRECTE.includes(mode)
     ? [
@@ -613,6 +619,8 @@ function renderPieceEngagementBlock(mode, existingProc) {
   const pe = existingProc.pieceEngagement || {};
   const isDirect = MODES_PIECE_DIRECTE.includes(mode);
   const opts = getPieceEngagementOptions(mode);
+  // Modif #108 — C-5 : « contractualisation sans CF » réservée aux PSD/PSC.
+  const allowSansCF = ['PSD', 'PSC'].includes(mode);
 
   const typeSelect = el('select', { className: 'form-input', id: 'eng-type' }, [
     el('option', { value: '' }, '-- Sélectionner --'),
@@ -654,9 +662,32 @@ function renderPieceEngagementBlock(mode, existingProc) {
           el('input', { type: 'file', className: 'form-input', id: 'eng-doc', accept: '.pdf' }),
           pe.doc ? el('small', { className: 'text-success' }, `✓ ${pe.doc}`) : null
         ])
-      ])
+      ]),
+      // Modif #108 — C-5 : option « sans CF » (PSD/PSC) — allège la saisie.
+      allowSansCF ? el('div', { className: 'form-field', style: { marginTop: '14px', borderTop: '1px dashed #e5e7eb', paddingTop: '12px' } }, [
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+          (() => { const cb = el('input', { type: 'checkbox', id: 'proc-sans-cf', onchange: () => applySansCFVisibility() }); cb.checked = !!existingProc.sansCF; return cb; })(),
+          el('span', {}, "Contractualisation sans CF (le Contrôleur Financier n'est pas impliqué)")
+        ]),
+        el('small', { className: 'text-muted' }, 'Allège la saisie : masque les soumissionnaires, les lots et la réserve CF.')
+      ]) : null
     ])
   ]);
+}
+
+/**
+ * Modif #108 — C-5 : applique la visibilité « sans CF ». Quand la case est
+ * cochée (PSD/PSC sans participation du CF), on masque les sections lourdes
+ * (soumissionnaires, lots, et la réserve CF lorsqu'elle sera portée ici par
+ * E-19). Lecture directe du DOM par identifiants stables.
+ */
+function applySansCFVisibility() {
+  const cb = document.getElementById('proc-sans-cf');
+  const sansCF = !!(cb && cb.checked);
+  ['soumissionnaires-container', 'lots-container', 'reserve-cf-container'].forEach(idc => {
+    const node = document.getElementById(idc);
+    if (node) node.style.display = sansCF ? 'none' : '';
+  });
 }
 
 function renderProcedureDetailsForm(procedure, operation, registries, mode) {
@@ -1206,6 +1237,8 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   // Modif #105 — C-7/C-8 : N° dossier d'appel + allotissement (non-PSD).
   procedureData.numeroDossierAppel = document.getElementById('proc-num-dossier')?.value?.trim() || null;
   procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';
+  // Modif #108 — C-5 : indicateur « contractualisation sans CF » (PSD/PSC).
+  procedureData.sansCF = !!document.getElementById('proc-sans-cf')?.checked;
   // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (doc préservé si non ré-uploadé).
   if (document.getElementById('eng-type')) {
     procedureData.pieceEngagement = {

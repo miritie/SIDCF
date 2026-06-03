@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : gré à gré (attribution directe) + option « sans CF »
+
+> **Modif #108** — Section B, points **C-10 et C-5**.
+> - **C-10** : le **gré à gré / entente directe** (codes `ENTENTE_DIRECTE` et `GRE`) est une **attribution directe** — plus de section « Lots & procédure par lot » (donc pas de PV par lot) ; sa pièce d'engagement reste « Bon de commande / Devis ».
+> - **C-5** : pour les **PSD/PSC**, une case **« Contractualisation sans CF »** (le Contrôleur Financier n'est pas impliqué) **allège** la saisie : elle masque les soumissionnaires, les lots (et la réserve CF lorsque E-19 la portera à cette étape).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `shouldShowLots` exclut désormais `PSD`, `ENTENTE_DIRECTE`, `GRE` ;
+  - `MODES_PIECE_DIRECTE` += `GRE` ;
+  - case `#proc-sans-cf` (PSD/PSC) + `applySansCFVisibility()` (masque soumissionnaires/lots/réserve-CF) appliqué à l'init et au changement ; persistance `procedureData.sansCF`.
+
+### Impact / Anti-régression
+
+- **UI** : gré à gré sans lots ; case « sans CF » pour PSD/PSC pilotant la visibilité des sections lourdes.
+- **Données** : `sansCF` (booléen) ajouté à `MP_PROCEDURE` (JSONB — pas de migration).
+- **Vérifié (CDP)** : PSC → case présente, cochée masque soumissionnaires+lots, décochée restaure ; ENTENTE_DIRECTE → aucune carte lots.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : action « Déclarer infructueux »
 
 > **Modif #107** — Section B, points **C-4 et C-12**. La contractualisation peut ne pas aboutir à une attribution. Ajout d'un **bouton dédié « 🚫 Déclarer infructueux »** (à côté d'« Enregistrer & Continuer »), avec **confirmation**, qui sauvegarde la procédure puis pose le statut du marché à **INFRUCTUEUX**.
