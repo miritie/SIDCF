@@ -191,6 +191,10 @@ export async function renderProcedurePV(params) {
     // Derogation alert (shown dynamically)
     el('div', { id: 'derogation-alert-container' }),
 
+    // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (mise en évidence,
+    // en tête). Options selon le mode (PV/courrier/mandat ↔ bon de commande/devis).
+    el('div', { id: 'engagement-container' }),
+
     // Contextual info alert (requirements based on mode)
     el('div', { id: 'contextual-info-container' }),
 
@@ -382,11 +386,19 @@ export async function renderProcedurePV(params) {
   function updateContextualSections(mode, procedureData) {
     if (!mode) {
       // Hide all contextual sections
+      document.getElementById('engagement-container').innerHTML = '';
       document.getElementById('contextual-info-container').innerHTML = '';
       document.getElementById('procedure-details-container').innerHTML = '';
       document.getElementById('soumissionnaires-container').innerHTML = '';
       document.getElementById('lots-container').innerHTML = '';
       return;
+    }
+
+    // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (mise en évidence).
+    const engagementContainer = document.getElementById('engagement-container');
+    if (engagementContainer) {
+      engagementContainer.innerHTML = '';
+      engagementContainer.appendChild(renderPieceEngagementBlock(mode, procedureData || {}));
     }
 
     // Render procedure details form based on mode
@@ -565,6 +577,78 @@ export async function renderProcedurePV(params) {
  * - PSC: Comparaison de devis
  * - PSL/PSO/AOO/PI: Full form with COJO, dates, PV
  */
+// Modif #106 — C-2/C-3 : options de la pièce d'engagement selon le mode.
+// PSD/PSC/ENTENTE_DIRECTE (CF non systématique) → bon de commande / devis.
+// Concurrentiel (PSL/PSO/AOO/PI/AOR…) → courrier / mandat / PV d'ouverture.
+const MODES_PIECE_DIRECTE = ['PSD', 'PSC', 'ENTENTE_DIRECTE'];
+function getPieceEngagementOptions(mode) {
+  return MODES_PIECE_DIRECTE.includes(mode)
+    ? [
+        { code: 'BON_COMMANDE', label: 'Bon de commande' },
+        { code: 'DEVIS_PROFORMA', label: 'Devis / facture proforma' }
+      ]
+    : [
+        { code: 'COURRIER_INVITATION', label: "Courrier d'invitation" },
+        { code: 'MANDAT_REPRESENTATION', label: 'Mandat de représentation' },
+        { code: 'PV_OUVERTURE', label: "PV d'ouverture" }
+      ];
+}
+
+/**
+ * Modif #106 — C-2/C-3 : bloc « pièce d'engagement de l'étape », mis en
+ * évidence en tête de la contractualisation. Marque la pièce qui ouvre
+ * l'étape (et, pour un PV d'ouverture, la participation du CF au COJO/COPE).
+ */
+function renderPieceEngagementBlock(mode, existingProc) {
+  const pe = existingProc.pieceEngagement || {};
+  const isDirect = MODES_PIECE_DIRECTE.includes(mode);
+  const opts = getPieceEngagementOptions(mode);
+
+  const typeSelect = el('select', { className: 'form-input', id: 'eng-type' }, [
+    el('option', { value: '' }, '-- Sélectionner --'),
+    ...opts.map(o => el('option', { value: o.code }, o.label))
+  ]);
+  // .value après construction (évite le bug el()/attribut selected)
+  typeSelect.value = pe.type || '';
+
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '24px', border: '2px solid #0d6efd', boxShadow: '0 0 0 3px rgba(13,110,253,0.08)' }
+  }, [
+    el('div', { className: 'card-header', style: { background: '#eff6ff' } }, [
+      el('h3', { className: 'card-title', style: { color: '#1e3a8a' } }, "🚀 Pièce d'engagement de l'étape")
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+        el('div', { className: 'alert-icon' }, 'ℹ️'),
+        el('div', { className: 'alert-content' },
+          isDirect
+            ? 'Pour ce mode (PSD/PSC/entente directe), la contractualisation débute par la prise en compte du bon de commande ou du devis / facture proforma.'
+            : "La contractualisation débute par le courrier d'invitation, le mandat de représentation ou le PV d'ouverture. Le PV d'ouverture capte la participation du CF au COJO/COPE.")
+      ]),
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Type de pièce'),
+          typeSelect
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'N° / Référence'),
+          el('input', { type: 'text', className: 'form-input', id: 'eng-ref', value: pe.reference || '', placeholder: 'Réf. de la pièce' })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Date'),
+          el('input', { type: 'date', className: 'form-input', id: 'eng-date', value: pe.date ? pe.date.split('T')[0] : '' })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Pièce jointe (PDF)'),
+          el('input', { type: 'file', className: 'form-input', id: 'eng-doc', accept: '.pdf' }),
+          pe.doc ? el('small', { className: 'text-success' }, `✓ ${pe.doc}`) : null
+        ])
+      ])
+    ])
+  ]);
+}
+
 function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   const existingProc = procedure || {};
 
@@ -1107,6 +1191,17 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   // Modif #105 — C-7/C-8 : N° dossier d'appel + allotissement (non-PSD).
   procedureData.numeroDossierAppel = document.getElementById('proc-num-dossier')?.value?.trim() || null;
   procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';
+  // Modif #106 — C-2/C-3 : pièce d'engagement de l'étape (doc préservé si non ré-uploadé).
+  if (document.getElementById('eng-type')) {
+    procedureData.pieceEngagement = {
+      type: document.getElementById('eng-type')?.value || null,
+      reference: document.getElementById('eng-ref')?.value?.trim() || null,
+      date: document.getElementById('eng-date')?.value || null,
+      doc: document.getElementById('eng-doc')?.files?.[0]
+        ? 'ENGAGEMENT_' + Date.now() + '.pdf'
+        : (existingProc?.pieceEngagement?.doc || null)
+    };
+  }
 
   // Merge with existing data if updating (préserve documents PSD/PSC/dossier
   // si non ré-uploadés). La logique per-lot pour les PVs/dates est gérée par

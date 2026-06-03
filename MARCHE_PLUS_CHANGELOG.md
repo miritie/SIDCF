@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : bloc « Pièce d'engagement de l'étape »
+
+> **Modif #106** — Section B, points **C-2 et C-3**. Ajout en **tête de l'étape** d'un bloc **« Pièce d'engagement de l'étape »** mis en évidence (bordure bleue). Il marque la pièce qui ouvre la contractualisation, avec **type / référence / date / pièce jointe**. Les types proposés s'adaptent au mode : **Courrier d'invitation · Mandat de représentation · PV d'ouverture** pour les modes concurrentiels (le PV capte la participation du CF au COJO/COPE) ; **Bon de commande · Devis / facture proforma** pour **PSD/PSC/entente directe** (CF non systématique).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - nouveau conteneur `#engagement-container` (en tête, après la dérogation) ;
+  - `getPieceEngagementOptions(mode)` + `renderPieceEngagementBlock(mode, existingProc)` ;
+  - persistance `procedureData.pieceEngagement = { type, reference, date, doc }` (doc préservé si non ré-uploadé).
+
+### Impact / Anti-régression
+
+- **UI** : bloc proéminent supplémentaire en tête ; les formulaires par mode existants restent inchangés (consolidation fine repoussée à la vague C-11).
+- **Données** : champ `pieceEngagement` ajouté à `MP_PROCEDURE` (JSONB — pas de migration).
+- **Vérifié (CDP)** : bloc présent et mis en évidence, options concurrentielles (courrier/mandat/PV), champs référence/date/upload.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : N° dossier d'appel + Allotissement (Lot unique / Lots multiples)
 
 > **Modif #105** — Section B, points **C-7 et C-8**. Ajout d'une carte **« Organisation du marché »** (modes hors PSD) avec le **N° du dossier d'appel** et un sélecteur **Allotissement**. Le choix pilote le widget lots : **Lot unique** → saisie directe simplifiée (pas de numérotation « Lot N », pas de contrôle « Nombre de lots ») ; **Lots multiples** → comportement historique (nombre de lots + cartes numérotées, N° de lot devant chaque objet/libellé).
