@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : attributaire SÉLECTIONNÉ + case « sans CF » relocalisée
+
+> **Modif #114** — Retour métier (2 points) :
+> - **Attribution** : l'attributaire n'est **jamais saisi**, il est **SÉLECTIONNÉ**. Les champs libres « raison sociale » + « NCC » sont remplacés par un **sélecteur d'entreprise** ; le **NCC est déduit** automatiquement. Source : la **liste restreinte** si une procédure d'AMI l'a définie en amont (cas DP) ; **sinon toutes les entreprises** de la base (`MP_ENTREPRISE`). Le montant attribué est conservé (contrôlé à l'enregistrement). L'enregistrement réutilisera cette désignation.
+> - **« Pièces à joindre » / PSD-PSC** : la case **« Contractualisation sans CF »** est déplacée **dans le formulaire du mode** (à côté du bon de commande / devis), et le bloc « Pièces à joindre » **ne s'affiche plus pour PSD/PSC** (il n'avait pas de pièce → trompeur : « comment charger la pièce ? »). Le document se charge via le BC/devis du formulaire.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `renderAttributionBlock(existingProc, candidates)` — `<select>` d'entreprises (liste restreinte ou `MP_ENTREPRISE` chargé async), NCC `readonly` auto-déduit ;
+  - call sites mis à jour (DP → liste restreinte ; sinon toutes entreprises) ; persistance `attribution` lue depuis `#proc-attr-select` ;
+  - `_sansCFField()` injecté dans les formulaires PSD et PSC ; retiré de `renderPiecesAJoindreBlock` (qui retourne `null` pour PSD/PSC).
+
+### Impact / Anti-régression
+
+- **UI** : attributaire choisi dans une liste (plus de saisie libre) ; NCC non saisissable. PSD/PSC : case sans-CF dans le formulaire, plus de bloc « Pièces à joindre » vide.
+- **Données** : `attribution = { raisonSociale, ncc, montantAttribue }` inchangé en forme.
+- **Vérifié (CDP)** : AOO → 33 entreprises sélectionnables, NCC auto à la sélection ; PSD/PSC → sans-CF dans le formulaire, pas de bloc pièces ; PI/DP → sélecteur présent ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : refonte du bloc en « Pièces à joindre (facultatif) »
 
 > **Modif #113** — Retour métier sur l'ancien bloc « Pièce d'engagement de l'étape » (#106) : ces pièces **ne sont pas indispensables**, **plusieurs peuvent coexister** (courrier **ET** mandat — pas un choix exclusif), et **le PV d'ouverture est déjà saisi au niveau du lot** (donc retiré d'ici). Le bloc devient **« 📎 Pièces à joindre (facultatif) »**, sobre, avec des **uploads indépendants** :

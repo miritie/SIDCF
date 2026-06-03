@@ -605,16 +605,18 @@ export async function renderProcedurePV(params) {
         if (sub === 'AMI_CABINET') {
           if (lrContainer) lrContainer.appendChild(renderListeRestreinteBlock(procedureData?.listeRestreinte, false));
         } else {
-          if (attributionContainer) attributionContainer.appendChild(renderAttributionBlock(mode, procedureData || {}));
-          if (sub === 'DP' && Array.isArray(procedureData?.listeRestreinte) && procedureData.listeRestreinte.length) {
-            if (lrContainer) lrContainer.appendChild(renderListeRestreinteBlock(procedureData.listeRestreinte, true));
-          }
+          // DP : l'attributaire se choisit DANS la liste restreinte ; AMI CV : parmi toutes les entreprises.
+          const lr = (sub === 'DP' && Array.isArray(procedureData?.listeRestreinte) && procedureData.listeRestreinte.length)
+            ? procedureData.listeRestreinte : null;
+          if (attributionContainer) attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, lr));
+          if (lr && lrContainer) lrContainer.appendChild(renderListeRestreinteBlock(lr, true));
         }
       };
       if (piContainer) piContainer.appendChild(renderPISubprocSelector(initialSub, applyPI));
       applyPI(initialSub);
     } else if (attributionContainer) {
-      attributionContainer.appendChild(renderAttributionBlock(mode, procedureData || {}));
+      // Hors PI : sélection parmi toutes les entreprises.
+      attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, null));
     }
 
     // Modif #108 — C-5 : applique l'état initial « sans CF » (PSD/PSC).
@@ -652,7 +654,6 @@ const MODES_CONTRAT_DIRECT = ['CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCT
  */
 function renderPiecesAJoindreBlock(mode, existingProc) {
   const pj = existingProc.piecesJointes || {};
-  const allowSansCF = ['PSD', 'PSC'].includes(mode);
   const isContrat = MODES_CONTRAT_DIRECT.includes(mode);
   const isDirectSimple = ['PSD', 'PSC', 'ENTENTE_DIRECTE', 'GRE'].includes(mode);
 
@@ -670,40 +671,45 @@ function renderPiecesAJoindreBlock(mode, existingProc) {
     ];
   }
 
-  if (slots.length === 0 && !allowSansCF) return null;
+  if (slots.length === 0) return null;
 
-  const body = [];
-  if (slots.length > 0) {
-    body.push(el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+  const body = [
+    el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
       el('div', { className: 'alert-icon' }, 'ℹ️'),
       el('div', { className: 'alert-content' },
         isContrat
           ? 'Attribution directe : chargez le document du contrat.'
           : 'Pièces facultatives à joindre au marché (vous pouvez en joindre plusieurs).')
-    ]));
-    body.push(el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } },
+    ]),
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } },
       slots.map(s => el('div', { className: 'form-field' }, [
         el('label', { className: 'form-label' }, s.label),
         el('input', { type: 'file', className: 'form-input', id: s.id, accept: '.pdf' }),
         s.doc ? el('small', { className: 'text-success' }, `✓ ${s.doc}`) : null
       ]))
-    ));
-  }
-  if (allowSansCF) {
-    body.push(el('div', { className: 'form-field', style: { marginTop: slots.length ? '14px' : '0', borderTop: slots.length ? '1px dashed #e5e7eb' : 'none', paddingTop: slots.length ? '12px' : '0' } }, [
-      el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
-        (() => { const cb = el('input', { type: 'checkbox', id: 'proc-sans-cf', onchange: () => applySansCFVisibility() }); cb.checked = !!existingProc.sansCF; return cb; })(),
-        el('span', {}, "Contractualisation sans CF (le Contrôleur Financier n'est pas impliqué)")
-      ]),
-      el('small', { className: 'text-muted' }, 'Allège la saisie : masque les soumissionnaires, les lots et la réserve CF.')
-    ]));
-  }
+    )
+  ];
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, isContrat ? '📄 Document du contrat' : '📎 Pièces à joindre (facultatif)')
     ]),
     el('div', { className: 'card-body' }, body)
+  ]);
+}
+
+/**
+ * Modif #114 — C-5 : champ « Contractualisation sans CF » (PSD/PSC), désormais
+ * porté par le formulaire du mode (à côté du document), et non plus par le bloc
+ * « Pièces à joindre » (qui était vide/trompeur pour ces modes).
+ */
+function _sansCFField(existingProc) {
+  return el('div', { className: 'form-field', style: { marginTop: '16px', borderTop: '1px dashed #e5e7eb', paddingTop: '12px' } }, [
+    el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+      (() => { const cb = el('input', { type: 'checkbox', id: 'proc-sans-cf', onchange: () => applySansCFVisibility() }); cb.checked = !!existingProc.sansCF; return cb; })(),
+      el('span', {}, "Contractualisation sans CF (le Contrôleur Financier n'est pas impliqué)")
+    ]),
+    el('small', { className: 'text-muted' }, 'Allège la saisie : masque les soumissionnaires, les lots et la réserve CF.')
   ]);
 }
 
@@ -723,14 +729,51 @@ function applySansCFVisibility() {
 }
 
 /**
- * Modif #109 — C-11 vague 1 : bloc « Attribution » (issue de la
- * contractualisation). Désigne l'attributaire (raison sociale + NCC) et le
- * montant attribué — repris et contrôlé à l'enregistrement du marché approuvé.
- * Affiché pour tous les modes concluant par une attribution (pas l'AMI/PI,
- * dont l'issue « liste restreinte » sera traitée en vague 3 / C-9).
+ * Modif #114 — Retour métier : l'attributaire n'est jamais SAISI, il est
+ * SÉLECTIONNÉ. Source : la liste restreinte (si une procédure d'AMI l'a
+ * définie en amont) sinon TOUTES les entreprises de la base (`MP_ENTREPRISE`).
+ * Le NCC est déduit de l'entreprise choisie. On conserve le montant attribué.
+ * @param {object} existingProc
+ * @param {Array|null} candidates  liste restreinte [{raisonSociale, ncc}] ou null
+ *                                 (null = charger toutes les entreprises async)
  */
-function renderAttributionBlock(mode, existingProc) {
+function renderAttributionBlock(existingProc, candidates) {
   const a = existingProc.attribution || {};
+
+  const nccDisplay = el('input', { type: 'text', className: 'form-input', id: 'proc-attr-ncc', value: a.ncc || '', placeholder: 'Auto (selon l\'entreprise)' });
+  nccDisplay.readOnly = true;
+
+  const sel = el('select', { className: 'form-input', id: 'proc-attr-select', onchange: (e) => {
+    const opt = e.target.selectedOptions[0];
+    nccDisplay.value = opt ? (opt.getAttribute('data-ncc') || '') : '';
+  } }, [el('option', { value: '' }, "— Sélectionner l'attributaire —")]);
+
+  const addOpt = (rs, ncc) => {
+    if (!rs) return;
+    const o = document.createElement('option');
+    o.value = rs;
+    o.setAttribute('data-ncc', ncc || '');
+    o.textContent = `${rs}${ncc ? ' — NCC ' + ncc : ''}`;
+    sel.appendChild(o);
+  };
+
+  const restreinte = Array.isArray(candidates);
+  if (restreinte) {
+    candidates.forEach(c => addOpt(c.raisonSociale, c.ncc));
+    if (a.raisonSociale && !candidates.some(c => c.raisonSociale === a.raisonSociale)) addOpt(a.raisonSociale, a.ncc);
+    sel.value = a.raisonSociale || '';
+  } else {
+    // garde l'attributaire déjà choisi en attendant le chargement
+    if (a.raisonSociale) { addOpt(a.raisonSociale, a.ncc); sel.value = a.raisonSociale; }
+    dataService.query(ENTITIES.MP_ENTREPRISE).then(list => {
+      (list || [])
+        .slice()
+        .sort((x, y) => (x.raisonSociale || '').localeCompare(y.raisonSociale || ''))
+        .forEach(e => { if (e.raisonSociale && e.raisonSociale !== a.raisonSociale) addOpt(e.raisonSociale, e.ncc); });
+      sel.value = a.raisonSociale || '';
+    }).catch(() => {});
+  }
+
   return el('div', { className: 'card', style: { marginBottom: '24px', border: '1px solid #16a34a' } }, [
     el('div', { className: 'card-header', style: { background: '#f0fdf4' } }, [
       el('h3', { className: 'card-title', style: { color: '#166534' } }, "🏆 Attribution de la contractualisation")
@@ -739,16 +782,18 @@ function renderAttributionBlock(mode, existingProc) {
       el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
         el('div', { className: 'alert-icon' }, 'ℹ️'),
         el('div', { className: 'alert-content' },
-          "Désignez l'attributaire et le montant attribué. Ce montant sera contrôlé à l'enregistrement du marché approuvé (alerte en cas d'écart).")
+          restreinte
+            ? "Sélectionnez l'attributaire dans la liste restreinte issue de l'AMI, puis le montant attribué (contrôlé à l'enregistrement)."
+            : "Sélectionnez l'attributaire parmi les entreprises, puis le montant attribué. Ce montant sera contrôlé à l'enregistrement du marché approuvé (alerte en cas d'écart).")
       ]),
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
         el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, 'Attributaire (raison sociale)'),
-          el('input', { type: 'text', className: 'form-input', id: 'proc-attr-rs', value: a.raisonSociale || '', placeholder: "Entreprise attributaire" })
+          el('label', { className: 'form-label' }, restreinte ? 'Attributaire (liste restreinte)' : 'Attributaire'),
+          sel
         ]),
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, 'NCC'),
-          el('input', { type: 'text', className: 'form-input', id: 'proc-attr-ncc', value: a.ncc || '', placeholder: 'N° Compte Contribuable' })
+          nccDisplay
         ]),
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, 'Montant attribué (XOF)'),
@@ -936,7 +981,8 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             }),
             existingProc.docBC ? el('small', { className: 'text-success' }, `✓ ${existingProc.docBC}`) : null
           ])
-        ])
+        ]),
+        mode === 'PSD' ? _sansCFField(existingProc) : null
       ])
     ]);
   }
@@ -1033,7 +1079,8 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             }),
             existingProc.noteSelection ? el('small', { className: 'text-success' }, `✓ ${existingProc.noteSelection}`) : null
           ])
-        ])
+        ]),
+        mode === 'PSC' ? _sansCFField(existingProc) : null
       ])
     ]);
   }
@@ -1427,11 +1474,12 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';
   // Modif #108 — C-5 : indicateur « contractualisation sans CF » (PSD/PSC).
   procedureData.sansCF = !!document.getElementById('proc-sans-cf')?.checked;
-  // Modif #109 — C-11 vague 1 : attribution (attributaire + NCC + montant attribué).
-  if (document.getElementById('proc-attr-rs')) {
+  // Modif #109/#114 — attribution : attributaire SÉLECTIONNÉ (raison sociale +
+  // NCC déduit) + montant attribué.
+  if (document.getElementById('proc-attr-select')) {
     const montantAttr = document.getElementById('proc-attr-montant')?.value;
     procedureData.attribution = {
-      raisonSociale: document.getElementById('proc-attr-rs')?.value?.trim() || null,
+      raisonSociale: document.getElementById('proc-attr-select')?.value?.trim() || null,
       ncc: document.getElementById('proc-attr-ncc')?.value?.trim() || null,
       montantAttribue: montantAttr ? Number(montantAttr) : null
     };
