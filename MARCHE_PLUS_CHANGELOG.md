@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Liste PPM : 6e carte KPI « Résilié »
+
+> **Modif #97** — CR « OBSERVATIONS SUR LES ECRANS » du 01/06/2026, point **P-1**. Le total planifié affiché (33) ne correspondait pas à la somme des cartes KPI (7+4+10+7+4 = 32) : les marchés au statut **RESILIE** n'étaient comptés dans aucune carte de phase. Ajout d'une **6e carte « Résilié »** (états `['RESILIE']`) → couverture complète des états « cycle de vie », somme des cartes = total.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : ajout d'une entrée à `PHASES` (`key:'resilie'`, icône ⛔, couleur `#dc3545`).
+
+### Impact / Anti-régression
+
+- **UI** : une carte KPI supplémentaire sur la rangée des phases.
+- **Donnée / Worker / DB** : ❌ aucun changement (calcul KPI local).
+- *NB* : le statut INFRUCTUEUX reste hors-carte (aucune opération concernée dans le jeu courant) — à rebucketiser si besoin ultérieur.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-05-29 — Bloc dérogation : retrait du « Demandeur » + bailleur en liste déroulante
 
 > **Modif #96** — Écran Procédure (`ecr02a`), bloc « Dérogation au barème » : le champ **« Demandeur de la dérogation » est retiré** (sans objet). On conserve les deux selects **« Source de la dérogation » (État / Bailleur)** et **« Bailleur concerné »**, mais ce dernier devient une **liste déroulante** : les bailleurs **déclarés au PPM sont mis en évidence** (groupe « ★ Bailleurs du marché (planifiés) »), avec extension possible aux autres bailleurs (« Autres bailleurs »). Plus de saisie libre.

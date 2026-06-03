@@ -194,7 +194,12 @@ const PHASES = [
   { key: 'contractualisation', label: 'En Contractualisation', icon: '📝', color: 'var(--color-info)',    etats: ['EN_PROC'] },
   { key: 'attribution',        label: 'Attribué',              icon: '✅', color: '#0d6efd',              etats: ['ATTRIBUE', 'VISE'] },
   { key: 'execution',          label: 'En exécution',          icon: '⚙️', color: '#6f42c1',              etats: ['EN_EXEC'] },
-  { key: 'cloture',            label: 'Achevé',                icon: '🏁', color: 'var(--color-gray-500)', etats: ['CLOS'] }
+  { key: 'cloture',            label: 'Achevé',                icon: '🏁', color: 'var(--color-gray-500)', etats: ['CLOS'] },
+  // Modif #97 — P-1 : 6e carte « Résilié ». Sans elle, la somme des cartes
+  // (32) ne retombait pas sur le total planifié (33) car les marchés au
+  // statut RESILIE n'étaient bucketés dans aucune phase. Couverture désormais
+  // complète des états « cycle de vie ».
+  { key: 'resilie',            label: 'Résilié',               icon: '⛔', color: '#dc3545',              etats: ['RESILIE'] }
 ];
 
 // Modif #41 — Libellés des étapes Marché+ : importés depuis etat-labels-mp.js
@@ -296,7 +301,7 @@ export async function renderPPMList() {
       ])
     ]),
 
-    // Stats KPIs — total + montant (rangée 1) puis 5 phases (rangée 2)
+    // Stats KPIs — total + montant (rangée 1) puis 6 phases (rangée 2)
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '12px' } }, [
       renderKPI('Total marché planifié', stats.totalOperations, 'var(--color-primary)', '📁'),
       renderKPI('Montant total prévisionnel', money(stats.totalMontant, 'F CFA'), 'var(--color-success)', '💰')
