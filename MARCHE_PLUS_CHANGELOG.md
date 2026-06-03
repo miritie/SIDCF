@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : N° dossier d'appel + Allotissement (Lot unique / Lots multiples)
+
+> **Modif #105** — Section B, points **C-7 et C-8**. Ajout d'une carte **« Organisation du marché »** (modes hors PSD) avec le **N° du dossier d'appel** et un sélecteur **Allotissement**. Le choix pilote le widget lots : **Lot unique** → saisie directe simplifiée (pas de numérotation « Lot N », pas de contrôle « Nombre de lots ») ; **Lots multiples** → comportement historique (nombre de lots + cartes numérotées, N° de lot devant chaque objet/libellé).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : nouvelle option `allotissement` ('UNIQUE'|'MULTIPLES') — masque la numérotation et les contrôles de nombre de lots en mode unique ; libellés/aide adaptés.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : carte « Organisation du marché » (`#proc-num-dossier`, `#proc-allotissement`) + `mountLots()` qui (re)monte le widget selon l'allotissement ; persistance `procedureData.numeroDossierAppel` / `procedureData.allotissement`.
+
+### Impact / Anti-régression
+
+- **UI** : nouvelle carte + bascule. En l'absence de donnée, défaut = **Lot unique** (≥2 lots existants → MULTIPLES auto).
+- **Données** : 2 champs ajoutés à `MP_PROCEDURE` (JSONB — pas de migration). Les lots existants restent gérés à l'identique en mode multiples.
+- **Vérifié (CDP)** : carte présente, défaut Lot unique (sans contrôle de nombre), bascule Multiples (Nombre de lots + Lot 1), retour unique masque le contrôle.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : types de dossier d'appel « DP/DDP » et « TDR »
 
 > **Modif #104** — Section B, point **C-6**. Complément de la liste « Type de dossier d'appel » : ajout de **« Demande de Proposition (DP / DDP) »** et **« Termes de Référence (TDR) »**, associés aux **Prestations Intellectuelles (PI)**. (« Demande de cotation » = `DC` et « AMI » étaient déjà présents.)

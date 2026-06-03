@@ -85,12 +85,19 @@ function fmtDateForInput(iso) {
 export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) {
   const container = el('div', { className: 'lots-procedure-mp' });
   const defaultLibelle = options.defaultLibelle || '';
+  // Modif #105 — C-8 : mode d'allotissement piloté par l'écran de
+  // contractualisation. 'UNIQUE' = lot unique (saisie simple, pas de
+  // numérotation ni de gestion du nombre de lots) ; 'MULTIPLES' = N lots
+  // numérotés (comportement historique). Défaut : UNIQUE.
+  const allotissement = options.allotissement === 'MULTIPLES' ? 'MULTIPLES' : 'UNIQUE';
 
   // Initial state — au moins 1 lot
   let state = (lots && lots.length > 0
     ? lots.map((l, i) => normalizeLot(l, i, defaultLibelle))
     : [blankLot(1, defaultLibelle)]
   );
+  // En lot unique, on ne conserve que le premier lot.
+  if (allotissement === 'UNIQUE' && state.length > 1) state = state.slice(0, 1);
 
   const notify = () => { if (onChange) onChange([...state]); };
 
@@ -116,7 +123,8 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       marginBottom: '12px', borderBottom: '1px dashed #e5e7eb', paddingBottom: '8px'
     });
     const title = document.createElement('strong');
-    title.textContent = `Lot ${lot.numero}`;
+    // Modif #105 — C-8 : pas de numérotation « Lot N » en allotissement unique.
+    title.textContent = allotissement === 'UNIQUE' ? 'Lot unique' : `Lot ${lot.numero}`;
     title.style.color = '#111827';
     header.appendChild(title);
 
@@ -134,7 +142,7 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       notify();
       render();
     });
-    if (state.length <= 1) removeBtn.style.visibility = 'hidden';
+    if (allotissement === 'UNIQUE' || state.length <= 1) removeBtn.style.visibility = 'hidden';
     header.appendChild(removeBtn);
     card.appendChild(header);
 
@@ -288,7 +296,9 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     });
 
     const titleEl = document.createElement('strong');
-    titleEl.textContent = `Lots & procédure par lot (${state.length})`;
+    titleEl.textContent = allotissement === 'UNIQUE'
+      ? 'Lot unique'
+      : `Lots & procédure par lot (${state.length})`;
     titleEl.style.color = '#111827';
     topBar.appendChild(titleEl);
 
@@ -296,49 +306,53 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     filler.style.flex = '1';
     topBar.appendChild(filler);
 
-    const genLabel = document.createElement('label');
-    genLabel.textContent = 'Nombre de lots :';
-    Object.assign(genLabel.style, { fontSize: '13px', color: '#6b7280' });
-    topBar.appendChild(genLabel);
+    // Modif #105 — C-8 : contrôles de gestion du nombre de lots réservés au
+    // mode « lots multiples ». En lot unique, la saisie est directe (1 carte).
+    if (allotissement === 'MULTIPLES') {
+      const genLabel = document.createElement('label');
+      genLabel.textContent = 'Nombre de lots :';
+      Object.assign(genLabel.style, { fontSize: '13px', color: '#6b7280' });
+      topBar.appendChild(genLabel);
 
-    const countInput = document.createElement('input');
-    countInput.type = 'number';
-    countInput.min = '1';
-    countInput.max = '20';
-    countInput.value = state.length;
-    countInput.className = 'form-input';
-    Object.assign(countInput.style, { width: '70px', padding: '4px 8px' });
-    topBar.appendChild(countInput);
+      const countInput = document.createElement('input');
+      countInput.type = 'number';
+      countInput.min = '1';
+      countInput.max = '20';
+      countInput.value = state.length;
+      countInput.className = 'form-input';
+      Object.assign(countInput.style, { width: '70px', padding: '4px 8px' });
+      topBar.appendChild(countInput);
 
-    const setBtn = document.createElement('button');
-    setBtn.type = 'button';
-    setBtn.className = 'btn btn-sm btn-secondary';
-    setBtn.textContent = 'Définir';
-    setBtn.title = 'Ajuste le nombre total de lots (préserve les lots existants en tête)';
-    setBtn.addEventListener('click', () => {
-      const n = Math.max(1, Math.min(20, Math.floor(Number(countInput.value) || 1)));
-      if (n > state.length) {
-        for (let i = state.length; i < n; i++) {
-          state.push(blankLot(i + 1, ''));
+      const setBtn = document.createElement('button');
+      setBtn.type = 'button';
+      setBtn.className = 'btn btn-sm btn-secondary';
+      setBtn.textContent = 'Définir';
+      setBtn.title = 'Ajuste le nombre total de lots (préserve les lots existants en tête)';
+      setBtn.addEventListener('click', () => {
+        const n = Math.max(1, Math.min(20, Math.floor(Number(countInput.value) || 1)));
+        if (n > state.length) {
+          for (let i = state.length; i < n; i++) {
+            state.push(blankLot(i + 1, ''));
+          }
+        } else if (n < state.length) {
+          state = state.slice(0, n);
         }
-      } else if (n < state.length) {
-        state = state.slice(0, n);
-      }
-      notify();
-      render();
-    });
-    topBar.appendChild(setBtn);
+        notify();
+        render();
+      });
+      topBar.appendChild(setBtn);
 
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.className = 'btn btn-sm btn-accent';
-    addBtn.textContent = '+ Ajouter un lot';
-    addBtn.addEventListener('click', () => {
-      state.push(blankLot(state.length + 1, ''));
-      notify();
-      render();
-    });
-    topBar.appendChild(addBtn);
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'btn btn-sm btn-accent';
+      addBtn.textContent = '+ Ajouter un lot';
+      addBtn.addEventListener('click', () => {
+        state.push(blankLot(state.length + 1, ''));
+        notify();
+        render();
+      });
+      topBar.appendChild(addBtn);
+    }
 
     container.appendChild(topBar);
 
@@ -349,8 +363,8 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       padding: '6px 10px', background: '#f9fafb', borderRadius: '4px',
       borderLeft: '3px solid #9ca3af'
     });
-    help.innerHTML = state.length === 1
-      ? 'Pour un projet à <strong>un seul lot</strong>, le libellé du lot prend par défaut le nom du marché. Tous les champs sont optionnels.'
+    help.innerHTML = allotissement === 'UNIQUE'
+      ? 'Marché à <strong>lot unique</strong> : renseignez les champs ci-dessous (le libellé prend par défaut le nom du marché). Tous les champs sont optionnels.'
       : `Le projet est constitué de <strong>${state.length} lots</strong>. Chaque lot a sa propre procédure (offres, dates, PVs). Tous les champs sont optionnels.`;
     container.appendChild(help);
 

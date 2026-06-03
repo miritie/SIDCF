@@ -476,6 +476,58 @@ export async function renderProcedurePV(params) {
         }];
       }
 
+      // Modif #105 — C-7/C-8 : carte « Organisation du marché » avec le
+      // N° du dossier d'appel et le sélecteur d'allotissement (Lot unique /
+      // Lots multiples) qui pilote le widget lots juste en dessous.
+      let allotissement = procedureData?.allotissement
+        || ((initialLots && initialLots.length > 1) ? 'MULTIPLES' : 'UNIQUE');
+
+      // (Re)monte le widget lots selon le mode d'allotissement courant.
+      const mountLots = (allot) => {
+        allotissement = allot;
+        const root = document.getElementById('lots-widget-root');
+        if (!root) return;
+        root.innerHTML = '';
+        const widget = renderLotsProcedureMP(
+          initialLots || [],
+          { defaultLibelle: operation.objet || '', allotissement: allot },
+          (updated) => { lotsState = updated; }
+        );
+        root.appendChild(widget);
+        lotsState = (initialLots && initialLots.length > 0)
+          ? (allot === 'UNIQUE' ? initialLots.slice(0, 1) : initialLots)
+          : [{ numero: 1, libelle: operation.objet || '', nbOffresRecues: 0, nbOffresClassees: 0, dates: {}, pv: {} }];
+      };
+
+      const orgCard = el('div', { className: 'card', style: { marginBottom: '16px' } }, [
+        el('div', { className: 'card-header' }, [
+          el('h3', { className: 'card-title' }, '🗂️ Organisation du marché')
+        ]),
+        el('div', { className: 'card-body' }, [
+          el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, 'N° du dossier d\'appel'),
+              el('input', {
+                type: 'text', className: 'form-input', id: 'proc-num-dossier',
+                placeholder: 'Ex: DAO-2024-007',
+                value: procedureData?.numeroDossierAppel || ''
+              })
+            ]),
+            el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, 'Allotissement'),
+              el('select', {
+                className: 'form-input', id: 'proc-allotissement',
+                onchange: (e) => mountLots(e.target.value)
+              }, [
+                el('option', { value: 'UNIQUE' }, 'Lot unique'),
+                el('option', { value: 'MULTIPLES' }, 'Lots multiples')
+              ])
+            ])
+          ])
+        ])
+      ]);
+      lotsContainer.appendChild(orgCard);
+
       const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
         el('div', { className: 'card-header' }, [
           el('h3', { className: 'card-title' }, '📦 Lots & procédure par lot')
@@ -484,19 +536,12 @@ export async function renderProcedurePV(params) {
           el('div', { id: 'lots-widget-root' })
         ])
       ]);
-
       lotsContainer.appendChild(card);
 
-      const widget = renderLotsProcedureMP(
-        initialLots || [],
-        { defaultLibelle: operation.objet || '' },
-        (updated) => { lotsState = updated; }
-      );
-      document.getElementById('lots-widget-root').appendChild(widget);
-      // Initialise lotsState avec la valeur courante (le widget le settera aussi via onChange dès la 1ʳᵉ interaction)
-      lotsState = initialLots && initialLots.length > 0
-        ? initialLots
-        : [{ numero: 1, libelle: operation.objet || '', nbOffresRecues: 0, nbOffresClassees: 0, dates: {}, pv: {} }];
+      // Pose la valeur du select via .value (évite le bug el()/selected) puis monte.
+      const allotSelect = document.getElementById('proc-allotissement');
+      if (allotSelect) allotSelect.value = allotissement;
+      mountLots(allotissement);
     } else {
       lotsContainer.innerHTML = '';
       lotsState = [];
@@ -1059,6 +1104,9 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
 
   procedureData.soumissionnaires = soumissionnaires;
   procedureData.lots = lots;
+  // Modif #105 — C-7/C-8 : N° dossier d'appel + allotissement (non-PSD).
+  procedureData.numeroDossierAppel = document.getElementById('proc-num-dossier')?.value?.trim() || null;
+  procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';
 
   // Merge with existing data if updating (préserve documents PSD/PSC/dossier
   // si non ré-uploadés). La logique per-lot pour les PVs/dates est gérée par
