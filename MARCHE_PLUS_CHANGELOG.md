@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Fiche de vie : montant de base « HT null » corrigé (Section C lot 2)
+
+> **Modif #117** — Section C, **lot 2** (montants), points **E-7 / E-8 / E-17**. Sur le récap « Montant du marché de base » (fiche de vie, en haut à droite), le **HT s'affichait à 0 (« null »)** quand seul le TTC était connu — car, contrairement au TTC (qui retombe sur le montant prévisionnel), le HT n'avait **aucun fallback**. Il est désormais **dérivé du TTC** (selon l'exonération) → montant de base cohérent et dynamique. Le séparateur de milliers (E-17) était déjà appliqué par `money()` ; il apparaît dès lors que le HT a une valeur.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` : `montantHT = montants.ht || (montantTTC ? round(montantTTC / (exonéré ? 1 : 1.18)) : 0)`.
+
+### Impact / Anti-régression
+
+- **UI** : le HT du récap reflète toujours une valeur cohérente (HT ≈ TTC/1,18 ou = TTC si exonéré), avec séparateur de milliers.
+- **DB / Worker** : ❌ aucun changement (calcul d'affichage).
+- **Vérifié (CDP)** : « 6 779 661 XOF HT · 8 000 000 XOF TTC », « 5 084 746 XOF HT · 6 000 000 XOF TTC » ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Enregistrement : Section C lot 1 (libellés)
 
 > **Modif #116** — Section C (Enregistrement, `ecr03a`), **lot 1 — libellés** :

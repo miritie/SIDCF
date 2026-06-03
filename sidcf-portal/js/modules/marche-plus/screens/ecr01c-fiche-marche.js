@@ -217,8 +217,13 @@ function renderHeaderSticky(operation, registries, fullData, currentLotId, lots,
   const attributionScoped = currentLotId && currentLotId !== 'ALL'
     ? getLotData(attributionRaw, currentLotId)
     : attributionRaw;
-  const montantHT = Number(attributionScoped?.montants?.ht) || 0;
+  // Modif #117 (E-7/E-8) — le HT n'a jamais de fallback et tombait à 0 (« null »)
+  // quand seul le TTC était connu. On le dérive du TTC (selon exonération) pour
+  // afficher un montant de base cohérent et dynamique à toutes les étapes.
+  const exonereMarche = attributionScoped?.exonereTVA === true;
   const montantTTC = Number(attributionScoped?.montants?.ttc) || Number(operation.montantPrevisionnel) || 0;
+  const montantHT = Number(attributionScoped?.montants?.ht)
+    || (montantTTC ? Math.round(montantTTC / (exonereMarche ? 1 : 1.18)) : 0);
 
   const ordresServiceAll = fullData.ordresService || [];
   const ordresService = currentLotId && currentLotId !== 'ALL'
