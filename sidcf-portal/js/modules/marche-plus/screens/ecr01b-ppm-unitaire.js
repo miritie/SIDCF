@@ -145,6 +145,7 @@ function getRouteForEtape(etat) {
     case 'CLOS':
     case 'CLOTURE':     return '/mp/cloture';     // CLOTURE = code legacy
     case 'RESILIE':     return '/mp/cloture';     // fin de vie : on va à la clôture
+    case 'SUSPENDU':    return '/mp/fiche-marche'; // Modif #99 / P-7 — difficulté : consultation/édition via la fiche de vie (P-6)
     case 'INFRUCTUEUX': return '/mp/attribution'; // écran d'enregistrement (lot 6)
     default:            return '/mp/fiche-marche';
   }

@@ -741,6 +741,7 @@
     { "code": "ATTRIBUE", "label": "Attribué", "color": "warning" },
     { "code": "VISE", "label": "Visé", "color": "primary" },
     { "code": "EXECUTION", "label": "En exécution", "color": "primary" },
+    { "code": "SUSPENDU", "label": "Suspendu", "color": "warning" },
     { "code": "INFRUCTUEUX", "label": "Infructueux", "color": "warning" },
     { "code": "RESILIE", "label": "Résilié", "color": "error" },
     { "code": "CLOS", "label": "Clôturé", "color": "success" }

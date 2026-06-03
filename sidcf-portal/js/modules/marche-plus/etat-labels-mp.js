@@ -30,6 +30,7 @@ export const ETAT_LABEL_MP = {
   CLOS:        'Achevé',
   CLOTURE:     'Achevé',         // legacy
   RESILIE:     'Résilié',
+  SUSPENDU:    'Suspendu',       // Modif #99 / P-7 — statut de difficulté
   INFRUCTUEUX: 'Infructueux'
 };
 

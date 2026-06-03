@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Statut « Suspendu » ajouté au référentiel des états
+
+> **Modif #99** — CR du 01/06/2026, point **P-7** (et préparation de P-6). Ajout du statut **« Suspendu »** au référentiel des états du marché : il apparaît désormais dans le **filtre « Statut du marché »** de la liste PPM et dispose de son **libellé Marché+**. L'action « Voir » route un marché suspendu vers sa **fiche de vie** (consultation/édition — point P-6). Le positionnement effectif du statut SUSPENDU sera câblé avec le bloc « difficultés » (points E-2/E-3, section C).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : `ETAT_MARCHE` += `{ "code": "SUSPENDU", "label": "Suspendu", "color": "warning" }`.
+- `sidcf-portal/js/modules/marche-plus/etat-labels-mp.js` : `ETAT_LABEL_MP.SUSPENDU = 'Suspendu'`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : `getRouteForEtape('SUSPENDU')` → fiche de vie.
+
+### Impact / Anti-régression
+
+- **UI** : un état de plus dans le filtre « Statut du marché » ; libellé homogène partout.
+- **Cache** : les référentiels sont lus depuis `registries.json` à chaque session (le cache `localStorage` `sidcf_registries` n'est écrit que par une action admin `updateRegistry`, absente en usage normal). Si un poste a un cache obsolète, vider `sidcf_registries`.
+- **DB / Worker** : ❌ aucun changement.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Statut du marché : « Approuvé » → « Attribué/Approuvé »
 
 > **Modif #98** — CR du 01/06/2026, point **P-5**. Le client rejette le statut « Approuvé » seul : un marché enregistré est **d'office attribué ET approuvé / visé CF**. Le libellé de l'état `VISE` passe donc de **« Approuvé »** à **« Attribué/Approuvé »**.
