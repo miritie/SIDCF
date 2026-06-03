@@ -819,20 +819,8 @@ function renderInfosMarcheSection(existingAttr, operation) {
           ])
         ])
       ]),
-      // Exonération de TVA
-      el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
-        el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
-          (() => {
-            const cb = el('input', { type: 'checkbox', id: 'attr-exonere-tva' });
-            cb.checked = exonere;
-            cb.addEventListener('change', (e) => toggleExonerationTVA(e.target.checked));
-            return cb;
-          })(),
-          el('span', {}, 'Marché exonéré de TVA')
-        ]),
-        el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
-          'Si coché, le taux de TVA est forcé à 0 % et la TVA du montant devient nulle.')
-      ]),
+      // Modif #118 (E-16) — l'exonération de TVA a été déplacée dans la section
+      // « Montant du marché de base » (au plus près du taux/montant qu'elle pilote).
       // Modif #89 (CR 6.b) — Avance de démarrage (toggle + flag ; le calibrage
       // « Décompte 00 » sera honoré à l'étape Exécution).
       el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
@@ -907,6 +895,21 @@ function renderMontantsSection(montantHT, montantTTC, exonereTVA = false, montan
             'Montant TTC'
           ])
         ])
+      ]),
+
+      // Modif #118 (E-16) — exonération de TVA, au niveau du montant de base.
+      el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+          (() => {
+            const cb = el('input', { type: 'checkbox', id: 'attr-exonere-tva' });
+            cb.checked = exonereTVA;
+            cb.addEventListener('change', (e) => toggleExonerationTVA(e.target.checked));
+            return cb;
+          })(),
+          el('span', {}, 'Marché exonéré de TVA')
+        ]),
+        el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
+          'Si coché, le taux de TVA est forcé à 0 % et la TVA du montant devient nulle.')
       ]),
 
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [

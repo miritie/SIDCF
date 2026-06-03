@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Enregistrement : exonération de TVA déplacée au niveau du montant de base
+
+> **Modif #118** — Section C, lot 2, point **E-16**. La case **« Marché exonéré de TVA »** était dans la section « Informations sur le marché approuvé », alors qu'elle pilote le taux/montant. Elle est **déplacée dans la carte « Montant du marché de base »** (juste au-dessus de la grille HT/Taux/TTC), au plus près de ce qu'elle affecte.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : bloc exonération retiré de `renderInfosMarcheSection`, ajouté dans `renderMontantsSection` (mêmes id `attr-exonere-tva` et handler `toggleExonerationTVA`).
+
+### Impact / Anti-régression
+
+- **UI** : exonération au niveau du montant ; comportement inchangé (force le taux à 0, désactive le champ taux).
+- **DB / Worker** : ❌ aucun changement (même id, même persistance).
+- **Vérifié (CDP)** : case présente dans la carte « Montant du marché de base », absente de « Infos marché » ; coché → taux 0 + désactivé ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Fiche de vie : montant de base « HT null » corrigé (Section C lot 2)
 
 > **Modif #117** — Section C, **lot 2** (montants), points **E-7 / E-8 / E-17**. Sur le récap « Montant du marché de base » (fiche de vie, en haut à droite), le **HT s'affichait à 0 (« null »)** quand seul le TTC était connu — car, contrairement au TTC (qui retombe sur le montant prévisionnel), le HT n'avait **aucun fallback**. Il est désormais **dérivé du TTC** (selon l'exonération) → montant de base cohérent et dynamique. Le séparateur de milliers (E-17) était déjà appliqué par `money()` ; il apparaît dès lors que le HT a une valeur.
