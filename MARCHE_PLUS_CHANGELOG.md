@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Filtre « Mode de passation » regroupé par famille
+
+> **Modif #100** — CR du 01/06/2026, point **P-4**. Le filtre « Mode de passation » de la liste PPM présentait les 13 modes à plat. Ils sont désormais **regroupés en 4 familles** (en-têtes de groupe), à l'image de la typologie des types de marché : **Appel d'offres** (AOO, AOO préqualif, AOO 2 étapes) · **Procédures simplifiées** (PSD, PSC, PSL, PSO) · **Prestations intellectuelles** (PI) · **Procédures dérogatoires** (AOR, Gré à gré/Entente directe, CFN, Convention, Lettre de commande valant marché).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : ajout de `MODE_PASSATION_FAMILLES` + `buildGroupedModePassationOptions()` ; le filtre `modePassation` consomme désormais les options groupées.
+
+### Impact / Anti-régression
+
+- **UI** : affichage du filtre structuré en groupes ; tri/sélection inchangés.
+- **Codes / barème / contractualisation** : **aucun changement** — on ne modifie pas le référentiel `MODE_PASSATION`, seulement la présentation dans le filtre. Tout mode non classé reste accessible sous « Autres ».
+- *NB* : les sous-types détaillés évoqués au 01/06 (AO avec concours, 6 méthodes PI : SMC/SCBD/SFQC/SFQ/SQC, Reconduction) ne sont **pas encore dans le référentiel** — leur ajout touche le barème/la contractualisation et sera traité avec le référentiel des champs par mode (point C-11).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Statut « Suspendu » ajouté au référentiel des états
 
 > **Modif #99** — CR du 01/06/2026, point **P-7** (et préparation de P-6). Ajout du statut **« Suspendu »** au référentiel des états du marché : il apparaît désormais dans le **filtre « Statut du marché »** de la liste PPM et dispose de son **libellé Marché+**. L'action « Voir » route un marché suspendu vers sa **fiche de vie** (consultation/édition — point P-6). Le positionnement effectif du statut SUSPENDU sera câblé avec le bloc « difficultés » (points E-2/E-3, section C).

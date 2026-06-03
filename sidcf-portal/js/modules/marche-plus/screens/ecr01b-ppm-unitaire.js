@@ -189,6 +189,41 @@ function buildHierarchicalTypeMarcheOptions(registries) {
   return out;
 }
 
+/**
+ * Modif #100 — P-4 (CR 01/06/2026) : regroupe les modes de passation par
+ * famille dans le filtre (Appel d'offres / Procédures simplifiées /
+ * Prestations intellectuelles / Procédures dérogatoires), à l'image de la
+ * typologie des types de marché. On NE TOUCHE PAS aux codes du référentiel
+ * MODE_PASSATION (aucun impact sur le barème ni la contractualisation) :
+ * seul l'affichage est structuré en groupes. Tout mode non classé reste
+ * accessible sous « Autres » (rétro-compat / futurs sous-types).
+ */
+const MODE_PASSATION_FAMILLES = [
+  { label: 'Appel d\'offres',             codes: ['AOO', 'AOO_PREQUALIF', 'AOO_2ETAPES'] },
+  { label: 'Procédures simplifiées',      codes: ['PSD', 'PSC', 'PSL', 'PSO'] },
+  { label: 'Prestations intellectuelles', codes: ['PI'] },
+  { label: 'Procédures dérogatoires',     codes: ['AOR', 'ENTENTE_DIRECTE', 'CFN', 'CONVENTION', 'LETTRE_COMMANDE_MARCHE'] }
+];
+
+function buildGroupedModePassationOptions(registries) {
+  const modes = registries.MODE_PASSATION || [];
+  const byCode = new Map(modes.map(m => [m.code, m]));
+  const used = new Set();
+  const out = [];
+  for (const fam of MODE_PASSATION_FAMILLES) {
+    const children = fam.codes.map(c => byCode.get(c)).filter(Boolean);
+    if (children.length === 0) continue;
+    out.push({ group: true, label: fam.label });
+    for (const m of children) { out.push({ code: m.code, label: m.label }); used.add(m.code); }
+  }
+  const orphans = modes.filter(m => !used.has(m.code));
+  if (orphans.length > 0) {
+    out.push({ group: true, label: 'Autres' });
+    for (const m of orphans) out.push({ code: m.code, label: m.label });
+  }
+  return out;
+}
+
 // Mapping des phases (états) — utilisé pour les KPIs
 const PHASES = [
   { key: 'planification',     label: 'En Planification',     icon: '📅', color: 'var(--color-warning)', etats: ['PLANIFIE'] },
@@ -398,11 +433,11 @@ export async function renderPPMList() {
             activeFilters.typeMarche
           ),
 
-          // Mode passation (multi)
+          // Mode passation (multi, regroupé par famille) — Modif #100 / P-4
           renderMultiSelectFilter(
             'modePassation',
             'Mode de passation',
-            registries.MODE_PASSATION || [],
+            buildGroupedModePassationOptions(registries),
             activeFilters.modePassation
           ),
 
