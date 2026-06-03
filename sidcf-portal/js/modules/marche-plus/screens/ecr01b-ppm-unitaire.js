@@ -171,6 +171,22 @@ function normalizeTypeMarche(code, registries) {
 }
 
 /**
+ * Modif #102 — Source UNIQUE de la représentation « Activité » (code + libellé),
+ * utilisée par le tableau, le filtre multi-select ET le match de filtrage,
+ * pour garantir la cohérence affichage ↔ filtre. Les données mélangent
+ * chaineBudgetaire.activiteLib et chaineBudgetaire.activite selon les
+ * opérations ; on normalise les deux (comme la colonne du tableau).
+ * @returns {{ key: string, label: string }} key = chaîne « CODE - Libellé »
+ *   servant à la fois de valeur de filtre et de clé de comparaison.
+ */
+function activiteOf(op) {
+  const code = op?.chaineBudgetaire?.activiteCode || '';
+  const lib  = op?.chaineBudgetaire?.activiteLib || op?.chaineBudgetaire?.activite || '';
+  const label = (code && lib) ? `${code} - ${lib}` : (code || lib || '');
+  return { key: label, label };
+}
+
+/**
  * Modif #76 — Construit la liste hiérarchisée pour le widget multi-select :
  * insère un entête de groupe A/B/C avant les types qui en relèvent. Exclut
  * les codes legacy (rétro-compat pour l'affichage par lookup, mais hors
@@ -298,7 +314,17 @@ export async function renderPPMList() {
   // Extract unique values for filters
   const exercices = [...new Set(operations.map(op => op.exercice).filter(Boolean))].sort((a, b) => b - a);
   const unites = [...new Set(operations.map(op => op.unite).filter(Boolean))].sort();
-  const activites = [...new Set(operations.map(op => op.chaineBudgetaire?.activiteLib).filter(Boolean))].sort();
+  // Modif #102 — Options du filtre « Activité » construites avec activiteOf()
+  // (même représentation « CODE - Libellé » que la colonne du tableau). La
+  // clé (= code de l'option) sert aussi de clé de match dans applyFilters →
+  // cohérence totale tableau ↔ filtre, et plus aucune opération « manquée »
+  // quand le libellé est dans `activite` et non `activiteLib`.
+  const activiteOptions = [...new Map(
+    operations
+      .map(op => activiteOf(op))
+      .filter(a => a.key)
+      .map(a => [a.key, { code: a.key, label: a.label }])
+  ).values()].sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   // Régions : référentiel officiel CI (33 entrées) — pas le calcul ad hoc sur les opérations
   const regions = await _getRegionsCi();
 
@@ -423,11 +449,11 @@ export async function renderPPMList() {
             })
           ]),
 
-          // Activité (multi)
+          // Activité (multi) — Modif #102 : libellé « CODE - Libellé » (cohérence tableau)
           renderMultiSelectFilter(
             'activite',
             'Activité',
-            activites.map(a => ({ code: a, label: a })),
+            activiteOptions,
             activeFilters.activite
           ),
 
@@ -799,11 +825,8 @@ function renderSimpleRow(op, registries) {
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === op.modePassation);
   const etat = registries.ETAT_MARCHE?.find(e => e.code === op.etat);
   // Modif #77 — Lot 2 (2.a) — colonne Activité affiche « CODE - Libellé »
-  const activiteCode = op.chaineBudgetaire?.activiteCode || '';
-  const activiteLib  = op.chaineBudgetaire?.activiteLib || op.chaineBudgetaire?.activite || '';
-  const activiteFull = activiteCode && activiteLib
-    ? `${activiteCode} - ${activiteLib}`
-    : (activiteCode || activiteLib || '-');
+  // Modif #102 — même source que le filtre (activiteOf) pour la cohérence
+  const activiteFull = activiteOf(op).label || '-';
   // Modif #77 — Lot 2 (2.b) — Nature économique : libellé du registre (qui
   // contient déjà « CODE - Libellé »), fallback sur le code brut.
   // Modif #91 — La nature économique vit en réalité dans
@@ -1130,7 +1153,7 @@ function applyFilters(operations, santeMap = null, registries = null) {
       const matchObjet = op.objet?.toLowerCase().includes(search);
       const matchBenef = op.beneficiaire?.toLowerCase().includes(search);
       const matchLocalite = op.localisation?.localite?.toLowerCase().includes(search);
-      const matchActivite = op.chaineBudgetaire?.activiteLib?.toLowerCase().includes(search);
+      const matchActivite = activiteOf(op).label.toLowerCase().includes(search);
       if (!matchObjet && !matchBenef && !matchLocalite && !matchActivite) return false;
     }
 
@@ -1149,7 +1172,7 @@ function applyFilters(operations, santeMap = null, registries = null) {
     if (!_matchMulti(activeFilters.natureEco, op.natureEco || op.chaineBudgetaire?.natureCode)) return false;
     if (!_matchMulti(activeFilters.region, op.localisation?.region)) return false;
     if (!_matchMulti(activeFilters.unite, op.unite)) return false;
-    if (!_matchMulti(activeFilters.activite, op.chaineBudgetaire?.activiteLib)) return false;
+    if (!_matchMulti(activeFilters.activite, activiteOf(op).key)) return false;
 
     // Modif #36 — filtre santé : nécessite la map pré-calculée
     if (Array.isArray(activeFilters.sante) && activeFilters.sante.length > 0) {

@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Cohérence « Activité » : filtre aligné sur la colonne (code + libellé)
+
+> **Modif #102** — Prolongement de P-3 (cohérence affichage ↔ filtre). La colonne « Activité » affiche « CODE - Libellé », mais le **filtre multi-select** du haut n'affichait que le **libellé** et, surtout, n'extrayait que `chaineBudgetaire.activiteLib` — **ratant les opérations** dont le libellé est stocké dans `chaineBudgetaire.activite`. Introduction d'une **source unique `activiteOf(op)`** (représentation « CODE - Libellé ») utilisée par **le tableau, le filtre ET le match** → cohérence totale et couverture complète. *(Vérification : la colonne « Nature économique » était déjà cohérente — même registre `NATURE_ECO` (labels « CODE - Libellé ») côté tableau et côté filtre.)*
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - ajout de la fonction `activiteOf(op)` (clé + libellé « CODE - Libellé », normalise `activiteLib`/`activite`) ;
+  - options du filtre `activite` construites via `activiteOf` (dédoublonnées, triées) ;
+  - `renderSimpleRow` (colonne Activité), recherche texte libre globale et `applyFilters` consomment désormais `activiteOf` → même clé partout.
+
+### Impact / Anti-régression
+
+- **UI** : le filtre « Activité » montre « CODE - Libellé » comme la colonne ; **21 valeurs** au lieu de 14 (les opérations auparavant manquées apparaissent).
+- **Filtrage** : la clé de match passe de `activiteLib` à la chaîne « CODE - Libellé » (cohérente entre option et opération) ; les opérations sans code restent listées par libellé (comme le tableau).
+- **Données / Worker / DB** : ❌ aucun changement.
+- **Vérifié (CDP)** : 33 lignes (pas de régression) ; options Activité avec code (`ACT_13001_001 - …`) ; cohérence confirmée.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Tableau PPM : tri + recherche texte libre par colonne (en-têtes)
 
 > **Modif #101** — CR du 01/06/2026, points **P-2 et P-3**. Le DCF demande des filtres directement sur les en-têtes du tableau. Chaque colonne du tableau PPM (hors « Actions ») dispose désormais : (1) d'un **tri** ascendant/descendant au clic sur le titre (indicateur ▲/▼), et (2) d'un **champ de recherche en texte libre** (2ᵉ rangée d'en-tête). Le filtrage et le tri s'opèrent **côté DOM** (sans re-render de la page) → le focus de saisie est préservé. La recherche s'appuie sur le texte affiché (libellé complet via `title` si tronqué) : la colonne **Activité** montrant « CODE - Libellé », sa recherche porte bien sur le **code-activité** (P-3).
