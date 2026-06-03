@@ -743,34 +743,33 @@ function renderAttributionBlock(existingProc, candidates) {
   const nccDisplay = el('input', { type: 'text', className: 'form-input', id: 'proc-attr-ncc', value: a.ncc || '', placeholder: 'Auto (selon l\'entreprise)' });
   nccDisplay.readOnly = true;
 
-  const sel = el('select', { className: 'form-input', id: 'proc-attr-select', onchange: (e) => {
-    const opt = e.target.selectedOptions[0];
-    nccDisplay.value = opt ? (opt.getAttribute('data-ncc') || '') : '';
-  } }, [el('option', { value: '' }, "— Sélectionner l'attributaire —")]);
-
+  // Modif #115 — recherche simple (autocomplétion) sur la base des entreprises
+  // pour une entreprise attributaire unique : input + datalist + map RS→NCC.
+  const nccByRs = {};
+  const datalist = el('datalist', { id: 'proc-attr-list' });
   const addOpt = (rs, ncc) => {
-    if (!rs) return;
-    const o = document.createElement('option');
-    o.value = rs;
-    o.setAttribute('data-ncc', ncc || '');
-    o.textContent = `${rs}${ncc ? ' — NCC ' + ncc : ''}`;
-    sel.appendChild(o);
+    if (!rs || nccByRs[rs] !== undefined) return;
+    nccByRs[rs] = ncc || '';
+    datalist.appendChild(el('option', { value: rs }));
   };
+
+  const input = el('input', {
+    type: 'text', className: 'form-input', id: 'proc-attr-input', list: 'proc-attr-list',
+    value: a.raisonSociale || '', placeholder: 'Rechercher une entreprise…',
+    oninput: () => { const n = nccByRs[input.value.trim()]; if (n !== undefined) nccDisplay.value = n; }
+  });
 
   const restreinte = Array.isArray(candidates);
   if (restreinte) {
     candidates.forEach(c => addOpt(c.raisonSociale, c.ncc));
-    if (a.raisonSociale && !candidates.some(c => c.raisonSociale === a.raisonSociale)) addOpt(a.raisonSociale, a.ncc);
-    sel.value = a.raisonSociale || '';
+    if (a.raisonSociale) addOpt(a.raisonSociale, a.ncc);
   } else {
-    // garde l'attributaire déjà choisi en attendant le chargement
-    if (a.raisonSociale) { addOpt(a.raisonSociale, a.ncc); sel.value = a.raisonSociale; }
+    if (a.raisonSociale) addOpt(a.raisonSociale, a.ncc);
     dataService.query(ENTITIES.MP_ENTREPRISE).then(list => {
       (list || [])
         .slice()
         .sort((x, y) => (x.raisonSociale || '').localeCompare(y.raisonSociale || ''))
-        .forEach(e => { if (e.raisonSociale && e.raisonSociale !== a.raisonSociale) addOpt(e.raisonSociale, e.ncc); });
-      sel.value = a.raisonSociale || '';
+        .forEach(e => addOpt(e.raisonSociale, e.ncc));
     }).catch(() => {});
   }
 
@@ -783,13 +782,14 @@ function renderAttributionBlock(existingProc, candidates) {
         el('div', { className: 'alert-icon' }, 'ℹ️'),
         el('div', { className: 'alert-content' },
           restreinte
-            ? "Sélectionnez l'attributaire dans la liste restreinte issue de l'AMI, puis le montant attribué (contrôlé à l'enregistrement)."
-            : "Sélectionnez l'attributaire parmi les entreprises, puis le montant attribué. Ce montant sera contrôlé à l'enregistrement du marché approuvé (alerte en cas d'écart).")
+            ? "Recherchez/sélectionnez l'attributaire dans la liste restreinte issue de l'AMI, puis le montant attribué (contrôlé à l'enregistrement)."
+            : "Recherchez l'attributaire dans la base des entreprises (saisie filtrante), puis le montant attribué. Ce montant sera contrôlé à l'enregistrement du marché approuvé (alerte en cas d'écart).")
       ]),
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' } }, [
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, restreinte ? 'Attributaire (liste restreinte)' : 'Attributaire'),
-          sel
+          input,
+          datalist
         ]),
         el('div', { className: 'form-field' }, [
           el('label', { className: 'form-label' }, 'NCC'),
@@ -1476,10 +1476,10 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   procedureData.sansCF = !!document.getElementById('proc-sans-cf')?.checked;
   // Modif #109/#114 — attribution : attributaire SÉLECTIONNÉ (raison sociale +
   // NCC déduit) + montant attribué.
-  if (document.getElementById('proc-attr-select')) {
+  if (document.getElementById('proc-attr-input')) {
     const montantAttr = document.getElementById('proc-attr-montant')?.value;
     procedureData.attribution = {
-      raisonSociale: document.getElementById('proc-attr-select')?.value?.trim() || null,
+      raisonSociale: document.getElementById('proc-attr-input')?.value?.trim() || null,
       ncc: document.getElementById('proc-attr-ncc')?.value?.trim() || null,
       montantAttribue: montantAttr ? Number(montantAttr) : null
     };

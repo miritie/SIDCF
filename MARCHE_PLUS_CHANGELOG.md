@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : attributaire en recherche simple (autocomplétion)
+
+> **Modif #115** — Retour métier : pour une **entreprise attributaire unique**, on doit pouvoir faire une **recherche simple** / rappeler depuis la base, plutôt que parcourir un long menu déroulant. Le `<select>` d'attributaire (#114) devient un **champ de recherche avec autocomplétion** (`<input list>` + `<datalist>`) sur la base des entreprises. La **saisie filtre** les suggestions ; le **NCC reste auto-déduit**. La source demeure : **liste restreinte** (AMI→DP) sinon **toutes les entreprises** (`MP_ENTREPRISE`).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `renderAttributionBlock` : `<input id="proc-attr-input" list="proc-attr-list">` + `<datalist>` peuplé (liste restreinte ou `MP_ENTREPRISE`), map `RS→NCC` pour déduire le NCC à la saisie ;
+  - persistance `attribution` lue depuis `#proc-attr-input`.
+
+### Impact / Anti-régression
+
+- **UI** : recherche/autocomplétion au lieu d'un long select ; NCC toujours auto.
+- **Données** : forme `attribution = { raisonSociale, ncc, montantAttribue }` inchangée.
+- **Vérifié (CDP)** : datalist = 33 entreprises, input lié (`list`), saisie d'une entreprise → NCC auto (« CI-AGE-2018-1200 ») ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : attributaire SÉLECTIONNÉ + case « sans CF » relocalisée
 
 > **Modif #114** — Retour métier (2 points) :
