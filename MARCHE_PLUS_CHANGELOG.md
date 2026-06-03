@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Contractualisation : C-11 vague 3 + C-9 (sous-procédures PI & liste restreinte)
+
+> **Modif #111** — Section B, point **C-11 (vague 3)** et **C-9**. Pour les **Prestations Intellectuelles (PI)**, ajout d'un **sélecteur de sous-procédure** qui pilote l'issue :
+> - **AMI — recrutement de cabinet** → issue = **LISTE RESTREINTE** (entreprises retenues, éditable, raison sociale + NCC), **sans** attributaire/montant. La liste est mémorisée pour la **Demande de Proposition** ultérieure (C-9 : « liste restreinte seule »).
+> - **AMI — comparaison de CV** → **attribution** (bloc Attribution : attributaire + NCC + montant).
+> - **DP (Demande de Proposition)** → **attribution** + **rappel en lecture seule** de la liste restreinte issue de l'AMI (si elle existe).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - conteneurs `#pi-subproc-container` et `#liste-restreinte-container` ;
+  - `renderPISubprocSelector()`, `renderListeRestreinteBlock()`, `_lrRow()` ;
+  - logique PI dans `updateContextualSections` (AMI cabinet → liste restreinte ; AMI CV / DP → attribution ; DP → rappel lecture seule) ;
+  - persistance `procedureData.sousProcedurePI` + `procedureData.listeRestreinte` (préservée pour la DP).
+
+### Impact / Anti-régression
+
+- **UI / Workflow** : les PI ne passent plus systématiquement par une attribution simple ; l'AMI cabinet conclut par une liste restreinte. La DP (procédure ultérieure distincte) réutilisera la liste — son traitement complet reste à venir (décision C-9).
+- **Données** : `sousProcedurePI`, `listeRestreinte` ajoutés à `MP_PROCEDURE` (JSONB — pas de migration).
+- **Vérifié (CDP, op PI réelle)** : AMI cabinet → liste restreinte (+ ajout d'entreprise) sans attribution ; AMI CV / DP → attribution ; bascule du sélecteur correcte.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Contractualisation : C-11 vague 2 (AOR + modes à contrat direct)
 
 > **Modif #110** — Section B, point **C-11 (vague 2)**.

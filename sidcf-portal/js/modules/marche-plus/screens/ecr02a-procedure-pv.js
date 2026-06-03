@@ -195,6 +195,10 @@ export async function renderProcedurePV(params) {
     // en tête). Options selon le mode (PV/courrier/mandat ↔ bon de commande/devis).
     el('div', { id: 'engagement-container' }),
 
+    // Modif #111 — C-11 vague 3 / C-9 : sélecteur de sous-procédure PI
+    // (AMI cabinet / AMI CV / DP) qui pilote l'issue (liste restreinte vs attribution).
+    el('div', { id: 'pi-subproc-container' }),
+
     // Contextual info alert (requirements based on mode)
     el('div', { id: 'contextual-info-container' }),
 
@@ -210,6 +214,9 @@ export async function renderProcedurePV(params) {
     // Modif #109 — C-11 vague 1 : bloc « Attribution » (issue de la
     // contractualisation : attributaire + NCC + montant attribué).
     el('div', { id: 'attribution-container' }),
+
+    // Modif #111 — C-11 vague 3 / C-9 : liste restreinte (AMI cabinet).
+    el('div', { id: 'liste-restreinte-container' }),
 
     // Actions
     el('div', { className: 'card' }, [
@@ -401,11 +408,13 @@ export async function renderProcedurePV(params) {
     if (!mode) {
       // Hide all contextual sections
       document.getElementById('engagement-container').innerHTML = '';
+      document.getElementById('pi-subproc-container').innerHTML = '';
       document.getElementById('contextual-info-container').innerHTML = '';
       document.getElementById('procedure-details-container').innerHTML = '';
       document.getElementById('soumissionnaires-container').innerHTML = '';
       document.getElementById('lots-container').innerHTML = '';
       document.getElementById('attribution-container').innerHTML = '';
+      document.getElementById('liste-restreinte-container').innerHTML = '';
       return;
     }
 
@@ -578,13 +587,33 @@ export async function renderProcedurePV(params) {
       lotsState = [];
     }
 
-    // Modif #109 — C-11 vague 1 : bloc Attribution (sauf PI/AMI, vague 3).
+    // Modif #109/#111 — C-11 : bloc Attribution ; pour les PI, sélecteur de
+    // sous-procédure (AMI cabinet → liste restreinte ; AMI CV / DP → attribution).
     const attributionContainer = document.getElementById('attribution-container');
-    if (attributionContainer) {
-      attributionContainer.innerHTML = '';
-      if (mode !== 'PI') {
-        attributionContainer.appendChild(renderAttributionBlock(mode, procedureData || {}));
-      }
+    const lrContainer = document.getElementById('liste-restreinte-container');
+    const piContainer = document.getElementById('pi-subproc-container');
+    if (attributionContainer) attributionContainer.innerHTML = '';
+    if (lrContainer) lrContainer.innerHTML = '';
+    if (piContainer) piContainer.innerHTML = '';
+
+    if (mode === 'PI') {
+      const initialSub = (procedureData && procedureData.sousProcedurePI) || 'AMI_CABINET';
+      const applyPI = (sub) => {
+        if (attributionContainer) attributionContainer.innerHTML = '';
+        if (lrContainer) lrContainer.innerHTML = '';
+        if (sub === 'AMI_CABINET') {
+          if (lrContainer) lrContainer.appendChild(renderListeRestreinteBlock(procedureData?.listeRestreinte, false));
+        } else {
+          if (attributionContainer) attributionContainer.appendChild(renderAttributionBlock(mode, procedureData || {}));
+          if (sub === 'DP' && Array.isArray(procedureData?.listeRestreinte) && procedureData.listeRestreinte.length) {
+            if (lrContainer) lrContainer.appendChild(renderListeRestreinteBlock(procedureData.listeRestreinte, true));
+          }
+        }
+      };
+      if (piContainer) piContainer.appendChild(renderPISubprocSelector(initialSub, applyPI));
+      applyPI(initialSub);
+    } else if (attributionContainer) {
+      attributionContainer.appendChild(renderAttributionBlock(mode, procedureData || {}));
     }
 
     // Modif #108 — C-5 : applique l'état initial « sans CF » (PSD/PSC).
@@ -747,6 +776,72 @@ function renderAttributionBlock(mode, existingProc) {
         ])
       ])
     ])
+  ]);
+}
+
+// Modif #111 — C-11 vague 3 / C-9 : sélecteur de sous-procédure PI.
+// L'AMI « recrutement de cabinet » conclut par une LISTE RESTREINTE (mémorisée
+// pour la DP ultérieure) ; l'AMI « comparaison de CV » et la DP concluent par
+// une attribution. onChange(sub) est rappelé pour re-piloter les blocs.
+function renderPISubprocSelector(initialSub, onChange) {
+  const sel = el('select', { className: 'form-input', id: 'proc-pi-subproc', onchange: (e) => onChange(e.target.value) }, [
+    el('option', { value: 'AMI_CABINET' }, 'AMI — recrutement de cabinet (liste restreinte)'),
+    el('option', { value: 'AMI_CV' }, 'AMI — comparaison de CV (attribution)'),
+    el('option', { value: 'DP' }, 'Demande de Proposition (DP) — attribution')
+  ]);
+  sel.value = initialSub;
+  return el('div', { className: 'card', style: { marginBottom: '24px', border: '1px solid #7c3aed' } }, [
+    el('div', { className: 'card-header', style: { background: '#f5f3ff' } }, [
+      el('h3', { className: 'card-title', style: { color: '#5b21b6' } }, '🎓 Sous-procédure (Prestations Intellectuelles)')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Type de procédure PI'),
+        sel,
+        el('small', { className: 'text-muted' }, "L'AMI cabinet retient une liste restreinte (réutilisée par la DP) ; AMI CV et DP concluent par une attribution.")
+      ])
+    ])
+  ]);
+}
+
+// Modif #111 — une ligne de la liste restreinte (raison sociale + NCC).
+function _lrRow(rs = '', ncc = '', readOnly = false) {
+  const rsInput = el('input', { type: 'text', className: 'form-input lr-rs', value: rs, placeholder: 'Raison sociale', style: { flex: '2' } });
+  const nccInput = el('input', { type: 'text', className: 'form-input lr-ncc', value: ncc, placeholder: 'NCC', style: { flex: '1' } });
+  if (readOnly) { rsInput.disabled = true; nccInput.disabled = true; }
+  const children = [rsInput, nccInput];
+  if (!readOnly) {
+    children.push(el('button', { type: 'button', className: 'btn btn-sm btn-secondary', onclick: (e) => { e.target.closest('.lr-row').remove(); } }, '✕'));
+  }
+  return el('div', { className: 'lr-row', style: { display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' } }, children);
+}
+
+// Modif #111 — C-9 : bloc liste restreinte (AMI cabinet : éditable ; DP : rappel
+// en lecture seule).
+function renderListeRestreinteBlock(existing, readOnly) {
+  const items = Array.isArray(existing) ? existing : [];
+  const rows = el('div', { id: 'lr-rows' }, items.length ? items.map(it => _lrRow(it.raisonSociale, it.ncc, readOnly)) : (readOnly ? [] : [_lrRow()]));
+  const body = [
+    el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
+      el('div', { className: 'alert-icon' }, 'ℹ️'),
+      el('div', { className: 'alert-content' },
+        readOnly
+          ? "Liste restreinte issue de l'AMI : seules ces entreprises peuvent soumissionner à la Demande de Proposition."
+          : "Enregistrez la liste restreinte des entreprises retenues à l'issue de l'AMI. Elle sera réutilisée par la Demande de Proposition (DP).")
+    ]),
+    rows
+  ];
+  if (!readOnly) {
+    body.push(el('button', {
+      type: 'button', className: 'btn btn-sm btn-accent',
+      onclick: () => { document.getElementById('lr-rows')?.appendChild(_lrRow()); }
+    }, '+ Ajouter une entreprise'));
+  }
+  return el('div', { className: 'card', style: { marginBottom: '24px', border: '1px solid #7c3aed' } }, [
+    el('div', { className: 'card-header', style: { background: '#f5f3ff' } }, [
+      el('h3', { className: 'card-title', style: { color: '#5b21b6' } }, readOnly ? "🎯 Liste restreinte (issue de l'AMI)" : '🎯 Liste restreinte retenue (AMI)')
+    ]),
+    el('div', { className: 'card-body' }, body)
   ]);
 }
 
@@ -1360,6 +1455,20 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       ncc: document.getElementById('proc-attr-ncc')?.value?.trim() || null,
       montantAttribue: montantAttr ? Number(montantAttr) : null
     };
+  }
+  // Modif #111 — C-11 vague 3 / C-9 : sous-procédure PI + liste restreinte.
+  const piSub = document.getElementById('proc-pi-subproc')?.value;
+  if (piSub) {
+    procedureData.sousProcedurePI = piSub;
+    if (piSub === 'AMI_CABINET') {
+      const lrRows = [...document.querySelectorAll('#liste-restreinte-container .lr-row')];
+      procedureData.listeRestreinte = lrRows
+        .map(r => ({ raisonSociale: r.querySelector('.lr-rs')?.value?.trim() || '', ncc: r.querySelector('.lr-ncc')?.value?.trim() || '' }))
+        .filter(e => e.raisonSociale);
+    } else if (existingProc?.listeRestreinte) {
+      // DP / AMI CV : on préserve la liste restreinte issue de l'AMI.
+      procedureData.listeRestreinte = existingProc.listeRestreinte;
+    }
   }
   // Modif #110 — C-11 vague 2 : contrôle reconduction (autorisation DGMP > 2 ans).
   if (document.getElementById('proc-recond-annees')) {
