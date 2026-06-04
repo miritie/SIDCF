@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Exécution : montant global (base + avenants) visible pour EN_EXEC (X-2)
+
+> **Modif #133** — Section D (Exécution), lot D1, point **OBS-X2**. Le « **Montant global du marché** » est déjà calculé **base + avenants** (formule correcte). Le vrai défaut : le **cockpit OP/mandats** (qui porte ce KPI, la table des décomptes et le suivi d'exécution financière) ne s'affichait **que pour l'état legacy `EXECUTION`**, jamais pour l'état **canonique `EN_EXEC`** — un simple placeholder « pas en exécution » s'affichait à la place. Du coup, pour un marché normalement en cours, aucun montant global n'était visible. Correctif : inclure `EN_EXEC` dans le déclenchement du cockpit.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` :
+  - `isMarcheEnExecution()` accepte désormais `EN_EXEC` (en plus de `EXECUTION`/`RESILIE`/`CLOS`).
+  - `computeExecutionFinanciere()` : heuristique de santé étendue à `EN_EXEC` (cohérence ; helper exporté).
+
+### Impact / Anti-régression
+
+- **UI** : un marché `EN_EXEC` affiche le cockpit complet (KPIs dont « Montant global du marché » = base + avenants, table des décomptes/OP) au lieu d'un placeholder. Aucun changement pour `EXECUTION`/`RESILIE`/`CLOS`.
+- **DB / Worker** : aucun (front uniquement, pas de schéma).
+- **Vérifié (CDP)** : marché `EN_EXEC` (TEST-EN_EXEC) → cockpit visible, « MONTANT GLOBAL DU MARCHÉ » présent, plus de placeholder, table décomptes rendue, **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-04 — Fusion étapes 3 & 4 : redirection Visa CF + frise (E-1/E-9, 2b)
 
 > **Modif #132** — Section C, lot 10, points **E-1/E-9**, commit 2b (final). La fusion est **complète côté navigation et frise** : l'ancienne URL/étape « Visa CF » rend désormais l'**écran d'enregistrement** (l'approbation y est contenue), et un marché à l'état **VISE** se positionne sur l'étape « **Enregistrement de marché** » dans la frise (et non « Exécution »).

@@ -77,7 +77,11 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
 
   function isMarcheEnExecution() {
     const etat = operation?.etat;
-    return etat === 'EXECUTION' || etat === 'RESILIE' || etat === 'CLOS';
+    // Modif #133 (X-2) — EN_EXEC est l'état canonique d'exécution ; EXECUTION
+    // est legacy. Sans EN_EXEC, le cockpit OP/mandats (et son KPI « Montant
+    // global du marché » = base + avenants) ne s'affichait pas pour les marchés
+    // normalement en cours d'exécution → un simple placeholder à la place.
+    return etat === 'EN_EXEC' || etat === 'EXECUTION' || etat === 'RESILIE' || etat === 'CLOS';
   }
 
   function render() {
@@ -590,7 +594,8 @@ export function computeExecutionFinanciere(operation, attribution, avenants = []
 
   // Heuristique de santé financière — sera enrichie par durée d'exécution dans modif #36
   let sante = 'NON_DEMARRE';
-  if (operation?.etat === 'EXECUTION' || operation?.etat === 'CLOS') {
+  // Modif #133 (X-2) — inclure l'état canonique EN_EXEC (EXECUTION = legacy).
+  if (operation?.etat === 'EN_EXEC' || operation?.etat === 'EXECUTION' || operation?.etat === 'CLOS') {
     const cumulAvenantPct = baseTTC > 0 ? (totalAvenants / baseTTC) * 100 : 0;
     if (operation?.etat === 'CLOS' && tauxExec >= 95) sante = 'NORMAL';
     else if (cumulAvenantPct >= 30) sante = 'A_RISQUE';
