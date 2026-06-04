@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Enregistrement : Section C lot 4 (avances de démarrage 15/15 ≤ 30 %)
+
+> **Modif #120** — Section C, **lot 4**, point **E-15**. L'avance de démarrage (auparavant une simple case) est refondue en **deux avances** : **forfaitaire** (≤ 15 % du marché de base) + **facultative** (≤ 15 %), avec **calcul des montants** (% × montant TTC), **total** affiché et **alerte non bloquante si le cumul dépasse 30 %**. Le calibrage « Décompte 00 » reste honoré à l'étape Exécution.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` :
+  - bloc avance enrichi (case + détail forfaitaire/facultative + total + alerte) ;
+  - `updateAvancesDisplay()` (montants, total, plafond 30 %), branchée sur `calculerMontants()` + les saisies ;
+  - persistance `avanceDemarrage = { actif, forfaitPct, facultPct }` (rétro-compat avec l'ancien booléen à la lecture).
+
+### Impact / Anti-régression
+
+- **UI** : deux pourcentages + montants + garde-fou 30 %.
+- **Données** : `avanceDemarrage` passe de booléen à objet (JSONB — pas de migration ; lecture tolère l'ancien format).
+- **Vérifié (CDP)** : défaut 15 %/0 → total « 15,0 % · 1 200 000 XOF » ; 35 % → alerte ⚠️ ; 25 % → pas d'alerte ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Enregistrement : Section C lot 3 (attributaire : NCC + compte simplifié)
 
 > **Modif #119** — Section C, **lot 3** (attributaire), points **E-12 / E-13** :

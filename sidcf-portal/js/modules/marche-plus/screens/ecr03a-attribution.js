@@ -781,6 +781,12 @@ function renderInfosMarcheSection(existingAttr, operation) {
   const dureeValeur = existingAttr.dates?.delaiExecution || operation.dureePrevisionnelle || '';
   // Modif #116 (E-14) — unité par défaut « Jours » (sauf valeur déjà enregistrée).
   const dureeUnite = existingAttr.dates?.delaiUnite || 'JOURS';
+  // Modif #120 (E-15) — avance de démarrage : forfaitaire + facultative (≤30 % cumulé).
+  // Rétro-compat : ancien format booléen → objet { actif, forfaitPct, facultPct }.
+  const av = existingAttr.avanceDemarrage;
+  const avActif = av === true || (av && typeof av === 'object' && av.actif === true);
+  const avForfaitPct = (av && typeof av === 'object' && av.forfaitPct != null) ? av.forfaitPct : 15;
+  const avFacultPct  = (av && typeof av === 'object' && av.facultPct  != null) ? av.facultPct  : 0;
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
@@ -826,17 +832,66 @@ function renderInfosMarcheSection(existingAttr, operation) {
       el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
         el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
           (() => {
-            const cb = el('input', { type: 'checkbox', id: 'attr-avance-demarrage' });
-            cb.checked = (existingAttr.avanceDemarrage === true);
+            const cb = el('input', { type: 'checkbox', id: 'attr-avance-demarrage', onchange: () => updateAvancesDisplay() });
+            cb.checked = avActif;
             return cb;
           })(),
           el('span', {}, 'Avance de démarrage prévue')
         ]),
         el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
           'Si oui, le premier décompte sera calibré en « Décompte 00 » lors de l\'exécution.')
+      ]),
+      // Modif #120 (E-15) — détail : forfaitaire (≤15 %) + facultative (≤15 %), total ≤ 30 %.
+      el('div', { id: 'attr-avances-detail', style: { display: avActif ? 'block' : 'none', marginTop: '8px', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
+        el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Avance forfaitaire (% du marché de base)'),
+            el('input', { type: 'number', className: 'form-input', id: 'attr-avance-forfait-pct', value: avForfaitPct, min: 0, max: 15, step: 0.1, oninput: () => updateAvancesDisplay() }),
+            el('small', { className: 'text-muted', id: 'attr-avance-forfait-montant', style: { display: 'block', marginTop: '4px' } }, '')
+          ]),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Avance facultative (% du marché de base)'),
+            el('input', { type: 'number', className: 'form-input', id: 'attr-avance-facult-pct', value: avFacultPct, min: 0, max: 15, step: 0.1, oninput: () => updateAvancesDisplay() }),
+            el('small', { className: 'text-muted', id: 'attr-avance-facult-montant', style: { display: 'block', marginTop: '4px' } }, '')
+          ])
+        ]),
+        el('div', { style: { marginTop: '8px', fontWeight: '600' } }, [
+          'Total avance de démarrage : ',
+          el('span', { id: 'attr-avance-total' }, '')
+        ]),
+        el('div', { id: 'attr-avance-alert', style: { display: 'none', marginTop: '8px', padding: '8px 12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', fontSize: '13px' } })
       ])
     ])
   ]);
+}
+
+/**
+ * Modif #120 (E-15) — Met à jour l'affichage des avances de démarrage :
+ * montants (% × montant TTC du marché de base), total, et alerte si le cumul
+ * forfaitaire + facultative dépasse 30 %.
+ */
+function updateAvancesDisplay() {
+  const on = document.getElementById('attr-avance-demarrage')?.checked === true;
+  const wrap = document.getElementById('attr-avances-detail');
+  if (wrap) wrap.style.display = on ? 'block' : 'none';
+  if (!on) return;
+  const base = parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0;
+  const pf = Math.max(0, parseFloat(document.getElementById('attr-avance-forfait-pct')?.value) || 0);
+  const pa = Math.max(0, parseFloat(document.getElementById('attr-avance-facult-pct')?.value) || 0);
+  const total = pf + pa;
+  const setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setTxt('attr-avance-forfait-montant', base ? `≈ ${formatMoney(base * pf / 100)}` : '');
+  setTxt('attr-avance-facult-montant', base ? `≈ ${formatMoney(base * pa / 100)}` : '');
+  setTxt('attr-avance-total', `${total.toFixed(1)} %${base ? ` · ${formatMoney(base * total / 100)}` : ''}`);
+  const alertEl = document.getElementById('attr-avance-alert');
+  if (alertEl) {
+    if (total > 30) {
+      alertEl.style.display = 'block';
+      alertEl.textContent = `⚠️ Le total des avances de démarrage ne peut excéder 30 % (actuellement ${total.toFixed(1)} %).`;
+    } else {
+      alertEl.style.display = 'none';
+    }
+  }
 }
 
 /**
@@ -1164,6 +1219,9 @@ function calculerMontants() {
       alertEl.innerHTML = '';
     }
   }
+
+  // Modif #120 (E-15) — les avances de démarrage (% du marché) suivent le montant.
+  try { updateAvancesDisplay(); } catch (_) {}
 }
 
 /**
@@ -2308,7 +2366,12 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     // Modif #86 (CR 6.b) — Informations sur le marché approuvé
     const numeroMarcheApprouve = document.getElementById('attr-numero-marche')?.value?.trim() || null;
     const exonereTVA = document.getElementById('attr-exonere-tva')?.checked === true;
-    const avanceDemarrage = document.getElementById('attr-avance-demarrage')?.checked === true;
+    // Modif #120 (E-15) — avance de démarrage : forfaitaire + facultative (objet).
+    const avanceDemarrage = {
+      actif: document.getElementById('attr-avance-demarrage')?.checked === true,
+      forfaitPct: parseFloat(document.getElementById('attr-avance-forfait-pct')?.value) || 0,
+      facultPct: parseFloat(document.getElementById('attr-avance-facult-pct')?.value) || 0
+    };
     const dureeValeur = parseInt(document.getElementById('attr-duree-valeur')?.value, 10) || 0;
     const dureeUnite = document.getElementById('attr-duree-unite')?.value || 'MOIS';
 
