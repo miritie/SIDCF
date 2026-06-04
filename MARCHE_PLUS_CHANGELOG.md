@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Difficultés : « Autorité décisionnelle » + « Réf./N° de l'acte » (E-4/E-6)
+
+> **Modif #124** — Section C, **lot 7** (bloc difficultés), étape 1, points **E-4 et E-6**. Le bloc « difficultés » existe déjà (`difficultes-manager-mp.js` + `MP_DIFFICULTE`). Renommages dans le formulaire : **« Nom du décideur » → « Autorité décisionnelle »** (E-4) et **« Référence document » → « Référence / N° de l'acte »** (E-6). *(Décisions actées pour la suite : changement d'état du marché via action explicite ; bloc sur toutes les étapes ; acte optionnel.)*
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js` : libellés du formulaire (champs `nomDecideur`, `fichier` inchangés en donnée).
+
+### Impact / Anti-régression
+
+- **UI** : libellés uniquement. Aucun changement de logique/persistance.
+- **DB / Worker** : ❌ aucun.
+- **Vérifié (CDP)** : modal d'ajout → « Autorité décisionnelle » + « Référence / N° de l'acte » ; ancien « Nom du décideur » absent ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Livrables : types configurables + « Autre » (E-20)
 
 > **Modif #123** — Section C, **lot 6**, point **E-20**. Le référentiel des livrables des géographes n'étant pas disponible, on s'appuie sur la **configuration** : les types de livrables proviennent du référentiel `TYPE_LIVRABLE` (modifiable), et on ajoute un type **« Autre (à préciser) »** pour saisir tout livrable hors liste (type + libellé libre). Un **repère** indique que la liste est configurable et s'enrichira du référentiel géographes une fois fourni. Le manager permet déjà d'ajouter/modifier les livrables (Générer / Ajouter + champs éditables).

@@ -406,23 +406,25 @@ export function renderDifficultesManager({
     // Décideur + fichier
     const bottomGrid = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' } });
     bottomGrid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'Nom du décideur'),
+      // Modif #124 (E-4) — « Autorité décisionnelle » au lieu de « Nom du décideur ».
+      el('label', { className: 'form-label' }, 'Autorité décisionnelle'),
       el('input', {
         type: 'text',
         className: 'form-input',
         id: 'dif-decideur',
         value: draft.nomDecideur || '',
-        placeholder: 'Ex : Mme Adjoua, CF'
+        placeholder: 'Personne ou instance habilitée à décider'
       })
     ]));
     bottomGrid.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, 'Référence document'),
+      // Modif #124 (E-6) — « Référence / N° de l'acte » (acte : résiliation, suspension…).
+      el('label', { className: 'form-label' }, 'Référence / N° de l\'acte'),
       el('input', {
         type: 'text',
         className: 'form-input',
         id: 'dif-fichier',
         value: draft.fichier || '',
-        placeholder: 'Référence R2 (upload à venir)'
+        placeholder: 'N° / référence de l\'acte de décision'
       })
     ]));
     content.appendChild(bottomGrid);
