@@ -13,6 +13,33 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Difficultés du marché : pièce jointe de l'acte + autorité décisionnelle (E-4)
+
+> **Modif #140** — Point **E-4** sur la modale « Nouvelle difficulté ». Trois demandes du retour traitées : (1) **chargement du fichier** = l'acte qui rend la décision (résiliation, suspension…) — ajout d'un **vrai upload** (champ `type=file`, envoi R2 à l'enregistrement, lien 📎 dans le tableau) ; (2) **Autorité décisionnelle** — le champ texte devient une **sélection assistée** (`datalist` de 8 autorités courantes, saisie libre conservée) ; (3) **Référence / N° de l'acte** — champ texte déjà présent, conservé. La modale est aussi **réalignée** : tous les couples label/champ passent par la classe `.form-field` (les `<div>` nus empêchaient l'empilement vertical et la pleine largeur — d'où le décalage visuel).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js` :
+  - Import `uploadDocument` (R2 — variante Marché+) ; référentiel `AUTORITES_DECISIONNELLES` ; constante `ACTE_ACCEPT`.
+  - Draft : champs `acteDocumentId`, `acteUrl`, `acteNom`.
+  - Modale : tous les wrappers de champ reçoivent `className: 'form-field'` (alignement) ; « Autorité décisionnelle » devient un input + `<datalist>` ; nouveau bloc **« Acte de décision (pièce jointe) »** (input file + aperçu du fichier déjà attaché en édition).
+  - Save : si un fichier est choisi → `uploadDocument(file, {entityType:'DIFFICULTE', entityId, operationId, typeDocument:'ACTE_DECISION'})`, puis stockage de `acteDocumentId`/`acteUrl`/`acteNom` ; bouton en état « ⏳ Envoi de l'acte… » + gestion d'erreur (pas de persistance si l'upload échoue).
+  - Tableau : colonne « Décision » affiche un lien 📎 vers l'acte quand `acteUrl` est présent.
+- `sidcf-portal/js/datastore/schema.js` : `MP_DIFFICULTE` — ajout de `acteDocumentId`, `acteUrl`, `acteNom` (et commentaires clarifiant `nomDecideur` = autorité, `fichier` = référence texte).
+
+### Impact / Anti-régression
+
+- **DB** : champs additifs sur `MP_DIFFICULTE` (NoSQL/JSON) → **aucune migration** ; les difficultés existantes (sans pièce) restent valides (`acteUrl` null = pas de lien 📎).
+- **R2** : réutilise le pipeline existant `uploadDocument` (entité `MP_DOCUMENT`, préfixe `mp/`, max 50 Mo) — aucune nouvelle infra. L'acte est aussi tracé comme `MP_DOCUMENT` (`entityType: 'DIFFICULTE'`).
+- **UI** : `.form-field` (flex column + stretch) corrige le décalage label/champ visible sur la maquette. `datalist` = saisie libre préservée (rétro-compatible avec les valeurs déjà saisies dans `nomDecideur`).
+- **Vérifié** : `node --check` OK sur les 2 fichiers JS modifiés.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). L'upload R2 passe par l'adapter `dataService` déjà en place — pas de déploiement Worker spécifique requis.
+
+---
+
 ## 2026-06-04 — Sous-traitance : compte bancaire du sous-traitant (E-18)
 
 > **Modif #138** — Point **E-18** (« Ressortir son compte bancaire le cas échéant »). Ajout au gestionnaire des sous-traitants de deux champs **Banque** et **N° de compte (RIB / IBAN)**, optionnels, pré-remplis depuis la fiche entreprise du sous-traitant (via le picker) mais éditables. Une colonne **« Compte bancaire »** apparaît dans le tableau des sous-traitants. (Raison sociale, NCC et part du marché étaient déjà présents.)

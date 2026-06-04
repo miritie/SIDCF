@@ -29,6 +29,22 @@ import dataService, { ENTITIES } from '../../datastore/data-service.js';
 import logger from '../../lib/logger.js';
 import { date as fmtDate } from '../../lib/format.js';
 import { uid } from '../../lib/uid.js';
+import { uploadDocument } from '../../lib/r2-storage-mp.js';
+
+// Modif #140 (E-4) — Autorités décisionnelles courantes (suggestions, saisie libre
+// possible). « à minima » : l'agent sélectionne une autorité ou en saisit une.
+export const AUTORITES_DECISIONNELLES = [
+  'Autorité contractante',
+  'Personne Responsable des Marchés Publics (PRMP)',
+  'Maître d\'ouvrage',
+  'Commission d\'ouverture et de jugement',
+  'Direction des Marchés Publics (DMP)',
+  'Autorité Nationale de Régulation des Marchés Publics (ANRMP)',
+  'Ministre / Directeur Général',
+  'Juridiction compétente'
+];
+
+const ACTE_ACCEPT = '.pdf,.doc,.docx,.png,.jpg,.jpeg';
 
 // ----- Référentiels locaux -----
 
@@ -249,7 +265,17 @@ export function renderDifficultesManager({
           el('td', {}, el('span', {
             style: { fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: statutM.bg, color: statutM.color }
           }, statutM.label)),
-          el('td', { style: { fontSize: '12px' } }, d.decision || '-'),
+          el('td', { style: { fontSize: '12px' } }, [
+            el('span', {}, d.decision || '-'),
+            // Modif #140 (E-4) — lien vers l'acte de décision si une pièce est jointe
+            d.acteUrl
+              ? el('a', {
+                  href: d.acteUrl, target: '_blank', rel: 'noopener',
+                  title: `Acte : ${d.acteNom || 'document'}`,
+                  style: { marginLeft: '6px', textDecoration: 'none' }
+                }, '📎')
+              : null
+          ]),
           el('td', { style: { fontSize: '12px' } }, fmtDate(d.dateDecision || d.createdAt)),
           el('td', { style: { textAlign: 'center' } }, [
             el('button', {
@@ -294,6 +320,9 @@ export function renderDifficultesManager({
       dateDecision: null,
       nomDecideur: '',
       fichier: null,
+      acteDocumentId: null,
+      acteUrl: null,
+      acteNom: null,
       impact: 'MOYEN',
       categorieProbleme: 'TECHNIQUE',
       actionsCorrectives: '',
@@ -334,7 +363,7 @@ export function renderDifficultesManager({
         el('option', { value: '' }, '-- Sélectionner un lot --'),
         ...lots.map(l => el('option', { value: l.id, selected: draft.lotId === l.id }, l.libelle || l.id))
       ]);
-      formGrid.appendChild(el('div', { style: { gridColumn: '1 / -1' } }, [
+      formGrid.appendChild(el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
         el('label', { className: 'form-label' }, ['Lot concerné', el('span', { className: 'required' }, '*')]),
         lotSelect,
         el('small', { className: 'text-muted', style: { fontSize: '11px' } },
@@ -342,7 +371,7 @@ export function renderDifficultesManager({
       ]));
     } else if (Array.isArray(lots) && lots.length === 1) {
       // Mono-lot : affichage informatif read-only
-      formGrid.appendChild(el('div', { style: { gridColumn: '1 / -1' } }, [
+      formGrid.appendChild(el('div', { className: 'form-field', style: { gridColumn: '1 / -1' } }, [
         el('label', { className: 'form-label' }, 'Lot concerné'),
         el('div', {
           style: {
@@ -357,7 +386,7 @@ export function renderDifficultesManager({
     const impactSelect = el('select', { className: 'form-input', id: 'dif-impact' },
       IMPACT_LEVELS.map(i => el('option', { value: i.code, selected: draft.impact === i.code }, i.label))
     );
-    formGrid.appendChild(el('div', {}, [
+    formGrid.appendChild(el('div', { className: 'form-field' }, [
       el('label', { className: 'form-label' }, ['Impact', el('span', { className: 'required' }, '*')]),
       impactSelect
     ]));
@@ -366,7 +395,7 @@ export function renderDifficultesManager({
     const categorieSelect = el('select', { className: 'form-input', id: 'dif-categorie' },
       CATEGORIES_PROBLEME.map(c => el('option', { value: c.code, selected: draft.categorieProbleme === c.code }, c.label))
     );
-    formGrid.appendChild(el('div', {}, [
+    formGrid.appendChild(el('div', { className: 'form-field' }, [
       el('label', { className: 'form-label' }, ['Catégorie', el('span', { className: 'required' }, '*')]),
       categorieSelect
     ]));
@@ -375,7 +404,7 @@ export function renderDifficultesManager({
     const statutSelect = el('select', { className: 'form-input', id: 'dif-statut' },
       STATUT_TRAITEMENT.map(s => el('option', { value: s.code, selected: draft.statutTraitement === s.code }, s.label))
     );
-    formGrid.appendChild(el('div', {}, [
+    formGrid.appendChild(el('div', { className: 'form-field' }, [
       el('label', { className: 'form-label' }, ['Statut de traitement', el('span', { className: 'required' }, '*')]),
       statutSelect
     ]));
@@ -384,7 +413,7 @@ export function renderDifficultesManager({
     const statutMarcheSelect = el('select', { className: 'form-input', id: 'dif-statut-marche' },
       STATUT_MARCHE_DIFFICULTE.map(s => el('option', { value: s.code, selected: (draft.statutMarche || 'EN_COURS') === s.code }, s.label))
     );
-    formGrid.appendChild(el('div', {}, [
+    formGrid.appendChild(el('div', { className: 'form-field' }, [
       el('label', { className: 'form-label' }, 'Statut du marché'),
       statutMarcheSelect
     ]));
@@ -396,7 +425,7 @@ export function renderDifficultesManager({
       id: 'dif-date',
       value: draft.dateDecision || ''
     });
-    formGrid.appendChild(el('div', {}, [
+    formGrid.appendChild(el('div', { className: 'form-field' }, [
       el('label', { className: 'form-label' }, 'Date de décision'),
       dateInput
     ]));
@@ -404,7 +433,7 @@ export function renderDifficultesManager({
     content.appendChild(formGrid);
 
     // Problème (full width)
-    content.appendChild(el('div', { style: { marginTop: '12px' } }, [
+    content.appendChild(el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
       el('label', { className: 'form-label' }, ['Description du problème', el('span', { className: 'required' }, '*')]),
       el('textarea', {
         className: 'form-input',
@@ -415,7 +444,7 @@ export function renderDifficultesManager({
     ]));
 
     // Décision (full width)
-    content.appendChild(el('div', { style: { marginTop: '12px' } }, [
+    content.appendChild(el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
       el('label', { className: 'form-label' }, 'Décision prise'),
       el('input', {
         type: 'text',
@@ -427,7 +456,7 @@ export function renderDifficultesManager({
     ]));
 
     // Actions correctives (full width)
-    content.appendChild(el('div', { style: { marginTop: '12px' } }, [
+    content.appendChild(el('div', { className: 'form-field', style: { marginTop: '12px' } }, [
       el('label', { className: 'form-label' }, 'Actions correctives'),
       el('textarea', {
         className: 'form-input',
@@ -437,20 +466,25 @@ export function renderDifficultesManager({
       }, draft.actionsCorrectives || '')
     ]));
 
-    // Décideur + fichier
+    // Autorité décisionnelle + Référence / N° de l'acte
     const bottomGrid = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' } });
-    bottomGrid.appendChild(el('div', {}, [
+    bottomGrid.appendChild(el('div', { className: 'form-field' }, [
       // Modif #124 (E-4) — « Autorité décisionnelle » au lieu de « Nom du décideur ».
+      // Modif #140 (E-4) — sélection assistée (datalist) tout en gardant la saisie libre.
       el('label', { className: 'form-label' }, 'Autorité décisionnelle'),
       el('input', {
         type: 'text',
         className: 'form-input',
         id: 'dif-decideur',
+        list: 'dif-autorites-list',
         value: draft.nomDecideur || '',
-        placeholder: 'Personne ou instance habilitée à décider'
-      })
+        placeholder: 'Sélectionner ou saisir une autorité…'
+      }),
+      el('datalist', { id: 'dif-autorites-list' },
+        AUTORITES_DECISIONNELLES.map(a => el('option', { value: a }))
+      )
     ]));
-    bottomGrid.appendChild(el('div', {}, [
+    bottomGrid.appendChild(el('div', { className: 'form-field' }, [
       // Modif #124 (E-6) — « Référence / N° de l'acte » (acte : résiliation, suspension…).
       el('label', { className: 'form-label' }, 'Référence / N° de l\'acte'),
       el('input', {
@@ -463,12 +497,37 @@ export function renderDifficultesManager({
     ]));
     content.appendChild(bottomGrid);
 
+    // Modif #140 (E-4) — Pièce jointe : chargement de l'acte qui rend la décision
+    // (résiliation, suspension…). Upload réel vers R2 au moment de l'enregistrement.
+    const acteField = el('div', { className: 'form-field', style: { marginTop: '12px' } });
+    acteField.appendChild(el('label', { className: 'form-label' }, 'Acte de décision (pièce jointe)'));
+    // Aperçu du fichier déjà attaché (en édition)
+    const acteCurrent = el('div', { id: 'dif-acte-current', style: { marginBottom: draft.acteUrl ? '6px' : '0' } },
+      draft.acteUrl
+        ? el('a', { href: draft.acteUrl, target: '_blank', rel: 'noopener', style: { fontSize: '12px', color: '#0066cc' } },
+            `📎 ${draft.acteNom || 'Document attaché'}`)
+        : null
+    );
+    acteField.appendChild(acteCurrent);
+    acteField.appendChild(el('input', {
+      type: 'file',
+      className: 'form-input',
+      id: 'dif-acte-file',
+      accept: ACTE_ACCEPT
+    }));
+    acteField.appendChild(el('small', { className: 'text-muted', style: { fontSize: '11px' } },
+      draft.acteUrl
+        ? 'Choisir un fichier pour remplacer l\'acte attaché. PDF, Word ou image (max 50 Mo).'
+        : 'PDF, Word ou image (max 50 Mo). Facultatif.'));
+    content.appendChild(acteField);
+
     // Boutons
     content.appendChild(el('div', { style: { marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' } }, [
       el('button', { className: 'btn btn-secondary', onclick: () => modal.remove() }, 'Annuler'),
       el('button', {
         className: 'btn btn-primary',
-        onclick: async () => {
+        onclick: async (e) => {
+          const saveBtn = e.currentTarget;
           const probleme = document.getElementById('dif-probleme').value.trim();
           if (!probleme) {
             alert('La description du problème est obligatoire');
@@ -502,6 +561,34 @@ export function renderDifficultesManager({
             payload.operationId = operationId;
             payload.createdAt = new Date().toISOString();
           }
+
+          // Modif #140 (E-4) — Upload de l'acte de décision (si un fichier est choisi)
+          const fileInput = document.getElementById('dif-acte-file');
+          const file = fileInput && fileInput.files && fileInput.files[0];
+          if (file) {
+            const prevLabel = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Envoi de l\'acte…';
+            try {
+              const res = await uploadDocument(file, {
+                entityType: 'DIFFICULTE',
+                entityId: payload.id,
+                operationId,
+                typeDocument: 'ACTE_DECISION',
+                commentaire: `Acte de décision — difficulté ${payload.id}`
+              });
+              payload.acteDocumentId = res.documentId;
+              payload.acteUrl = res.url;
+              payload.acteNom = file.name;
+            } catch (err) {
+              logger.error('[Difficultés] Upload acte échoué', err);
+              alert(`❌ Échec du chargement de l'acte : ${err.message}`);
+              saveBtn.disabled = false;
+              saveBtn.textContent = prevLabel;
+              return;
+            }
+          }
+
           await persist(payload, isEdit);
           modal.remove();
         }

@@ -1205,8 +1205,12 @@ export const SCHEMAS = {
 
     // Traçabilité
     dateDecision: null,
-    nomDecideur: '',
-    fichier: null, // Document de résolution
+    nomDecideur: '',          // Autorité décisionnelle (personne ou instance habilitée)
+    fichier: null,            // Référence / N° de l'acte (texte)
+    // Modif #140 (E-4) — Pièce jointe : l'acte qui rend la décision (résiliation, suspension…)
+    acteDocumentId: null,     // id de l'entité MP_DOCUMENT uploadée
+    acteUrl: null,            // URL R2 directe (lien rapide)
+    acteNom: null,            // nom du fichier d'origine (affichage)
 
     // Détails
     impact: 'FAIBLE', // FAIBLE | MOYEN | ELEVE | CRITIQUE
