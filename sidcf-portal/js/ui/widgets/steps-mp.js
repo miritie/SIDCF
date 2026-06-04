@@ -399,7 +399,9 @@ const ETAT_TO_PHASE = {
   PLANIFIE:  'PLANIF',
   EN_PROC:   'PROCEDURE',
   ATTRIBUE:  'ATTRIBUTION',
-  VISE:      'VISA_CF',
+  // Modif #132 (E-1/E-9) — fusion étapes 3 & 4 : VISE (Approuvé) reste sur
+  // l'étape « Enregistrement de marché » (plus d'étape « Visa CF » distincte).
+  VISE:      'ATTRIBUTION',
   EN_EXEC:   'EXECUTION',
   EXECUTION: 'EXECUTION',
   CLOS:      'CLOTURE',

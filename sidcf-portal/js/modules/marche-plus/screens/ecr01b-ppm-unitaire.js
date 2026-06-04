@@ -145,7 +145,8 @@ function getRouteForEtape(etat) {
     case 'PLANIFIE':    return '/mp/ppm-create-line'; // Modif #94 — édition de la ligne PPM (pas la fiche de vie)
     case 'EN_PROC':     return '/mp/procedure';
     case 'ATTRIBUE':    return '/mp/attribution';
-    case 'VISE':        return '/mp/visa-cf';
+    // Modif #132 (E-1/E-9) — fusion étapes 3 & 4 : VISE consulte l'enregistrement.
+    case 'VISE':        return '/mp/attribution';
     case 'EN_EXEC':
     case 'EXECUTION':   return '/mp/execution';   // EXECUTION = code legacy
     case 'CLOS':

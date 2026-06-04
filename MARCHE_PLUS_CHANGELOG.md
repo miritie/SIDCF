@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Fusion étapes 3 & 4 : redirection Visa CF + frise (E-1/E-9, 2b)
+
+> **Modif #132** — Section C, lot 10, points **E-1/E-9**, commit 2b (final). La fusion est **complète côté navigation et frise** : l'ancienne URL/étape « Visa CF » rend désormais l'**écran d'enregistrement** (l'approbation y est contenue), et un marché à l'état **VISE** se positionne sur l'étape « **Enregistrement de marché** » dans la frise (et non « Exécution »).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/index.js` : route `/mp/visa-cf` enregistrée sur `renderAttribution` (au lieu de `renderVisaCF`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : `getRouteForEtape` — `VISE` (et `ATTRIBUE`) renvoient vers `/mp/attribution` (l'action « Voir » d'un marché approuvé ouvre l'enregistrement).
+- `sidcf-portal/js/ui/widgets/steps-mp.js` : `ETAT_TO_PHASE.VISE = 'ATTRIBUTION'` (au lieu de `'VISA_CF'`, étape qui n'existe plus dans la frise rendue).
+
+### Impact / Anti-régression
+
+- **Workflow** : plus aucune étape « Visa CF » distincte — ni écran, ni route, ni jalon de frise. `renderVisaCF` (ecr03c) reste importé mais n'est plus routé (aucune régression ; suppression possible ultérieurement).
+- **DB / Worker** : aucun changement (front uniquement).
+- **Vérifié (CDP)** : `/mp/visa-cf?idOperation=…` rend bien l'écran d'enregistrement (bloc « Origine de l'approbation » présent) ; la frise d'un marché **VISE** affiche « Enregistrement de marché » comme étape courante (✅, pas « Exécution ») ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Vider le cache localStorage `sidcf_registries` non requis (pas de changement de référentiel).
+
+---
+
 ## 2026-06-04 — Fusion étapes 3 & 4 : enregistrement → Approuvé directement (E-1/E-9, 2a)
 
 > **Modif #131** — Section C, lot 10, points **E-1/E-9**, commit 2a. La fusion devient effective : l'écran d'**enregistrement** fait passer le marché **directement à l'état VISE (Attribué/Approuvé)** à la sauvegarde (l'approbation est contenue dans l'enregistrement). Le **bouton orange « Passer à Approbation »** (transition ATTRIBUE→VISE) est **supprimé**.

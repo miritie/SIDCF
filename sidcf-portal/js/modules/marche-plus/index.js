@@ -42,7 +42,9 @@ export function registerMarchePlusRoutes() {
 
   // Attribution
   router.register('/mp/attribution', renderAttribution);
-  router.register('/mp/visa-cf', renderVisaCF);
+  // Modif #132 (E-1/E-9) — fusion étapes 3 & 4 : l'URL Visa CF rend désormais
+  // l'écran d'enregistrement (l'approbation y est contenue).
+  router.register('/mp/visa-cf', renderAttribution);
   router.register('/mp/echeancier', renderEcheancierCle);
 
   // Execution
