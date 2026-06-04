@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Enregistrement : retrait du bloc « TVA supportée par l'État » (E-19, 1/2)
+
+> **Modif #121** — Section C, lot 5, point **E-19 (volet TVA)**. Analyse demandée : le bloc **« TVA supportée par l'État »** de l'enregistrement était **orphelin** (aucune persistance — ses champs n'étaient jamais sauvegardés) et **redondant** avec la **clé de répartition**, qui gère sa propre ligne « TVA État » via un **toggle dédié** (`addTVAEtatLine`/`removeTVAEtatLine`). Le bloc est donc **retiré** sans perte de fonctionnalité ni risque pour la clé.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : appel `renderTVASection(...)` retiré de `renderAttributionForm`. La fonction `renderTVASection` reste définie mais **non appelée** (à supprimer ultérieurement).
+
+### Impact / Anti-régression
+
+- **UI** : un bloc en moins à l'enregistrement ; la déclaration « État supporte la TVA » reste possible dans la **clé de répartition**.
+- **Données** : ❌ aucune (le bloc ne persistait rien).
+- **Vérifié (CDP)** : bloc TVA absent, réserve CF toujours présente, clé de répartition intacte (toggle TVA conservé) ; 0 erreur console.
+- *Suite (E-19, 2/2)* : déplacement de la **réserve CF** vers la contractualisation.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Enregistrement : Section C lot 4 (avances de démarrage 15/15 ≤ 30 %)
 
 > **Modif #120** — Section C, **lot 4**, point **E-15**. L'avance de démarrage (auparavant une simple case) est refondue en **deux avances** : **forfaitaire** (≤ 15 % du marché de base) + **facultative** (≤ 15 %), avec **calcul des montants** (% × montant TTC), **total** affiché et **alerte non bloquante si le cumul dépasse 30 %**. Le calibrage « Décompte 00 » reste honoré à l'étape Exécution.

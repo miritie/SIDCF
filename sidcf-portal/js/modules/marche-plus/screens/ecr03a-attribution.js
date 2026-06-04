@@ -531,8 +531,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Réserves CF
     renderReservesCFSection(existingAttr.decisionCF || {}),
 
-    // Section TVA supportée par l'État
-    renderTVASection(existingAttr.tvaEtat || {}),
+    // Modif #121 (E-19) — Bloc « TVA supportée par l'État » retiré : il était
+    // orphelin (aucune persistance) et redondant avec la clé de répartition,
+    // qui gère sa propre ligne « TVA État » via son toggle dédié.
 
     // Section Clé de Répartition
     // Modif #88 (CR 6.b) — Rappel + ajustement des livrables du marché
