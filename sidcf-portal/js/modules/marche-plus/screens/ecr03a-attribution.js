@@ -528,9 +528,8 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Section Sous-traitance (Marché+ modif #38.b — mail séance 6 mai §5.g)
     renderSousTraitanceSection(existingAttr.sousTraitants || []),
 
-    // Section Réserves CF
-    renderReservesCFSection(existingAttr.decisionCF || {}),
-
+    // Modif #122 (E-19) — Réserves du CF déplacées vers la CONTRACTUALISATION
+    // (« à toutes les contractualisations »). Plus rendues ici.
     // Modif #121 (E-19) — Bloc « TVA supportée par l'État » retiré : il était
     // orphelin (aucune persistance) et redondant avec la clé de répartition,
     // qui gère sa propre ligne « TVA État » via son toggle dédié.

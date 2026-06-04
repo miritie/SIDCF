@@ -218,6 +218,10 @@ export async function renderProcedurePV(params) {
     // Modif #111 — C-11 vague 3 / C-9 : liste restreinte (AMI cabinet).
     el('div', { id: 'liste-restreinte-container' }),
 
+    // Modif #122 — E-19 : réserves du CF, déplacées de l'enregistrement vers la
+    // contractualisation (« à toutes les contractualisations »).
+    el('div', { id: 'reserve-cf-container' }),
+
     // Actions
     el('div', { className: 'card' }, [
       el('div', { className: 'card-body' }, [
@@ -415,6 +419,7 @@ export async function renderProcedurePV(params) {
       document.getElementById('lots-container').innerHTML = '';
       document.getElementById('attribution-container').innerHTML = '';
       document.getElementById('liste-restreinte-container').innerHTML = '';
+      document.getElementById('reserve-cf-container').innerHTML = '';
       return;
     }
 
@@ -619,6 +624,13 @@ export async function renderProcedurePV(params) {
       attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, null));
     }
 
+    // Modif #122 — E-19 : réserves du CF (à toutes les contractualisations).
+    const reserveCFContainer = document.getElementById('reserve-cf-container');
+    if (reserveCFContainer) {
+      reserveCFContainer.innerHTML = '';
+      reserveCFContainer.appendChild(renderReserveCFBlock(procedureData || {}));
+    }
+
     // Modif #108 — C-5 : applique l'état initial « sans CF » (PSD/PSC).
     applySansCFVisibility();
   }
@@ -726,6 +738,57 @@ function applySansCFVisibility() {
     const node = document.getElementById(idc);
     if (node) node.style.display = sansCF ? 'none' : '';
   });
+}
+
+// Modif #122 — E-19 : types de réserve CF (liste indicative ; le vrai
+// référentiel configurable TYPE_RESERVE_CF sera fourni par la DCF).
+const TYPES_RESERVE_CF = [
+  { code: 'DOCUMENT_MANQUANT', label: 'Document manquant (pièce justificative absente)' },
+  { code: 'PIECES_INCOMPLETES', label: 'Pièces administratives incomplètes' },
+  { code: 'PROCEDURE_NON_CONFORME', label: 'Procédure non conforme au seuil' },
+  { code: 'DEROGATION_NON_JUSTIFIEE', label: 'Dérogation sans pièce justificative' },
+  { code: 'ATTRIBUTAIRE_SANCTIONNE', label: 'Attributaire sur liste de sanctions' },
+  { code: 'PV_NON_CONFORME', label: "PV d'ouverture/attribution non conforme" },
+  { code: 'GARANTIES_NON_CONFORMES', label: 'Garanties hors plage légale' },
+  { code: 'AUTRE', label: 'Autre motif (préciser en commentaire)' }
+];
+
+/**
+ * Modif #122 — E-19 : bloc « Réserves du Contrôleur Financier », déplacé de
+ * l'enregistrement vers la contractualisation. Masqué par « sans CF » (PSD/PSC).
+ */
+function renderReserveCFBlock(existingProc) {
+  const r = existingProc.reserveCF || {};
+  const aReserves = r.aReserves === true;
+  const typeSel = el('select', { className: 'form-input', id: 'cf-type-reserve' }, [
+    el('option', { value: '' }, '-- Sélectionner --'),
+    ...TYPES_RESERVE_CF.map(t => el('option', { value: t.code }, t.label))
+  ]);
+  typeSel.value = r.typeReserve || '';
+  const details = el('div', { id: 'cf-reserves-details', style: { display: aReserves ? 'block' : 'none', padding: '16px', backgroundColor: '#fff3cd', borderRadius: '4px' } }, [
+    el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+      el('label', { className: 'form-label' }, 'Type de réserve'),
+      typeSel
+    ]),
+    el('div', { className: 'form-field' }, [
+      el('label', { className: 'form-label' }, 'Commentaire'),
+      el('textarea', { className: 'form-input', id: 'cf-commentaire', rows: 2, placeholder: 'Nature de la réserve, pièces attendues, etc.' }, r.commentaire || '')
+    ])
+  ]);
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '⚠️ Réserves du Contrôleur Financier')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+        el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+          (() => { const cb = el('input', { type: 'checkbox', id: 'cf-a-reserves', onchange: (e) => { details.style.display = e.target.checked ? 'block' : 'none'; } }); cb.checked = aReserves; return cb; })(),
+          el('span', {}, 'Le CF a émis des réserves')
+        ])
+      ]),
+      details
+    ])
+  ]);
 }
 
 /**
@@ -1474,6 +1537,14 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';
   // Modif #108 — C-5 : indicateur « contractualisation sans CF » (PSD/PSC).
   procedureData.sansCF = !!document.getElementById('proc-sans-cf')?.checked;
+  // Modif #122 — E-19 : réserves du CF (déplacées à la contractualisation).
+  if (document.getElementById('cf-a-reserves')) {
+    procedureData.reserveCF = {
+      aReserves: document.getElementById('cf-a-reserves')?.checked === true,
+      typeReserve: document.getElementById('cf-type-reserve')?.value || null,
+      commentaire: document.getElementById('cf-commentaire')?.value?.trim() || null
+    };
+  }
   // Modif #109/#114 — attribution : attributaire SÉLECTIONNÉ (raison sociale +
   // NCC déduit) + montant attribué.
   if (document.getElementById('proc-attr-input')) {

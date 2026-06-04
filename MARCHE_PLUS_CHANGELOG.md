@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Réserves du CF déplacées vers la Contractualisation (E-19, 2/2)
+
+> **Modif #122** — Section C, lot 5, point **E-19 (volet réserve CF)**. La case **« Réserves du Contrôleur Financier »** quitte l'enregistrement pour la **contractualisation** (« à toutes les contractualisations », C-11 §2). Elle est désormais **masquée par l'option « sans CF »** (PSD/PSC). À l'enregistrement, le bloc n'apparaît plus (il n'y était d'ailleurs pas persisté).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : conteneur `#reserve-cf-container` + `renderReserveCFBlock()` + `TYPES_RESERVE_CF` ; persistance `procedureData.reserveCF = { aReserves, typeReserve, commentaire }`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : appel `renderReservesCFSection(...)` retiré (fonction conservée non appelée).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` : affichage des réserves lu depuis `procedure.reserveCF` (fallback `attribution.decisionCF`).
+
+### Impact / Anti-régression
+
+- **UI** : réserve CF saisie à la contractualisation (masquée si « sans CF ») ; absente de l'enregistrement.
+- **Données** : nouveau `procedure.reserveCF` (JSONB — pas de migration) ; l'ancien `attribution.decisionCF` reste lu en fallback par la fiche.
+- **Vérifié (CDP)** : présente (AOO) avec détails au clic ; masquée par « sans CF » (PSC) ; absente de l'enregistrement ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Enregistrement : retrait du bloc « TVA supportée par l'État » (E-19, 1/2)
 
 > **Modif #121** — Section C, lot 5, point **E-19 (volet TVA)**. Analyse demandée : le bloc **« TVA supportée par l'État »** de l'enregistrement était **orphelin** (aucune persistance — ses champs n'étaient jamais sauvegardés) et **redondant** avec la **clé de répartition**, qui gère sa propre ligne « TVA État » via un **toggle dédié** (`addTVAEtatLine`/`removeTVAEtatLine`). Le bloc est donc **retiré** sans perte de fonctionnalité ni risque pour la clé.

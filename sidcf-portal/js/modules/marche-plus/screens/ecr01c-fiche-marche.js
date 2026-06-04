@@ -1381,15 +1381,17 @@ function renderAttributionContent(fullData, currentLotId, registries) {
         ])
       : null,
 
-    attribution.decisionCF?.aReserves
-      ? el('div', {
-          className: 'alert alert-warning',
-          style: { marginTop: '16px' }
-        }, [
-          el('strong', {}, '⚠️ Réserves du CF : '),
-          attribution.decisionCF.commentaire || attribution.decisionCF.motifReserve || '(non précisées)'
-        ])
-      : null
+    // Modif #122 (E-19) — réserve CF lue depuis la contractualisation
+    // (procedure.reserveCF) ; fallback sur l'ancien emplacement (attribution.decisionCF).
+    (() => {
+      const res = fullData.procedure?.reserveCF || attribution.decisionCF || {};
+      return res.aReserves
+        ? el('div', { className: 'alert alert-warning', style: { marginTop: '16px' } }, [
+            el('strong', {}, '⚠️ Réserves du CF : '),
+            res.commentaire || res.motifReserve || '(non précisées)'
+          ])
+        : null;
+    })()
   ]);
 }
 
