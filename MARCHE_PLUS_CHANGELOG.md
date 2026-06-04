@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Enregistrement : ordonnancement prévu (CP par année) — E-21
+
+> **Modif #128** — Section C, **lot 8**, point **E-21**. Ajout d'une section **« 🗓️ Ordonnancement prévu (CP par année) »** sur l'écran d'enregistrement : un tableau **années × sources de financement** (Trésor (CI) / Dons / Emprunts) avec **montants saisissables**, **totaux par ligne et généraux**, et **ajout/suppression d'années**. Vue annuelle / pluriannuelle de la prise en charge, **complémentaire à la clé de répartition** (conforme à l'extrait « page de garde » transmis).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : `renderOrdonnancementSection(existingAttr, operation)` (rendue après la clé de répartition) ; persistance `ordonnancement = [{ annee, tresor, dons, emprunts }]` dans `lotFields`.
+
+### Impact / Anti-régression
+
+- **UI** : une section de plus à l'enregistrement ; totaux recalculés à la saisie.
+- **Données** : `ordonnancement` ajouté à `MP_ATTRIBUTION` (JSONB — pas de migration).
+- **Vérifié (CDP)** : tableau présent, total ligne/général « 3 000 000 000 XOF » correct, ajout d'année OK ; 0 erreur console.
+- *Suite (« à terme »)* : pré-remplissage depuis les sources/clé de répartition + lien pluriannualité.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Difficultés : bloc OUI/NON sur toutes les étapes (E-2/E-22)
 
 > **Modif #127** — Section C, lot 7, étape finale, points **E-2 et E-22**. Le bloc « difficultés » devient un **composant réutilisable encadré OUI/NON** (`renderDifficultesGatedBloc`) et est **posé sur toutes les étapes** : contractualisation, enregistrement, exécution, clôture (en plus de la fiche de vie). « Oui » déploie le gestionnaire (chargé à la demande), « Non » le replie ; il s'ouvre **automatiquement** si des difficultés existent déjà.

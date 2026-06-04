@@ -544,6 +544,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
 
     renderCleRepartitionSection(montantHT, montantTTC, operation.livrables || [], registries),
 
+    // Modif #128 (E-21) — Ordonnancement prévu (CP par année), complémentaire à la clé.
+    renderOrdonnancementSection(existingAttr, operation),
+
     // Section Échéancier
     renderEcheancierSection(montantTTC, operation.livrables || [], registries)
   ]);
@@ -2158,6 +2161,68 @@ function renderLivrablesSection() {
 }
 
 /**
+ * Modif #128 (E-21) — Section « Ordonnancement prévu (CP par année) ».
+ * Tableau récapitulatif années × sources (Trésor/Dons/Emprunts), complémentaire
+ * à la clé de répartition : vue annuelle / pluriannuelle de la prise en charge.
+ */
+function renderOrdonnancementSection(existingAttr, operation) {
+  const rows = (Array.isArray(existingAttr.ordonnancement) && existingAttr.ordonnancement.length)
+    ? existingAttr.ordonnancement
+    : [{ annee: operation.exercice || '', tresor: 0, dons: 0, emprunts: 0 }];
+
+  const tbody = el('tbody', { id: 'ord-tbody' });
+  const totalLine = el('div', { id: 'ord-total', style: { marginTop: '8px', fontWeight: 600, textAlign: 'right', fontSize: '13px' } }, '');
+
+  const recompute = () => {
+    let tT = 0, tD = 0, tE = 0;
+    [...tbody.querySelectorAll('tr')].forEach(tr => {
+      const v = (cls) => Number(tr.querySelector(cls)?.value) || 0;
+      const rt = v('.ord-tresor') + v('.ord-dons') + v('.ord-emprunts');
+      const cell = tr.querySelector('.ord-rowtotal'); if (cell) cell.textContent = formatMoney(rt);
+      tT += v('.ord-tresor'); tD += v('.ord-dons'); tE += v('.ord-emprunts');
+    });
+    totalLine.textContent = `Total — Trésor : ${formatMoney(tT)} · Dons : ${formatMoney(tD)} · Emprunts : ${formatMoney(tE)} · Général : ${formatMoney(tT + tD + tE)}`;
+  };
+
+  const numCell = (cls, val) => el('td', {}, el('input', { type: 'number', className: `form-input ${cls}`, value: val || 0, min: 0, step: 1, style: { width: '100%' }, oninput: () => recompute() }));
+  const makeRow = (r) => el('tr', {}, [
+    el('td', {}, el('input', { type: 'number', className: 'form-input ord-annee', value: r.annee || '', placeholder: 'Année', style: { width: '90px' } })),
+    numCell('ord-tresor', r.tresor),
+    numCell('ord-dons', r.dons),
+    numCell('ord-emprunts', r.emprunts),
+    el('td', { className: 'ord-rowtotal', style: { textAlign: 'right', fontWeight: 600 } }, ''),
+    el('td', {}, el('button', { type: 'button', className: 'btn btn-sm btn-secondary', onclick: (e) => { e.target.closest('tr').remove(); recompute(); } }, '✕'))
+  ]);
+
+  rows.forEach(r => tbody.appendChild(makeRow(r)));
+  setTimeout(recompute, 0);
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '🗓️ Ordonnancement prévu (CP par année)'),
+      el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+        'Vue annuelle / pluriannuelle de la prise en charge, par source de financement — complémentaire à la clé de répartition.')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('table', { className: 'table', id: 'ord-table', style: { width: '100%', fontSize: '13px' } }, [
+        el('thead', {}, el('tr', {}, [
+          el('th', {}, 'Année (CP)'),
+          el('th', {}, 'Trésor (CI)'),
+          el('th', {}, 'Dons'),
+          el('th', {}, 'Emprunts'),
+          el('th', { style: { textAlign: 'right' } }, 'Total'),
+          el('th', {}, '')
+        ])),
+        tbody
+      ]),
+      el('div', { style: { marginTop: '8px' } },
+        el('button', { type: 'button', className: 'btn btn-sm btn-accent', onclick: () => { tbody.appendChild(makeRow({ annee: '', tresor: 0, dons: 0, emprunts: 0 })); recompute(); } }, '+ Ajouter une année')),
+      totalLine
+    ])
+  ]);
+}
+
+/**
  * Section Échéancier
  */
 function renderEcheancierSection(montantMarcheTotal, livrables, registries) {
@@ -2379,12 +2444,22 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     const dureeValeur = parseInt(document.getElementById('attr-duree-valeur')?.value, 10) || 0;
     const dureeUnite = document.getElementById('attr-duree-unite')?.value || 'MOIS';
 
+    // Modif #128 (E-21) — ordonnancement prévu (CP par année × sources).
+    const ordonnancement = [...document.querySelectorAll('#ord-tbody tr')].map(tr => ({
+      annee: parseInt(tr.querySelector('.ord-annee')?.value, 10) || null,
+      tresor: Number(tr.querySelector('.ord-tresor')?.value) || 0,
+      dons: Number(tr.querySelector('.ord-dons')?.value) || 0,
+      emprunts: Number(tr.querySelector('.ord-emprunts')?.value) || 0
+    })).filter(r => r.annee || r.tresor || r.dons || r.emprunts);
+
     // Champs métier (per-lot ou racine selon lotId)
     const lotFields = {
       attributaire: attributaireData,
       // Modif #86 — N° du marché approuvé + exonération de TVA
       numeroMarcheApprouve,
       exonereTVA,
+      // Modif #128 (E-21) — ordonnancement prévu CP par année.
+      ordonnancement,
       // Modif #89 — avance de démarrage (flag ; calibrage Décompte 00 à l'exécution)
       avanceDemarrage,
       montants: {
