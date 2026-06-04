@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Exécution : N° de mandat sur les décomptes (anti-doublon) (X-1)
+
+> **Modif #134** — Section D (Exécution), lot D2, point **OBS-X1**. En complément du **N° d'OP**, ajout d'un champ **N° de mandat** sur chaque décompte/OP. Il rattache le décompte à la facture/au mandat de paiement et sert de garde anti-doublon : si un autre décompte porte déjà le même N° de mandat, une confirmation alerte sur le risque de doublon de paiement.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` :
+  - Modale éditeur : nouveau champ « Numéro de mandat » (`dec-numeroMandat`) dans la section Identification, avec aide contextuelle.
+  - Sauvegarde : persistance de `numeroMandat` + contrôle anti-doublon (confirm si N° mandat déjà utilisé sur un autre décompte).
+  - Table des décomptes : nouvelle colonne « N° Mandat » (après N° d'OP) ; colspans des lignes de synthèse CUMULS/%CUMULS ajustés (4→5).
+
+### Impact / Anti-régression
+
+- **UI** : un champ et une colonne en plus ; aucun champ existant modifié. Le N° de mandat est facultatif (pas de blocage si vide).
+- **DB / Worker** : `numeroMandat` stocké dans l'entité `MP_DECOMPTE` (JSONB — aucune migration).
+- **Vérifié (CDP)** : colonne « N° Mandat » présente dans la table ; champ « Numéro de mandat » présent dans la modale (libellé + placeholder corrects) ; **0 erreur console**. (Anti-doublon non exercé en live pour ne pas créer de décompte réel.)
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-04 — Exécution : montant global (base + avenants) visible pour EN_EXEC (X-2)
 
 > **Modif #133** — Section D (Exécution), lot D1, point **OBS-X2**. Le « **Montant global du marché** » est déjà calculé **base + avenants** (formule correcte). Le vrai défaut : le **cockpit OP/mandats** (qui porte ce KPI, la table des décomptes et le suivi d'exécution financière) ne s'affichait **que pour l'état legacy `EXECUTION`**, jamais pour l'état **canonique `EN_EXEC`** — un simple placeholder « pas en exécution » s'affichait à la place. Du coup, pour un marché normalement en cours, aucun montant global n'était visible. Correctif : inclure `EN_EXEC` dans le déclenchement du cockpit.

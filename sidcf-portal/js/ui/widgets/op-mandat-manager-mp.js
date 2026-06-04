@@ -244,6 +244,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
           el('th', {}, 'N° Décompte'),
           el('th', {}, 'Type d\'OP'),
           el('th', {}, 'N° d\'OP'),
+          el('th', {}, 'N° Mandat'),
           el('th', {}, 'Date'),
           el('th', { style: { textAlign: 'right' } }, 'Acompte HTVA'),
           el('th', { style: { textAlign: 'right' } }, 'Avance'),
@@ -266,6 +267,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
               el('td', { style: { fontWeight: 600, fontFamily: 'monospace' } }, d.numero || '-'),
               el('td', {}, typeLib),
               el('td', { style: { fontFamily: 'monospace' } }, d.numeroOP || '-'),
+              el('td', { style: { fontFamily: 'monospace' } }, d.numeroMandat || '-'),
               el('td', {}, fmtDate(d.dateDecompte)),
               el('td', { style: { textAlign: 'right' } }, money(Number(d.acompteHTVA) || 0)),
               el('td', { style: { textAlign: 'right' } }, money(Number(d.avance) || 0)),
@@ -304,7 +306,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
           }),
           // Modif #48 — Ligne de synthèse CUMULS (totaux absolus)
           el('tr', { style: { background: '#fef2f2', borderTop: '2px solid #fecaca' } }, [
-            el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 4 }, 'CUMULS'),
+            el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 5 }, 'CUMULS'),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.acompteHTVA)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.avance)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.garantie)),
@@ -315,7 +317,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
           ]),
           // Modif #48 — Ligne de synthèse %CUMULS (pourcentages relatifs au montant global)
           el('tr', { style: { background: '#fef2f2' } }, [
-            el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 4 }, '%CUMULS'),
+            el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 5 }, '%CUMULS'),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.acompteHTVA)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.avance)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.garantie)),
@@ -341,6 +343,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
       numero: '',
       typeOP: 'OP',
       numeroOP: '',
+      numeroMandat: '', // Modif #134 (X-1) — N° de mandat de paiement (anti-doublon facture)
       dateDecompte: new Date().toISOString().slice(0, 10),
       acompteHTVA: 0,
       avance: 0,
@@ -393,6 +396,13 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     grid1.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, 'Numéro d\'OP'),
       el('input', { type: 'text', className: 'form-input', id: 'dec-numeroOP', value: draft.numeroOP || '', placeholder: 'Renseigné par le module budget' })
+    ]));
+    // Modif #134 (X-1) — N° de mandat : rattache le décompte à la facture payée.
+    // En complément du N° d'OP, il sert à éviter les doublons de paiement.
+    grid1.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Numéro de mandat'),
+      el('input', { type: 'text', className: 'form-input', id: 'dec-numeroMandat', value: draft.numeroMandat || '', placeholder: 'N° du mandat de paiement (Trésor)' }),
+      el('small', { className: 'text-muted', style: { fontSize: '11px' } }, 'Rattache le décompte à la facture/au mandat ; évite les doublons de paiement.')
     ]));
     grid1.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, 'Date de décompte'),
@@ -479,6 +489,17 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
           const numero = document.getElementById('dec-numero').value.trim();
           if (!numero) { alert('Numéro de décompte obligatoire'); return; }
 
+          // Modif #134 (X-1) — anti-doublon : alerter si un autre décompte porte
+          // déjà ce même N° de mandat (un mandat = un paiement, pas de doublon).
+          const numeroMandat = document.getElementById('dec-numeroMandat').value.trim();
+          if (numeroMandat) {
+            const dup = items.find(it => it.id !== draft.id
+              && String(it.numeroMandat || '').trim().toLowerCase() === numeroMandat.toLowerCase());
+            if (dup && !confirm(`⚠️ Le mandat « ${numeroMandat} » est déjà rattaché au décompte « ${dup.numero || '?'} ».\n\nRisque de doublon de paiement. Enregistrer quand même ?`)) {
+              return;
+            }
+          }
+
           const acompteHTVA = parseFloat(document.getElementById('dec-acompteHTVA').value) || 0;
           const avance      = parseFloat(document.getElementById('dec-avance').value) || 0;
           const garantie    = parseFloat(document.getElementById('dec-garantie').value) || 0;
@@ -496,6 +517,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
             numero,
             typeOP: document.getElementById('dec-type').value,
             numeroOP: document.getElementById('dec-numeroOP').value.trim(),
+            numeroMandat, // Modif #134 (X-1)
             dateDecompte: document.getElementById('dec-date').value || null,
             acompteHTVA,
             avance,
