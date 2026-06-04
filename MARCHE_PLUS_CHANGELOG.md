@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Enregistrement : bloc « Origine de l'approbation » (E-1/E-9, 1/2)
+
+> **Modif #130** — Section C, **lot 10** (structurant), points **E-1/E-9**, **commit 1/2** (additif). Conformément aux instructions du client (« l'étape d'approbation est **contenue dans l'enregistrement** ; même onglet ; champ pour désigner l'autorité approbatrice »), ajout sur l'écran d'enregistrement d'un bloc **« Origine de l'approbation »** : choix **Marché/Contrat visé CF** / **Approuvé autre que CF**. Le choix ouvre les champs : *Visé CF* → N° + date du visa ; *Autre* → **autorité approbatrice** (référentiel des organes, **CF exclu**) + N° + date de l'acte.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : import `getAllOrganes` ; `renderApprobationOrigineSection(existingAttr)` (rendue après les infos marché) ; persistance `attribution.approbation = { origine, visaNum, visaDate, organe, acteNum, acteDate }`.
+
+### Impact / Anti-régression
+
+- **UI** : nouvelle section ; **aucun changement de workflow pour l'instant** (commit additif).
+- **Données** : `approbation` ajouté à `MP_ATTRIBUTION` (JSONB — pas de migration).
+- **Vérifié (CDP)** : choix présent, bascule Visé CF ↔ Approuvé autre, 27 organes (CF exclu : DGMP, DGBF…) ; 0 erreur console.
+- *Commit 2/2 (à venir)* : transition directe vers Approuvé/Visé à l'enregistrement, retrait du bouton orange « Passer à Approbation », redirection de l'écran Visa CF, fusion timeline.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — En-tête : distinguer « état effectif » et « étape consultée » (E-10)
 
 > **Modif #129** — Section C, **lot 9**, point **E-10**. La subtilité signalée : confusion entre **l'état réel du marché** (invariant, ex. « Achevé ») et **l'étape/écran consulté**. L'en-tête affichait déjà les deux (badge = `operation.etat`, breadcrumb = étape) mais sans les distinguer clairement. Reformulé : badge **« État effectif du marché : … »** et breadcrumb **« Vous consultez l'étape : … »**. Aucune logique modifiée — le badge reste basé sur `operation.etat`.

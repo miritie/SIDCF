@@ -33,6 +33,7 @@ import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
+import { getAllOrganes } from '../../../lib/mp-organes-approbation.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -522,6 +523,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
     // Modif #86 (CR 6.b) — Informations sur le marché approuvé (N°, exonération TVA, durée)
     renderInfosMarcheSection(existingAttr, operation),
 
+    // Modif #130 (E-1/E-9) — Origine de l'approbation (fusion étapes 3 & 4)
+    renderApprobationOrigineSection(existingAttr),
+
     // Section Montants
     renderMontantsSection(montantHT, montantTTC, existingAttr.exonereTVA === true, operation.montantPrevisionnel || 0),
 
@@ -899,6 +903,69 @@ function updateAvancesDisplay() {
       alertEl.style.display = 'none';
     }
   }
+}
+
+/**
+ * Modif #130 (E-1/E-9) — Bloc « Origine de l'approbation » : la fusion des
+ * étapes 3 & 4. Choix « Marché/Contrat visé CF » vs « Approuvé autre que CF »,
+ * qui ouvre les champs correspondants (visa CF, ou autorité approbatrice + acte).
+ */
+function renderApprobationOrigineSection(existingAttr) {
+  const a = existingAttr.approbation || {};
+  const origine = a.origine || 'VISE_CF';
+
+  const ff = (label, input) => el('div', { className: 'form-field' }, [el('label', { className: 'form-label' }, label), input]);
+
+  const visaFields = el('div', { id: 'appr-visa-fields', style: { display: origine === 'VISE_CF' ? 'block' : 'none', marginTop: '12px' } }, [
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+      ff('N° du visa CF', el('input', { type: 'text', className: 'form-input', id: 'appr-visa-num', value: a.visaNum || '', placeholder: 'N° du visa' })),
+      ff('Date du visa CF', el('input', { type: 'date', className: 'form-input', id: 'appr-visa-date', value: a.visaDate || '' }))
+    ])
+  ]);
+
+  const organeSelect = el('select', { className: 'form-input', id: 'appr-organe' }, [el('option', { value: '' }, '-- Chargement... --')]);
+  const autreFields = el('div', { id: 'appr-autre-fields', style: { display: origine === 'AUTRE' ? 'block' : 'none', marginTop: '12px' } }, [
+    ff('Autorité approbatrice', organeSelect),
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '12px' } }, [
+      ff('N° de l\'acte d\'approbation', el('input', { type: 'text', className: 'form-input', id: 'appr-acte-num', value: a.acteNum || '', placeholder: 'N° / réf. de l\'acte' })),
+      ff('Date de l\'acte', el('input', { type: 'date', className: 'form-input', id: 'appr-acte-date', value: a.acteDate || '' }))
+    ])
+  ]);
+
+  // Charger les organes (hors CF) de façon asynchrone.
+  getAllOrganes().then(list => {
+    organeSelect.innerHTML = '';
+    organeSelect.appendChild(el('option', { value: '' }, '-- Sélectionner --'));
+    (list || []).filter(o => o.code !== 'CONTROLEUR_FINANCIER').forEach(o => {
+      const opt = document.createElement('option'); opt.value = o.code; opt.textContent = o.label; organeSelect.appendChild(opt);
+    });
+    organeSelect.value = a.organe || '';
+  }).catch(() => {});
+
+  const toggle = (val) => {
+    visaFields.style.display = val === 'VISE_CF' ? 'block' : 'none';
+    autreFields.style.display = val === 'AUTRE' ? 'block' : 'none';
+  };
+  const radio = (val, label) => el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+    (() => { const r = el('input', { type: 'radio', name: 'appr-origine', value: val, onchange: (e) => { if (e.target.checked) toggle(val); } }); r.checked = (origine === val); return r; })(),
+    label
+  ]);
+
+  return el('div', { className: 'card' }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, "🏛️ Origine de l'approbation"),
+      el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+        'Le marché est enregistré déjà approuvé. Indiquez l\'origine de l\'approbation.')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { display: 'flex', gap: '24px', flexWrap: 'wrap' } }, [
+        radio('VISE_CF', 'Marché/Contrat visé CF'),
+        radio('AUTRE', 'Approuvé autre que CF')
+      ]),
+      visaFields,
+      autreFields
+    ])
+  ]);
 }
 
 /**
@@ -2452,12 +2519,24 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       emprunts: Number(tr.querySelector('.ord-emprunts')?.value) || 0
     })).filter(r => r.annee || r.tresor || r.dons || r.emprunts);
 
+    // Modif #130 (E-1/E-9) — origine de l'approbation (visa CF / autre que CF).
+    const approbation = {
+      origine: document.querySelector('input[name="appr-origine"]:checked')?.value || 'VISE_CF',
+      visaNum: document.getElementById('appr-visa-num')?.value?.trim() || null,
+      visaDate: document.getElementById('appr-visa-date')?.value || null,
+      organe: document.getElementById('appr-organe')?.value || null,
+      acteNum: document.getElementById('appr-acte-num')?.value?.trim() || null,
+      acteDate: document.getElementById('appr-acte-date')?.value || null
+    };
+
     // Champs métier (per-lot ou racine selon lotId)
     const lotFields = {
       attributaire: attributaireData,
       // Modif #86 — N° du marché approuvé + exonération de TVA
       numeroMarcheApprouve,
       exonereTVA,
+      // Modif #130 (E-1/E-9) — origine de l'approbation.
+      approbation,
       // Modif #128 (E-21) — ordonnancement prévu CP par année.
       ordonnancement,
       // Modif #89 — avance de démarrage (flag ; calibrage Décompte 00 à l'exécution)
