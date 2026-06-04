@@ -79,7 +79,7 @@ export function renderPageHeaderMP(opts) {
           textTransform: 'uppercase',
           letterSpacing: '0.3px'
         }
-      }, `📊 État marché : ${etatLabel}`)
+      }, `📊 État effectif du marché : ${etatLabel}`)
     ]),
     // Ligne 2 : breadcrumb (où je suis dans le workflow)
     el('div', {
@@ -89,7 +89,7 @@ export function renderPageHeaderMP(opts) {
         textTransform: 'uppercase', letterSpacing: '0.5px',
         fontWeight: 600
       }
-    }, `${phaseIcon} Vous êtes ici · Étape ${phaseLabel}${subEcran ? ` (sous-écran ${subEcran})` : ''}`),
+    }, `${phaseIcon} Vous consultez l'étape : ${phaseLabel}${subEcran ? ` (sous-écran ${subEcran})` : ''}`),
     // Ligne 3 : titre principal
     el('h1', { className: 'page-title' }, `${phaseIcon} ${phaseLabel} — ${titre}`),
     // Ligne 4 : objet / contexte

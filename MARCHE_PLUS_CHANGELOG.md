@@ -13,6 +13,23 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — En-tête : distinguer « état effectif » et « étape consultée » (E-10)
+
+> **Modif #129** — Section C, **lot 9**, point **E-10**. La subtilité signalée : confusion entre **l'état réel du marché** (invariant, ex. « Achevé ») et **l'étape/écran consulté**. L'en-tête affichait déjà les deux (badge = `operation.etat`, breadcrumb = étape) mais sans les distinguer clairement. Reformulé : badge **« État effectif du marché : … »** et breadcrumb **« Vous consultez l'étape : … »**. Aucune logique modifiée — le badge reste basé sur `operation.etat`.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/page-header-mp.js` : libellés du badge d'état et du breadcrumb (en-tête partagé par tous les écrans Marché+).
+
+### Impact / Anti-régression
+
+- **UI** : wording plus clair sur tous les écrans MP ; aucun changement de logique/donnée.
+- **Vérifié (CDP)** : « État effectif du marché : Attribué » + « Vous consultez l'étape : Enregistrement de marché » ; pas de régression.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Enregistrement : ordonnancement prévu (CP par année) — E-21
 
 > **Modif #128** — Section C, **lot 8**, point **E-21**. Ajout d'une section **« 🗓️ Ordonnancement prévu (CP par année) »** sur l'écran d'enregistrement : un tableau **années × sources de financement** (Trésor (CI) / Dons / Emprunts) avec **montants saisissables**, **totaux par ligne et généraux**, et **ajout/suppression d'années**. Vue annuelle / pluriannuelle de la prise en charge, **complémentaire à la clé de répartition** (conforme à l'extrait « page de garde » transmis).
