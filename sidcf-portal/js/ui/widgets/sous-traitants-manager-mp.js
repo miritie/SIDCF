@@ -121,6 +121,7 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
         el('th', {}, 'NCC'),
         el('th', {}, 'Prestations'),
         el('th', { style: { textAlign: 'right' } }, '% marché'),
+        el('th', {}, 'Compte bancaire'),
         el('th', {}, 'Agrément CF'),
         el('th', { style: { textAlign: 'center' } }, 'Actions')
       ])]),
@@ -150,6 +151,10 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
             el('td', { style: { fontSize: '12px' }, title: st.prestations || '' },
               (st.prestations || '').length > 50 ? st.prestations.substring(0, 50) + '…' : (st.prestations || '-')),
             el('td', { style: { textAlign: 'right', fontWeight: 500 } }, `${(Number(st.pourcentageMarche) || 0).toFixed(2)} %`),
+            el('td', { style: { fontSize: '12px' } },
+              (st.banque || st.numeroCompte)
+                ? `${st.banque || ''}${st.banque && st.numeroCompte ? ' — ' : ''}${st.numeroCompte || ''}`
+                : '-'),
             el('td', {}, agrementBadge),
             el('td', { style: { textAlign: 'center' } }, [
               el('button', {
@@ -165,7 +170,7 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
           ]),
           // Ligne d'alerte sanction sous la ligne principale (colspan 6)
           el('tr', {}, [
-            el('td', { colspan: 6, style: { padding: 0 } }, sanctionWarn)
+            el('td', { colspan: 7, style: { padding: 0 } }, sanctionWarn)
           ])
         ];
       }).flat())
@@ -184,6 +189,8 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
       telephone: '',
       prestations: '',
       pourcentageMarche: 0,
+      banque: '',         // Modif #138 (E-18) — compte bancaire du sous-traitant
+      numeroCompte: '',   // Modif #138 (E-18)
       agrementCF: false,
       agrementCFDocRef: '',
       dateDeclaration: new Date().toISOString().slice(0, 10)
@@ -219,6 +226,10 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
           setVal('st-ncc',           entreprise?.ncc || '');
           setVal('st-adresse',       entreprise?.adresse || '');
           setVal('st-tel',           entreprise?.telephone || '');
+          // Modif #138 (E-18) — pré-remplir le compte bancaire du sous-traitant
+          // depuis la fiche entreprise (le cas échéant ; reste modifiable).
+          setVal('st-banque', entreprise?.banque?.libelle || entreprise?.banque?.code || '');
+          setVal('st-compte', entreprise?.compte?.numero || '');
           // Déclenche le check sanctions
           const ev = new Event('input', { bubbles: true });
           document.getElementById('st-rs')?.dispatchEvent(ev);
@@ -279,6 +290,19 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
     ]));
     content.appendChild(grid2);
 
+    // Modif #138 (E-18) — compte bancaire du sous-traitant (« le cas échéant »).
+    // Optionnel ; pré-rempli depuis la fiche entreprise mais éditable.
+    const grid3 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginTop: '12px' } });
+    grid3.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Banque'),
+      el('input', { type: 'text', className: 'form-input', id: 'st-banque', value: draft.banque || '', placeholder: 'Banque du sous-traitant (facultatif)' })
+    ]));
+    grid3.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'N° de compte (RIB / IBAN)'),
+      el('input', { type: 'text', className: 'form-input', id: 'st-compte', value: draft.numeroCompte || '', placeholder: 'N° de compte du sous-traitant (facultatif)' })
+    ]));
+    content.appendChild(grid3);
+
     content.appendChild(el('div', { style: { marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' } }, [
       el('button', { className: 'btn btn-secondary', onclick: () => modal.remove() }, 'Annuler'),
       el('button', {
@@ -297,6 +321,8 @@ export function renderSousTraitantsManager({ sousTraitants = [], onChange } = {}
             telephone: document.getElementById('st-tel').value.trim(),
             prestations: document.getElementById('st-prestations').value.trim(),
             pourcentageMarche: pct,
+            banque: document.getElementById('st-banque').value.trim(),         // Modif #138 (E-18)
+            numeroCompte: document.getElementById('st-compte').value.trim(),    // Modif #138 (E-18)
             agrementCF: document.getElementById('st-agrement').checked,
             agrementCFDocRef: document.getElementById('st-agrement-doc').value.trim()
           };

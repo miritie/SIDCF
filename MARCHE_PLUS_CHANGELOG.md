@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Sous-traitance : compte bancaire du sous-traitant (E-18)
+
+> **Modif #138** — Point **E-18** (« Ressortir son compte bancaire le cas échéant »). Ajout au gestionnaire des sous-traitants de deux champs **Banque** et **N° de compte (RIB / IBAN)**, optionnels, pré-remplis depuis la fiche entreprise du sous-traitant (via le picker) mais éditables. Une colonne **« Compte bancaire »** apparaît dans le tableau des sous-traitants. (Raison sociale, NCC et part du marché étaient déjà présents.)
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/sous-traitants-manager-mp.js` :
+  - Draft : champs `banque` + `numeroCompte`.
+  - Modale : nouvelle ligne « Banque » / « N° de compte » (`st-banque`, `st-compte`) ; auto-remplissage depuis le picker entreprise (`onChange`).
+  - Sauvegarde : persistance de `banque` + `numeroCompte` (dans `MP_ATTRIBUTION.sousTraitants`).
+  - Table : colonne « Compte bancaire » (Banque — N°) ; colspan de la ligne d'alerte sanction ajusté (6→7).
+
+### Impact / Anti-régression
+
+- **UI** : deux champs facultatifs + une colonne en plus ; aucun champ existant modifié. Pas de blocage si vides.
+- **DB / Worker** : `banque`/`numeroCompte` stockés dans le tableau `sousTraitants` (JSONB — aucune migration).
+- **Vérifié (CDP)** : modale « Nouveau sous-traitant » → champs « Banque » + « N° de compte (facultatif) » présents ; **0 erreur console**. (La colonne table s'affiche dès qu'un sous-traitant est déclaré.)
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-04 — Enregistrement : sélection du compte parmi les comptes du titulaire (E-13 b)
 
 > **Modif #137** — Point **E-13, volet (b)**. « Sélection du compte bancaire : tous les comptes du titulaire s'afficheront dans la liste déroulante, le chargé d'études sélectionnera simplement le compte qui figure dans le marché approuvé. » Ajout d'un sélecteur **« Compte bancaire du titulaire »** en tête de la section Coordonnées bancaires : il liste les comptes de l'entreprise sélectionnée ; le choix renseigne automatiquement Banque / N° / agence / intitulé / SWIFT (champs persistés par `handleSave`). Le volet (a) — simplification d'affichage — était déjà fait (#119).
