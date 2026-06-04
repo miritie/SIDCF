@@ -39,6 +39,7 @@ import { renderRelatedOperations, computeLinks, getRoleMeta } from '../../../ui/
 import { renderDifficultesManager, countDifficultes } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { openDocumentUploadModal } from '../../../ui/widgets/document-upload-mp.js';
 import { renderOpMandatManager } from '../../../ui/widgets/op-mandat-manager-mp.js';
+import { renderAvancementPhysique } from '../../../ui/widgets/avancement-physique-mp.js';
 import { renderPluriannualite } from '../../../ui/widgets/pluriannualite-mp.js';
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { openKpiDrilldownDrawer } from '../../../ui/widgets/kpi-drilldown-drawer-mp.js';
@@ -131,6 +132,9 @@ export async function renderFicheMarche(params) {
     // le marché est en exécution ou postérieur — le widget gère lui-même l'état de
     // l'opération et affiche un message informatif sinon.
     renderSituationExecutionFinanciere(operation, mpDecomptes, fullData.attribution, fullData.avenants || [], idOperation),
+    // Modif #136 (X-3) : situation d'exécution physique (historique d'avancement %).
+    // Pendant physique du taux financier ci-dessus ; même gating « marché en exécution ».
+    renderSituationExecutionPhysique(operation),
     // Modif #35 : encart pluriannualité basé sur la clé de répartition multi-bailleurs
     renderPluriannualiteSection(fullData.cleRepartition, mpDecomptes, registries),
     // Modif #67 — Toujours afficher l'info lot :
@@ -798,6 +802,31 @@ function renderSituationExecutionFinanciere(operation, mpDecomptes, attribution,
         attribution,
         avenants
       })
+    ])
+  ]);
+}
+
+/**
+ * Section « Taux d'exécution physique » — modif #136 (OBS-X3).
+ * Historique d'avancement physique du marché (relevés date / % / commentaire).
+ * Complète la situation d'exécution financière. Le widget gère lui-même
+ * l'affichage conditionnel (visible quand le marché est en exécution).
+ */
+function renderSituationExecutionPhysique(operation) {
+  return el('div', {
+    className: 'card',
+    style: { marginBottom: '20px' }
+  }, [
+    el('div', {
+      className: 'card-header',
+      style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+    }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '📐 Taux d\'exécution physique'),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } },
+        'Avancement des travaux/prestations · historique de relevés')
+    ]),
+    el('div', { className: 'card-body' }, [
+      renderAvancementPhysique({ operation })
     ])
   ]);
 }

@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Exécution : onglet « Taux d'exécution physique » (historique) (X-3)
+
+> **Modif #136** — Section D (Exécution), lot D4, point **OBS-X3**. Nouveau bloc « 📐 Taux d'exécution physique » dans la fiche, en pendant de la situation d'exécution financière. Contenu retenu (validé) : un **historique d'avancement** — chaque relevé = date + taux (%) + commentaire ; le dernier relevé (date la plus récente) donne le **taux courant** (affiché en tête avec barre de progression). Ajout/suppression de relevés, colonne « Évolution » (Δ en points vs relevé précédent), garde-fou si saisie d'un taux inférieur au précédent.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/avancement-physique-mp.js` *(nouveau)* : widget `renderAvancementPhysique({ operation, onSaved })` — bandeau taux courant + barre, formulaire d'ajout, table d'historique (tri date décroissante, Δ en points), suppression. Gating état exécution (EN_EXEC/EXECUTION/RESILIE/CLOS) sinon placeholder.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` : import + section carte `renderSituationExecutionPhysique(operation)` montée juste après la situation d'exécution financière.
+
+### Impact / Anti-régression
+
+- **UI** : un bloc en plus dans la fiche, visible seulement en exécution. Aucune section existante modifiée.
+- **DB / Worker** : historique stocké dans `MP_OPERATION.avancementPhysique` (tableau JSONB — **aucune migration**). Persistance via `dataService.update(MP_OPERATION, …)` (même schéma que les autres champs JSONB).
+- **Vérifié (CDP)** : (1) section + formulaire + état vide présents sur un marché EN_EXEC ; (2) logique isolée — taux courant = dernier relevé, lignes triées, Δ +/− en points corrects ; (3) gating — placeholder si non en exécution ; **0 erreur console**. (Persistance non exercée en live pour ne pas muter de données réelles ; chemin identique au cockpit OP/mandats.)
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-04 — Exécution : expliciter le chaînage des marchés (X-4)
 
 > **Modif #135** — Section D (Exécution), lot D3, point **OBS-X4**. Le client ne comprenait pas la table « Aucun marché antérieur / Aucun marché postérieur » du bandeau « Liens entre marchés ». On explicite la notion de **chaînage dans le temps** : phrase d'aide + libellés et états vides reformulés avec exemples (amont = étude préalable, marché d'origine en reconduction… ; aval = reconduction, marché suivant, contrôle…).
