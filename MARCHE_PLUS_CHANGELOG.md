@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Difficultés : statut du marché En cours/Suspendu/Abandonné/Résilié (E-3)
+
+> **Modif #125** — Section C, lot 7, étape 2, point **E-3**. Ajout d'un **statut du marché en difficulté** (En cours / Suspendu / Abandonné / Résilié), **axe distinct** du « statut de traitement » (En cours / Résolu / Abandonné) — ce dernier sert au calcul de santé et reste inchangé. Le nouveau statut apparaît dans le formulaire et dans une colonne « Statut marché » du tableau.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js` : constante `STATUT_MARCHE_DIFFICULTE` ; champ `statutMarche` (formulaire + défaut + persistance) ; colonne + badge dans le tableau.
+
+### Impact / Anti-régression
+
+- **UI** : un select + une colonne de plus ; `statutTraitement` (santé) intact.
+- **Données** : champ `statutMarche` ajouté à `MP_DIFFICULTE` (JSONB — pas de migration).
+- **Vérifié (CDP)** : select présent avec les 4 valeurs ; 0 erreur console.
+- *Suite* : action « Appliquer au marché » (met `operation.etat` à jour, décision actée) puis pose du bloc sur toutes les étapes (E-2/E-22).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Difficultés : « Autorité décisionnelle » + « Réf./N° de l'acte » (E-4/E-6)
 
 > **Modif #124** — Section C, **lot 7** (bloc difficultés), étape 1, points **E-4 et E-6**. Le bloc « difficultés » existe déjà (`difficultes-manager-mp.js` + `MP_DIFFICULTE`). Renommages dans le formulaire : **« Nom du décideur » → « Autorité décisionnelle »** (E-4) et **« Référence document » → « Référence / N° de l'acte »** (E-6). *(Décisions actées pour la suite : changement d'état du marché via action explicite ; bloc sur toutes les étapes ; acte optionnel.)*

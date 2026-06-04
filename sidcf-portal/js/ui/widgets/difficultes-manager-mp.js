@@ -38,6 +38,15 @@ export const STATUT_TRAITEMENT = [
   { code: 'ABANDONNE',  label: 'Abandonné',  color: '#6b7280', bg: '#f3f4f6' }
 ];
 
+// Modif #125 (E-3) — Statut du MARCHÉ en difficulté (axe distinct du « statut de
+// traitement » de la difficulté). Codes alignés sur ETAT_MARCHE quand ils existent.
+export const STATUT_MARCHE_DIFFICULTE = [
+  { code: 'EN_COURS',  label: 'En cours',  color: '#0066cc', bg: '#dbeafe' },
+  { code: 'SUSPENDU',  label: 'Suspendu',  color: '#d97706', bg: '#fef3c7' },
+  { code: 'ABANDONNE', label: 'Abandonné', color: '#6b7280', bg: '#f3f4f6' },
+  { code: 'RESILIE',   label: 'Résilié',   color: '#dc2626', bg: '#fee2e2' }
+];
+
 export const IMPACT_LEVELS = [
   { code: 'FAIBLE',   label: 'Faible',   color: '#16a34a', bg: '#dcfce7' },
   { code: 'MOYEN',    label: 'Moyen',    color: '#f59e0b', bg: '#fef3c7' },
@@ -200,6 +209,7 @@ export function renderDifficultesManager({
         el('th', {}, 'Catégorie'),
         el('th', {}, 'Problème'),
         el('th', {}, 'Statut'),
+        el('th', {}, 'Statut marché'),
         el('th', {}, 'Décision'),
         el('th', {}, 'Date'),
         el('th', { style: { textAlign: 'center' } }, 'Actions')
@@ -207,6 +217,7 @@ export function renderDifficultesManager({
       el('tbody', {}, filtered.map(d => {
         const impact = metaImpact(d.impact);
         const statut = metaStatut(d.statutTraitement);
+        const statutM = STATUT_MARCHE_DIFFICULTE.find(s => s.code === (d.statutMarche || 'EN_COURS')) || STATUT_MARCHE_DIFFICULTE[0];
         const categorie = metaCategorie(d.categorieProbleme);
         const problemeShort = (d.probleme || '').length > 80
           ? d.probleme.substring(0, 80) + '…'
@@ -235,6 +246,9 @@ export function renderDifficultesManager({
               color: statut.color
             }
           }, statut.label)),
+          el('td', {}, el('span', {
+            style: { fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: statutM.bg, color: statutM.color }
+          }, statutM.label)),
           el('td', { style: { fontSize: '12px' } }, d.decision || '-'),
           el('td', { style: { fontSize: '12px' } }, fmtDate(d.dateDecision || d.createdAt)),
           el('td', { style: { textAlign: 'center' } }, [
@@ -264,6 +278,7 @@ export function renderDifficultesManager({
       operationId,
       lotId: (lots && lots.length === 1) ? lots[0].id : null,   // Modif #68
       statutTraitement: 'EN_COURS',
+      statutMarche: 'EN_COURS', // Modif #125 (E-3)
       decision: '',
       probleme: '',
       dateDecision: null,
@@ -346,13 +361,22 @@ export function renderDifficultesManager({
       categorieSelect
     ]));
 
-    // Statut
+    // Statut de traitement
     const statutSelect = el('select', { className: 'form-input', id: 'dif-statut' },
       STATUT_TRAITEMENT.map(s => el('option', { value: s.code, selected: draft.statutTraitement === s.code }, s.label))
     );
     formGrid.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, ['Statut de traitement', el('span', { className: 'required' }, '*')]),
       statutSelect
+    ]));
+
+    // Modif #125 (E-3) — Statut du marché en difficulté (En cours / Suspendu / Abandonné / Résilié).
+    const statutMarcheSelect = el('select', { className: 'form-input', id: 'dif-statut-marche' },
+      STATUT_MARCHE_DIFFICULTE.map(s => el('option', { value: s.code, selected: (draft.statutMarche || 'EN_COURS') === s.code }, s.label))
+    );
+    formGrid.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Statut du marché'),
+      statutMarcheSelect
     ]));
 
     // Date décision (visible si statut != EN_COURS)
@@ -452,6 +476,7 @@ export function renderDifficultesManager({
             ...draft,
             lotId,
             statutTraitement: document.getElementById('dif-statut').value,
+            statutMarche: document.getElementById('dif-statut-marche')?.value || 'EN_COURS', // Modif #125 (E-3)
             impact: document.getElementById('dif-impact').value,
             categorieProbleme: document.getElementById('dif-categorie').value,
             probleme,
