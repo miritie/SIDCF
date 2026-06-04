@@ -238,6 +238,12 @@ export function renderRelatedOperations({
     ]);
     container.appendChild(header);
 
+    // Modif #135 (X-4) — le client ne comprenait pas la table « antérieur /
+    // postérieur ». On explicite la notion de chaînage des marchés dans le temps.
+    container.appendChild(el('p', {
+      style: { margin: '0 0 10px', fontSize: '12px', color: '#64748b', lineHeight: '1.4' }
+    }, 'Chaînage de ce marché dans le temps : en amont, les marchés ou études qui l\'ont précédé (étude préalable, marché d\'origine en cas de reconduction…) ; en aval, ceux qui en découlent (reconduction, marché suivant, maîtrise d\'œuvre, contrôle…). Cliquez « Gérer les liens » pour relier deux marchés.'));
+
     // Bandeau visuel — flow horizontal
     container.appendChild(renderFlowChart(workingOp, anterieurs, posterieurs));
   }
@@ -309,7 +315,9 @@ export function renderRelatedOperations({
           justifyContent: 'center',
           textAlign: 'center'
         }
-      }, `Aucun marché ${label.toLowerCase()}`);
+      }, side === 'left'
+        ? 'Aucun marché en amont (étude préalable, marché d\'origine…)'
+        : 'Aucun marché en aval (reconduction, marché suivant, contrôle…)');
     }
 
     return el('div', {
@@ -321,7 +329,8 @@ export function renderRelatedOperations({
         gap: '6px'
       }
     }, [
-      el('div', { style: { fontSize: '10px', textTransform: 'uppercase', color: '#64748b', textAlign: side === 'left' ? 'right' : 'left', letterSpacing: '0.5px' } }, label),
+      el('div', { style: { fontSize: '10px', textTransform: 'uppercase', color: '#64748b', textAlign: side === 'left' ? 'right' : 'left', letterSpacing: '0.5px' } },
+        side === 'left' ? 'Antérieurs · en amont' : 'Postérieurs · en aval'),
       ...links.map(link => renderLinkCard(link, side))
     ]);
   }

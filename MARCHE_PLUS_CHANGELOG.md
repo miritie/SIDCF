@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Exécution : expliciter le chaînage des marchés (X-4)
+
+> **Modif #135** — Section D (Exécution), lot D3, point **OBS-X4**. Le client ne comprenait pas la table « Aucun marché antérieur / Aucun marché postérieur » du bandeau « Liens entre marchés ». On explicite la notion de **chaînage dans le temps** : phrase d'aide + libellés et états vides reformulés avec exemples (amont = étude préalable, marché d'origine en reconduction… ; aval = reconduction, marché suivant, contrôle…).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/related-operations-mp.js` :
+  - Phrase d'aide sous l'en-tête expliquant le chaînage amont/aval.
+  - États vides reformulés : « Aucun marché en amont (étude préalable, marché d'origine…) » / « Aucun marché en aval (reconduction, marché suivant, contrôle…) ».
+  - Libellés de colonnes : « Antérieurs · en amont » / « Postérieurs · en aval ».
+
+### Impact / Anti-régression
+
+- **UI** : purement textuel/explicatif. Aucune logique de liens modifiée (calcul `computeLinks`, gestion via « Gérer les liens » inchangés).
+- **DB / Worker** : aucun.
+- **Vérifié (CDP)** : phrase d'aide présente, libellés amont/aval présents, ancienne formulation « Aucun marché antérieur/postérieur » absente, **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-04 — Exécution : N° de mandat sur les décomptes (anti-doublon) (X-1)
 
 > **Modif #134** — Section D (Exécution), lot D2, point **OBS-X1**. En complément du **N° d'OP**, ajout d'un champ **N° de mandat** sur chaque décompte/OP. Il rattache le décompte à la facture/au mandat de paiement et sert de garde anti-doublon : si un autre décompte porte déjà le même N° de mandat, une confirmation alerte sur le risque de doublon de paiement.
