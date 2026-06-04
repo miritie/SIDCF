@@ -354,6 +354,14 @@ export function renderLivrableManagerMP(livrables = [], registries = {}, onChang
 
     container.appendChild(topBar);
 
+    // Modif #123 (E-20) — les types de livrables sont configurables (référentiel
+    // TYPE_LIVRABLE) ; en attendant le référentiel des géographes, on peut
+    // ajouter/modifier les livrables librement (type « Autre » + libellé).
+    const hint = document.createElement('div');
+    Object.assign(hint.style, { fontSize: '12px', color: '#6b7280', marginBottom: '10px' });
+    hint.textContent = 'ℹ️ Types configurables : choisissez un type (ou « Autre ») et précisez le libellé. La liste s\'enrichira du référentiel des géographes une fois disponible.';
+    container.appendChild(hint);
+
     // List
     if (currentLivrables.length === 0) {
       const empty = document.createElement('div');

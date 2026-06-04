@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Livrables : types configurables + « Autre » (E-20)
+
+> **Modif #123** — Section C, **lot 6**, point **E-20**. Le référentiel des livrables des géographes n'étant pas disponible, on s'appuie sur la **configuration** : les types de livrables proviennent du référentiel `TYPE_LIVRABLE` (modifiable), et on ajoute un type **« Autre (à préciser) »** pour saisir tout livrable hors liste (type + libellé libre). Un **repère** indique que la liste est configurable et s'enrichira du référentiel géographes une fois fourni. Le manager permet déjà d'ajouter/modifier les livrables (Générer / Ajouter + champs éditables).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : `TYPE_LIVRABLE` += `AUTRE`.
+- `sidcf-portal/js/ui/widgets/livrable-manager-mp.js` : repère « Types configurables… ».
+
+### Impact / Anti-régression
+
+- **UI** : option « Autre » + note ; comportement d'ajout/édition inchangé.
+- **Données / Worker** : ❌ aucun (référentiel statique ; cache `localStorage` à vider si présent).
+- **Vérifié (CDP)** : « Autre (à préciser) » dans le select des types ; repère affiché ; 0 erreur console.
+- *Suite* : le référentiel des livrables géographes s'ajoutera par simple enrichissement de `TYPE_LIVRABLE`.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Réserves du CF déplacées vers la Contractualisation (E-19, 2/2)
 
 > **Modif #122** — Section C, lot 5, point **E-19 (volet réserve CF)**. La case **« Réserves du Contrôleur Financier »** quitte l'enregistrement pour la **contractualisation** (« à toutes les contractualisations », C-11 §2). Elle est désormais **masquée par l'option « sans CF »** (PSD/PSC). À l'enregistrement, le bloc n'apparaît plus (il n'y était d'ailleurs pas persisté).

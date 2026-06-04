@@ -95,7 +95,8 @@
     { "code": "SERVICE", "label": "Service" },
     { "code": "ETUDE", "label": "Étude" },
     { "code": "FORMATION", "label": "Formation" },
-    { "code": "LOGICIEL", "label": "Logiciel" }
+    { "code": "LOGICIEL", "label": "Logiciel" },
+    { "code": "AUTRE", "label": "Autre (à préciser)" }
   ],
   "LOCALITE_CI": {
     "regions": [
