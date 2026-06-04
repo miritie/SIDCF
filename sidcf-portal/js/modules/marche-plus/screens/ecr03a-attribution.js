@@ -2607,10 +2607,16 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       updateOp.livrables = [..._livrablesState];
     }
 
-    if (!operation.timeline.includes('ATTR')) {
-      updateOp.timeline = [...operation.timeline, 'ATTR'];
-      updateOp.etat = 'EN_ATTR';
+    // Modif #131 (E-1/E-9) — l'approbation est contenue dans l'enregistrement :
+    // après enregistrement, le marché passe directement à l'état VISE (Approuvé),
+    // sauf s'il est déjà plus avancé (EN_EXEC/CLOS/RESILIE).
+    const newTimeline = [...operation.timeline];
+    if (!newTimeline.includes('ATTR')) newTimeline.push('ATTR');
+    if (['EN_PROC', 'ATTRIBUE', 'EN_ATTR'].includes(operation.etat)) {
+      if (!newTimeline.includes('VISE')) newTimeline.push('VISE');
+      updateOp.etat = 'VISE';
     }
+    updateOp.timeline = newTimeline;
 
     const opResult = await dataService.update(ENTITIES.MP_OPERATION, idOperation, updateOp);
 

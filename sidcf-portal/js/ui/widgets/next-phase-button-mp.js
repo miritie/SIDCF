@@ -22,7 +22,10 @@ import logger from '../../lib/logger.js';
 const TRANSITIONS = {
   PLANIFIE:  { nextEtat: 'EN_PROC',   timelineCode: 'EN_PROC',   label: 'Contractualisation' },
   EN_PROC:   { nextEtat: 'ATTRIBUE',  timelineCode: 'ATTRIBUE',  label: 'Enregistrement de marché' },
-  ATTRIBUE:  { nextEtat: 'VISE',      timelineCode: 'VISE',      label: 'Approbation' },
+  // Modif #131 (E-1/E-9) — l'approbation est CONTENUE dans l'enregistrement :
+  // plus de bouton orange « Passer à Approbation ». L'écran d'enregistrement
+  // fait passer le marché à VISE (Approuvé) à la sauvegarde.
+  ATTRIBUE:  null,
   VISE:      { nextEtat: 'EN_EXEC',   timelineCode: 'EN_EXEC',   label: 'Exécution' },
   EN_EXEC:   { nextEtat: 'CLOS',      timelineCode: 'CLOS',      label: 'Clôture (Achevé)' },
   EXECUTION: { nextEtat: 'CLOS',      timelineCode: 'CLOS',      label: 'Clôture (Achevé)' },

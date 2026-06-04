@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Fusion étapes 3 & 4 : enregistrement → Approuvé directement (E-1/E-9, 2a)
+
+> **Modif #131** — Section C, lot 10, points **E-1/E-9**, commit 2a. La fusion devient effective : l'écran d'**enregistrement** fait passer le marché **directement à l'état VISE (Attribué/Approuvé)** à la sauvegarde (l'approbation est contenue dans l'enregistrement). Le **bouton orange « Passer à Approbation »** (transition ATTRIBUE→VISE) est **supprimé**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : à la sauvegarde, `etat → VISE` (depuis EN_PROC/ATTRIBUE/EN_ATTR ; timeline += ATTR, VISE).
+- `sidcf-portal/js/ui/widgets/next-phase-button-mp.js` : transition `ATTRIBUE` mise à `null` (plus de bouton « Approbation » ; le `null` est déjà géré comme un état terminal).
+
+### Impact / Anti-régression
+
+- **Workflow** : une étape de moins ; l'enregistrement produit un marché approuvé. La transition `VISE → Exécution` reste inchangée.
+- **DB / Worker** : mise à jour de `etat`/`timeline` (pas de schéma).
+- **Vérifié (CDP)** : bouton « Passer à Approbation » absent ; bloc origine + bouton « Enregistrer » présents ; 0 erreur console. (Le passage effectif à VISE n'a pas été exécuté en test pour ne pas muter une opération réelle.)
+- *Commit 2b (à venir)* : redirection de l'écran Visa CF vers l'enregistrement + fusion de l'étape « Visa CF » dans la timeline.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Enregistrement : bloc « Origine de l'approbation » (E-1/E-9, 1/2)
 
 > **Modif #130** — Section C, **lot 10** (structurant), points **E-1/E-9**, **commit 1/2** (additif). Conformément aux instructions du client (« l'étape d'approbation est **contenue dans l'enregistrement** ; même onglet ; champ pour désigner l'autorité approbatrice »), ajout sur l'écran d'enregistrement d'un bloc **« Origine de l'approbation »** : choix **Marché/Contrat visé CF** / **Approuvé autre que CF**. Le choix ouvre les champs : *Visé CF* → N° + date du visa ; *Autre* → **autorité approbatrice** (référentiel des organes, **CF exclu**) + N° + date de l'acte.
