@@ -13,6 +13,32 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Enregistrement : sélection du compte parmi les comptes du titulaire (E-13 b)
+
+> **Modif #137** — Point **E-13, volet (b)**. « Sélection du compte bancaire : tous les comptes du titulaire s'afficheront dans la liste déroulante, le chargé d'études sélectionnera simplement le compte qui figure dans le marché approuvé. » Ajout d'un sélecteur **« Compte bancaire du titulaire »** en tête de la section Coordonnées bancaires : il liste les comptes de l'entreprise sélectionnée ; le choix renseigne automatiquement Banque / N° / agence / intitulé / SWIFT (champs persistés par `handleSave`). Le volet (a) — simplification d'affichage — était déjà fait (#119).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` :
+  - Helpers `_getComptesOfEntreprise` / `_normalizeCompteEntry` / `_applyCompteSelection` / `_populateComptesSelect`.
+  - `renderCoordonneesBancairesSection` : nouveau `<select>` `${prefix}-compte-select` (auto-sélection du 1ᵉʳ compte, remplissage des champs au `change`).
+  - `_prefillBanqueSection` appelle `_populateComptesSelect` à chaque sélection d'entreprise ; `quickPickEntreprise` propage `comptes` au pickerValue.
+
+### Modèle de données
+
+- Le sélecteur lit **`entreprise.comptes[]`** quand la base entreprises est enrichie (multi-comptes) ; **à défaut, repli sur le compte legacy unique** (`banque{}` + `compte{}`). Aucune migration : `comptes[]` est un champ JSONB facultatif. Tant que la base ne porte qu'un compte par entreprise, une seule entrée apparaît (comportement correct) ; dès qu'une entreprise reçoit plusieurs comptes, ils s'affichent tous.
+
+### Impact / Anti-régression
+
+- **UI** : un sélecteur en plus ; les champs Banque/N°/détails restent éditables (correction manuelle possible). Aucune logique de persistance modifiée — `handleSave` lit les mêmes ids.
+- **Vérifié (CDP)** : à la sélection d'une entreprise, le menu « Compte bancaire du titulaire » se remplit (ex. « SGCI — … ») et la banque se renseigne ; **0 erreur console**. (Aucune donnée réelle modifiée — pas de sauvegarde déclenchée.)
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-04 — Exécution : onglet « Taux d'exécution physique » (historique) (X-3)
 
 > **Modif #136** — Section D (Exécution), lot D4, point **OBS-X3**. Nouveau bloc « 📐 Taux d'exécution physique » dans la fiche, en pendant de la situation d'exécution financière. Contenu retenu (validé) : un **historique d'avancement** — chaque relevé = date + taux (%) + commentaire ; le dernier relevé (date la plus récente) donne le **taux courant** (affiché en tête avec barre de progression). Ajout/suppression de relevés, colonne « Évolution » (Δ en points vs relevé précédent), garde-fou si saisie d'un taux inférieur au précédent.

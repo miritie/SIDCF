@@ -137,6 +137,80 @@ function _prefillBanqueSection(prefix, entreprise) {
   setVal(`${prefix}-banque-agence`,   b.agence);
   setVal(`${prefix}-banque-numero`,   c.numero);
   setVal(`${prefix}-banque-intitule`, c.intitule || entreprise.raisonSociale);
+
+  // Modif #137 (E-13 b) — alimente la liste « Compte bancaire du titulaire ».
+  _populateComptesSelect(prefix, entreprise);
+}
+
+// Modif #137 (E-13 b) — « tous les comptes du titulaire s'afficheront dans la
+// liste déroulante, le chargé d'études sélectionnera simplement le compte qui
+// figure dans le marché approuvé ».
+//
+// On lit `entreprise.comptes[]` quand la base est enrichie (multi-comptes) ;
+// sinon on retombe sur le compte legacy unique (banque{} + compte{}). Chaque
+// entrée est normalisée vers une forme stable.
+function _normalizeCompteEntry(c, i) {
+  if (!c) return null;
+  return {
+    id:            c.id || `cpt-${i}`,
+    banqueCode:    c.banqueCode || c.banque?.code || c.code || '',
+    banqueLibelle: c.banqueLibelle || c.banque?.libelle || c.libelle || '',
+    agence:        c.agence || c.banque?.agence || '',
+    numero:        c.numero || c.compte?.numero || '',
+    intitule:      c.intitule || c.compte?.intitule || '',
+    swift:         c.swift || c.swiftBic || c.compte?.swift || ''
+  };
+}
+
+function _getComptesOfEntreprise(entreprise) {
+  if (!entreprise) return [];
+  if (Array.isArray(entreprise.comptes) && entreprise.comptes.length) {
+    return entreprise.comptes.map(_normalizeCompteEntry).filter(Boolean);
+  }
+  const b = entreprise.banque || {};
+  const c = entreprise.compte || {};
+  if (!b.code && !b.libelle && !c.numero) return []; // aucun compte legacy
+  return [_normalizeCompteEntry({
+    banqueCode: b.code, banqueLibelle: b.libelle, agence: b.agence,
+    numero: c.numero, intitule: c.intitule, swift: c.swift
+  }, 0)];
+}
+
+// Applique le compte choisi aux champs (Banque / N° / agence / intitulé / SWIFT)
+// — ce sont ces champs que handleSave persiste.
+function _applyCompteSelection(prefix, compte) {
+  if (!compte) return;
+  const banqueSel = document.getElementById(`${prefix}-banque`);
+  if (banqueSel) {
+    const wanted = compte.banqueCode || compte.banqueLibelle || '';
+    const matching = Array.from(banqueSel.options || []).find(o => o.value === wanted || o.text === wanted);
+    if (matching) banqueSel.value = matching.value;
+    else banqueSel.dataset.selected = wanted;
+  }
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+  set(`${prefix}-banque-numero`,   compte.numero);
+  set(`${prefix}-banque-agence`,   compte.agence);
+  set(`${prefix}-banque-intitule`, compte.intitule);
+  set(`${prefix}-banque-swift`,    compte.swift);
+}
+
+// Remplit le <select> des comptes du titulaire et auto-sélectionne le 1ᵉʳ.
+function _populateComptesSelect(prefix, entreprise) {
+  const sel = document.getElementById(`${prefix}-compte-select`);
+  if (!sel) return;
+  const comptes = _getComptesOfEntreprise(entreprise);
+  sel._comptes = comptes;
+  sel.innerHTML = '';
+  if (!comptes.length) {
+    sel.appendChild(el('option', { value: '' }, '— Aucun compte enregistré pour ce titulaire —'));
+    return;
+  }
+  comptes.forEach((c, i) => {
+    const label = `${c.banqueLibelle || c.banqueCode || 'Banque ?'} — ${c.numero || 'N° non renseigné'}`;
+    sel.appendChild(el('option', { value: String(i) }, label));
+  });
+  sel.value = '0';
+  _applyCompteSelection(prefix, comptes[0]);
 }
 
 // Modif #69 — Sélection rapide d'entreprise via dropdown (fallback si picker bug)
@@ -195,6 +269,7 @@ function quickPickEntreprise(prefix, entrepriseId) {
     email: entreprise.email || '',
     banque: { ...(entreprise.banque || {}) },
     compte: { ...(entreprise.compte || {}) },
+    comptes: Array.isArray(entreprise.comptes) ? entreprise.comptes : undefined, // Modif #137 (E-13 b) — multi-comptes si enrichi
     validationStatus: entreprise.validationStatus || 'VALIDATED'
   };
   // Stocker l'état pour handleSave
@@ -1748,13 +1823,26 @@ function renderCoordonneesBancairesSection(idPrefix, cb) {
     el('h4', {
       style: { margin: '0 0 12px 0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }
     }, ['🏦 Coordonnées bancaires']),
-    // Modif #119 (E-13) — « juste le compte bancaire suffirait » : on rappelle le
-    // compte du titulaire (Banque + N° de compte visibles) ; agence / intitulé /
-    // SWIFT sont repliés (non nécessaires à l'affichage). La sélection parmi
-    // PLUSIEURS comptes du titulaire viendra avec l'enrichissement de la base
-    // entreprises (liste détaillée des comptes — « à terme »).
+    // Modif #119 (E-13 a) — « juste le compte bancaire suffirait » : Banque + N°
+    // visibles ; agence / intitulé / SWIFT repliés (non nécessaires à l'affichage).
+    // Modif #137 (E-13 b) — sélection du compte parmi TOUS les comptes du titulaire.
     el('p', { className: 'text-small text-muted', style: { marginBottom: '12px' } },
-      'Compte rappelé depuis la base entreprises. Sélectionnez le compte rattaché au marché.'),
+      'Sélectionnez le compte du titulaire rattaché au marché. Les détails (banque, n°…) se renseignent automatiquement.'),
+
+    // Modif #137 (E-13 b) — liste déroulante des comptes du titulaire.
+    el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
+      el('label', { className: 'form-label' }, 'Compte bancaire du titulaire'),
+      el('select', {
+        className: 'form-input',
+        id: `${idPrefix}-compte-select`,
+        onchange: (e) => {
+          const compte = (e.target._comptes || [])[Number(e.target.value)];
+          _applyCompteSelection(idPrefix, compte);
+        }
+      }, [ el('option', { value: '' }, '— Sélectionnez d\'abord le titulaire —') ]),
+      el('small', { className: 'text-muted', style: { fontSize: '11px' } },
+        'Tous les comptes du titulaire enregistrés dans la base SIDCF apparaissent ici ; choisissez celui qui figure dans le marché approuvé.')
+    ]),
 
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
       el('div', { className: 'form-field' }, [
