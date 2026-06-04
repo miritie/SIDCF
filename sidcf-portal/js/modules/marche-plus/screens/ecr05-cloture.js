@@ -17,6 +17,7 @@ import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } 
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
+import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -322,6 +323,9 @@ export async function renderCloture(params) {
       ])
     ])
   ]);
+
+  // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
+  page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries: dataService.getAllRegistries(), lots: [] }));
 
   // Modif #69 — Bouton démo « Passer à l'étape suivante »
   page.appendChild(renderNextPhaseButton({ idOperation, operation }));

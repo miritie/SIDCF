@@ -571,6 +571,64 @@ export function renderDifficultesManager({
 }
 
 /**
+ * Modif #127 (E-2/E-22) — Bloc « difficultés » encadré OUI/NON, réutilisable sur
+ * TOUTES les étapes (contractualisation, enregistrement, exécution, clôture).
+ * « Oui » déploie le gestionnaire de difficultés (chargé à la demande) ; « Non »
+ * le replie. S'ouvre automatiquement si des difficultés existent déjà.
+ */
+export function renderDifficultesGatedBloc({ operationId, registries = {}, lots = [] } = {}) {
+  const managerHost = el('div', { style: { marginTop: '14px', display: 'none' } });
+  let loaded = false;
+  let cache = null;
+
+  const mountManager = (difficultes) => {
+    managerHost.innerHTML = '';
+    managerHost.appendChild(renderDifficultesManager({ operationId, difficultes: difficultes || [], registries, lots, onSaved: () => {} }));
+    loaded = true;
+  };
+  const ensureLoaded = async () => {
+    if (loaded) return;
+    if (!cache) {
+      try { cache = (await dataService.query(ENTITIES.MP_DIFFICULTE)).filter(d => d.operationId === operationId); }
+      catch (_) { cache = []; }
+    }
+    mountManager(cache);
+  };
+
+  const radioName = `dif-gate-${operationId || 'x'}`;
+  const ouiR = el('input', { type: 'radio', name: radioName, value: 'OUI' });
+  const nonR = el('input', { type: 'radio', name: radioName, value: 'NON' });
+  nonR.checked = true;
+  const onToggle = async () => {
+    if (ouiR.checked) { managerHost.style.display = 'block'; await ensureLoaded(); }
+    else { managerHost.style.display = 'none'; }
+  };
+  ouiR.addEventListener('change', onToggle);
+  nonR.addEventListener('change', onToggle);
+
+  const container = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header' }, [ el('h3', { className: 'card-title' }, '🚧 Difficultés du marché') ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' } }, [
+        el('span', { style: { fontWeight: 600 } }, 'Y a-t-il des difficultés sur ce marché / contrat ?'),
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' } }, [ouiR, 'Oui']),
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' } }, [nonR, 'Non'])
+      ]),
+      managerHost
+    ])
+  ]);
+
+  // Auto-ouverture si des difficultés existent déjà.
+  (async () => {
+    try { cache = (await dataService.query(ENTITIES.MP_DIFFICULTE)).filter(d => d.operationId === operationId); }
+    catch (_) { cache = []; }
+    if (cache.length > 0) { ouiR.checked = true; nonR.checked = false; managerHost.style.display = 'block'; mountManager(cache); }
+  })();
+
+  return container;
+}
+
+/**
  * Helper pour compter les difficultés actives par niveau d'impact.
  * Utilisé par les KPIs de santé de la fiche de vie.
  */
@@ -584,4 +642,4 @@ export function countDifficultes(difficultes = []) {
   };
 }
 
-export default { renderDifficultesManager, countDifficultes };
+export default { renderDifficultesManager, renderDifficultesGatedBloc, countDifficultes };

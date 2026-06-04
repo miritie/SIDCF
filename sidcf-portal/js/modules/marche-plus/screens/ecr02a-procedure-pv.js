@@ -20,6 +20,7 @@ import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js'
 import { checkSanction, renderSanctionBanner, openSanctionsDrawer } from '../../../lib/mp-sanctions.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
+import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
 
 // Debounce simple pour la détection sanctions (évite un appel à chaque touche)
 let _procSanctionTimer = null;
@@ -249,6 +250,9 @@ export async function renderProcedurePV(params) {
       ])
     ])
   ]);
+
+  // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
+  page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries, lots: [] }));
 
   // Modif #69 — Bouton démo « Passer à l'étape suivante »
   page.appendChild(renderNextPhaseButton({ idOperation, operation }));

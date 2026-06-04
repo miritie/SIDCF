@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Difficultés : bloc OUI/NON sur toutes les étapes (E-2/E-22)
+
+> **Modif #127** — Section C, lot 7, étape finale, points **E-2 et E-22**. Le bloc « difficultés » devient un **composant réutilisable encadré OUI/NON** (`renderDifficultesGatedBloc`) et est **posé sur toutes les étapes** : contractualisation, enregistrement, exécution, clôture (en plus de la fiche de vie). « Oui » déploie le gestionnaire (chargé à la demande), « Non » le replie ; il s'ouvre **automatiquement** si des difficultés existent déjà.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js` : export `renderDifficultesGatedBloc({ operationId, registries, lots })`.
+- `ecr02a-procedure-pv.js`, `ecr03a-attribution.js`, `ecr04a-execution-os.js`, `ecr05-cloture.js` : import + `page.appendChild(renderDifficultesGatedBloc(...))` avant le bouton d'étape.
+
+### Impact / Anti-régression
+
+- **UI** : un bloc OUI/NON identique à chaque étape ; le gestionnaire complet (table + modal + actions) reste celui de la fiche de vie.
+- **Données / Worker** : ❌ aucun changement (lecture `MP_DIFFICULTE`).
+- **Vérifié (CDP)** : bloc présent + « Oui » déploie le gestionnaire sur Contractualisation, Enregistrement et Exécution ; 0 erreur console. (Clôture : code identique, non testé live.)
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Difficultés : action « Appliquer au marché » (état effectif)
 
 > **Modif #126** — Section C, lot 7, étape 3, points **E-3/E-10** (décision actée : changement d'état **via action explicite**). Pour une difficulté de statut **Suspendu** ou **Résilié**, un bouton **« ↪ Appliquer au marché »** met à jour l'**état effectif** du marché (`operation.etat → SUSPENDU/RESILIE`) — seulement sur clic + confirmation. La déclaration de la difficulté et le changement d'état restent ainsi **distincts** (cohérent avec E-10 : état effectif ≠ étape).

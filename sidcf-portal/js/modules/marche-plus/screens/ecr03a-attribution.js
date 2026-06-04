@@ -32,6 +32,7 @@ import { renderDerogationBanner } from '../../../ui/widgets/derogation-banner-mp
 import { wireSpec, updateSpecContext } from '../../../lib/spec-mode-mp.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
+import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
 
 // Modif #37 — Formules et règles légales associées aux garanties contractuelles
 const GARANTIE_FORMULES = {
@@ -430,6 +431,9 @@ export async function renderAttribution(params) {
         ])
       ])
     ]);
+
+    // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
+    page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries, lots: [] }));
 
     // Modif #69 — Bouton démo « Passer à l'étape suivante »
     page.appendChild(renderNextPhaseButton({ idOperation, operation }));
