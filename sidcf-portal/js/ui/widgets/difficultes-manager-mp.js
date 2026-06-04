@@ -258,6 +258,16 @@ export function renderDifficultesManager({
               style: { marginRight: '4px' },
               onclick: () => openEditorModal(d)
             }, '✏️'),
+            // Modif #126 (E-3/E-10) — action explicite : appliquer le statut du
+            // marché en difficulté à l'état effectif du marché (Suspendu/Résilié).
+            ['SUSPENDU', 'RESILIE'].includes(d.statutMarche)
+              ? el('button', {
+                  className: 'btn btn-sm btn-warning',
+                  title: 'Appliquer ce statut au marché',
+                  style: { marginRight: '4px' },
+                  onclick: () => applyStatutMarche(d)
+                }, '↪ Appliquer au marché')
+              : null,
             el('button', {
               className: 'btn btn-sm btn-danger',
               title: 'Supprimer',
@@ -522,6 +532,23 @@ export function renderDifficultesManager({
     } catch (err) {
       logger.error('[Difficultés] Erreur persistence', err);
       alert(`❌ Erreur lors de la sauvegarde : ${err.message}`);
+    }
+  }
+
+  // Modif #126 (E-3/E-10) — applique le statut du marché en difficulté à l'état
+  // effectif du marché (action EXPLICITE, sur décision de l'agent).
+  async function applyStatutMarche(d) {
+    const meta = STATUT_MARCHE_DIFFICULTE.find(s => s.code === d.statutMarche);
+    const label = meta ? meta.label : d.statutMarche;
+    if (!window.confirm(`Appliquer le statut « ${label} » au marché ?\nL'état effectif du marché sera mis à jour.`)) return;
+    try {
+      await dataService.update(ENTITIES.MP_OPERATION, operationId, { etat: d.statutMarche });
+      logger.info('[Difficultés] Statut marché appliqué', operationId, d.statutMarche);
+      alert(`✅ État du marché mis à jour : « ${label} ».`);
+      window.location.reload();
+    } catch (err) {
+      logger.error('[Difficultés] Erreur application statut marché', err);
+      alert('❌ Échec de la mise à jour de l\'état du marché.');
     }
   }
 

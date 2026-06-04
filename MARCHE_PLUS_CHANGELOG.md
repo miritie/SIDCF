@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Difficultés : action « Appliquer au marché » (état effectif)
+
+> **Modif #126** — Section C, lot 7, étape 3, points **E-3/E-10** (décision actée : changement d'état **via action explicite**). Pour une difficulté de statut **Suspendu** ou **Résilié**, un bouton **« ↪ Appliquer au marché »** met à jour l'**état effectif** du marché (`operation.etat → SUSPENDU/RESILIE`) — seulement sur clic + confirmation. La déclaration de la difficulté et le changement d'état restent ainsi **distincts** (cohérent avec E-10 : état effectif ≠ étape).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/difficultes-manager-mp.js` : bouton conditionnel (Suspendu/Résilié) + `applyStatutMarche(d)` (`dataService.update(MP_OPERATION, …, { etat })` + confirmation + rechargement).
+
+### Impact / Anti-régression
+
+- **Workflow** : l'état du marché ne change **jamais automatiquement** ; uniquement sur action explicite. Abandonné / En cours : pas de bouton (pas d'état correspondant).
+- **DB / Worker** : mise à jour de `etat` sur action (pas de schéma).
+- **Vérifié** : manager rendu sans erreur console ; logique d'application revue (non exécutée en test pour ne pas muter une opération réelle de la base de démo).
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-04 — Difficultés : statut du marché En cours/Suspendu/Abandonné/Résilié (E-3)
 
 > **Modif #125** — Section C, lot 7, étape 2, point **E-3**. Ajout d'un **statut du marché en difficulté** (En cours / Suspendu / Abandonné / Résilié), **axe distinct** du « statut de traitement » (En cours / Résolu / Abandonné) — ce dernier sert au calcul de santé et reste inchangé. Le nouveau statut apparaît dans le formulaire et dans une colonne « Statut marché » du tableau.
