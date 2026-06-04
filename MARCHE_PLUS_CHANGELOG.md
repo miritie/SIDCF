@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-03 — Enregistrement : Section C lot 3 (attributaire : NCC + compte simplifié)
+
+> **Modif #119** — Section C, **lot 3** (attributaire), points **E-12 / E-13** :
+> - **E-12** : le **NCC** est déjà affiché à côté de la raison sociale par le sélecteur d'entreprise (`entreprise-picker-mp.js`) — confirmé, aucun changement nécessaire.
+> - **E-13** : « *juste le compte bancaire suffirait* ». La section bancaire affiche désormais **Banque + N° de compte** (le compte rappelé du titulaire) ; **agence / intitulé / SWIFT** sont **repliés** dans un `<details>` (non nécessaires à l'affichage). Les **identifiants de champs sont conservés** → préremplissage et persistance inchangés. La **sélection parmi PLUSIEURS comptes** du titulaire viendra avec l'enrichissement de la base entreprises (liste détaillée des comptes — « à terme »).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : `renderCoordonneesBancairesSection` restructurée (Banque + N° visibles ; agence/intitulé/SWIFT dans un `<details>` replié). Fonction partagée → cohérent pour entreprise simple, mandataire et co-titulaires.
+
+### Impact / Anti-régression
+
+- **UI** : affichage simplifié au compte ; détails accessibles au besoin (repliés).
+- **Données / persistance** : ❌ aucun changement (mêmes id de champs, même `_prefillBanqueSection` / `handleSave`).
+- **Vérifié (CDP)** : Banque + N° visibles, agence/intitulé/SWIFT dans un `<details>` fermé par défaut ; 0 erreur console.
+
+### Déploiement : ✅ auto-déploiement Vercel
+
+---
+
 ## 2026-06-03 — Enregistrement : exonération de TVA déplacée au niveau du montant de base
 
 > **Modif #118** — Section C, lot 2, point **E-16**. La case **« Marché exonéré de TVA »** était dans la section « Informations sur le marché approuvé », alors qu'elle pilote le taux/montant. Elle est **déplacée dans la carte « Montant du marché de base »** (juste au-dessus de la grille HT/Taux/TTC), au plus près de ce qu'elle affecte.

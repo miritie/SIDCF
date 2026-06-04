@@ -1616,8 +1616,13 @@ function renderCoordonneesBancairesSection(idPrefix, cb) {
     el('h4', {
       style: { margin: '0 0 12px 0', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }
     }, ['🏦 Coordonnées bancaires']),
+    // Modif #119 (E-13) — « juste le compte bancaire suffirait » : on rappelle le
+    // compte du titulaire (Banque + N° de compte visibles) ; agence / intitulé /
+    // SWIFT sont repliés (non nécessaires à l'affichage). La sélection parmi
+    // PLUSIEURS comptes du titulaire viendra avec l'enrichissement de la base
+    // entreprises (liste détaillée des comptes — « à terme »).
     el('p', { className: 'text-small text-muted', style: { marginBottom: '12px' } },
-      'Nécessaires pour l\'émission des paiements en exécution.'),
+      'Compte rappelé depuis la base entreprises. Sélectionnez le compte rattaché au marché.'),
 
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
       el('div', { className: 'form-field' }, [
@@ -1632,48 +1637,43 @@ function renderCoordonneesBancairesSection(idPrefix, cb) {
         ])
       ]),
       el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Agence'),
+        el('label', { className: 'form-label' }, 'N° de compte (RIB / IBAN)'),
         el('input', {
           type: 'text',
           className: 'form-input',
-          id: `${idPrefix}-banque-agence`,
-          value: data.agence || '',
-          placeholder: 'Plateau, Cocody, etc.'
+          id: `${idPrefix}-banque-numero`,
+          value: data.numeroCompte || '',
+          placeholder: 'Ex: CI05 BICI 01040 0011 4555 0048 7'
         })
       ])
     ]),
 
-    el('div', { className: 'form-field', style: { marginTop: '16px' } }, [
-      el('label', { className: 'form-label' }, 'Numéro de compte (RIB / IBAN)'),
-      el('input', {
-        type: 'text',
-        className: 'form-input',
-        id: `${idPrefix}-banque-numero`,
-        value: data.numeroCompte || '',
-        placeholder: 'Ex: CI05 BICI 01040 0011 4555 0048 7'
-      })
-    ]),
-
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' } }, [
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'Intitulé du compte'),
-        el('input', {
-          type: 'text',
-          className: 'form-input',
-          id: `${idPrefix}-banque-intitule`,
-          value: data.intituleCompte || '',
-          placeholder: 'Si différent de la raison sociale'
-        })
-      ]),
-      el('div', { className: 'form-field' }, [
-        el('label', { className: 'form-label' }, 'SWIFT / BIC'),
-        el('input', {
-          type: 'text',
-          className: 'form-input',
-          id: `${idPrefix}-banque-swift`,
-          value: data.swiftBic || '',
-          placeholder: 'BICIIVCIA, SGCIIVCI, ...'
-        })
+    // Détails repliés (non nécessaires à l'affichage) — conservés pour la persistance.
+    el('details', { style: { marginTop: '12px' } }, [
+      el('summary', { style: { cursor: 'pointer', fontSize: '13px', color: '#6b7280' } },
+        'Détails du compte (agence, intitulé, SWIFT) — optionnel'),
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '12px' } }, [
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Agence'),
+          el('input', {
+            type: 'text', className: 'form-input', id: `${idPrefix}-banque-agence`,
+            value: data.agence || '', placeholder: 'Plateau, Cocody, etc.'
+          })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'Intitulé du compte'),
+          el('input', {
+            type: 'text', className: 'form-input', id: `${idPrefix}-banque-intitule`,
+            value: data.intituleCompte || '', placeholder: 'Si différent de la raison sociale'
+          })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, 'SWIFT / BIC'),
+          el('input', {
+            type: 'text', className: 'form-input', id: `${idPrefix}-banque-swift`,
+            value: data.swiftBic || '', placeholder: 'BICIIVCIA, SGCIIVCI, ...'
+          })
+        ])
       ])
     ])
   ]);
