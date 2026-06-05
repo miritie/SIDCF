@@ -730,20 +730,21 @@ function renderSimpleTable(operations, registries) {
   const sortIndicator = (ci) =>
     tableSort.col === ci && tableSort.dir !== 0 ? (tableSort.dir > 0 ? ' ▲' : ' ▼') : '';
 
-  // Rangée 1 — titres cliquables (tri)
+  // Rangée d'en-tête unique — Modif #143 : la zone de recherche par colonne
+  // (ex-2e rangée, #101) est intégrée dans la cellule d'en-tête, sous le titre.
+  // Le tri reste au clic sur le titre (pas sur l'input, qui stoppe la
+  // propagation pour ne pas déclencher le tri en prenant le focus).
   const headTitles = el('tr', {},
     cols.map((c, ci) => {
-      const thAttrs = {
+      const titleAttrs = {
         style: {
-          width: c.w, textAlign: c.align,
-          whiteSpace: 'normal', wordBreak: 'break-word',
-          verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25',
+          display: 'block',
           cursor: c.noFilter ? 'default' : 'pointer', userSelect: 'none'
         }
       };
       if (!c.noFilter) {
-        thAttrs.title = 'Cliquer pour trier';
-        thAttrs.onclick = () => {
+        titleAttrs.title = 'Cliquer pour trier';
+        titleAttrs.onclick = () => {
           if (tableSort.col === ci) tableSort.dir = tableSort.dir > 0 ? -1 : 1;
           else { tableSort.col = ci; tableSort.dir = 1; }
           headTitles.querySelectorAll('[data-sort-ind]').forEach(s => {
@@ -752,34 +753,38 @@ function renderSimpleTable(operations, registries) {
           applyTableView(tbody, cols);
         };
       }
-      return el('th', thAttrs, [
-        el('span', {}, c.label),
-        el('span', { 'data-sort-ind': String(ci), style: { color: '#0d6efd', fontWeight: '700' } }, sortIndicator(ci))
+      return el('th', {
+        style: {
+          width: c.w, textAlign: c.align,
+          whiteSpace: 'normal', wordBreak: 'break-word',
+          verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25',
+          padding: '6px 6px 4px'
+        }
+      }, [
+        el('span', titleAttrs, [
+          el('span', {}, c.label),
+          el('span', { 'data-sort-ind': String(ci), style: { color: '#0d6efd', fontWeight: '700' } }, sortIndicator(ci))
+        ]),
+        c.noFilter ? null : el('input', {
+          type: 'text',
+          className: 'form-input',
+          value: tableColSearch[ci] || '',
+          placeholder: '🔎 filtrer',
+          style: { width: '100%', fontSize: '11px', padding: '2px 6px', marginTop: '4px', fontWeight: 'normal' },
+          onclick: (e) => e.stopPropagation(),
+          oninput: (e) => {
+            const v = e.target.value.trim().toLowerCase();
+            if (v) tableColSearch[ci] = v; else delete tableColSearch[ci];
+            applyTableView(tbody, cols);
+          }
+        })
       ]);
     })
   );
 
-  // Rangée 2 — recherche texte libre par colonne
-  const headSearch = el('tr', {},
-    cols.map((c, ci) => el('th', { style: { padding: '4px', verticalAlign: 'top' } },
-      c.noFilter ? null : el('input', {
-        type: 'text',
-        className: 'form-input',
-        value: tableColSearch[ci] || '',
-        placeholder: '🔎 filtrer',
-        style: { width: '100%', fontSize: '11px', padding: '3px 6px', fontWeight: 'normal' },
-        oninput: (e) => {
-          const v = e.target.value.trim().toLowerCase();
-          if (v) tableColSearch[ci] = v; else delete tableColSearch[ci];
-          applyTableView(tbody, cols);
-        }
-      })
-    ))
-  );
-
   const table = el('div', { style: { width: '100%' } }, [
     el('table', { className: 'data-table', style: { width: '100%', tableLayout: 'fixed' } }, [
-      el('thead', {}, [headTitles, headSearch]),
+      el('thead', {}, [headTitles]),
       tbody
     ])
   ]);

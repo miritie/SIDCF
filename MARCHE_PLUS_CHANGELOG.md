@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-05 — Liste PPM : recherche par colonne intégrée dans l'en-tête (ECR01B)
+
+> **Modif #143** — Demande client : la 2e rangée d'en-tête dédiée à la recherche par colonne (#101, P-2/P-3) « prend trop d'espace ». Les champs « 🔎 filtrer » sont désormais **intégrés directement dans la cellule d'en-tête**, sous le titre de la colonne (rangée d'en-tête unique). Le **tri** reste au clic sur le **titre** ; un clic dans le champ de recherche ne déclenche pas le tri (stopPropagation + onclick déplacé du `<th>` vers le span du titre).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - `renderSimpleTable()` : suppression de la rangée `headSearch` ; chaque `<th>` contient le titre cliquable (tri) + l'input de recherche (sauf colonne Actions). Logique tri/filtre (`applyTableView`, `tableSort`, `tableColSearch`) inchangée.
+
+### Impact / Anti-régression
+
+- **Aucune migration, aucun changement Worker/DB** — purement affichage.
+- **Vérifié** (Chrome headless, données réelles) : 1 rangée d'en-tête, 6 inputs ; filtre « planif » sur Objet → 33→1→33 lignes ; clic input → pas de tri ; clic titre Montant → tri ▲ (premier montant 4,50) ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-05 — Liste PPM : retrait des cartes de statut et de la colonne « Statut du marché » (ECR01B)
 
 > **Modif #142** — Demande client (capture du 05/06/2026) sur l'écran **« PPM & Marchés et contrats »** (ECR01B) : (1) **retirer la rangée des 6 cartes KPI par phase** (« En Planification » → « Résilié », introduites en #97/P-1) sous les deux cartes de totaux ; (2) **retirer la colonne « Statut du marché »** (badge, 2.f) du tableau des résultats. Les deux cartes de totaux (« Total marché planifié », « Montant total prévisionnel ») sont conservées. Le statut reste consultable via le **filtre « Statut du marché »** du panneau Filtres (inchangé), le **modal Détails** et la **fiche de vie** ; l'export **CSV** conserve la colonne (export de données, pas d'affichage).
