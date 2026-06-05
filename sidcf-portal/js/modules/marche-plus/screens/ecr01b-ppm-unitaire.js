@@ -116,7 +116,6 @@ let activeFilters = {
   search: '',
   typeMarche: [],
   modePassation: [],
-  etat: [],
   typeFinancement: [],
   bailleur: [],
   categoriePrestation: [],
@@ -481,14 +480,8 @@ export async function renderPPMList() {
             activeFilters.modePassation
           ),
 
-          // Statut du marché (multi) — Modif #76 lot 1, point 1.c (ex « État »)
-          // Inclut désormais INFRUCTUEUX — Modif #76 lot 1, point 1.b
-          renderMultiSelectFilter(
-            'etat',
-            'Statut du marché',
-            (registries.ETAT_MARCHE || []).map(e => ({ ...e, label: ETAT_LABEL_MP[e.code] || e.label })),
-            activeFilters.etat
-          ),
+          // Modif #144 — filtre « Statut du marché » (#76 lot 1, 1.c) retiré du
+          // panneau, dans la continuité de #142 (cartes et colonne statut).
 
           // Type financement (multi)
           renderMultiSelectFilter(
@@ -600,8 +593,6 @@ function renderActiveFilterChips(filters, registries, exercices) {
   if (filters.activite?.length)         chips.push(`Activité (${filters.activite.length})`);
   if (filters.typeMarche?.length)       chips.push(`Type (${filters.typeMarche.length})`);
   if (filters.modePassation?.length)    chips.push(`Mode (${filters.modePassation.length})`);
-  // Modif #76 lot 1 (1.c) — « État » devient « Statut »
-  if (filters.etat?.length)             chips.push(`Statut (${filters.etat.length})`);
   if (filters.typeFinancement?.length)  chips.push(`Financement (${filters.typeFinancement.length})`);
   // Modif #76 lot 1 (1.d) — « Bailleur » devient « Source de financement »
   if (filters.bailleur?.length)         chips.push(`Source fin. (${filters.bailleur.length})`);
@@ -1172,7 +1163,6 @@ function applyFilters(operations, santeMap = null, registries = null) {
     // pour matcher la sélection faite via la liste hiérarchisée — Modif #76 lot 1
     if (!_matchMulti(activeFilters.typeMarche, normalizeTypeMarche(op.typeMarche, registries))) return false;
     if (!_matchMulti(activeFilters.modePassation, op.modePassation)) return false;
-    if (!_matchMulti(activeFilters.etat, op.etat)) return false;
     if (!_matchMulti(activeFilters.typeFinancement, op.typeFinancement)) return false;
     if (!_matchMulti(activeFilters.bailleur, op.sourceFinancement)) return false;
     if (!_matchMulti(activeFilters.categoriePrestation, op.categoriePrestation)) return false;
@@ -1354,7 +1344,6 @@ function resetFilters() {
     search: '',
     typeMarche: [],
     modePassation: [],
-    etat: [],
     typeFinancement: [],
     bailleur: [],
     categoriePrestation: [],

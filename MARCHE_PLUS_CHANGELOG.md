@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-05 — Liste PPM : retrait du filtre « Statut du marché » du panneau Filtres (ECR01B)
+
+> **Modif #144** — Suite de #142 (retrait des cartes par phase et de la colonne statut) : le **multi-sélecteur « Statut du marché »** du panneau Filtres est lui aussi retiré, à la demande du client. Le statut reste visible dans le **modal Détails** et la **fiche de vie** ; l'export **CSV** le conserve.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - Panneau Filtres : retrait du `renderMultiSelectFilter('etat', …)` (#76 lot 1, 1.c).
+  - `applyFilters()` : retrait du test `_matchMulti(activeFilters.etat, op.etat)`.
+  - Chips des filtres actifs : retrait du chip `Statut (n)`.
+  - `activeFilters` (déclaration + `resetFilters()`) : clé `etat` supprimée.
+
+### Impact / Anti-régression
+
+- **Aucune migration, aucun changement Worker/DB** — purement affichage.
+- **Vérifié** (Chrome headless, données réelles) : panneau Filtres déplié sans « Statut du marché », les 7 autres filtres présents (Activité, Type de marché, Mode de passation, Type financement, Source de financement, Nature économique, Région), 33 lignes, **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-05 — Liste PPM : recherche par colonne intégrée dans l'en-tête (ECR01B)
 
 > **Modif #143** — Demande client : la 2e rangée d'en-tête dédiée à la recherche par colonne (#101, P-2/P-3) « prend trop d'espace ». Les champs « 🔎 filtrer » sont désormais **intégrés directement dans la cellule d'en-tête**, sous le titre de la colonne (rangée d'en-tête unique). Le **tri** reste au clic sur le **titre** ; un clic dans le champ de recherche ne déclenche pas le tri (stopPropagation + onclick déplacé du `<th>` vers le span du titre).
