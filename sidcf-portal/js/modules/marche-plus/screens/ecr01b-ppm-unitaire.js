@@ -721,55 +721,100 @@ function renderSimpleTable(operations, registries) {
   const sortIndicator = (ci) =>
     tableSort.col === ci && tableSort.dir !== 0 ? (tableSort.dir > 0 ? ' ▲' : ' ▼') : '';
 
-  // Rangée d'en-tête unique — Modif #143 : la zone de recherche par colonne
-  // (ex-2e rangée, #101) est intégrée dans la cellule d'en-tête, sous le titre.
-  // Le tri reste au clic sur le titre (pas sur l'input, qui stoppe la
-  // propagation pour ne pas déclencher le tri en prenant le focus).
+  // Rangée d'en-tête unique — Modif #145 (retour client sur #143) : le champ
+  // de recherche n'est plus visible en permanence. Au clic sur l'en-tête, le
+  // champ remplace visuellement le libellé (focus immédiat) ; il s'efface au
+  // blur si la saisie est vide (le libellé revient). Tant qu'un filtre est
+  // actif, le champ reste affiché (le filtre demeure visible). Le tri, qui
+  // occupait le clic sur le titre (#101), se fait via l'icône ⇅ à côté du
+  // libellé (et reste actif pendant la saisie).
   const headTitles = el('tr', {},
     cols.map((c, ci) => {
-      const titleAttrs = {
+      if (c.noFilter) {
+        return el('th', {
+          style: {
+            width: c.w, textAlign: c.align,
+            whiteSpace: 'normal', wordBreak: 'break-word',
+            verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25',
+            padding: '6px'
+          }
+        }, c.label);
+      }
+
+      const input = el('input', {
+        type: 'text',
+        className: 'form-input',
+        value: tableColSearch[ci] || '',
+        placeholder: `🔎 ${c.label}`,
         style: {
-          display: 'block',
-          cursor: c.noFilter ? 'default' : 'pointer', userSelect: 'none'
+          width: '100%', fontSize: '11px', padding: '2px 6px', fontWeight: 'normal',
+          display: tableColSearch[ci] ? '' : 'none'
+        },
+        onclick: (e) => e.stopPropagation(),
+        oninput: (e) => {
+          const v = e.target.value.trim().toLowerCase();
+          if (v) tableColSearch[ci] = v; else delete tableColSearch[ci];
+          applyTableView(tbody, cols);
+        },
+        onkeydown: (e) => {
+          // Échap : efface le filtre et referme le champ
+          if (e.key === 'Escape') {
+            e.target.value = '';
+            delete tableColSearch[ci];
+            applyTableView(tbody, cols);
+            e.target.blur();
+          }
+        },
+        onblur: (e) => {
+          // Saisie vide → le libellé reprend sa place ; sinon le champ reste
+          // visible pour matérialiser le filtre actif.
+          if (!e.target.value.trim()) {
+            input.style.display = 'none';
+            labelView.style.display = '';
+          }
         }
-      };
-      if (!c.noFilter) {
-        titleAttrs.title = 'Cliquer pour trier';
-        titleAttrs.onclick = () => {
+      });
+
+      const sortBtn = el('span', {
+        'data-sort-ind': String(ci),
+        title: 'Trier',
+        style: { color: '#0d6efd', fontWeight: '700', cursor: 'pointer', marginLeft: '4px' },
+        onclick: (e) => {
+          e.stopPropagation();
           if (tableSort.col === ci) tableSort.dir = tableSort.dir > 0 ? -1 : 1;
           else { tableSort.col = ci; tableSort.dir = 1; }
           headTitles.querySelectorAll('[data-sort-ind]').forEach(s => {
-            s.textContent = sortIndicator(Number(s.getAttribute('data-sort-ind')));
+            const i = Number(s.getAttribute('data-sort-ind'));
+            s.textContent = sortIndicator(i) || ' ⇅';
           });
           applyTableView(tbody, cols);
-        };
-      }
+        }
+      }, sortIndicator(ci) || ' ⇅');
+
+      const labelView = el('span', {
+        title: 'Cliquer pour filtrer',
+        style: {
+          display: tableColSearch[ci] ? 'none' : 'block',
+          cursor: 'pointer', userSelect: 'none'
+        },
+        onclick: () => {
+          labelView.style.display = 'none';
+          input.style.display = '';
+          input.focus();
+        }
+      }, [
+        el('span', {}, c.label),
+        sortBtn
+      ]);
+
       return el('th', {
         style: {
           width: c.w, textAlign: c.align,
           whiteSpace: 'normal', wordBreak: 'break-word',
           verticalAlign: 'bottom', fontSize: '12px', lineHeight: '1.25',
-          padding: '6px 6px 4px'
+          padding: '6px'
         }
-      }, [
-        el('span', titleAttrs, [
-          el('span', {}, c.label),
-          el('span', { 'data-sort-ind': String(ci), style: { color: '#0d6efd', fontWeight: '700' } }, sortIndicator(ci))
-        ]),
-        c.noFilter ? null : el('input', {
-          type: 'text',
-          className: 'form-input',
-          value: tableColSearch[ci] || '',
-          placeholder: '🔎 filtrer',
-          style: { width: '100%', fontSize: '11px', padding: '2px 6px', marginTop: '4px', fontWeight: 'normal' },
-          onclick: (e) => e.stopPropagation(),
-          oninput: (e) => {
-            const v = e.target.value.trim().toLowerCase();
-            if (v) tableColSearch[ci] = v; else delete tableColSearch[ci];
-            applyTableView(tbody, cols);
-          }
-        })
-      ]);
+      }, [labelView, input]);
     })
   );
 

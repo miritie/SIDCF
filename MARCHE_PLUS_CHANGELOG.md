@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-05 — Liste PPM : champ de filtre en place du libellé de colonne (ECR01B)
+
+> **Modif #145** — Retour client sur #143 (« c'est le même effet visuel ») : le champ de recherche ne doit pas être visible en permanence. Désormais, **cliquer sur l'en-tête de colonne fait apparaître le champ de saisie à la place du libellé** (focus immédiat). Comportement : saisie → filtrage immédiat ; **blur avec saisie vide** → le libellé revient ; **filtre actif** → le champ reste affiché (le critère demeure visible) ; **Échap** → efface le filtre et referme le champ. Le **tri**, qui occupait le clic sur le titre (#101/P-2), passe sur une **icône ⇅ dédiée** à côté du libellé (▲/▼ une fois actif), sans conflit avec l'ouverture du filtre.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - `renderSimpleTable()` : en-tête à deux états (libellé ↔ input) par colonne, bascule au clic / blur / Échap ; tri déplacé du titre vers l'icône `⇅` (stopPropagation) ; logique `applyTableView`/`tableSort`/`tableColSearch` inchangée.
+
+### Impact / Anti-régression
+
+- **Aucune migration, aucun changement Worker/DB** — purement affichage.
+- Au re-render, une colonne avec filtre actif ré-affiche directement le champ (état persisté `tableColSearch`).
+- **Vérifié** (Chrome headless, données réelles) : libellé par défaut ; clic → input focus à la place du libellé ; filtre « planif » 33→1 ; blur avec valeur → champ conservé ; vidage + blur → libellé revenu, 33 lignes ; tri ⇅ → ▲ premier montant 4,50 sans ouvrir le filtre ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-05 — Liste PPM : retrait du filtre « Statut du marché » du panneau Filtres (ECR01B)
 
 > **Modif #144** — Suite de #142 (retrait des cartes par phase et de la colonne statut) : le **multi-sélecteur « Statut du marché »** du panneau Filtres est lui aussi retiré, à la demande du client. Le statut reste visible dans le **modal Détails** et la **fiche de vie** ; l'export **CSV** le conserve.
