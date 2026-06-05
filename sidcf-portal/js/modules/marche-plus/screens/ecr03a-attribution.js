@@ -626,8 +626,9 @@ function renderAttributionForm(attribution, operation, registries, modePassation
 
     renderCleRepartitionSection(montantHT, montantTTC, operation.livrables || [], registries),
 
-    // Modif #128 (E-21) — Ordonnancement prévu (CP par année), complémentaire à la clé.
-    renderOrdonnancementSection(existingAttr, operation),
+    // Modif #128 (E-21) — Ordonnancement prévu (CP par année).
+    // Modif #141 — récap en lecture seule, dérivé de la clé de répartition.
+    renderOrdonnancementSection(),
 
     // Section Échéancier
     renderEcheancierSection(montantTTC, operation.livrables || [], registries)
@@ -2321,64 +2322,92 @@ function renderLivrablesSection() {
 
 /**
  * Modif #128 (E-21) — Section « Ordonnancement prévu (CP par année) ».
- * Tableau récapitulatif années × sources (Trésor/Dons/Emprunts), complémentaire
- * à la clé de répartition : vue annuelle / pluriannuelle de la prise en charge.
+ * Modif #141 (E-21, retour 01/06) — « ce n'est pas un élément de saisie, c'est
+ * une forme de récap de la clé de répartition » : la section devient un
+ * récapitulatif en LECTURE SEULE, dérivé automatiquement de la clé de
+ * répartition (ventilation année × source de financement). Le tableau est
+ * (re)généré par renderOrdonnancementRecap() au montage de la clé et à chaque
+ * modification de celle-ci (onChange du widget).
  */
-function renderOrdonnancementSection(existingAttr, operation) {
-  const rows = (Array.isArray(existingAttr.ordonnancement) && existingAttr.ordonnancement.length)
-    ? existingAttr.ordonnancement
-    : [{ annee: operation.exercice || '', tresor: 0, dons: 0, emprunts: 0 }];
-
-  const tbody = el('tbody', { id: 'ord-tbody' });
-  const totalLine = el('div', { id: 'ord-total', style: { marginTop: '8px', fontWeight: 600, textAlign: 'right', fontSize: '13px' } }, '');
-
-  const recompute = () => {
-    let tT = 0, tD = 0, tE = 0;
-    [...tbody.querySelectorAll('tr')].forEach(tr => {
-      const v = (cls) => Number(tr.querySelector(cls)?.value) || 0;
-      const rt = v('.ord-tresor') + v('.ord-dons') + v('.ord-emprunts');
-      const cell = tr.querySelector('.ord-rowtotal'); if (cell) cell.textContent = formatMoney(rt);
-      tT += v('.ord-tresor'); tD += v('.ord-dons'); tE += v('.ord-emprunts');
-    });
-    totalLine.textContent = `Total — Trésor : ${formatMoney(tT)} · Dons : ${formatMoney(tD)} · Emprunts : ${formatMoney(tE)} · Général : ${formatMoney(tT + tD + tE)}`;
-  };
-
-  const numCell = (cls, val) => el('td', {}, el('input', { type: 'number', className: `form-input ${cls}`, value: val || 0, min: 0, step: 1, style: { width: '100%' }, oninput: () => recompute() }));
-  const makeRow = (r) => el('tr', {}, [
-    el('td', {}, el('input', { type: 'number', className: 'form-input ord-annee', value: r.annee || '', placeholder: 'Année', style: { width: '90px' } })),
-    numCell('ord-tresor', r.tresor),
-    numCell('ord-dons', r.dons),
-    numCell('ord-emprunts', r.emprunts),
-    el('td', { className: 'ord-rowtotal', style: { textAlign: 'right', fontWeight: 600 } }, ''),
-    el('td', {}, el('button', { type: 'button', className: 'btn btn-sm btn-secondary', onclick: (e) => { e.target.closest('tr').remove(); recompute(); } }, '✕'))
-  ]);
-
-  rows.forEach(r => tbody.appendChild(makeRow(r)));
-  setTimeout(recompute, 0);
-
+function renderOrdonnancementSection() {
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
       el('h3', { className: 'card-title' }, '🗓️ Ordonnancement prévu (CP par année)'),
       el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
-        'Vue annuelle / pluriannuelle de la prise en charge, par source de financement — complémentaire à la clé de répartition.')
+        'Récapitulatif de la clé de répartition, ventilé par année et par source de financement. Non saisissable : reflète automatiquement la clé.')
     ]),
-    el('div', { className: 'card-body' }, [
-      el('table', { className: 'table', id: 'ord-table', style: { width: '100%', fontSize: '13px' } }, [
-        el('thead', {}, el('tr', {}, [
-          el('th', {}, 'Année (CP)'),
-          el('th', {}, 'Trésor (CI)'),
-          el('th', {}, 'Dons'),
-          el('th', {}, 'Emprunts'),
-          el('th', { style: { textAlign: 'right' } }, 'Total'),
-          el('th', {}, '')
-        ])),
-        tbody
-      ]),
-      el('div', { style: { marginTop: '8px' } },
-        el('button', { type: 'button', className: 'btn btn-sm btn-accent', onclick: () => { tbody.appendChild(makeRow({ annee: '', tresor: 0, dons: 0, emprunts: 0 })); recompute(); } }, '+ Ajouter une année')),
-      totalLine
-    ])
+    el('div', { className: 'card-body', id: 'ord-container' })
   ]);
+}
+
+/**
+ * Modif #141 — Agrège la clé de répartition par année × source de financement.
+ * Mapping typeFinancement → colonne : ETAT → tresor (la TVA État, portée par
+ * une ligne ETAT, y est donc comptée), DON → dons, EMPRUNT → emprunts.
+ * Retourne la même structure {annee, tresor, dons, emprunts} que #128
+ * (consommateurs en aval inchangés).
+ */
+function computeOrdonnancementFromCle(cleList) {
+  const byYear = new Map();
+  (Array.isArray(cleList) ? cleList : []).forEach(ligne => {
+    const annee = parseInt(ligne.annee, 10) || null;
+    const montant = Number(ligne.montant) || 0;
+    if (!annee && !montant) return;
+    if (!byYear.has(annee)) byYear.set(annee, { annee, tresor: 0, dons: 0, emprunts: 0 });
+    const row = byYear.get(annee);
+    const type = (ligne.typeFinancement || '').toUpperCase();
+    if (type === 'DON') row.dons += montant;
+    else if (type === 'EMPRUNT') row.emprunts += montant;
+    else row.tresor += montant; // ETAT (et défaut) → Trésor (CI)
+  });
+  return [...byYear.values()].sort((a, b) => (a.annee || 0) - (b.annee || 0));
+}
+
+/**
+ * Modif #141 — (Re)génère le tableau récapitulatif en lecture seule dans
+ * #ord-container, à partir de l'état courant de la clé (cleRepartitionList).
+ */
+function renderOrdonnancementRecap() {
+  const container = document.getElementById('ord-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const rows = computeOrdonnancementFromCle(cleRepartitionList);
+  if (!rows.length) {
+    container.appendChild(el('p', { style: { margin: 0, fontSize: '13px', color: '#6b7280' } },
+      'Renseignez la clé de répartition ci-dessus : l\'ordonnancement prévu s\'en déduira automatiquement.'));
+    return;
+  }
+
+  let tT = 0, tD = 0, tE = 0;
+  const tbody = el('tbody', {}, rows.map(r => {
+    tT += r.tresor; tD += r.dons; tE += r.emprunts;
+    return el('tr', {}, [
+      el('td', {}, String(r.annee || '—')),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(r.tresor)),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(r.dons)),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(r.emprunts)),
+      el('td', { style: { textAlign: 'right', fontWeight: 600 } }, formatMoney(r.tresor + r.dons + r.emprunts))
+    ]);
+  }));
+
+  container.appendChild(el('table', { className: 'table', id: 'ord-table', style: { width: '100%', fontSize: '13px' } }, [
+    el('thead', {}, el('tr', {}, [
+      el('th', {}, 'Année (CP)'),
+      el('th', { style: { textAlign: 'right' } }, 'Trésor (CI)'),
+      el('th', { style: { textAlign: 'right' } }, 'Dons'),
+      el('th', { style: { textAlign: 'right' } }, 'Emprunts'),
+      el('th', { style: { textAlign: 'right' } }, 'Total')
+    ])),
+    tbody,
+    el('tfoot', {}, el('tr', { style: { fontWeight: 600, borderTop: '2px solid #e5e7eb' } }, [
+      el('td', {}, 'Total'),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(tT)),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(tD)),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(tE)),
+      el('td', { style: { textAlign: 'right' } }, formatMoney(tT + tD + tE))
+    ]))
+  ]));
 }
 
 /**
@@ -2417,11 +2446,16 @@ function initializeWidgets(operation, registries) {
       registries,
       (updatedList) => {
         cleRepartitionList = updatedList;
+        // Modif #141 — le récap d'ordonnancement suit la clé en temps réel.
+        renderOrdonnancementRecap();
       },
       bailleursPlanifies
     );
     cleContainer.innerHTML = '';
     cleContainer.appendChild(widget);
+
+    // Modif #141 — premier rendu du récap d'ordonnancement (état initial de la clé).
+    renderOrdonnancementRecap();
   }
 
   if (echeancierContainer) {
@@ -2604,12 +2638,8 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     const dureeUnite = document.getElementById('attr-duree-unite')?.value || 'MOIS';
 
     // Modif #128 (E-21) — ordonnancement prévu (CP par année × sources).
-    const ordonnancement = [...document.querySelectorAll('#ord-tbody tr')].map(tr => ({
-      annee: parseInt(tr.querySelector('.ord-annee')?.value, 10) || null,
-      tresor: Number(tr.querySelector('.ord-tresor')?.value) || 0,
-      dons: Number(tr.querySelector('.ord-dons')?.value) || 0,
-      emprunts: Number(tr.querySelector('.ord-emprunts')?.value) || 0
-    })).filter(r => r.annee || r.tresor || r.dons || r.emprunts);
+    // Modif #141 — snapshot dérivé de la clé de répartition (plus de saisie).
+    const ordonnancement = computeOrdonnancementFromCle(cleRepartitionList);
 
     // Modif #130 (E-1/E-9) — origine de l'approbation (visa CF / autre que CF).
     const approbation = {

@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-04 — Ordonnancement prévu : récap dérivé de la clé de répartition, non saisissable (E-21)
+
+> **Modif #141** — Retour client (01/06/2026) sur la section **« Ordonnancement prévu (CP par année) »** de l'enregistrement (E-21) : *« ce n'est pas un élément de saisie, c'est une forme de récap de la clé de répartition »*. La section, jusque-là **éditable** (inputs Trésor/Dons/Emprunts par année + bouton « Ajouter une année », #128), devient un **récapitulatif en lecture seule** calculé automatiquement à partir de la **clé de répartition** : chaque ligne de la clé est ventilée par **année** et par **source de financement** (`typeFinancement` : `ETAT` → Trésor (CI), `DON` → Dons, `EMPRUNT` → Emprunts), avec une ligne de total. Le récap se **resynchronise** à chaque modification de la clé (onChange) et au montage. À l'enregistrement, le champ `ordonnancement` persisté devient un **snapshot dérivé** de la clé (même structure `{annee, tresor, dons, emprunts}` qu'avant — consommateurs en aval inchangés).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` :
+  - `renderOrdonnancementSection()` : ne rend plus qu'un conteneur `#ord-container` + texte d'aide (« Non saisissable : reflète automatiquement la clé »). Signature simplifiée (plus de `existingAttr`/`operation`).
+  - Nouveau `computeOrdonnancementFromCle(cleList)` : agrège la clé par année × source (helper partagé rendu + save).
+  - Nouveau `renderOrdonnancementRecap()` : (re)génère le tableau lecture seule dans `#ord-container` ; message d'invite si la clé est vide.
+  - `initializeWidgets()` : appel de `renderOrdonnancementRecap()` au montage de la clé **et** dans le `onChange` du widget clé de répartition.
+  - Save : `ordonnancement` calculé via `computeOrdonnancementFromCle(cleRepartitionList)` au lieu de lire les anciens inputs `#ord-tbody`.
+
+### Impact / Anti-régression
+
+- **DB** : aucune migration — structure de `ordonnancement[]` inchangée (`annee/tresor/dons/emprunts`) ; les enregistrements existants restent valides (le récap les recalcule depuis la clé, qui est la source de vérité).
+- **UI** : plus de double saisie (clé + ordonnancement) → suppression d'une source d'incohérence. La TVA État (ligne `typeFinancement: 'ETAT'`) est comptée dans la colonne Trésor (CI), cohérent avec « prise en charge par l'État ».
+- **Vérifié** : `node --check` OK ; aucune référence orpheline aux anciens IDs (`#ord-tbody`, `.ord-annee`, etc.).
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
 
 ## 2026-06-04 — Difficultés du marché : pièce jointe de l'acte + autorité décisionnelle (E-4)
 
