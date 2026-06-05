@@ -220,12 +220,19 @@ function buildHierarchicalTypeMarcheOptions(registries) {
  * MODE_PASSATION (aucun impact sur le barème ni la contractualisation) :
  * seul l'affichage est structuré en groupes. Tout mode non classé reste
  * accessible sous « Autres » (rétro-compat / futurs sous-types).
+ *
+ * Modif #139 — Alignement sur la liste de référence des modes de passation
+ * (CR DCF, liste 01/06/2026) : ajout d'« Appel d'offres avec concours »
+ * (AOO_CONCOURS) à la famille Appel d'offres ; éclatement des Prestations
+ * intellectuelles en 6 sous-procédures (PI_CV / PI_AMI_*) tout en conservant
+ * le code générique PI ; reclassement de CFN parmi les procédures
+ * dérogatoires ; retrait de « Lettre de commande valant marché ».
  */
 const MODE_PASSATION_FAMILLES = [
-  { label: 'Appel d\'offres',             codes: ['AOO', 'AOO_PREQUALIF', 'AOO_2ETAPES'] },
+  { label: 'Appel d\'offres',             codes: ['AOO', 'AOO_PREQUALIF', 'AOO_2ETAPES', 'AOO_CONCOURS'] },
   { label: 'Procédures simplifiées',      codes: ['PSD', 'PSC', 'PSL', 'PSO'] },
-  { label: 'Prestations intellectuelles', codes: ['PI'] },
-  { label: 'Procédures dérogatoires',     codes: ['AOR', 'ENTENTE_DIRECTE', 'CFN', 'CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCTION'] }
+  { label: 'Prestations intellectuelles', codes: ['PI', 'PI_CV', 'PI_AMI_SMC', 'PI_AMI_SCBD', 'PI_AMI_SFQC', 'PI_AMI_SFQ', 'PI_AMI_SQC'] },
+  { label: 'Procédures dérogatoires',     codes: ['CFN', 'ENTENTE_DIRECTE', 'AOR', 'RECONDUCTION', 'CONVENTION'] }
 ];
 
 /**

@@ -82,6 +82,19 @@ const DEFAULT_PHASE_CONFIG = {
 let cachedPhaseConfig = null;
 
 /**
+ * Modif #139 — Les sous-types de la liste de référence (AOO_PREQUALIF /
+ * AOO_2ETAPES / AOO_CONCOURS et PI_CV / PI_AMI_*) n'ont pas de frise dédiée :
+ * ils empruntent celle de leur mode de base (AOO ou PI). Évite une frise vide
+ * lorsqu'un de ces sous-types est sélectionné.
+ */
+function resolveBaseModeForPhases(mode) {
+  if (typeof mode !== 'string') return mode;
+  if (mode === 'PI' || mode.startsWith('PI_')) return 'PI';
+  if (mode === 'AOO' || mode.startsWith('AOO_')) return 'AOO';
+  return mode;
+}
+
+/**
  * Fetch phases from API
  * @param {string} modePassation - PSD, PSC, PSL, PSO, AOO, PI
  * @returns {Promise<Array>} Array of phase objects
@@ -145,7 +158,9 @@ export function getPhases(modePassation) {
 
   // Utiliser la configuration par défaut en synchrone
   // La version async chargera depuis l'API
-  const phases = DEFAULT_PHASE_CONFIG[modePassation] || [];
+  const phases = DEFAULT_PHASE_CONFIG[modePassation]
+    || DEFAULT_PHASE_CONFIG[resolveBaseModeForPhases(modePassation)]
+    || [];
 
   logger.info(`[PhaseHelper] Phases (fallback) pour ${modePassation}:`, phases.length);
   return phases.sort((a, b) => a.order - b.order);
@@ -179,7 +194,9 @@ export async function getPhasesAsync(modePassation) {
   }
 
   // Fallback sur la configuration par défaut
-  const phases = DEFAULT_PHASE_CONFIG[modePassation] || [];
+  const phases = DEFAULT_PHASE_CONFIG[modePassation]
+    || DEFAULT_PHASE_CONFIG[resolveBaseModeForPhases(modePassation)]
+    || [];
   logger.info(`[PhaseHelper] Phases fallback pour ${modePassation}:`, phases.length);
   return phases.sort((a, b) => a.order - b.order);
 }

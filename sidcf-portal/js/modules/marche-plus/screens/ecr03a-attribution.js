@@ -17,7 +17,9 @@ import {
   isFieldRequired,
   isFieldOptional,
   isFieldHidden,
-  getContextualConfig
+  getContextualConfig,
+  isPrestationIntellectuelle,
+  resolveBaseMode
 } from '../../../lib/procedure-context.js';
 import { getLotData, buildLotPatch, getLotsFromProcedure, resolveCurrentLotId } from '../../../lib/lot-data.js';
 import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
@@ -564,8 +566,9 @@ function renderContextualAlert(modePassation) {
   const config = getContextualConfig(modePassation, 'attribution');
   if (!config || !config.note) return null;
 
-  const isPI = modePassation === 'PI';
-  const isAOO = modePassation === 'AOO';
+  // Modif #139 — les sous-types (PI_*, AOO_*) héritent du comportement du mode de base.
+  const isPI = isPrestationIntellectuelle(modePassation);
+  const isAOO = resolveBaseMode(modePassation) === 'AOO';
 
   return el('div', { className: 'card', style: { marginBottom: '24px', borderColor: isPI ? '#dc3545' : '#0dcaf0' } }, [
     el('div', { className: 'card-header', style: { background: isPI ? '#f8d7da' : '#cff4fc' } }, [
@@ -1463,8 +1466,9 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
     reference: 'Code MP CI Art. 97, 98, 100 · RG010, RG011 du SDF · CCAP du marché',
     dynamic: (ctx) => {
       const mode = ctx.modePassation;
-      const piHidden = mode === 'PI';
-      const aooObligatoire = mode === 'AOO';
+      // Modif #139 — sous-types PI_*/AOO_* rattachés à leur famille.
+      const piHidden = isPrestationIntellectuelle(mode);
+      const aooObligatoire = resolveBaseMode(mode) === 'AOO';
       return {
         modeCourant: mode,
         visibilite: piHidden ? '❌ Section masquée (mode PI — procédure d\'urgence)' : '✓ Section visible',

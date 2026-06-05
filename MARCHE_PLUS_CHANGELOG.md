@@ -13,6 +13,7 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+
 ## 2026-06-04 — Difficultés du marché : pièce jointe de l'acte + autorité décisionnelle (E-4)
 
 > **Modif #140** — Point **E-4** sur la modale « Nouvelle difficulté ». Trois demandes du retour traitées : (1) **chargement du fichier** = l'acte qui rend la décision (résiliation, suspension…) — ajout d'un **vrai upload** (champ `type=file`, envoi R2 à l'enregistrement, lien 📎 dans le tableau) ; (2) **Autorité décisionnelle** — le champ texte devient une **sélection assistée** (`datalist` de 8 autorités courantes, saisie libre conservée) ; (3) **Référence / N° de l'acte** — champ texte déjà présent, conservé. La modale est aussi **réalignée** : tous les couples label/champ passent par la classe `.form-field` (les `<div>` nus empêchaient l'empilement vertical et la pleine largeur — d'où le décalage visuel).
@@ -37,6 +38,32 @@ Format :
 ### Déploiement
 
 - Front statique (Vercel auto-deploy sur push `main`). L'upload R2 passe par l'adapter `dataService` déjà en place — pas de déploiement Worker spécifique requis.
+
+---
+
+## 2026-06-04 — Modes de passation : alignement sur la liste de référence (familles)
+
+> **Modif #139** — Mise en conformité du référentiel **MODE_PASSATION** avec la **liste de référence des modes de passation** (classification par famille, CR DCF — liste 01/06/2026). Quatre familles : **Appel d'offres**, **Procédures simplifiées**, **Prestations intellectuelles**, **Procédures dérogatoires**. Changements : (1) ajout d'**« Appel d'offres avec concours »** (`AOO_CONCOURS`) ; (2) éclatement des **Prestations intellectuelles** en 6 sous-procédures (`PI_CV`, `PI_AMI_SMC`, `PI_AMI_SCBD`, `PI_AMI_SFQC`, `PI_AMI_SFQ`, `PI_AMI_SQC`) **tout en conservant le code générique `PI`** (zéro migration, rétro-compat des marchés et de la logique existante) ; (3) reclassement de **CFN** parmi les procédures dérogatoires ; (4) **retrait** de « Lettre de commande valant marché » (`LETTRE_COMMANDE_MARCHE`), absente de la liste. Le référentiel passe de 14 à **20 modes**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` : `MODE_PASSATION` réordonné par famille ; +`AOO_CONCOURS` ; +6 sous-types `PI_*` (avec `parent: "PI"`) ; `CFN` → `famille: "DEROGATOIRE"` (`seuil: false`) ; suppression de `LETTRE_COMMANDE_MARCHE`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` : `MODE_PASSATION_FAMILLES` (groupement du filtre) mis à l'image de la liste de référence (ordre + membres).
+- `sidcf-portal/js/lib/procedure-context.js` : helpers exportés `isPrestationIntellectuelle()` et `resolveBaseMode()` ; `getContextualConfig()` se replie sur le mode de base quand un sous-type n'a pas de config dédiée ; les règles PI (garanties masquées, validation DGMP/publication/garanties) couvrent désormais les sous-types.
+- `sidcf-portal/js/lib/phase-helper-mp.js` + `phase-helper.js` : repli de la **frise** sur le mode de base (`PI_*`→`PI`, `AOO_*`→`AOO`) — évite une frise vide pour les nouveaux sous-types.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` / `ecr04a-execution-os.js` / `ecr02a-procedure-pv.js` : les tests `=== 'PI'` / `=== 'AOO'` (alerte contextuelle, garanties, visa CF requis, sélecteur de sous-procédure PI) deviennent **famille-conscients** via `isPrestationIntellectuelle()` / `resolveBaseMode()`.
+
+### Impact / Anti-régression
+
+- **Métadonnées seulement pour `famille`/`seuil`** : aucune logique ne lit ces champs ; la dérogation reste pilotée par l'écart au **barème** (`getSuggestedProcedures`), inchangé. Le barème (`rules-config.json`) ne référence que AOO/PSC/PSD/PSL/PSO — les nouveaux modes restent hors barème (comportement identique aux dérogatoires existants).
+- **DB** : `mode_passation VARCHAR(100)` sans contrainte CHECK → les nouveaux codes sont acceptés à la sauvegarde. **Aucune migration.**
+- **`PI` générique conservé** : les 2 marchés seed en `PI` et toute la logique référençant `'PI'` continuent de fonctionner ; les sous-types héritent du comportement PI par détection de famille.
+- **`LETTRE_COMMANDE_MARCHE`** : aucun marché ne l'utilisait ; références résiduelles nettoyées (`MODES_CONTRAT_DIRECT` et branche d'attribution directe dans `ecr02a`).
+- **Vérifié** : `node --check` OK sur tous les fichiers JS modifiés ; `registries.json` valide (20 modes) ; aucune référence résiduelle à `LETTRE_COMMANDE_MARCHE`. Le filtre « Mode de passation » affichera 20 modes + 4 entêtes de famille (= « 24 valeurs »).
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). `registries.json` est un asset statique : pris en compte au prochain chargement (le navigateur lit le fichier ; pas de copie figée en localStorage — le compteur « 18 valeurs » correspondait à 14 modes + 4 entêtes).
 
 ---
 

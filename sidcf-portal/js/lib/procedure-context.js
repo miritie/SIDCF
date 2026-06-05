@@ -14,9 +14,32 @@ import { getRulesConfig } from '../datastore/data-service.js';
  * @param {string} phase - Phase du cycle (contractualisation, attribution, execution, cloture)
  * @returns {Object} Configuration des champs pour cette phase
  */
+/**
+ * Modif #139 — Les modes de passation peuvent désormais avoir des sous-types
+ * (familles « Appel d'offres » et « Prestations intellectuelles » de la liste
+ * de référence 01/06/2026) : AOO_PREQUALIF / AOO_2ETAPES / AOO_CONCOURS et
+ * PI_CV / PI_AMI_*. Ces sous-types héritent du comportement de leur mode de
+ * base (config contextuelle, règles, garanties). On résout donc le code en son
+ * mode de base avant toute recherche de configuration, sans toucher au code
+ * stocké sur l'opération.
+ */
+export function isPrestationIntellectuelle(modePassation) {
+  return modePassation === 'PI' ||
+    (typeof modePassation === 'string' && modePassation.startsWith('PI_'));
+}
+
+export function resolveBaseMode(modePassation) {
+  if (typeof modePassation !== 'string') return modePassation;
+  if (isPrestationIntellectuelle(modePassation)) return 'PI';
+  if (modePassation === 'AOO' || modePassation.startsWith('AOO_')) return 'AOO';
+  return modePassation;
+}
+
 export function getContextualConfig(modePassation, phase = 'contractualisation') {
   const rulesConfig = getRulesConfig();
-  const contextConfig = rulesConfig?.contextualite_procedures?.[modePassation];
+  const cp = rulesConfig?.contextualite_procedures;
+  // Repli sur le mode de base si le sous-type n'a pas de config dédiée.
+  const contextConfig = cp?.[modePassation] || cp?.[resolveBaseMode(modePassation)];
 
   if (!contextConfig) {
     console.warn(`[ProcedureContext] Aucune configuration trouvée pour le mode: ${modePassation}`);
@@ -305,7 +328,7 @@ export function applyProcedureContextToSections(container, modePassation, phase 
     const garantiesSection = container.querySelector('[data-section="garanties"]');
     if (garantiesSection) {
       // Cacher pour PI (pas de garanties pour prestations intellectuelles)
-      if (modePassation === 'PI') {
+      if (isPrestationIntellectuelle(modePassation)) {
         garantiesSection.style.display = 'none';
       } else {
         garantiesSection.style.display = '';
@@ -430,7 +453,7 @@ export function validateProcedureRequirements(formData, modePassation, phase = '
     }
   }
 
-  if (['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation) && phase === 'contractualisation') {
+  if ((['PSL', 'PSO', 'AOO'].includes(modePassation) || isPrestationIntellectuelle(modePassation)) && phase === 'contractualisation') {
     // Validation DGMP obligatoire
     if (!data.validationDGMP) {
       errors.push({
@@ -440,7 +463,7 @@ export function validateProcedureRequirements(formData, modePassation, phase = '
     }
   }
 
-  if (['PSO', 'AOO', 'PI'].includes(modePassation) && phase === 'contractualisation') {
+  if ((['PSO', 'AOO'].includes(modePassation) || isPrestationIntellectuelle(modePassation)) && phase === 'contractualisation') {
     // Publication obligatoire
     if (!data.datePublication) {
       errors.push({
@@ -450,7 +473,7 @@ export function validateProcedureRequirements(formData, modePassation, phase = '
     }
   }
 
-  if (['AOO', 'PI'].includes(modePassation) && phase === 'attribution') {
+  if ((modePassation === 'AOO' || isPrestationIntellectuelle(modePassation)) && phase === 'attribution') {
     // Garanties obligatoires pour AOO
     if (modePassation === 'AOO') {
       if (!data.garantieBonneExecution) {

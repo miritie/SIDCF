@@ -14,6 +14,7 @@ import { renderLotSelector } from '../../../ui/widgets/lot-selector.js';
 import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
+import { isPrestationIntellectuelle, resolveBaseMode } from '../../../lib/procedure-context.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -137,7 +138,9 @@ export async function renderExecutionOS(params) {
 
   // Déterminer si le visa CF est requis selon le mode de passation
   const modePassation = operation.modePassation || 'PSD';
-  const visaRequired = ['PSL', 'PSO', 'AOO', 'PI'].includes(modePassation);
+  const visaRequired = ['PSL', 'PSO'].includes(modePassation)
+    || resolveBaseMode(modePassation) === 'AOO'
+    || isPrestationIntellectuelle(modePassation);
 
   // Check if visa CF granted (si requis) — scopé au lot courant
   const visaFavorable = visasCFForLot && visasCFForLot.length > 0 &&

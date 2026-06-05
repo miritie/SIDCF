@@ -13,7 +13,8 @@ import {
   requiresCOJO,
   requiresDGMPValidation,
   requiresPublication,
-  createProcedureInfoAlert
+  createProcedureInfoAlert,
+  isPrestationIntellectuelle
 } from '../../../lib/procedure-context.js';
 import { SoumissionnairesWidget } from '../../../widgets/soumissionnaires-widget.js';
 import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js';
@@ -606,7 +607,7 @@ export async function renderProcedurePV(params) {
     if (lrContainer) lrContainer.innerHTML = '';
     if (piContainer) piContainer.innerHTML = '';
 
-    if (mode === 'PI') {
+    if (isPrestationIntellectuelle(mode)) {
       const initialSub = (procedureData && procedureData.sousProcedurePI) || 'AMI_CABINET';
       const applyPI = (sub) => {
         if (attributionContainer) attributionContainer.innerHTML = '';
@@ -658,7 +659,7 @@ export async function renderProcedurePV(params) {
  */
 // Modif #110 — C-11 vague 2 : modes à contrat direct (le document du contrat
 // se charge ici ; pas de PV, pas de lots ; attribution directe).
-const MODES_CONTRAT_DIRECT = ['CONVENTION', 'LETTRE_COMMANDE_MARCHE', 'RECONDUCTION'];
+const MODES_CONTRAT_DIRECT = ['CONVENTION', 'RECONDUCTION'];
 
 /**
  * Modif #113 — Refonte (retour métier) : les pièces de la contractualisation
@@ -1185,11 +1186,13 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
     ]);
   }
 
-  // Modif #110 — C-11 vague 2 : Convention / Lettre de commande valant marché.
-  // Attribution directe : document chargé dans la pièce d'engagement, attributaire
-  // et montant saisis dans le bloc « Attribution ». Pas de formulaire COJO.
-  if (mode === 'CONVENTION' || mode === 'LETTRE_COMMANDE_MARCHE') {
-    const libelle = mode === 'CONVENTION' ? 'la convention' : 'la lettre de commande valant marché';
+  // Modif #110 — C-11 vague 2 : Convention. Attribution directe : document
+  // chargé dans la pièce d'engagement, attributaire et montant saisis dans le
+  // bloc « Attribution ». Pas de formulaire COJO.
+  // Modif #139 — « Lettre de commande valant marché » retirée du référentiel
+  // (absente de la liste de référence 01/06/2026) : branche réduite à CONVENTION.
+  if (mode === 'CONVENTION') {
+    const libelle = 'la convention';
     return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, '📄 Attribution directe')
