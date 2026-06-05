@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-05 — Import PPM : modèle téléchargeable + simulation complète du chargement (ECR01A)
+
+> **Modif #146** — Demande client « CHARGEMENT DES PPM » : (a) récap des éléments chargés après import ; (b) mise en évidence des **écarts de soutenabilité budgétaire** ; (c) **rapport d'erreurs non bloquant**. Cadrage : l'écran fonctionne en **simulation** (le modèle réel évoluera sous peu) — d'abord **télécharger un fichier modèle**, puis si le fichier chargé est **conforme au document type**, générer un **contenu cohérent à l'image du tableau PPM** (ECR01B). **Aucune écriture en base** (choix validé).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01a-import-ppm.js` (refonte complète, ~560 lignes) :
+  - **Modèle Excel** : génération d'un vrai `.xlsx` **sans dépendance** (ZIP « stored » écrit à la main : CRC-32 + en-têtes locaux/centraux ; feuille `inlineStr`) — 9 colonnes alignées sur le tableau PPM + 2 lignes d'exemple. Bouton « 📥 Télécharger le modèle (Excel) » dans l'encart Format attendu.
+  - **Conformité** : `.xlsx` par signature ZIP (`PK\x03\x04`), `.xls` par signature OLE2 (`D0 CF 11 E0`), `.csv` par entêtes (≥ 3 colonnes du modèle). Non conforme → alerte explicite, on reste sur l'étape 1.
+  - **Simulation** : 10 lignes cohérentes (activités, objets, types, natures éco, modes, montants réalistes CI). Étape 2 : bandeau « Fichier conforme », 4 KPI (lignes / montant total / modes / alertes), récap par mode et par type, carte **écarts de soutenabilité** (2 lignes en dépassement, écart par ligne + dépassement cumulé), **aperçu à l'image du tableau PPM** (lignes en écart surlignées rouge, badge alertes), carte **rapport d'erreurs non bloquant** (4 alertes : 2 soutenabilité MAJEURE, 1 hors barème PSD, 1 nature éco manquante) avec **export CSV**.
+  - Bandeau « 🧪 Mode simulation » à l'étape 1 ; bouton « Terminer la simulation » → message « aucune donnée enregistrée » → retour liste PPM ; bouton « Recommencer ».
+
+### Impact / Anti-régression
+
+- **Aucune écriture en base** (`dataService.importPPM` n'est plus appelé), aucun changement Worker/DB/R2.
+- **Vérifié** (Chrome headless, bout en bout) : modèle téléchargé puis **réinjecté comme fichier d'import** → conforme, 10 lignes d'aperçu, écarts (2), rapport (4), CSV téléchargé ; faux `.xlsx` (texte) → alerte « non conforme », on reste sur l'étape 1 ; le `.xlsx` généré passe `zipfile.testzip()` (intégrité OK) et la feuille contient bien 3 lignes ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-05 — Liste PPM : champ de filtre en place du libellé de colonne (ECR01B)
 
 > **Modif #145** — Retour client sur #143 (« c'est le même effet visuel ») : le champ de recherche ne doit pas être visible en permanence. Désormais, **cliquer sur l'en-tête de colonne fait apparaître le champ de saisie à la place du libellé** (focus immédiat). Comportement : saisie → filtrage immédiat ; **blur avec saisie vide** → le libellé revient ; **filtre actif** → le champ reste affiché (le critère demeure visible) ; **Échap** → efface le filtre et referme le champ. Le **tri**, qui occupait le clic sur le titre (#101/P-2), passe sur une **icône ⇅ dédiée** à côté du libellé (▲/▼ une fois actif), sans conflit avec l'ouverture du filtre.
