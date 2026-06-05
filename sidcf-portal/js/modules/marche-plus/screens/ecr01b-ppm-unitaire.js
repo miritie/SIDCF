@@ -267,19 +267,10 @@ function buildGroupedModePassationOptions(registries) {
   return out;
 }
 
-// Mapping des phases (états) — utilisé pour les KPIs
-const PHASES = [
-  { key: 'planification',     label: 'En Planification',     icon: '📅', color: 'var(--color-warning)', etats: ['PLANIFIE'] },
-  { key: 'contractualisation', label: 'En Contractualisation', icon: '📝', color: 'var(--color-info)',    etats: ['EN_PROC'] },
-  { key: 'attribution',        label: 'Attribué',              icon: '✅', color: '#0d6efd',              etats: ['ATTRIBUE', 'VISE'] },
-  { key: 'execution',          label: 'En exécution',          icon: '⚙️', color: '#6f42c1',              etats: ['EN_EXEC'] },
-  { key: 'cloture',            label: 'Achevé',                icon: '🏁', color: 'var(--color-gray-500)', etats: ['CLOS'] },
-  // Modif #97 — P-1 : 6e carte « Résilié ». Sans elle, la somme des cartes
-  // (32) ne retombait pas sur le total planifié (33) car les marchés au
-  // statut RESILIE n'étaient bucketés dans aucune phase. Couverture désormais
-  // complète des états « cycle de vie ».
-  { key: 'resilie',            label: 'Résilié',               icon: '⛔', color: '#dc3545',              etats: ['RESILIE'] }
-];
+// Modif #142 — retrait des 6 cartes KPI par phase (En Planification → Résilié)
+// sur demande client : la constante PHASES (#97) et le calcul stats.parPhase
+// sont supprimés avec elles. Le statut reste consultable via le filtre
+// « Statut du marché » du panneau Filtres et dans le modal Détails.
 
 // Modif #41 — Libellés des étapes Marché+ : importés depuis etat-labels-mp.js
 
@@ -364,14 +355,11 @@ export async function renderPPMList() {
   // et registries pour normaliser les codes typeMarche legacy)
   const filteredOps = applyFilters(operations, santeMap, registries);
 
-  // Calculate stats : total + montant + 1 KPI par phase + 1 KPI par catégorie de santé
+  // Calculate stats : total + montant + 1 KPI par catégorie de santé
+  // (Modif #142 — plus de KPI par phase, cartes retirées.)
   const stats = {
     totalOperations: filteredOps.length,
     totalMontant: filteredOps.reduce((sum, op) => sum + (op.montantPrevisionnel || 0), 0),
-    parPhase: PHASES.reduce((acc, p) => {
-      acc[p.key] = filteredOps.filter(op => p.etats.includes(op.etat)).length;
-      return acc;
-    }, {}),
     parSante: SANTE_CATEGORIES.reduce((acc, s) => {
       acc[s.code] = filteredOps.filter(op => santeMap.get(op.id) === s.code).length;
       return acc;
@@ -390,14 +378,13 @@ export async function renderPPMList() {
       ])
     ]),
 
-    // Stats KPIs — total + montant (rangée 1) puis 6 phases (rangée 2)
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '12px' } }, [
+    // Stats KPIs — total + montant.
+    // Modif #142 — la rangée des 6 cartes par phase (En Planification → Résilié)
+    // est retirée sur demande client.
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' } }, [
       renderKPI('Total marché planifié', stats.totalOperations, 'var(--color-primary)', '📁'),
       renderKPI('Montant total prévisionnel', money(stats.totalMontant, 'F CFA'), 'var(--color-success)', '💰')
     ]),
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '16px' } },
-      PHASES.map(p => renderKPI(p.label, stats.parPhase[p.key], p.color, p.icon))
-    ),
 
     // Modif #50 — Tuiles santé du marché masquées sur demande client (UX gênante).
     // La fonction renderSanteTuiles() est conservée plus bas pour réactivation
@@ -720,15 +707,17 @@ function renderSimpleTable(operations, registries) {
   // focus de saisie est préservé. La recherche s'appuie sur le texte affiché
   // (title complet si tronqué) : la colonne Activité montrant « CODE - Libellé »,
   // sa recherche porte bien sur le code-activité (P-3).
+  // Modif #142 — colonne « Statut du marché » (2.f, badge) retirée du tableau
+  // sur demande client ; son 9 % est redistribué (Objet, Nature éco, Actions).
+  // Le statut reste accessible via le filtre du panneau et le modal Détails.
   const cols = [
     { label: 'Activité',                        w: '14%', align: 'left'  }, // 2.a — code - libellé
-    { label: 'Objet / Libellé',                 w: '19%', align: 'left'  }, // 2.c
+    { label: 'Objet / Libellé',                 w: '22%', align: 'left'  }, // 2.c
     { label: 'Type de marché',                  w: '11%', align: 'left'  }, // 2.d
-    { label: 'Nature économique',               w: '13%', align: 'left'  }, // 2.b
+    { label: 'Nature économique',               w: '16%', align: 'left'  }, // 2.b
     { label: 'Mode de passation',               w: '12%', align: 'left'  },
     { label: 'Montant prévisionnel (M F CFA)',  w: '10%', align: 'right', numeric: true }, // 2.e
-    { label: 'Statut du marché',                w: '9%',  align: 'left'  }, // 2.f
-    { label: 'Actions',                         w: '12%', align: 'left', noFilter: true }
+    { label: 'Actions',                         w: '15%', align: 'left', noFilter: true }
   ];
 
   const rows = operations.map(op => {
@@ -844,7 +833,6 @@ function applyTableView(tbody, cols) {
 function renderSimpleRow(op, registries) {
   const typeMarche = registries.TYPE_MARCHE?.find(t => t.code === op.typeMarche);
   const modePassation = registries.MODE_PASSATION?.find(m => m.code === op.modePassation);
-  const etat = registries.ETAT_MARCHE?.find(e => e.code === op.etat);
   // Modif #77 — Lot 2 (2.a) — colonne Activité affiche « CODE - Libellé »
   // Modif #102 — même source que le filtre (activiteOf) pour la cohérence
   const activiteFull = activiteOf(op).label || '-';
@@ -875,12 +863,7 @@ function renderSimpleRow(op, registries) {
     el('td', { className: 'text-small', title: natureEcoFull }, natureEcoFull),
     el('td', { className: 'text-small', title: modePassation?.label || op.modePassation || '' }, formatModeLabel(modePassation) || op.modePassation || '-'),
     el('td', { style: { fontWeight: '600', textAlign: 'right' } }, moneyMillions(op.montantPrevisionnel)),
-    el('td', {},
-      el('span', {
-        className: `badge badge-${etat?.color || 'gray'}`,
-        style: { fontSize: '11px' }
-      }, ETAT_LABEL_MP[op.etat] || etat?.label || op.etat)
-    ),
+    // Modif #142 — cellule « Statut du marché » (badge) retirée avec la colonne.
     el('td', {}, [
       // Modif #78 (3.e) — bouton « Voir » contextuel : navigation vers
       // l'écran correspondant à l'étape courante du marché (mapping dans

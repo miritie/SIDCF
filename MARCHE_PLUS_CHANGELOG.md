@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-05 — Liste PPM : retrait des cartes de statut et de la colonne « Statut du marché » (ECR01B)
+
+> **Modif #142** — Demande client (capture du 05/06/2026) sur l'écran **« PPM & Marchés et contrats »** (ECR01B) : (1) **retirer la rangée des 6 cartes KPI par phase** (« En Planification » → « Résilié », introduites en #97/P-1) sous les deux cartes de totaux ; (2) **retirer la colonne « Statut du marché »** (badge, 2.f) du tableau des résultats. Les deux cartes de totaux (« Total marché planifié », « Montant total prévisionnel ») sont conservées. Le statut reste consultable via le **filtre « Statut du marché »** du panneau Filtres (inchangé), le **modal Détails** et la **fiche de vie** ; l'export **CSV** conserve la colonne (export de données, pas d'affichage).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01b-ppm-unitaire.js` :
+  - Suppression de la constante `PHASES` (#97) et du calcul `stats.parPhase` ; retrait de la rangée `PHASES.map(renderKPI)` du rendu.
+  - `renderSimpleTable()` : colonne « Statut du marché » retirée de `cols` ; ses 9 % redistribués (Objet 19→22 %, Nature éco 13→16 %, Actions 12→15 %).
+  - `renderSimpleRow()` : cellule badge statut retirée ; lookup `ETAT_MARCHE` devenu inutile supprimé.
+
+### Impact / Anti-régression
+
+- **Aucune migration, aucun changement Worker/DB** — purement affichage.
+- Le tri/recherche par colonne (#101) suit l'ordre des colonnes restantes (index recalculés au rendu).
+- **Vérifié** (Chrome headless + serveur local, données réelles) : 33 lignes rendues, 7 en-têtes sans « Statut du marché », cartes de phase absentes, cartes de totaux présentes, **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-04 — Ordonnancement prévu : récap dérivé de la clé de répartition, non saisissable (E-21)
 
 > **Modif #141** — Retour client (01/06/2026) sur la section **« Ordonnancement prévu (CP par année) »** de l'enregistrement (E-21) : *« ce n'est pas un élément de saisie, c'est une forme de récap de la clé de répartition »*. La section, jusque-là **éditable** (inputs Trésor/Dons/Emprunts par année + bouton « Ajouter une année », #128), devient un **récapitulatif en lecture seule** calculé automatiquement à partir de la **clé de répartition** : chaque ligne de la clé est ventilée par **année** et par **source de financement** (`typeFinancement` : `ETAT` → Trésor (CI), `DON` → Dons, `EMPRUNT` → Emprunts), avec une ligne de total. Le récap se **resynchronise** à chaque modification de la clé (onChange) et au montage. À l'enregistrement, le champ `ordonnancement` persisté devient un **snapshot dérivé** de la clé (même structure `{annee, tresor, dons, emprunts}` qu'avant — consommateurs en aval inchangés).
