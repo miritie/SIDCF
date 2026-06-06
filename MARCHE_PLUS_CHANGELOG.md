@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-06 — Import PPM : modèle type enrichi — tous les champs de « Créer ligne PPM », codes + libellés (ECR01A)
+
+> **Modif #147** — Retour client sur #146 : « le document type proposé est trop pauvre. Le tableau doit alimenter l'écran Créer ligne PPM. Il faut donc bien plus d'informations, et à chaque fois les codes et les libellés dans deux colonnes différentes — les codes ramènent toujours à des informations en base. » Le modèle passe de **9 à 37 colonnes**, organisées comme les blocs de l'écran ECR01D : **chaîne programmatique** (exercice, section, programme, UA, activité, nature éco), **identification du marché** (objet, type, mode, revue, nature des prix), **financements** (montant, types de financement et bailleurs multiples séparés par « ; »), **technique** (délai, catégorie de prestation, bénéficiaire), **localisation** (région, département, sous-préfecture, localité, GPS) et **livrables**. Chaque champ référentiel = **2 colonnes (code + libellé)** ; l'imputation budgétaire est exclue (calculée par l'écran à partir de la chaîne).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01a-import-ppm.js` :
+  - `TEMPLATE_COLUMNS` : 37 colonnes (cf. ci-dessus).
+  - `TEMPLATE_EXAMPLE_ROWS` : 2 lignes d'exemple dont **chaque code existe réellement en base** — chaîne `13030016 (Sénat) → 110101 → UA 13030 → ACT_13030_005/001` (registries.json + ua-activites.json), modes `PSC`/`AOO`, revues `A_POSTERIORI`/`A_PRIORI`, financements `ETAT;EMPRUNT` → bailleurs `TRESOR;BAD`, régions `ABIDJAN`/`GBEKE` (mp-regions-ci.json).
+  - Encart « Format attendu » : décrit les 37 colonnes, la convention code/libellé et le lien avec l'écran « Créer ligne PPM ».
+
+### Impact / Anti-régression
+
+- Contrôle de conformité, simulation, récap, soutenabilité et rapport d'erreurs **inchangés** (#146).
+- **Vérifié** (Chrome headless) : modèle régénéré = 37 colonnes × 3 lignes (intégrité ZIP OK, paires code/libellé contrôlées par échantillon), réinjection du modèle → simulation complète OK ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-05 — Import PPM : modèle téléchargeable + simulation complète du chargement (ECR01A)
 
 > **Modif #146** — Demande client « CHARGEMENT DES PPM » : (a) récap des éléments chargés après import ; (b) mise en évidence des **écarts de soutenabilité budgétaire** ; (c) **rapport d'erreurs non bloquant**. Cadrage : l'écran fonctionne en **simulation** (le modèle réel évoluera sous peu) — d'abord **télécharger un fichier modèle**, puis si le fichier chargé est **conforme au document type**, générer un **contenu cohérent à l'image du tableau PPM** (ECR01B). **Aucune écriture en base** (choix validé).

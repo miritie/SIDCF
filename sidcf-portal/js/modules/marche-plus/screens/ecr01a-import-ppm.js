@@ -23,27 +23,114 @@ import logger from '../../../lib/logger.js';
 import { money } from '../../../lib/format.js';
 
 /* ------------------------------------------------------------------ */
-/* Modèle type — colonnes alignées sur le tableau PPM (ECR01B)         */
+/* Modèle type — Modif #147 : colonnes alignées sur l'écran « Créer    */
+/* ligne PPM » (ECR01D), que l'import doit pouvoir alimenter champ à   */
+/* champ. Pour chaque information référentielle, DEUX colonnes : le    */
+/* CODE (clé qui ramène au référentiel en base : registries,           */
+/* chaîne budgétaire, régions CI…) et le LIBELLÉ (lecture humaine,     */
+/* contrôle de cohérence). Les champs multiples (financements,         */
+/* bailleurs, livrables) sont séparés par « ; ». L'imputation          */
+/* budgétaire n'apparaît pas : elle est calculée par l'écran à partir  */
+/* de la chaîne (section / programme / UA / nature).                   */
 /* ------------------------------------------------------------------ */
 
 const TEMPLATE_COLUMNS = [
+  // — Chaîne programmatique / imputation budgétaire (ECR01D, bloc 1)
+  'Exercice',
+  'Code section (ministère)',
+  'Libellé section',
+  'Code programme',
+  'Libellé programme',
+  'Code unité administrative (UA)',
+  'Libellé unité administrative',
   'Code activité',
   'Libellé activité',
-  'Objet / Libellé du marché',
-  'Type de marché',
-  'Nature économique (code)',
-  'Mode de passation (code)',
+  'Code nature économique',
+  'Libellé nature économique',
+  // — Identification du marché (bloc 2)
+  'Objet du marché',
+  'Code type de marché',
+  'Libellé type de marché',
+  'Code mode de passation',
+  'Libellé mode de passation',
+  'Code revue',
+  'Libellé revue',
+  'Code nature des prix',
+  'Libellé nature des prix',
+  // — Informations financières (bloc 3)
   'Montant prévisionnel (F CFA)',
-  'Ligne budgétaire',
-  'Région'
+  'Code(s) type de financement (séparés par ;)',
+  'Libellé(s) type de financement',
+  'Code(s) bailleur (séparés par ;)',
+  'Libellé(s) bailleur',
+  // — Information technique prévisionnelle (bloc 4)
+  'Délai d\'exécution (jours)',
+  'Code catégorie de prestation',
+  'Libellé catégorie de prestation',
+  'Bénéficiaire',
+  // — Localisation (bloc 5)
+  'Code région',
+  'Libellé région',
+  'Département',
+  'Sous-préfecture',
+  'Localité',
+  'Longitude',
+  'Latitude',
+  // — Livrables (bloc 6)
+  'Livrables (séparés par ;)'
 ];
 
-// Deux lignes d'exemple dans le modèle (mêmes conventions que la liste PPM)
+// Deux lignes d'exemple : chaque code provient des référentiels réellement
+// en base (registries.json : CHAINE_BUDGETAIRE, TYPE_MARCHE, MODE_PASSATION,
+// TYPE_REVUE, NATURE_PRIX, TYPE_FINANCEMENT, BAILLEUR, CATEGORIE_PRESTATION,
+// NATURE_ECO ; ua-activites.json ; mp-regions-ci.json).
 const TEMPLATE_EXAMPLE_ROWS = [
-  ['ACT_13030_005', 'Fournitures de bureau', 'Acquisition de fournitures de bureau pour les services centraux',
-    'Marchés de fournitures et équipements', '232', 'PSC', 18500000, 'LB-2026-232-013', 'Abidjan'],
-  ['ACT_21015_002', 'Infrastructures scolaires', 'Construction de 3 salles de classe',
-    'Marchés de travaux', '231', 'AOO', 240000000, 'LB-2026-231-021', 'Gbêkê']
+  [
+    2026,
+    '13030016', 'Sénat',
+    '110101', 'Sous-préfecture 1303001',
+    '13030', 'Assemblée N 3 Biens et services',
+    'ACT_13030_005', 'Fournitures de bureau',
+    '232', '232 - Équipements et matériels',
+    'Acquisition de fournitures de bureau pour les services centraux',
+    'MARCHE_FOURN_EQUIP', 'Marchés de fournitures et équipements',
+    'PSC', 'Procédure Simplifiée de demande de Cotation (PSC)',
+    'A_POSTERIORI', 'A posteriori (Contrôle après signature)',
+    'UNITAIRE', 'Prix Unitaire',
+    18500000,
+    'ETAT', 'Budget de l\'État',
+    'TRESOR', 'Trésor Public (CI)',
+    90,
+    'FOURNITURE', 'Fourniture',
+    'Services centraux DCF',
+    'ABIDJAN', 'District Autonome d\'Abidjan',
+    'Abidjan', 'Abidjan', 'Plateau',
+    '-4.0167', '5.3364',
+    'Lot de fournitures de bureau'
+  ],
+  [
+    2026,
+    '13030016', 'Sénat',
+    '110101', 'Sous-préfecture 1303001',
+    '13030', 'Assemblée N 3 Biens et services',
+    'ACT_13030_001', 'Construction de bâtiments administratifs',
+    '231', '231 - Constructions',
+    'Construction d\'un bâtiment administratif annexe à Bouaké',
+    'MARCHE_TRAVAUX', 'Marchés de travaux',
+    'AOO', 'Appel d\'Offres Ouvert (AOO)',
+    'A_PRIORI', 'A priori (Visa CF obligatoire avant signature)',
+    'FORFAITAIRE', 'Prix Forfaitaire',
+    240000000,
+    'ETAT;EMPRUNT', 'Budget de l\'État;Emprunt',
+    'TRESOR;BAD', 'Trésor Public (CI);Banque Africaine de Développement (BAD)',
+    240,
+    'INFRASTRUCTURE', 'Infrastructure',
+    'Population de la région de Gbêkê',
+    'GBEKE', 'Gbêkê',
+    'Bouaké', 'Bouaké', 'Bouaké centre',
+    '-5.0301', '7.6939',
+    'Bâtiment R+1;Parking;Voirie et réseaux divers'
+  ]
 ];
 
 /* ------------------------------------------------------------------ */
@@ -313,7 +400,7 @@ export async function renderImportPPM() {
           el('div', { className: 'alert-content' }, [
             el('div', { className: 'alert-title' }, 'Format attendu'),
             el('div', { className: 'alert-message' }, [
-              el('span', {}, `Le fichier doit suivre le modèle type (colonnes : ${TEMPLATE_COLUMNS.slice(0, 6).join(', ')}…). `),
+              el('span', {}, `Le fichier doit suivre le modèle type : ${TEMPLATE_COLUMNS.length} colonnes couvrant tous les champs de l'écran « Créer ligne PPM » (chaîne programmatique, identification du marché, financements, technique, localisation, livrables). Chaque information référentielle occupe deux colonnes — le code (qui ramène au référentiel en base) et le libellé. `),
               el('button', {
                 type: 'button',
                 className: 'btn btn-sm btn-accent',
