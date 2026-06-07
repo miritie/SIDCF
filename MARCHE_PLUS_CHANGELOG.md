@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-07 — Import PPM : le modèle de référence « MODEL DE PPM SIDCF » remplace le modèle généré (ECR01A)
+
+> **Modif #148** — Le client fournit le **modèle PPM de référence officiel** (`MODEL DE PPM SIDCF (1).xlsx`, Documentation/retours-meets-parcours-maquette/). Il remplace le modèle généré (#146/#147). Structure : **23 colonnes** (SECTION, UNITE_OPERATIONNELLE, OBJET_MARCHE, TYPE_FINANCEMENT, SOURCE_FINANCEMENT, ACTIVITE, LIGNE_BUDGETAIRE, TYPE_MARCHE, MODE_PASSATION, REVUE, NATURE_PRIX, MONTANT_PREVISIONNEL, LIVRABLE, BENEFICIAIRE, LONGITUDE, LATITUDE, DELAI_EXECUTION, INFRASTRUCTURE, DISTRICT, REGION, DEPARTEMENT, SOUS_PREFECTURE, LOCALITE) + 1 ligne d'exemple. Convention : dans les **15 colonnes codifiées**, la cellule porte « **CODE LIBELLÉ** » avec **séparateur espace** (ex. « 1 Trésor », « PSD procedure simplifié », « 23 Kabadougou ») — le code ramène toujours au référentiel en base.
+
+### Fichiers touchés
+
+- `sidcf-portal/assets/MODELE_PPM_SIDCF.xlsx` (**nouveau**) : copie conforme du modèle client (hash identique), servie en asset statique.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01a-import-ppm.js` :
+  - Bouton « 📥 Télécharger le modèle (Excel) » → sert l'asset tel quel (lien `download`), au lieu de générer un classeur.
+  - **Suppression du générateur .xlsx** (#146 : CRC-32, ZIP « stored », `buildSheetXml`, exemples #147) devenu inutile (−130 lignes).
+  - `TEMPLATE_COLUMNS` = les 23 entêtes du modèle ; nouveau `TEMPLATE_CODED_COLUMNS` (15 colonnes codifiées) ; encart « Format attendu » décrit la convention « CODE LIBELLÉ » à séparateur espace.
+
+### Impact / Anti-régression
+
+- Conformité (signatures binaires / entêtes CSV — les mots-clés `objet`/`mode`/`montant` couvrent les nouveaux noms techniques), simulation, récap, soutenabilité et rapport d'erreurs **inchangés**.
+- **Vérifié** (Chrome headless) : le fichier téléchargé est **byte-à-byte identique** au modèle client (sha1 `aa012edd…`) ; réinjection → simulation complète (10 lignes, 2 écarts) ; encart mis à jour (23 colonnes, convention espace) ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-06 — Import PPM : modèle type enrichi — tous les champs de « Créer ligne PPM », codes + libellés (ECR01A)
 
 > **Modif #147** — Retour client sur #146 : « le document type proposé est trop pauvre. Le tableau doit alimenter l'écran Créer ligne PPM. Il faut donc bien plus d'informations, et à chaque fois les codes et les libellés dans deux colonnes différentes — les codes ramènent toujours à des informations en base. » Le modèle passe de **9 à 37 colonnes**, organisées comme les blocs de l'écran ECR01D : **chaîne programmatique** (exercice, section, programme, UA, activité, nature éco), **identification du marché** (objet, type, mode, revue, nature des prix), **financements** (montant, types de financement et bailleurs multiples séparés par « ; »), **technique** (délai, catégorie de prestation, bénéficiaire), **localisation** (région, département, sous-préfecture, localité, GPS) et **livrables**. Chaque champ référentiel = **2 colonnes (code + libellé)** ; l'imputation budgétaire est exclue (calculée par l'écran à partir de la chaîne).

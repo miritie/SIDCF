@@ -2,10 +2,10 @@
    ECR01A - Import PPM (Excel)
 
    Modif #146 — Refonte « simulation » (retour client, CHARGEMENT DES PPM) :
-   1. Téléchargement d'un fichier modèle Excel (.xlsx généré sans dépendance,
-      zip « stored » + feuille inlineStr), aligné sur les colonnes du tableau
-      PPM de la liste (ECR01B). Le modèle réel évoluera ; celui-ci sert de
-      référence de conformité pour la simulation.
+   1. Téléchargement d'un fichier modèle Excel. Depuis la Modif #148, c'est le
+      modèle de référence officiel « MODEL DE PPM SIDCF » (23 colonnes,
+      cellules codifiées « CODE LIBELLÉ » à séparateur espace), servi tel quel
+      depuis assets/MODELE_PPM_SIDCF.xlsx.
    2. Import SIMULÉ : si le fichier chargé est conforme au document type
       (.xlsx/.xls par signature binaire, .csv par entêtes), on génère un
       contenu cohérent à l'image du tableau des PPM — AUCUNE donnée n'est
@@ -23,232 +23,62 @@ import logger from '../../../lib/logger.js';
 import { money } from '../../../lib/format.js';
 
 /* ------------------------------------------------------------------ */
-/* Modèle type — Modif #147 : colonnes alignées sur l'écran « Créer    */
-/* ligne PPM » (ECR01D), que l'import doit pouvoir alimenter champ à   */
-/* champ. Pour chaque information référentielle, DEUX colonnes : le    */
-/* CODE (clé qui ramène au référentiel en base : registries,           */
-/* chaîne budgétaire, régions CI…) et le LIBELLÉ (lecture humaine,     */
-/* contrôle de cohérence). Les champs multiples (financements,         */
-/* bailleurs, livrables) sont séparés par « ; ». L'imputation          */
-/* budgétaire n'apparaît pas : elle est calculée par l'écran à partir  */
-/* de la chaîne (section / programme / UA / nature).                   */
+/* Modèle type — Modif #148 : le modèle de référence officiel          */
+/* « MODEL DE PPM SIDCF » fourni par le client remplace le modèle      */
+/* généré (#146/#147). Il est servi tel quel depuis les assets         */
+/* (assets/MODELE_PPM_SIDCF.xlsx). Convention du fichier : une seule   */
+/* ligne d'entête (noms techniques ci-dessous) et, pour chaque colonne */
+/* codifiée, la cellule porte « CODE LIBELLÉ » (séparateur espace) —   */
+/* le code ramène au référentiel en base, le libellé sert de contrôle. */
+/* Ex. : « 111 section xx », « 1 Trésor », « PSD procedure simplifié »,*/
+/* « 23 Kabadougou ».                                                  */
 /* ------------------------------------------------------------------ */
+
+const TEMPLATE_URL = 'assets/MODELE_PPM_SIDCF.xlsx';
+const TEMPLATE_FILENAME = 'MODELE_PPM_SIDCF.xlsx';
 
 const TEMPLATE_COLUMNS = [
-  // — Chaîne programmatique / imputation budgétaire (ECR01D, bloc 1)
-  'Exercice',
-  'Code section (ministère)',
-  'Libellé section',
-  'Code programme',
-  'Libellé programme',
-  'Code unité administrative (UA)',
-  'Libellé unité administrative',
-  'Code activité',
-  'Libellé activité',
-  'Code nature économique',
-  'Libellé nature économique',
-  // — Identification du marché (bloc 2)
-  'Objet du marché',
-  'Code type de marché',
-  'Libellé type de marché',
-  'Code mode de passation',
-  'Libellé mode de passation',
-  'Code revue',
-  'Libellé revue',
-  'Code nature des prix',
-  'Libellé nature des prix',
-  // — Informations financières (bloc 3)
-  'Montant prévisionnel (F CFA)',
-  'Code(s) type de financement (séparés par ;)',
-  'Libellé(s) type de financement',
-  'Code(s) bailleur (séparés par ;)',
-  'Libellé(s) bailleur',
-  // — Information technique prévisionnelle (bloc 4)
-  'Délai d\'exécution (jours)',
-  'Code catégorie de prestation',
-  'Libellé catégorie de prestation',
-  'Bénéficiaire',
-  // — Localisation (bloc 5)
-  'Code région',
-  'Libellé région',
-  'Département',
-  'Sous-préfecture',
-  'Localité',
-  'Longitude',
-  'Latitude',
-  // — Livrables (bloc 6)
-  'Livrables (séparés par ;)'
+  'SECTION',
+  'UNITE_OPERATIONNELLE',
+  'OBJET_MARCHE',
+  'TYPE_FINANCEMENT',
+  'SOURCE_FINANCEMENT',
+  'ACTIVITE',
+  'LIGNE_BUDGETAIRE',
+  'TYPE_MARCHE',
+  'MODE_PASSATION',
+  'REVUE',
+  'NATURE_PRIX',
+  'MONTANT_PREVISIONNEL',
+  'LIVRABLE',
+  'BENEFICIAIRE',
+  'LONGITUDE',
+  'LATITUDE',
+  'DELAI_EXECUTION',
+  'INFRASTRUCTURE',
+  'DISTRICT',
+  'REGION',
+  'DEPARTEMENT',
+  'SOUS_PREFECTURE',
+  'LOCALITE'
 ];
 
-// Deux lignes d'exemple : chaque code provient des référentiels réellement
-// en base (registries.json : CHAINE_BUDGETAIRE, TYPE_MARCHE, MODE_PASSATION,
-// TYPE_REVUE, NATURE_PRIX, TYPE_FINANCEMENT, BAILLEUR, CATEGORIE_PRESTATION,
-// NATURE_ECO ; ua-activites.json ; mp-regions-ci.json).
-const TEMPLATE_EXAMPLE_ROWS = [
-  [
-    2026,
-    '13030016', 'Sénat',
-    '110101', 'Sous-préfecture 1303001',
-    '13030', 'Assemblée N 3 Biens et services',
-    'ACT_13030_005', 'Fournitures de bureau',
-    '232', '232 - Équipements et matériels',
-    'Acquisition de fournitures de bureau pour les services centraux',
-    'MARCHE_FOURN_EQUIP', 'Marchés de fournitures et équipements',
-    'PSC', 'Procédure Simplifiée de demande de Cotation (PSC)',
-    'A_POSTERIORI', 'A posteriori (Contrôle après signature)',
-    'UNITAIRE', 'Prix Unitaire',
-    18500000,
-    'ETAT', 'Budget de l\'État',
-    'TRESOR', 'Trésor Public (CI)',
-    90,
-    'FOURNITURE', 'Fourniture',
-    'Services centraux DCF',
-    'ABIDJAN', 'District Autonome d\'Abidjan',
-    'Abidjan', 'Abidjan', 'Plateau',
-    '-4.0167', '5.3364',
-    'Lot de fournitures de bureau'
-  ],
-  [
-    2026,
-    '13030016', 'Sénat',
-    '110101', 'Sous-préfecture 1303001',
-    '13030', 'Assemblée N 3 Biens et services',
-    'ACT_13030_001', 'Construction de bâtiments administratifs',
-    '231', '231 - Constructions',
-    'Construction d\'un bâtiment administratif annexe à Bouaké',
-    'MARCHE_TRAVAUX', 'Marchés de travaux',
-    'AOO', 'Appel d\'Offres Ouvert (AOO)',
-    'A_PRIORI', 'A priori (Visa CF obligatoire avant signature)',
-    'FORFAITAIRE', 'Prix Forfaitaire',
-    240000000,
-    'ETAT;EMPRUNT', 'Budget de l\'État;Emprunt',
-    'TRESOR;BAD', 'Trésor Public (CI);Banque Africaine de Développement (BAD)',
-    240,
-    'INFRASTRUCTURE', 'Infrastructure',
-    'Population de la région de Gbêkê',
-    'GBEKE', 'Gbêkê',
-    'Bouaké', 'Bouaké', 'Bouaké centre',
-    '-5.0301', '7.6939',
-    'Bâtiment R+1;Parking;Voirie et réseaux divers'
-  ]
+/** Colonnes codifiées : cellule = « CODE LIBELLÉ » (séparateur espace). */
+const TEMPLATE_CODED_COLUMNS = [
+  'SECTION', 'UNITE_OPERATIONNELLE', 'TYPE_FINANCEMENT', 'SOURCE_FINANCEMENT',
+  'ACTIVITE', 'LIGNE_BUDGETAIRE', 'TYPE_MARCHE', 'MODE_PASSATION', 'NATURE_PRIX',
+  'INFRASTRUCTURE', 'DISTRICT', 'REGION', 'DEPARTEMENT', 'SOUS_PREFECTURE', 'LOCALITE'
 ];
 
-/* ------------------------------------------------------------------ */
-/* Générateur .xlsx minimal (zip « stored », cellules inlineStr)       */
-/* Aucune dépendance : CRC-32 + structure ZIP écrites à la main.       */
-/* ------------------------------------------------------------------ */
-
-const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-
-function crc32(bytes) {
-  let c = 0xFFFFFFFF;
-  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
-  return (c ^ 0xFFFFFFFF) >>> 0;
-}
-
-/** Construit un ZIP sans compression (méthode 0 « stored »). */
-function buildStoredZip(entries) {
-  const enc = new TextEncoder();
-  const chunks = [];
-  const central = [];
-  let offset = 0;
-
-  const u16 = (v) => new Uint8Array([v & 0xFF, (v >> 8) & 0xFF]);
-  const u32 = (v) => new Uint8Array([v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
-
-  for (const { name, content } of entries) {
-    const nameB = enc.encode(name);
-    const data = typeof content === 'string' ? enc.encode(content) : content;
-    const crc = crc32(data);
-    // Local file header
-    const header = [u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
-      u32(crc), u32(data.length), u32(data.length), u16(nameB.length), u16(0)];
-    chunks.push(...header, nameB, data);
-    central.push({ nameB, crc, size: data.length, offset });
-    offset += header.reduce((s, a) => s + a.length, 0) + nameB.length + data.length;
-  }
-
-  const centralStart = offset;
-  for (const e of central) {
-    const rec = [u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
-      u32(e.crc), u32(e.size), u32(e.size), u16(e.nameB.length), u16(0), u16(0),
-      u16(0), u16(0), u32(0), u32(e.offset)];
-    chunks.push(...rec, e.nameB);
-    offset += rec.reduce((s, a) => s + a.length, 0) + e.nameB.length;
-  }
-  chunks.push(u32(0x06054b50), u16(0), u16(0), u16(central.length), u16(central.length),
-    u32(offset - centralStart), u32(centralStart), u16(0));
-
-  return new Blob(chunks, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-}
-
-const xmlEscape = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const colLetter = (i) => { let s = ''; i++; while (i > 0) { s = String.fromCharCode(65 + ((i - 1) % 26)) + s; i = Math.floor((i - 1) / 26); } return s; };
-
-function buildSheetXml(rows) {
-  const rowsXml = rows.map((cells, r) => {
-    const cellsXml = cells.map((v, c) => {
-      const ref = `${colLetter(c)}${r + 1}`;
-      if (typeof v === 'number') return `<c r="${ref}"><v>${v}</v></c>`;
-      return `<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(v)}</t></is></c>`;
-    }).join('');
-    return `<row r="${r + 1}">${cellsXml}</row>`;
-  }).join('');
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowsXml}</sheetData></worksheet>`;
-}
-
+/** Télécharge le modèle de référence (asset statique, fidèle à l'original). */
 function downloadTemplateXlsx() {
-  const blob = buildStoredZip([
-    {
-      name: '[Content_Types].xml',
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-        `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
-        `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
-        `<Default Extension="xml" ContentType="application/xml"/>` +
-        `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
-        `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
-        `</Types>`
-    },
-    {
-      name: '_rels/.rels',
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
-        `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>` +
-        `</Relationships>`
-    },
-    {
-      name: 'xl/workbook.xml',
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-        `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
-        `<sheets><sheet name="PPM" sheetId="1" r:id="rId1"/></sheets></workbook>`
-    },
-    {
-      name: 'xl/_rels/workbook.xml.rels',
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
-        `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>` +
-        `</Relationships>`
-    },
-    { name: 'xl/worksheets/sheet1.xml', content: buildSheetXml([TEMPLATE_COLUMNS, ...TEMPLATE_EXAMPLE_ROWS]) }
-  ]);
-
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'modele_import_PPM.xlsx';
+  a.href = TEMPLATE_URL;
+  a.download = TEMPLATE_FILENAME;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-  logger.info('[ImportPPM] Modèle Excel téléchargé');
+  logger.info('[ImportPPM] Modèle de référence téléchargé');
 }
 
 /* ------------------------------------------------------------------ */
@@ -400,7 +230,7 @@ export async function renderImportPPM() {
           el('div', { className: 'alert-content' }, [
             el('div', { className: 'alert-title' }, 'Format attendu'),
             el('div', { className: 'alert-message' }, [
-              el('span', {}, `Le fichier doit suivre le modèle type : ${TEMPLATE_COLUMNS.length} colonnes couvrant tous les champs de l'écran « Créer ligne PPM » (chaîne programmatique, identification du marché, financements, technique, localisation, livrables). Chaque information référentielle occupe deux colonnes — le code (qui ramène au référentiel en base) et le libellé. `),
+              el('span', {}, `Le fichier doit suivre le modèle de référence « MODEL DE PPM SIDCF » : ${TEMPLATE_COLUMNS.length} colonnes alimentant l'écran « Créer ligne PPM » (${TEMPLATE_COLUMNS.slice(0, 6).join(', ')}…). Dans les ${TEMPLATE_CODED_COLUMNS.length} colonnes codifiées, la cellule porte le CODE suivi du LIBELLÉ, séparés par un espace (ex. « 1 Trésor », « 23 Kabadougou ») — le code ramène toujours au référentiel en base. `),
               el('button', {
                 type: 'button',
                 className: 'btn btn-sm btn-accent',
