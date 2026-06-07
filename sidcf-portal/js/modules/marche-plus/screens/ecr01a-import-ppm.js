@@ -19,6 +19,7 @@
 import { el, mount } from '../../../lib/dom.js';
 import { formField, formActions } from '../../../ui/widgets/form.js';
 import router from '../../../router.js';
+import dataService from '../../../datastore/data-service.js';
 import logger from '../../../lib/logger.js';
 import { money } from '../../../lib/format.js';
 
@@ -249,11 +250,14 @@ export async function renderImportPPM() {
           help: 'Formats acceptés : .xlsx, .xls, .csv'
         }),
 
+        // Modif #149 — pré-remplie avec l'institution de l'app-config : en
+        // simulation, seul le fichier reste à fournir (modifiable au besoin).
         formField({
           type: 'text',
           name: 'unite',
           label: 'Unité administrative',
           required: true,
+          value: dataService.getConfig()?.institution?.name || '',
           placeholder: 'Ex: Direction Générale des Marchés Publics'
         }),
 
@@ -286,8 +290,15 @@ export async function renderImportPPM() {
     const exerciceInput = document.querySelector('[name="exercice"]');
     const fileInput = document.querySelector('[name="ppmFile"]');
 
-    if (!uniteInput?.value || !exerciceInput?.value || !fileInput?.files?.[0]) {
-      alert('Veuillez remplir tous les champs obligatoires');
+    // Modif #149 — désigner précisément le(s) champ(s) manquant(s) et y
+    // ramener le focus, au lieu d'un message générique.
+    const manquants = [];
+    if (!fileInput?.files?.[0]) manquants.push({ label: 'Fichier Excel PPM', input: fileInput });
+    if (!uniteInput?.value?.trim()) manquants.push({ label: 'Unité administrative', input: uniteInput });
+    if (!exerciceInput?.value) manquants.push({ label: 'Exercice budgétaire', input: exerciceInput });
+    if (manquants.length) {
+      alert(`⚠️ Champ(s) obligatoire(s) manquant(s) :\n\n• ${manquants.map(m => m.label).join('\n• ')}`);
+      manquants[0].input?.focus();
       return;
     }
 

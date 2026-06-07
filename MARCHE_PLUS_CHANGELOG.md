@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-07 — Import PPM : unité administrative pré-remplie + alerte de champ manquant explicite (ECR01A)
+
+> **Modif #149** — Retour utilisateur après #148 : en testant la simulation avec le modèle de référence, l'écran bloquait sur « Veuillez remplir tous les champs obligatoires » — le champ **Unité administrative** était vide et l'alerte ne désignait pas le champ en cause. Deux corrections : (1) **Unité administrative pré-remplie** avec l'institution de l'app-config (« Direction du Contrôle Financier ») — en simulation, il ne reste qu'à choisir le fichier (champ toujours modifiable) ; (2) l'alerte liste désormais **précisément le(s) champ(s) manquant(s)** et y ramène le focus.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01a-import-ppm.js` :
+  - Champ `unite` : `value: dataService.getConfig()?.institution?.name` (import `dataService` rétabli).
+  - `handleImport()` : liste des champs manquants par libellé (« Fichier Excel PPM », « Unité administrative », « Exercice budgétaire ») + `focus()` sur le premier.
+
+### Impact / Anti-régression
+
+- Aucune migration, aucun changement Worker/DB.
+- **Vérifié** (Chrome headless) : unité pré-remplie « Direction du Contrôle Financier » ; lancement sans fichier → « ⚠️ Champ(s) obligatoire(s) manquant(s) : • Fichier Excel PPM » ; avec le modèle de référence → simulation complète ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-07 — Import PPM : le modèle de référence « MODEL DE PPM SIDCF » remplace le modèle généré (ECR01A)
 
 > **Modif #148** — Le client fournit le **modèle PPM de référence officiel** (`MODEL DE PPM SIDCF (1).xlsx`, Documentation/retours-meets-parcours-maquette/). Il remplace le modèle généré (#146/#147). Structure : **23 colonnes** (SECTION, UNITE_OPERATIONNELLE, OBJET_MARCHE, TYPE_FINANCEMENT, SOURCE_FINANCEMENT, ACTIVITE, LIGNE_BUDGETAIRE, TYPE_MARCHE, MODE_PASSATION, REVUE, NATURE_PRIX, MONTANT_PREVISIONNEL, LIVRABLE, BENEFICIAIRE, LONGITUDE, LATITUDE, DELAI_EXECUTION, INFRASTRUCTURE, DISTRICT, REGION, DEPARTEMENT, SOUS_PREFECTURE, LOCALITE) + 1 ligne d'exemple. Convention : dans les **15 colonnes codifiées**, la cellule porte « **CODE LIBELLÉ** » avec **séparateur espace** (ex. « 1 Trésor », « PSD procedure simplifié », « 23 Kabadougou ») — le code ramène toujours au référentiel en base.
