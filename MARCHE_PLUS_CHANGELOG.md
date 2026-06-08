@@ -13,6 +13,40 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Contractualisation : PV d'ouverture liminaire (avant la zone de lot) (ECR02A)
+
+> **Modif #160** — Retour client : le **PV d'ouverture** (transverse, quand il y en a un) est une **information liminaire** → il doit apparaître **avant la zone de lot**. Réordonnancement des cartes : **Organisation du marché → 📄 PV d'ouverture → 📦 Lots & procédure par lot** (au lieu de PV après les lots).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : la carte PV d'ouverture transverse est désormais ajoutée **entre** la carte « Organisation du marché » et la carte « Lots & procédure par lot ».
+
+### Impact / Anti-régression
+
+- Aucun changement de données/persistance (toujours `procedure.pv.ouverture`). Le masquage « sans CF » (PSC) reste opérant (même id `#pv-ouverture-transverse-container`).
+- **Vérifié** (Chrome headless) : ordre des cartes = Organisation → PV d'ouverture → Lots ; **0 erreur console**.
+
+---
+
+## 2026-06-08 — Contractualisation : retrait du bouton global « Déclarer infructueux » (issue désormais par lot) (ECR02A)
+
+> **Modif #159** — Retour client : l'issue **ATTRIBUÉ / INFRUCTUEUX** est désormais décidée **par lot** dans la zone LOT (#153) ; le **bouton global « 🚫 Déclarer infructueux »** en bas d'écran fait doublon et est **retiré**. L'**état infructueux du marché** est désormais **dérivé** à l'enregistrement : le marché passe à « Infructueux » uniquement si **tous les lots** sont infructueux (sinon il reste attribué / en procédure).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : suppression du bouton « Déclarer infructueux » ; `handleSave` dérive `etat = 'INFRUCTUEUX'` quand `lotsState.every(statut === 'INFRUCTUEUX')` (repli `options.issue` conservé) ; message de succès adapté.
+
+### Impact / Anti-régression
+
+- Reste non bloquant ; l'infructuosité partielle (certains lots seulement) ne bascule plus tout le marché en infructueux (comportement plus correct).
+- **Vérifié** (Chrome headless) : plus de bouton « Déclarer infructueux », bouton « Enregistrer & Continuer » conservé ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-08 — Zone LOT : attribution dans le lot (suppression du bloc doublon) + préfixe « LOT n : » obligatoire (ECR02A)
 
 > **Modif #158** — Retour client : la **zone LOT rassemble tous les aspects** de collecte d'information **et d'attribution**. (1) Le bloc séparé **« 🏆 Attribution de la contractualisation »** (proc-attr-input/NCC/montant, #109) **faisait doublon** avec l'attribution par lot (« Issue du lot & attributaire », #153) → il n'est **plus rendu dès qu'il y a une zone LOT** (modes à lots) ; il reste pour les modes sans lots. (2) Le **préfixe « LOT n : » devient obligatoire** sur le libellé en **multi-lots** : affiché comme **addon non éditable**, l'agent ne saisit que la description, et le libellé **stocké** est `LOT n : description` (préfixe baké, ré-appliqué à toute (re)numérotation). En **lot unique**, le libellé reste l'**objet du marché** directement (sans préfixe).

@@ -296,17 +296,10 @@ export async function renderProcedurePV(params) {
       el('div', { className: 'card-body' }, [
         el('div', { style: { display: 'flex', gap: '12px', justifyContent: 'flex-end' } }, [
           createButton('btn btn-secondary', 'Annuler', () => router.navigate('/mp/fiche-marche', { idOperation })),
-          // Modif #107 — C-4/C-12 : issue alternative « Infructueux ».
-          createButton('btn btn-warning', '🚫 Déclarer infructueux', async () => {
-            if (!window.confirm('Déclarer cette contractualisation INFRUCTUEUSE ?\nLe marché passera au statut « Infructueux ».')) return;
-            await handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, {
-              justif: derogationJustif,
-              comment: derogationComment,
-              sourceType: derogationSourceType,
-              sourceBailleur: derogationSourceBailleur,
-              modePlanifie: modePlanifieCode
-            }, { issue: 'INFRUCTUEUX' });
-          }),
+          // Modif #159 — Le bouton global « Déclarer infructueux » est retiré :
+          // l'issue ATTRIBUÉ / INFRUCTUEUX est désormais décidée PAR LOT dans la
+          // zone LOT (#153). L'état infructueux du marché est dérivé à
+          // l'enregistrement (si tous les lots sont infructueux). Cf. handleSave.
           createButton('btn btn-primary', 'Enregistrer & Continuer', async () => {
             await handleSave(idOperation, selectedMode, suggestedCodes, soumissionnairesWidget, lotsState, {
               justif: derogationJustif,
@@ -699,22 +692,11 @@ export async function renderProcedurePV(params) {
       ]);
       lotsContainer.appendChild(orgCard);
 
-      const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-        el('div', { className: 'card-header' }, [
-          el('h3', { className: 'card-title' }, '📦 Lots & procédure par lot')
-        ]),
-        el('div', { className: 'card-body' }, [
-          el('div', { id: 'lots-widget-root' })
-        ])
-      ]);
-      lotsContainer.appendChild(card);
-
-      // Modif #150 — PV d'ouverture TRANSVERSE : valable pour tous les lots d'un
-      // même processus (y compris PSC avec participation CF). Il sort donc du
-      // per-lot et se range dans la colonne `pv` (JSONB) déjà existante de
-      // MP_PROCEDURE — clé `ouverture` — ce qui évite toute migration (le Worker
-      // mappe colonne par colonne et rejette les colonnes inconnues). Repli
-      // legacy : ancien PV d'ouverture stocké sur le 1er lot.
+      // Modif #150 / #160 — PV d'ouverture TRANSVERSE : valable pour tous les
+      // lots d'un même processus (y compris PSC avec participation CF). C'est une
+      // information LIMINAIRE : il est placé AVANT la zone de lot (#160). Rangé
+      // dans la colonne `pv` (JSONB) de MP_PROCEDURE — clé `ouverture` (pas de
+      // migration). Repli legacy : ancien PV d'ouverture stocké sur le 1er lot.
       const pvOuvLegacy = procedureData?.pv?.ouverture
         || (procedureData?.lots && procedureData.lots[0]?.pv?.ouverture)
         || procedureData?.pvOuverture
@@ -738,6 +720,16 @@ export async function renderProcedurePV(params) {
         ])
       ]);
       lotsContainer.appendChild(pvCard);
+
+      const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+        el('div', { className: 'card-header' }, [
+          el('h3', { className: 'card-title' }, '📦 Lots & procédure par lot')
+        ]),
+        el('div', { className: 'card-body' }, [
+          el('div', { id: 'lots-widget-root' })
+        ])
+      ]);
+      lotsContainer.appendChild(card);
 
       // Pose la valeur du select via .value (évite le bug el()/selected) puis monte.
       const allotSelect = document.getElementById('proc-allotissement');
@@ -1757,9 +1749,13 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     updateData.timeline = [...operation.timeline, 'PROC'];
     updateData.etat = 'EN_PROC';
   }
-  // Modif #107 — C-4/C-12 : issue « Infructueux » → statut INFRUCTUEUX
-  // (la contractualisation peut ne pas aboutir à une attribution).
-  if (options.issue === 'INFRUCTUEUX') {
+  // Modif #107 / #159 — issue « Infructueux » → statut INFRUCTUEUX. Le bouton
+  // global a été retiré (#159) : l'infructuosité est désormais décidée PAR LOT
+  // (zone LOT) et l'état du marché en est DÉRIVÉ — infructueux seulement si
+  // TOUS les lots sont infructueux. `options.issue` est conservé en repli.
+  const _lotsIssue = Array.isArray(lotsState) ? lotsState : [];
+  const _tousLotsInfructueux = _lotsIssue.length > 0 && _lotsIssue.every(l => l.statut === 'INFRUCTUEUX');
+  if (options.issue === 'INFRUCTUEUX' || _tousLotsInfructueux) {
     updateData.etat = 'INFRUCTUEUX';
   }
 
@@ -1889,8 +1885,8 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
 
   if (procedureResult.success) {
     logger.info('[Procedure] Procédure enregistrée avec succès');
-    let msg = options.issue === 'INFRUCTUEUX'
-      ? '🚫 Contractualisation déclarée INFRUCTUEUSE — le marché passe au statut « Infructueux ».'
+    let msg = (options.issue === 'INFRUCTUEUX' || _tousLotsInfructueux)
+      ? '🚫 Tous les lots sont infructueux — le marché passe au statut « Infructueux ».'
       : '✅ Procédure enregistrée' + (isDerogation ? ' (avec dérogation)' : '');
     const warnings = window.__mpProcedureWarnings;
     if (Array.isArray(warnings) && warnings.length > 0) {
