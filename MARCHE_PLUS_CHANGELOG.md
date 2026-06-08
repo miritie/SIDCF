@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — PSD : montant attribué remonté dans la zone validation + retrait du bloc « Attribution » doublon (ECR02A)
+
+> **Modif #161** — Retour client : pour la **PSD** (et ENTENTE_DIRECTE / GRE), « **Fournisseur (attributaire)** » (zone « Validation du devis / facture proforma ») et le bloc séparé « **Attribution de la contractualisation** » (Attributaire / NCC / Montant) sont **la même chose présentée deux fois** → risque d'incohérence. Correction : le **bloc séparé est retiré** pour ces modes, et le **« Montant attribué (XOF) » est remonté dans la zone validation** (le fournisseur EST l'attributaire). Le bloc séparé **reste** pour CONVENTION / RECONDUCTION qui s'appuient dessus pour saisir l'attributaire.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - Formulaire PSD : champ « Montant attribué (XOF) » (`#proc-psd-montant`) ajouté en bas de la zone validation.
+  - `updateContextualSections` : le bloc `renderAttributionBlock` n'est plus rendu pour `PSD/ENTENTE_DIRECTE/GRE` (en plus de `!shouldShowLots`).
+  - `handleSave` (PSD) : persiste `attribution = { raisonSociale: fournisseur, montantAttribue }` (cohérent avec les autres modes et la reconduction à l'enregistrement).
+
+### Impact / Anti-régression
+
+- Aucune migration (`attribution` JSONB existe déjà). CONVENTION/RECONDUCTION inchangés (bloc conservé).
+- **Vérifié bout en bout** (Chrome headless + Neon) : PSD & ENTENTE_DIRECTE → fournisseur=attributaire + montant dans la zone validation, **plus de bloc séparé** ; save PSD → `attribution.montant_attribue = 7 500 000`, `raison_sociale = fournisseur` persistés ; seed restauré ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-08 — Contractualisation : PV d'ouverture liminaire (avant la zone de lot) (ECR02A)
 
 > **Modif #160** — Retour client : le **PV d'ouverture** (transverse, quand il y en a un) est une **information liminaire** → il doit apparaître **avant la zone de lot**. Réordonnancement des cartes : **Organisation du marché → 📄 PV d'ouverture → 📦 Lots & procédure par lot** (au lieu de PV après les lots).

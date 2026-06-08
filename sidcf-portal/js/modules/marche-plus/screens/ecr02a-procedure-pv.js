@@ -774,8 +774,10 @@ export async function renderProcedurePV(params) {
       };
       if (piContainer) piContainer.appendChild(renderPISubprocSelector(initialSub, applyPI));
       applyPI(initialSub);
-    } else if (attributionContainer && !shouldShowLots) {
-      // Hors PI ET sans zone LOT : sélection parmi toutes les entreprises.
+    } else if (attributionContainer && !shouldShowLots && !['PSD', 'ENTENTE_DIRECTE', 'GRE'].includes(mode)) {
+      // Modif #161 — Hors PI, sans zone LOT, ET hors devis/proforma (PSD/ENTENTE/GRE
+      // ont déjà « Fournisseur (attributaire) » + montant dans leur zone validation,
+      // donc pas de bloc séparé pour éviter le doublon). Reste pour CONVENTION/RECONDUCTION.
       attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, null));
     }
 
@@ -1195,6 +1197,22 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             ])
           ])
         ]),
+
+        // Modif #161 — Montant attribué remonté dans la zone validation : le
+        // « Fournisseur (attributaire) » ci-dessus EST l'attributaire, le bloc
+        // séparé « Attribution de la contractualisation » est donc retiré pour
+        // PSD/ENTENTE_DIRECTE/GRE (cf. updateContextualSections) pour éviter le
+        // doublon / risque d'incohérence.
+        el('div', { style: { marginTop: '20px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px' } }, [
+          el('div', { className: 'form-field', style: { maxWidth: '340px' } }, [
+            el('label', { className: 'form-label' }, 'Montant attribué (XOF)'),
+            el('input', {
+              type: 'number', className: 'form-input', id: 'proc-psd-montant', min: 0, step: 1,
+              value: existingProc.attribution?.montantAttribue != null ? existingProc.attribution.montantAttribue : '',
+              placeholder: "Montant de l'attribution"
+            })
+          ])
+        ]),
         mode === 'PSD' ? _sansCFField(existingProc) : null
       ])
     ]);
@@ -1545,6 +1563,10 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     }
 
     // Modif #151 — uploads (devis/BC) et N° BC retirés ; cases EXISTANT ajoutées.
+    // Modif #161 — montant attribué saisi dans la zone validation (le fournisseur
+    // EST l'attributaire) → on persiste aussi `attribution` (cohérent avec les
+    // autres modes / la reconduction à l'enregistrement), sans bloc séparé.
+    const montantPSD = document.getElementById('proc-psd-montant')?.value;
     procedureData = {
       ...procedureData,
       fournisseurNom: fournisseur,
@@ -1552,7 +1574,12 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       dateDevis: document.getElementById('proc-date-devis')?.value || null,
       dateBC: document.getElementById('proc-date-bc')?.value || null,
       devisExistant,
-      bcExistant
+      bcExistant,
+      attribution: {
+        raisonSociale: fournisseur,
+        ncc: existingProc?.attribution?.ncc || null,
+        montantAttribue: montantPSD ? Number(montantPSD) : null
+      }
     };
   }
   // PSC - Comparaison de devis
