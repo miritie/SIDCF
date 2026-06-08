@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Migration 031 : colonnes de contractualisation manquantes sur mp_procedure (correctif systémique)
+
+> **Correctif d'infrastructure (détecté par revue adversariale du #150).** Le Worker Cloudflare écrit chaque entité **colonne par colonne** (`camelToSnake`), sans colonne JSONB fourre-tout, et renvoie **500 sur colonne inconnue** (l'adaptateur propage, sans fallback par appel). Or les écrans de contractualisation (#105→#150) écrivaient dans `MP_PROCEDURE` une vingtaine de champs **sans colonne en base** → en mode postgres (cas prod/Vercel, Worker UP), **la sauvegarde de la contractualisation échouait entièrement** (la validation client avait eu lieu en localStorage). La migration **031** crée toutes ces colonnes (idempotent, `ADD COLUMN IF NOT EXISTS`).
+
+### Fichiers touchés
+
+- `postgres/migrations/031_mp_procedure_contractualisation_columns.sql` (**nouveau**) : 26 colonnes ajoutées à `mp_procedure` (allotissement, numero_dossier_appel, sans_c_f, reserve_c_f, attribution, pieces_jointes, sous_procedure_p_i, liste_restreinte, reconduction_control, soumissionnaires, fournisseur_nom, ref_devis, date_devis, doc_devis, num_b_c, date_b_c, doc_b_c, nb_fournisseurs_consultes, date_comparaison, fournisseur_retenu, motif_selection, note_selection, nb_devis_recus, tableau_comparatif, + devis_existant/bc_existant pour la V2 à venir).
+
+### Point d'attention — nommage
+
+- `camelToSnake` du Worker insère un `_` **avant chaque majuscule** : `sansCF`→`sans_c_f`, `numBC`→`num_b_c`, `reserveCF`→`reserve_c_f`, `sousProcedurePI`→`sous_procedure_p_i`. Les noms de colonnes respectent exactement cette transformation.
+
+### Impact / Anti-régression
+
+- **Exécutée sur Neon** (`run-any.js`) : `mp_procedure` passe de 16 à **42 colonnes**, 0 manquante.
+- **Round-trip réel vérifié** via l'API Worker en production (PUT MP_PROCEDURE avec sansCF/fournisseurNom/devisExistant/attribution… → **HTTP 200**, valeurs persistées), puis **état seed restauré** (colonnes de test remises à NULL).
+- Non destructif (ajout de colonnes nullable uniquement). Les futures écritures de contractualisation persistent désormais en postgres.
+
+### Déploiement
+
+- Migration appliquée sur Neon. Aucun redéploiement Worker (le code Worker était déjà générique). Front inchangé.
+
+---
+
 ## 2026-06-08 — Contractualisation : PV d'ouverture transverse (conditionnel CF en PSC) + préfixe « LOT n : » (ECR02A)
 
 > **Modif #150** — Première vague de la refonte CONTRACTUALISATION (CR client). Deux points : (1) **PV d'ouverture transverse** — « le PV d'ouverture est valable pour tous les lots d'un même processus, quel que soit le processus y compris PSC avec participation CF » : le PV d'ouverture sort du per-lot et passe au **niveau procédure** (un seul upload). Pour **PSC**, il n'apparaît **que si le CF est impliqué** (masqué quand « sans CF » est coché). Pour **PSD**, aucun PV (pas de bloc lots). (2) **Préfixe « LOT n : xxx »** sur tous les libellés de lot (sélecteurs aval, convention client).
