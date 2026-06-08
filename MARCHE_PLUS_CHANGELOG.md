@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Dérogations (Phase B) : rapport d'erreur transverse sur chaque écran fonctionnel
+
+> **Modif #157 — Feuille de route DÉROGATIONS, phase B** (décision métier : « RAPPORT D'ERREUR À ÉDITER À TOUTES LES ÉTAPES Y COMPRIS LES DOCUMENTS JUSTIFICATIFS D'UNE DÉROGATION »). Générateur commun + modale + export, accessible via un bouton **« 🧾 Rapport d'erreur »** présent sur **chaque écran fonctionnel** d'un marché. Le rapport, **non bloquant**, recense pour un marché donné : (1) la **dérogation** et ses justificatifs (écart planifié→liasse, source, justificatif manquant — le point explicitement demandé) ; (2) les **pièces obligatoires attendues par étape** (matrice `pieces-matrice.json` filtrée par le **mode effectif** + type marché), avec statut **Présent / Manquant / À vérifier** (détection honnête : ce qui n'est pas mappé reste « à vérifier ») ; (3) les **avertissements** de contractualisation. Export **CSV** + **impression**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/error-report-mp.js` (**nouveau**) : `buildErrorReport(idOperation)` (charge le marché via `getMpOperationFull`, mode effectif, set de présence des pièces, dérogation, warnings), `openErrorReportModal()`, `renderErrorReportButton()`, export CSV.
+- `sidcf-portal/js/ui/widgets/page-header-mp.js` : bouton « Rapport d'erreur » injecté dans le header partagé → couvre **ecr02a, ecr03a, ecr03b, ecr04a, ecr04b, ecr04c, ecr05** d'un coup.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` : bouton ajouté à la fiche de vie (hub, n'utilise pas le header partagé).
+
+### Impact / Anti-régression
+
+- **Aucune migration**, aucune écriture — lecture seule. Non bloquant (décision #5).
+- **Vérifié bout en bout** (Chrome headless) : bouton présent sur la contractualisation (header) et la fiche de vie ; modale OK (synthèse manquant/à vérifier/présent, mode effectif, section Dérogation, pièces par étape avec badges) ; export **CSV téléchargé** (contenu Catégorie/Étape/Élément/Statut) ; **0 erreur console**. (Note : le cache de module navigateur peut nécessiter un rechargement dur après déploiement.)
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-08 — Dérogations (Phase A) : confirmation / sélection du mode (la liasse fait foi) + dérogation unifiée pilotée par l'effectif (ECR02A)
 
 > **Modif #156 — Feuille de route DÉROGATIONS, phase A.** À la contractualisation, **la liasse fait foi** : nouvelle carte « 🧭 Mode de passation » qui rappelle le **mode planifié (PPM)** et le **mode imposé par le barème**, puis demande à l'agent de **confirmer le mode planifié** (Oui/Non). S'il ne confirme pas, il **sélectionne le mode adéquat** (groupé par famille). Le **mode effectif** (confirmé/sélectionné) **pilote tout l'écran** : changer de mode re-rend en cascade le formulaire (PSD↔AOO…), la commission figée (#154), les lots, les sections contextuelles. La **zone de dérogation est unifiée** : elle se déclenche pour **un seul motif global** couvrant les **deux écarts** — effectif↔barème ET planif↔liasse — avec source / bailleur / documents / motif (non bloquant). Le mode planifié reste **figé** pour tracer l'écart.

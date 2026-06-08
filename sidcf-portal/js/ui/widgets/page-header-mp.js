@@ -14,6 +14,7 @@
 import { el } from '../../lib/dom.js';
 import router from '../../router.js';
 import { ETAT_LABEL_MP } from '../../modules/marche-plus/etat-labels-mp.js';
+import { renderErrorReportButton } from '../../lib/error-report-mp.js';
 
 // Mapping des couleurs par état pour le badge
 const ETAT_COLORS = {
@@ -67,19 +68,24 @@ export function renderPageHeaderMP(opts) {
         });
         return btn;
       })(),
-      el('div', {
-        style: {
-          padding: '4px 12px',
-          background: etatColors.bg,
-          color: etatColors.fg,
-          border: `1px solid ${etatColors.border}`,
-          borderRadius: '12px',
-          fontSize: '11px',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.3px'
-        }
-      }, `📊 État effectif du marché : ${etatLabel}`)
+      // Modif #157 — bouton « Rapport d'erreur » présent sur chaque écran
+      // fonctionnel (via ce header partagé) + badge état à droite.
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
+        idOperation ? renderErrorReportButton(idOperation) : null,
+        el('div', {
+          style: {
+            padding: '4px 12px',
+            background: etatColors.bg,
+            color: etatColors.fg,
+            border: `1px solid ${etatColors.border}`,
+            borderRadius: '12px',
+            fontSize: '11px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.3px'
+          }
+        }, `📊 État effectif du marché : ${etatLabel}`)
+      ])
     ]),
     // Ligne 2 : breadcrumb (où je suis dans le workflow)
     el('div', {

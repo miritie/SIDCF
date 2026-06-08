@@ -44,6 +44,7 @@ import { renderPluriannualite } from '../../../ui/widgets/pluriannualite-mp.js';
 import { renderFormulaBadge } from '../../../ui/widgets/formula-tip-mp.js';
 import { openKpiDrilldownDrawer } from '../../../ui/widgets/kpi-drilldown-drawer-mp.js';
 import { getLotData, getLotsFromProcedure } from '../../../lib/lot-data.js';
+import { renderErrorReportButton } from '../../../lib/error-report-mp.js';
 import { getPhasesAsync } from '../../../lib/phase-helper-mp.js';
 import { ETAT_LABEL_MP } from '../etat-labels-mp.js';
 import logger from '../../../lib/logger.js';
@@ -258,6 +259,8 @@ function renderHeaderSticky(operation, registries, fullData, currentLotId, lots,
             className: 'btn btn-secondary btn-sm',
             onclick: () => router.navigate('/mp/ppm-list')
           }, '← Liste PPM'),
+          // Modif #157 — rapport d'erreur du marché (transverse, depuis la fiche).
+          renderErrorReportButton(operation.id),
           el('span', {
             className: `badge badge-${etat?.color || 'gray'}`,
             style: { fontSize: '13px', padding: '4px 12px' }
