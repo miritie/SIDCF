@@ -1921,12 +1921,23 @@ function collectAllDocuments(fullData, currentLotId, mpDocuments = []) {
 
   const inLot = (entity) => currentLotId === 'ALL' || !entity?.lotId || entity.lotId === currentLotId;
 
-  // Procedure : PVs des lots
+  // Procedure : PV d'ouverture transverse (Modif #150 — un seul pour tous les
+  // lots, rangé dans procedure.pv.ouverture). Repli legacy : lots[0].pv.ouverture.
+  const procPvOuverture = fullData.procedure?.pv?.ouverture
+    || fullData.procedure?.pvOuverture
+    || (fullData.procedure?.lots && fullData.procedure.lots[0]?.pv?.ouverture);
+  if (procPvOuverture) {
+    byPhase['Contractualisation'].push({ label: 'PV d\'ouverture (tous les lots)', ref: procPvOuverture });
+  }
+
+  // Procedure : PVs des lots (analyse, jugement…) — le PV d'ouverture par lot
+  // est désormais transverse (ci-dessus) et n'est plus listé par lot.
   if (fullData.procedure?.lots) {
     fullData.procedure.lots.forEach(lot => {
       if (currentLotId !== 'ALL' && lot.id !== currentLotId) return;
       const pv = lot.pv || {};
       Object.entries(pv).forEach(([k, ref]) => {
+        if (k === 'ouverture') return; // transverse, déjà listé une fois
         if (ref) byPhase['Contractualisation'].push({ label: `PV ${k} (lot ${lot.numero || lot.id})`, ref });
       });
     });

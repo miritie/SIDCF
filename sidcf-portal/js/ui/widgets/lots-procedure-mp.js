@@ -236,7 +236,7 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     gridDates.appendChild(mkDate('Date de jugement', 'jugement'));
     card.appendChild(gridDates);
 
-    // PVs (5)
+    // PVs par lot (4 — le PV d'ouverture est transverse depuis #150, géré dans ecr02a)
     const pvHeader = document.createElement('div');
     pvHeader.style.fontSize = '12px';
     pvHeader.style.fontWeight = '600';

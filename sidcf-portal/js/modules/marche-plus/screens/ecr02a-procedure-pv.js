@@ -591,11 +591,13 @@ export async function renderProcedurePV(params) {
 
       // Modif #150 — PV d'ouverture TRANSVERSE : valable pour tous les lots d'un
       // même processus (y compris PSC avec participation CF). Il sort donc du
-      // per-lot et se gère ici, au niveau procédure. Repli legacy : ancien PV
-      // d'ouverture stocké sur le 1er lot (lots[0].pv.ouverture) ou procedure.pv.
-      const pvOuvLegacy = procedureData?.pvOuverture
+      // per-lot et se range dans la colonne `pv` (JSONB) déjà existante de
+      // MP_PROCEDURE — clé `ouverture` — ce qui évite toute migration (le Worker
+      // mappe colonne par colonne et rejette les colonnes inconnues). Repli
+      // legacy : ancien PV d'ouverture stocké sur le 1er lot.
+      const pvOuvLegacy = procedureData?.pv?.ouverture
         || (procedureData?.lots && procedureData.lots[0]?.pv?.ouverture)
-        || procedureData?.pv?.ouverture
+        || procedureData?.pvOuverture
         || null;
       const pvCard = el('div', {
         className: 'card',
@@ -695,7 +697,7 @@ const MODES_CONTRAT_DIRECT = ['CONVENTION', 'RECONDUCTION'];
  * Modif #113 — Refonte (retour métier) : les pièces de la contractualisation
  * sont FACULTATIVES et MULTIPLES (on peut joindre courrier ET mandat), pas un
  * passage obligé ni un choix exclusif. Le PV d'ouverture n'est PAS ici : il
- * est saisi au niveau du lot. Pour les modes à contrat direct, on charge le
+ * est transverse (Modif #150), géré au niveau procédure. Pour les modes à contrat direct, on charge le
  * document du contrat. La case « sans CF » (PSD/PSC) reste portée par ce bloc.
  * Retourne null s'il n'y a rien à afficher (ex. gré à gré simple).
  */
@@ -1478,9 +1480,10 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     if (!categorie) warnings.push('Catégorie');
 
     const lots = Array.isArray(lotsState) ? lotsState : [];
-    // Modif #150 — PV d'ouverture transverse : un seul attendu pour tous les lots.
+    // Modif #150 — PV d'ouverture transverse : un seul attendu pour tous les lots
+    // (rangé dans la colonne JSONB `pv`, clé `ouverture`).
     const pvOuvTransverse = document.getElementById('proc-pv-ouverture')?.files?.[0]
-      || existingProc?.pvOuverture || existingProc?.lots?.[0]?.pv?.ouverture || existingProc?.pv?.ouverture;
+      || existingProc?.pv?.ouverture || existingProc?.lots?.[0]?.pv?.ouverture || existingProc?.pvOuverture;
     if (!pvOuvTransverse) warnings.push('PV d\'ouverture (transverse) manquant');
     if (lots.length === 0) {
       warnings.push('Aucun lot défini (au moins 1 lot attendu)');
@@ -1574,13 +1577,15 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
 
   procedureData.soumissionnaires = soumissionnaires;
   procedureData.lots = lots;
-  // Modif #150 — PV d'ouverture transverse (un seul pour tous les lots).
+  // Modif #150 — PV d'ouverture transverse (un seul pour tous les lots), rangé
+  // dans la colonne JSONB existante `pv` (clé `ouverture`) → pas de migration.
   // Préservé s'il n'est pas ré-uploadé. Repli legacy : lots[0].pv.ouverture.
   if (document.getElementById('proc-pv-ouverture')) {
     const pvFile = document.getElementById('proc-pv-ouverture')?.files?.[0];
-    procedureData.pvOuverture = pvFile
+    const pvOuvDoc = pvFile
       ? 'PV_OUV_' + Date.now() + '.pdf'
-      : (existingProc?.pvOuverture || existingProc?.lots?.[0]?.pv?.ouverture || existingProc?.pv?.ouverture || null);
+      : (existingProc?.pv?.ouverture || existingProc?.lots?.[0]?.pv?.ouverture || existingProc?.pvOuverture || null);
+    procedureData.pv = { ...(existingProc?.pv || {}), ...(procedureData.pv || {}), ouverture: pvOuvDoc };
   }
   // Modif #105 — C-7/C-8 : N° dossier d'appel + allotissement (non-PSD).
   procedureData.numeroDossierAppel = document.getElementById('proc-num-dossier')?.value?.trim() || null;
