@@ -759,6 +759,11 @@ export async function renderProcedurePV(params) {
     if (lrContainer) lrContainer.innerHTML = '';
     if (piContainer) piContainer.innerHTML = '';
 
+    // Modif #158 — L'attributaire est désormais collecté DANS la zone LOT
+    // (« Issue du lot & attributaire », par lot) — la zone LOT rassemble tous
+    // les aspects de collecte et d'attribution. Le bloc « Attribution de la
+    // contractualisation » séparé fait donc doublon dès qu'il y a une zone LOT :
+    // on ne le rend QUE pour les modes SANS lots (contrat direct, etc.).
     if (isPrestationIntellectuelle(mode)) {
       const initialSub = (procedureData && procedureData.sousProcedurePI) || 'AMI_CABINET';
       const applyPI = (sub) => {
@@ -770,14 +775,15 @@ export async function renderProcedurePV(params) {
           // DP : l'attributaire se choisit DANS la liste restreinte ; AMI CV : parmi toutes les entreprises.
           const lr = (sub === 'DP' && Array.isArray(procedureData?.listeRestreinte) && procedureData.listeRestreinte.length)
             ? procedureData.listeRestreinte : null;
-          if (attributionContainer) attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, lr));
+          // Bloc attribution séparé seulement si pas de zone LOT (sinon doublon).
+          if (attributionContainer && !shouldShowLots) attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, lr));
           if (lr && lrContainer) lrContainer.appendChild(renderListeRestreinteBlock(lr, true));
         }
       };
       if (piContainer) piContainer.appendChild(renderPISubprocSelector(initialSub, applyPI));
       applyPI(initialSub);
-    } else if (attributionContainer) {
-      // Hors PI : sélection parmi toutes les entreprises.
+    } else if (attributionContainer && !shouldShowLots) {
+      // Hors PI ET sans zone LOT : sélection parmi toutes les entreprises.
       attributionContainer.appendChild(renderAttributionBlock(procedureData || {}, null));
     }
 

@@ -97,5 +97,8 @@ export function formatLotLabel(lot, opts = {}) {
   if (!lot) return '';
   const lib = lot.libelle || lot.objet || '(sans libellé)';
   if (opts.allotissement === 'UNIQUE' || !lot.numero) return lib;
+  // Modif #158 — idempotent : si le libellé porte déjà « LOT n : » (préfixe
+  // obligatoire baké au stockage en multi-lots), ne pas le redoubler.
+  if (/^\s*LOT\s+\d+\s*:/i.test(lib)) return lib;
   return `LOT ${lot.numero} : ${lib}`;
 }

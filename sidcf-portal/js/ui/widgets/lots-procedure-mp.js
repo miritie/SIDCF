@@ -75,6 +75,22 @@ function fmtDateForInput(iso) {
   return '';
 }
 
+// Modif #158 — retire un éventuel préfixe « LOT n : » du libellé (pour n'éditer
+// que la description ; le préfixe est ré-appliqué selon le numéro courant).
+function stripLotPrefix(libelle) {
+  return String(libelle || '').replace(/^\s*LOT\s+\d+\s*:\s*/i, '').trim();
+}
+
+// Ré-applique le préfixe obligatoire « LOT n : » à tous les lots (multi-lots),
+// d'après leur numéro courant. À appeler après toute (re)numérotation.
+function reapplyLotPrefixes(state) {
+  state.forEach((l) => {
+    const raw = stripLotPrefix(l.libelle || l.objet || '');
+    l.objet = raw;
+    l.libelle = `LOT ${l.numero} : ${raw}`.trimEnd();
+  });
+}
+
 /**
  * @param {Array} lots  - liste initiale (normalisée)
  * @param {Object} options
@@ -98,6 +114,8 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
   );
   // En lot unique, on ne conserve que le premier lot.
   if (allotissement === 'UNIQUE' && state.length > 1) state = state.slice(0, 1);
+  // Modif #158 — en multi-lots, le préfixe « LOT n : » est obligatoire dès le montage.
+  if (allotissement === 'MULTIPLES') reapplyLotPrefixes(state);
 
   const notify = () => { if (onChange) onChange([...state]); };
 
@@ -139,6 +157,8 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       state.splice(idx, 1);
       // re-numérote
       state.forEach((l, i) => { l.numero = i + 1; });
+      // Modif #158 — re-préfixe « LOT n : » après renumérotation (multi-lots).
+      if (allotissement === 'MULTIPLES') reapplyLotPrefixes(state);
       notify();
       render();
     });
@@ -157,15 +177,44 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     // le nom du marché ; pour un marché multi-lots, on le définit par lot.
     libLabel.textContent = 'Objet / Libellé du lot';
     libWrap.appendChild(libLabel);
+
     const libInput = document.createElement('input');
     libInput.type = 'text';
     libInput.className = 'form-input';
-    libInput.placeholder = idx === 0 ? (defaultLibelle || 'Libellé du lot') : `Lot ${lot.numero}`;
-    libInput.value = lot.libelle || '';
-    libInput.addEventListener('input', () => {
-      updateLot(idx, (l) => { l.libelle = libInput.value; l.objet = libInput.value; });
-    });
-    libWrap.appendChild(libInput);
+
+    if (allotissement === 'MULTIPLES') {
+      // Modif #158 — En multi-lots, le préfixe « LOT n : » est OBLIGATOIRE :
+      // affiché comme addon non éditable ; l'agent ne saisit que la description.
+      // Le libellé stocké est « LOT n : description » (préfixe baké).
+      libInput.placeholder = 'Description du lot';
+      libInput.value = stripLotPrefix(lot.libelle);
+      const setLib = () => {
+        const raw = libInput.value.trim();
+        updateLot(idx, (l) => {
+          l.objet = raw;
+          l.libelle = raw ? `LOT ${l.numero} : ${raw}` : `LOT ${l.numero} : `;
+        });
+      };
+      libInput.addEventListener('input', setLib);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:stretch;gap:0';
+      const prefix = document.createElement('span');
+      prefix.textContent = `LOT ${lot.numero} :`;
+      prefix.style.cssText = 'display:flex;align-items:center;padding:0 10px;background:#eef2ff;border:1px solid #c7d2fe;border-right:none;border-radius:6px 0 0 6px;font-weight:700;color:#3730a3;white-space:nowrap';
+      libInput.style.borderRadius = '0 6px 6px 0';
+      row.appendChild(prefix);
+      row.appendChild(libInput);
+      libInput.style.flex = '1';
+      libWrap.appendChild(row);
+    } else {
+      // Lot unique : on utilise directement l'objet du marché (sans préfixe).
+      libInput.placeholder = defaultLibelle || 'Libellé du lot';
+      libInput.value = lot.libelle || '';
+      libInput.addEventListener('input', () => {
+        updateLot(idx, (l) => { l.libelle = libInput.value; l.objet = libInput.value; });
+      });
+      libWrap.appendChild(libInput);
+    }
     card.appendChild(libWrap);
 
     // Grille : nb offres
@@ -552,6 +601,7 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
         } else if (n < state.length) {
           state = state.slice(0, n);
         }
+        reapplyLotPrefixes(state); // Modif #158 — préfixe « LOT n : » obligatoire
         notify();
         render();
       });
@@ -563,6 +613,7 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       addBtn.textContent = '+ Ajouter un lot';
       addBtn.addEventListener('click', () => {
         state.push(blankLot(state.length + 1, ''));
+        reapplyLotPrefixes(state); // Modif #158
         notify();
         render();
       });

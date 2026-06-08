@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Zone LOT : attribution dans le lot (suppression du bloc doublon) + préfixe « LOT n : » obligatoire (ECR02A)
+
+> **Modif #158** — Retour client : la **zone LOT rassemble tous les aspects** de collecte d'information **et d'attribution**. (1) Le bloc séparé **« 🏆 Attribution de la contractualisation »** (proc-attr-input/NCC/montant, #109) **faisait doublon** avec l'attribution par lot (« Issue du lot & attributaire », #153) → il n'est **plus rendu dès qu'il y a une zone LOT** (modes à lots) ; il reste pour les modes sans lots. (2) Le **préfixe « LOT n : » devient obligatoire** sur le libellé en **multi-lots** : affiché comme **addon non éditable**, l'agent ne saisit que la description, et le libellé **stocké** est `LOT n : description` (préfixe baké, ré-appliqué à toute (re)numérotation). En **lot unique**, le libellé reste l'**objet du marché** directement (sans préfixe).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : `renderAttributionBlock` n'est rendu que `!shouldShowLots` (PI et hors-PI).
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : libellé multi-lots avec addon « LOT n : » (saisie de la description seule) ; helpers `stripLotPrefix` / `reapplyLotPrefixes` appliqués au montage, à l'ajout, au « Définir » et au retrait de lot.
+- `sidcf-portal/js/lib/lot-data.js` : `formatLotLabel` rendu **idempotent** (ne redouble pas un préfixe déjà présent).
+
+### Impact / Anti-régression
+
+- **DB** : aucune migration ; le libellé prefixé vit dans le JSONB `lots`. L'attribution reste lue depuis `procedure.lots[].attributaire` (reconduction #153/#155 inchangée). Le save du bloc séparé étant guardé (`if proc-attr-input`), son absence ne casse rien.
+- **Vérifié bout en bout** (Chrome headless) : lot unique → zone LOT avec attribution par lot, **plus de bloc séparé** ; bascule multi-lots (2 lots) → addons **« LOT 1 : » / « LOT 2 : »**, une zone d'attribution par lot ; **libellé stocké** « LOT 1 : Adduction principale » (objet = description seule), `formatLotLabel` **idempotent** ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-08 — Dérogations (Phase B) : rapport d'erreur transverse sur chaque écran fonctionnel
 
 > **Modif #157 — Feuille de route DÉROGATIONS, phase B** (décision métier : « RAPPORT D'ERREUR À ÉDITER À TOUTES LES ÉTAPES Y COMPRIS LES DOCUMENTS JUSTIFICATIFS D'UNE DÉROGATION »). Générateur commun + modale + export, accessible via un bouton **« 🧾 Rapport d'erreur »** présent sur **chaque écran fonctionnel** d'un marché. Le rapport, **non bloquant**, recense pour un marché donné : (1) la **dérogation** et ses justificatifs (écart planifié→liasse, source, justificatif manquant — le point explicitement demandé) ; (2) les **pièces obligatoires attendues par étape** (matrice `pieces-matrice.json` filtrée par le **mode effectif** + type marché), avec statut **Présent / Manquant / À vérifier** (détection honnête : ce qui n'est pas mappé reste « à vérifier ») ; (3) les **avertissements** de contractualisation. Export **CSV** + **impression**.
