@@ -14,7 +14,8 @@ import {
   requiresDGMPValidation,
   requiresPublication,
   createProcedureInfoAlert,
-  isPrestationIntellectuelle
+  isPrestationIntellectuelle,
+  resolveBaseMode
 } from '../../../lib/procedure-context.js';
 import { SoumissionnairesWidget } from '../../../widgets/soumissionnaires-widget.js';
 import { renderLotsProcedureMP } from '../../../ui/widgets/lots-procedure-mp.js';
@@ -1280,17 +1281,32 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
 
-        // Type de commission
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, ['Type de commission', el('span', { className: 'required' }, '*')]),
-          el('select', { className: 'form-input', id: 'proc-commission', required: true }, [
+        // Type de commission — Modif #154 (V5) : figé selon le mode.
+        // PSL/PSO → COPE (systématique) ; AOO et dérivés → COJO (systématique).
+        // Les autres modes (PI…) restent libres.
+        (() => {
+          const baseMode = resolveBaseMode(mode);
+          const forced = (mode === 'PSL' || mode === 'PSO') ? 'COPE'
+            : (baseMode === 'AOO') ? 'COJO'
+            : null;
+          const sel = el('select', { className: 'form-input', id: 'proc-commission', required: true }, [
             el('option', { value: '' }, '-- Sélectionner --'),
-            ...(registries.TYPE_COMMISSION || []).map(c =>
-              el('option', { value: c.code, selected: c.code === existingProc.commission }, c.label)
-            )
-          ]),
-          el('small', { className: 'text-muted' }, 'COJO pour Admin Centrale, COPE pour projets/collectivités')
-        ]),
+            ...(registries.TYPE_COMMISSION || []).map(c => el('option', { value: c.code }, c.label))
+          ]);
+          // Valeur initiale : commission figée si applicable, sinon valeur existante.
+          sel.value = forced || existingProc.commission || '';
+          let hint = 'COJO pour Admin Centrale, COPE pour projets/collectivités';
+          if (forced) {
+            sel.disabled = true;
+            const label = (registries.TYPE_COMMISSION || []).find(c => c.code === forced)?.label || forced;
+            hint = `Commission imposée par le mode de passation : ${label}.`;
+          }
+          return el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, ['Type de commission', el('span', { className: 'required' }, '*')]),
+            sel,
+            el('small', { className: 'text-muted' }, hint)
+          ]);
+        })(),
 
         // Catégorie procédure
         el('div', { className: 'form-field' }, [

@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Contractualisation : commission figée par mode — PSL/PSO → COPE, AOO (et dérivés) → COJO (ECR02A)
+
+> **Modif #154 (V5 de la refonte CONTRACTUALISATION).** Le « Type de commission » est désormais **imposé par le mode de passation** : **PSL/PSO → COPE** systématiquement, **AOO et tous ses dérivés** (AOO_PREQUALIF, AOO_2ETAPES, AOO_CONCOURS, via `resolveBaseMode`) **→ COJO** systématiquement. Le select est alors **pré-sélectionné et verrouillé** (disabled), avec un libellé d'aide explicite. Les autres modes (PI…) restent **libres**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : champ « Type de commission » réécrit — calcul de la commission imposée (`forced`) selon le mode ; `select.value` figé + `disabled` quand applicable ; libellé d'aide adapté ; import de `resolveBaseMode`. La sauvegarde lit `getElementById('proc-commission').value` (lisible même sur select désactivé), donc la valeur figée est bien persistée.
+
+### Impact / Anti-régression
+
+- Aucune migration ; `commission` a déjà sa colonne. PI/autres modes inchangés.
+- **Vérifié** (Chrome headless) : AOO → COJO (verrouillé), AOO_PREQUALIF → COJO (verrouillé, via mode de base), PSL → COPE (verrouillé), PSO → COPE (verrouillé), PI → COJO **modifiable** (libre) ; **0 erreur console**.
+
+### Déploiement
+
+- Aucune migration. Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-08 — Contractualisation : attribution PAR LOT (ATTRIBUÉ/INFRUCTUEUX + attributaire unique/groupement) + reconduction Enregistrement (ECR02A/ECR03A)
 
 > **Modif #153 (V4 de la refonte CONTRACTUALISATION).** Dans la zone d'allotissement (valable aussi pour lot unique), pour **tous les modes à lots** : (1) **choix explicite ATTRIBUÉ / INFRUCTUEUX** par lot ; (2) si **ATTRIBUÉ** → désignation de l'attributaire, **entreprise unique** OU **groupement** (mandataire + membres ajoutables), en sélection assistée (datalist des entreprises) ; (3) si **INFRUCTUEUX** → **motif en saisie libre** ; (4) **vérification de sanction systématique** sur chaque entreprise désignée → **REJET bloquant** au passage de phase (cohérent PSD/PSC) ; (5) l'attributaire (forme `{ singleOrGroup, entreprises[] }`) est **reconduit à l'Enregistrement** (ECR03A) : pré-remplissage de la section Attributaire depuis `procedure.lots[lot].attributaire`, sans jamais écraser une saisie d'enregistrement existante.
