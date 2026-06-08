@@ -237,6 +237,24 @@ class DataService {
   }
 
   /**
+   * Récupère la première entité dont `field === value`, ou null.
+   *
+   * Modif #151 — cette méthode était appelée par les écrans de
+   * contractualisation (ecr02a, modules marche & marché+) mais n'existait pas
+   * sur DataService → `getByField is not a function` faisait échouer TOUTE
+   * sauvegarde de contractualisation (avant même la persistance). On filtre
+   * côté backend quand c'est possible, puis on re-filtre défensivement côté
+   * client (certains adaptateurs/worker peuvent ignorer le filtre).
+   */
+  async getByField(entityType, field, value) {
+    const list = await this.adapter.query(entityType, { [field]: value });
+    const arr = Array.isArray(list) ? list : (list ? [list] : []);
+    // Re-filtre strict : ne jamais renvoyer une entité non concordante (le
+    // backend pourrait ignorer le filtre et tout renvoyer).
+    return arr.find(e => e && e[field] === value) || null;
+  }
+
+  /**
    * Get single entity
    */
   async get(entityType, id) {

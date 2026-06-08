@@ -994,22 +994,33 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           ])
         ]),
 
+        // Modif #151 (V2) — PSD : le fournisseur EST l'attributaire (sélection
+        // assistée). Plus d'upload de devis/BC ni de N° BC : la pièce est dans
+        // la liasse du dossier imputé, on coche simplement sa présence.
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-          // Fournisseur sélectionné
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Fournisseur', el('span', { className: 'required' }, '*')]),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'proc-fournisseur',
-              placeholder: 'Nom du fournisseur',
-              value: existingProc.fournisseurNom || ''
-            })
-          ]),
+          // Fournisseur (= attributaire), sélection assistée
+          (() => {
+            const dl = el('datalist', { id: 'proc-fournisseur-list' });
+            // Pré-remplit avec la valeur existante puis charge la base (async).
+            if (existingProc.fournisseurNom) dl.appendChild(el('option', { value: existingProc.fournisseurNom }));
+            dataService.query(ENTITIES.MP_ENTREPRISE).then(list => {
+              (list || []).slice().sort((x, y) => (x.raisonSociale || '').localeCompare(y.raisonSociale || ''))
+                .forEach(e => { if (e.raisonSociale) dl.appendChild(el('option', { value: e.raisonSociale })); });
+            }).catch(() => {});
+            return el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, ['Fournisseur (attributaire)', el('span', { className: 'required' }, '*')]),
+              el('input', {
+                type: 'text', className: 'form-input', id: 'proc-fournisseur', list: 'proc-fournisseur-list',
+                placeholder: 'Rechercher / sélectionner le fournisseur…',
+                value: existingProc.fournisseurNom || ''
+              }),
+              dl
+            ]);
+          })(),
 
-          // Référence devis / facture proforma
+          // Référence devis / facture proforma (renseignement)
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Référence devis / facture proforma', el('span', { className: 'required' }, '*')]),
+            el('label', { className: 'form-label' }, 'Référence devis / facture proforma'),
             el('input', {
               type: 'text',
               className: 'form-input',
@@ -1021,7 +1032,7 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
 
           // Date du devis / facture proforma
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Date du devis / facture proforma'),
+            el('label', { className: 'form-label' }, ['Date du devis / facture proforma', el('span', { className: 'required' }, '*')]),
             el('input', {
               type: 'date',
               className: 'form-input',
@@ -1030,16 +1041,13 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             })
           ]),
 
-          // Document devis / facture proforma
+          // Modif #151 — Présence du devis / facture proforma dans la liasse (case bloquante).
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, ['Document devis / facture proforma (PDF)', el('span', { className: 'required' }, '*')]),
-            el('input', {
-              type: 'file',
-              className: 'form-input',
-              id: 'proc-doc-devis',
-              accept: '.pdf'
-            }),
-            existingProc.docDevis ? el('small', { className: 'text-success' }, `✓ ${existingProc.docDevis}`) : null
+            el('label', { className: 'form-label' }, ['Devis / facture proforma', el('span', { className: 'required' }, '*')]),
+            el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '6px' } }, [
+              (() => { const cb = el('input', { type: 'checkbox', id: 'proc-devis-existant' }); cb.checked = existingProc.devisExistant === true; return cb; })(),
+              el('span', {}, 'Existant dans la liasse (après vérification)')
+            ])
           ])
         ]),
 
@@ -1049,19 +1057,7 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
         ]),
 
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
-          // Numéro BC
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Numéro bon de commande'),
-            el('input', {
-              type: 'text',
-              className: 'form-input',
-              id: 'proc-num-bc',
-              placeholder: 'Ex: BC-2024-001',
-              value: existingProc.numBC || ''
-            })
-          ]),
-
-          // Date BC
+          // Date émission BC
           el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, 'Date émission'),
             el('input', {
@@ -1072,16 +1068,13 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             })
           ]),
 
-          // Document BC
+          // Modif #151 — Présence du bon de commande dans la liasse (case bloquante).
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Document BC (PDF)'),
-            el('input', {
-              type: 'file',
-              className: 'form-input',
-              id: 'proc-doc-bc',
-              accept: '.pdf'
-            }),
-            existingProc.docBC ? el('small', { className: 'text-success' }, `✓ ${existingProc.docBC}`) : null
+            el('label', { className: 'form-label' }, ['Bon de commande', el('span', { className: 'required' }, '*')]),
+            el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '6px' } }, [
+              (() => { const cb = el('input', { type: 'checkbox', id: 'proc-bc-existant' }); cb.checked = existingProc.bcExistant === true; return cb; })(),
+              el('span', {}, 'Existant dans la liasse (après vérification)')
+            ])
           ])
         ]),
         mode === 'PSD' ? _sansCFField(existingProc) : null
@@ -1390,10 +1383,20 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   // PSD / ENTENTE_DIRECTE - Simplified procedure
   if (selectedMode === 'PSD' || selectedMode === 'ENTENTE_DIRECTE') {
     const fournisseur = document.getElementById('proc-fournisseur')?.value?.trim();
+    // Modif #151 (V2) — la référence devis n'est plus obligatoire (renseignement).
     const refDevis = document.getElementById('proc-ref-devis')?.value?.trim();
+    // Modif #151 — cases « EXISTANT » : la pièce est dans la liasse du dossier
+    // imputé ; on coche simplement sa présence (champs bloquants).
+    const devisExistant = document.getElementById('proc-devis-existant')?.checked === true;
+    const bcExistant = document.getElementById('proc-bc-existant')?.checked === true;
 
-    if (!fournisseur || !refDevis) {
-      alert('⚠️ Le fournisseur et la référence du devis / facture proforma sont obligatoires');
+    if (!fournisseur) {
+      alert('⚠️ Le fournisseur (attributaire) est obligatoire');
+      return;
+    }
+    if (!devisExistant || !bcExistant) {
+      const manquants = [!devisExistant ? 'le devis / facture proforma' : null, !bcExistant ? 'le bon de commande' : null].filter(Boolean);
+      alert(`⚠️ Avant de passer à l'étape suivante, confirmez la présence dans la liasse de : ${manquants.join(' et ')}.`);
       return;
     }
 
@@ -1404,15 +1407,15 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       return;
     }
 
+    // Modif #151 — uploads (devis/BC) et N° BC retirés ; cases EXISTANT ajoutées.
     procedureData = {
       ...procedureData,
       fournisseurNom: fournisseur,
-      refDevis: refDevis,
+      refDevis: refDevis || null,
       dateDevis: document.getElementById('proc-date-devis')?.value || null,
-      docDevis: document.getElementById('proc-doc-devis')?.files?.[0] ? 'DEVIS_' + Date.now() + '.pdf' : null,
-      numBC: document.getElementById('proc-num-bc')?.value?.trim() || null,
       dateBC: document.getElementById('proc-date-bc')?.value || null,
-      docBC: document.getElementById('proc-doc-bc')?.files?.[0] ? 'BC_' + Date.now() + '.pdf' : null
+      devisExistant,
+      bcExistant
     };
   }
   // PSC - Comparaison de devis

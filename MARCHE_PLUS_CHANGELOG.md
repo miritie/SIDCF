@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Contractualisation : PSD — cases « EXISTANT » bloquantes, retrait des uploads et du N° BC + fix getByField/migration 032 (ECR02A)
+
+> **Modif #151 (V2 de la refonte CONTRACTUALISATION).** Zone PSD « 📋 Validation du devis / facture proforma » : (1) **Fournisseur = attributaire**, en **sélection assistée** (datalist des entreprises) ; (2) **dates conservées** (date devis/facture proforma — désormais requise ; date émission BC) ; (3) **cases « EXISTANT dans la liasse »** pour le devis/facture proforma ET le bon de commande — la pièce est dans le dossier imputé, on coche simplement sa présence — **bloquantes au passage de phase** ; (4) **retraits** : upload devis, upload BC, **N° bon de commande** ; (5) « Contractualisation avec/sans CF » conservée, **sans PV d'ouverture** quel que soit le choix (déjà le cas pour PSD). La référence devis devient facultative.
+>
+> **Deux correctifs d'infrastructure indispensables découverts en testant le save :**
+> - **`dataService.getByField` n'existait pas** (seul `query` existe) alors que `handleSave` (ecr02a marché+ ET marché) l'appelle en tout début → `getByField is not a function` faisait **planter toute sauvegarde de contractualisation avant même la persistance**. Méthode ajoutée à `DataService` (filtre backend + re-filtre strict côté client).
+> - **`mp_operation` n'avait pas la colonne `contractualisation_warnings`** → l'UPDATE de l'opération échouait (500) après la sauvegarde de la procédure. **Migration 032** (idempotente).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : bloc PSD réécrit (fournisseur datalist, cases `proc-devis-existant`/`proc-bc-existant`, suppression `proc-doc-devis`/`proc-num-bc`/`proc-doc-bc`) ; `handleSave` PSD (validation bloquante des cases, écrit `devisExistant`/`bcExistant`, retire docDevis/numBC/docBC).
+- `sidcf-portal/js/datastore/data-service.js` : nouvelle méthode `getByField(entityType, field, value)`.
+- `postgres/migrations/032_mp_operation_contractualisation_warnings.sql` (**nouveau**, exécuté sur Neon).
+
+### Impact / Anti-régression
+
+- **Vérifié bout en bout** (Chrome headless + Neon) : UI PSD conforme (datalist, 2 cases, uploads/N° BC absents, pas de PV) ; save sans cases → **blocage** « confirmez la présence… » ; save avec cases → **« ✅ Procédure enregistrée »**, persistance confirmée (`fournisseur_nom`, `devis_existant=true`, `bc_existant=true`, `date_devis`), puis **seed restauré** (etat=ATTRIBUE) ; **0 erreur console**.
+- `getByField` corrige aussi la sauvegarde de contractualisation pour TOUS les modes (le crash était antérieur à la phase mode-spécifique).
+
+### Déploiement
+
+- Migration 032 appliquée sur Neon. Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-08 — Migration 031 : colonnes de contractualisation manquantes sur mp_procedure (correctif systémique)
 
 > **Correctif d'infrastructure (détecté par revue adversariale du #150).** Le Worker Cloudflare écrit chaque entité **colonne par colonne** (`camelToSnake`), sans colonne JSONB fourre-tout, et renvoie **500 sur colonne inconnue** (l'adaptateur propage, sans fallback par appel). Or les écrans de contractualisation (#105→#150) écrivaient dans `MP_PROCEDURE` une vingtaine de champs **sans colonne en base** → en mode postgres (cas prod/Vercel, Worker UP), **la sauvegarde de la contractualisation échouait entièrement** (la validation client avait eu lieu en localStorage). La migration **031** crée toutes ces colonnes (idempotent, `ADD COLUMN IF NOT EXISTS`).
