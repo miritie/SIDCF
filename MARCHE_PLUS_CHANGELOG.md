@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Dérogations (Phase A) : confirmation / sélection du mode (la liasse fait foi) + dérogation unifiée pilotée par l'effectif (ECR02A)
+
+> **Modif #156 — Feuille de route DÉROGATIONS, phase A.** À la contractualisation, **la liasse fait foi** : nouvelle carte « 🧭 Mode de passation » qui rappelle le **mode planifié (PPM)** et le **mode imposé par le barème**, puis demande à l'agent de **confirmer le mode planifié** (Oui/Non). S'il ne confirme pas, il **sélectionne le mode adéquat** (groupé par famille). Le **mode effectif** (confirmé/sélectionné) **pilote tout l'écran** : changer de mode re-rend en cascade le formulaire (PSD↔AOO…), la commission figée (#154), les lots, les sections contextuelles. La **zone de dérogation est unifiée** : elle se déclenche pour **un seul motif global** couvrant les **deux écarts** — effectif↔barème ET planif↔liasse — avec source / bailleur / documents / motif (non bloquant). Le mode planifié reste **figé** pour tracer l'écart.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - `buildModeCard()` (carte mode : rappel planifié + barème, radios Oui/Non, sélecteur groupé par famille) ; `applyMode()` (réactivité : recâble `updateDerogationAlertLocal` + `updateContextualSections` + sanctions).
+  - `updateDerogationAlertLocal()` : écart **unifié** (`_ecartBareme || _ecartPlanifLiasse`) + message d'intro adapté aux motifs détectés.
+  - `handleSave()` : `isDerogation` couvre les deux écarts ; persistance `procedure.modePassationEffectif` + `modeConfirmePlanifie`, miroir `operation.modePassation`, **gel** de `operation.modePassationPlanifie`, `procDerogation.ecart{bareme,planifLiasse}` + modePlanifie/modeEffectif.
+- `postgres/migrations/033_mode_planifie_effectif.sql` (**nouveau**, exécuté sur Neon) : `mp_operation.mode_passation_planifie`, `mp_procedure.mode_passation_effectif`, `mp_procedure.mode_confirme_planifie`.
+
+### Impact / Anti-régression
+
+- Le mode redevient modifiable à la contractualisation (réintroduction maîtrisée de ce que #80 avait figé), mais piloté par le parcours confirmation/sélection.
+- **Vérifié bout en bout** (Chrome headless + Neon) : carte présente, « Oui » par défaut (conforme → « Mode conforme au barème et au planifié ») ; bascule « Non » → AOO → **formulaire re-rendu en AOO**, **commission COJO verrouillée**, **dérogation unifiée** affichant les 2 écarts ; save mode confirmé (PSD) → persistance `mode_passation_planifie=PSD` (gelé), `mode_passation_effectif=PSD`, `mode_confirme_planifie=true` ; seed restauré ; **0 erreur console**.
+
+### Déploiement
+
+- Migration 033 appliquée sur Neon. Front statique (Vercel auto-deploy sur push `main`).
+- **Phase B à venir (#157)** : rapport d'erreur transverse sur chaque écran (pièces obligatoires + justificatifs de dérogation manquants).
+
+---
+
 ## 2026-06-08 — Reconduction attributaire : entrepriseId transporté → comptes bancaires sélectionnables à l'Enregistrement (ECR02A→ECR03A)
 
 > **Modif #155 (complément de #153).** La reconduction de l'attributaire (#153) ne transportait que `{raisonSociale, ncc}` — elle ne couvrait donc pas la fin de l'exigence : *« …pour avoir les informations sur mandataire au besoin et aussi les comptes bancaires à éventuellement sélectionner »*. Désormais l'**`entrepriseId`** est capturé à la désignation (contractualisation) et reconduit ; à l'Enregistrement, l'entreprise reconduite est **enrichie de sa fiche maître** (comptes / compte legacy + coordonnées) et le **sélecteur de comptes du titulaire (#137) se peuple automatiquement** au montage (sans écraser une attribution déjà saisie).

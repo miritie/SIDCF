@@ -99,11 +99,10 @@ export async function renderProcedurePV(params) {
   })();
 
   // State for form
-  // Modif #80 — Le mode de passation n'est plus sélectionnable à la
-  // contractualisation : il est FIGÉ sur le mode planifié (4.e). La dérogation
-  // est désormais déterminée par l'écart barème ↔ planification (et non plus
-  // par un choix de l'utilisateur, qui n'existe plus ici).
-  let selectedMode = modePlanifieCode || operation.modePassation || '';
+  // Modif #156 — La LIASSE fait foi : le mode redevient confirmable / sélectionnable
+  // à la contractualisation. Le mode EFFECTIF (déjà choisi sur la procédure, sinon
+  // le planifié) pilote l'écran. Le planifié reste figé pour tracer l'écart.
+  let selectedMode = procedure?.modePassationEffectif || modePlanifieCode || operation.modePassation || '';
   let derogationJustif = operation.procDerogation?.docId || null;
   let derogationComment = operation.procDerogation?.comment || '';
   // Modif #79 (4.d) — Nouveaux champs dérogation : demandeur + source
@@ -115,6 +114,86 @@ export async function renderProcedurePV(params) {
   let soumissionnairesWidget = null;
   // Marché+ : multi-lot procedure — lots[] avec libellé + nb offres + dates + PVs
   let lotsState = [];
+
+  // Modif #156 — applique un changement de mode effectif : recâble toute la
+  // cascade (dérogation + sections contextuelles + sanctions). Hoisté.
+  function applyMode(newMode) {
+    selectedMode = newMode || '';
+    updateDerogationAlertLocal(selectedMode);
+    updateContextualSections(selectedMode, procedure);
+    setTimeout(() => _procTriggerSanctionCheck(), 100);
+  }
+
+  // Modif #156 — Carte « Mode de passation » : rappel planifié (PPM) + barème,
+  // confirmation Oui/Non, et sélecteur du mode adéquat (la liasse fait foi) si
+  // l'agent ne confirme pas. Hoisté (appelée dans l'arbre de la page).
+  function buildModeCard() {
+    const baremeLabels = suggestedCodes.map(c => registries.MODE_PASSATION?.find(m => m.code === c)?.label || c);
+    const baremeText = baremeLabels.length ? baremeLabels.join(' / ') : '(aucun mode admissible au barème pour cette ligne)';
+    const initialConfirm = !selectedMode || selectedMode === modePlanifieCode;
+
+    // Sélecteur de mode, groupé par famille (registries.MODE_PASSATION.famille).
+    const familles = {};
+    (registries.MODE_PASSATION || []).forEach(m => {
+      const fam = m.famille || 'AUTRES';
+      (familles[fam] = familles[fam] || []).push(m);
+    });
+    const famLabel = { CLASSIQUE: 'Appel d\'offres', SIMPLIFIEE: 'Procédures simplifiées', PI: 'Prestations intellectuelles', DEROGATOIRE: 'Procédures dérogatoires', AUTRES: 'Autres' };
+    const selChildren = [el('option', { value: '' }, '-- Sélectionner le mode de la liasse --')];
+    Object.keys(familles).forEach(fam => {
+      selChildren.push(el('optgroup', { label: famLabel[fam] || fam },
+        familles[fam].map(m => el('option', { value: m.code }, `${m.code} — ${m.label}`))));
+    });
+    const modeSelect = el('select', { className: 'form-input', id: 'mode-effectif-select' }, selChildren);
+    modeSelect.value = (selectedMode && selectedMode !== modePlanifieCode) ? selectedMode : '';
+    modeSelect.addEventListener('change', (e) => { if (e.target.value) applyMode(e.target.value); });
+
+    const selectorWrap = el('div', {
+      className: 'form-field', id: 'mode-effectif-wrap',
+      style: { marginTop: '12px', display: initialConfirm ? 'none' : '' }
+    }, [
+      el('label', { className: 'form-label' }, ['Mode de passation de la liasse', el('span', { className: 'required' }, '*')]),
+      modeSelect,
+      el('small', { className: 'text-muted' }, 'La liasse fait foi : sélectionnez le mode effectivement constaté, puis chargez les justificatifs dans la zone dérogation si nécessaire.')
+    ]);
+
+    const onConfirmChange = (confirme) => {
+      selectorWrap.style.display = confirme ? 'none' : '';
+      if (confirme) { applyMode(modePlanifieCode); }
+      else { applyMode(modeSelect.value || (selectedMode !== modePlanifieCode ? selectedMode : '')); }
+    };
+
+    const radio = (val, label, checked) => el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+      (() => { const r = el('input', { type: 'radio', name: 'mode-confirm', value: val, onchange: () => onConfirmChange(val === 'OUI') }); r.checked = checked; return r; })(),
+      el('span', {}, label)
+    ]);
+
+    return el('div', { className: 'card', style: { marginBottom: '16px', borderColor: '#3b82f6' } }, [
+      el('div', { className: 'card-header', style: { background: '#eff6ff' } }, [
+        el('h3', { className: 'card-title', style: { color: '#1e3a8a' } }, '🧭 Mode de passation')
+      ]),
+      el('div', { className: 'card-body' }, [
+        el('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '20px', marginBottom: '12px' } }, [
+          el('div', {}, [
+            el('div', { style: { fontSize: '11px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' } }, 'Mode planifié (PPM)'),
+            el('div', { style: { fontSize: '14px', fontWeight: 600, color: '#1e3a8a', marginTop: '2px' } }, `${modePlanifieCode || '—'} — ${modePlanifieLabel}`)
+          ]),
+          el('div', {}, [
+            el('div', { style: { fontSize: '11px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' } }, 'Mode imposé par le barème'),
+            el('div', { style: { fontSize: '14px', fontWeight: 600, color: '#065f46', marginTop: '2px' } }, baremeText)
+          ])
+        ]),
+        el('div', { style: { borderTop: '1px dashed #e5e7eb', paddingTop: '12px' } }, [
+          el('div', { style: { fontSize: '13px', fontWeight: 600, marginBottom: '8px' } }, 'Confirmez-vous le mode de passation planifié ?'),
+          el('div', { style: { display: 'flex', gap: '24px' } }, [
+            radio('OUI', 'Oui, je confirme le mode planifié', initialConfirm),
+            radio('NON', 'Non — la liasse relève d\'un autre mode', !initialConfirm)
+          ]),
+          selectorWrap
+        ])
+      ])
+    ]);
+  }
 
   const page = el('div', { className: 'page' }, [
     // Timeline
@@ -160,29 +239,16 @@ export async function renderProcedurePV(params) {
       ])
     ]),
 
-    // Modif #79 (4.e) — Rappel du mode de passation planifié à la création
-    // PPM. Bandeau d'information neutre (pas une alerte). Permet au chargé
-    // d'études de confirmer ou de motiver une dérogation au moment de la
-    // contractualisation.
-    modePlanifieCode ? el('div', {
-      style: {
-        marginBottom: '16px', padding: '12px 16px',
-        background: '#eff6ff', border: '1px solid #3b82f6', borderRadius: '6px',
-        display: 'flex', alignItems: 'center', gap: '12px'
-      }
-    }, [
-      el('span', { style: { fontSize: '18px' } }, '📌'),
-      el('div', { style: { flex: 1 } }, [
-        el('div', { style: { fontSize: '11px', fontWeight: 700, color: '#1e3a8a', letterSpacing: '0.5px', textTransform: 'uppercase' } }, 'Mode de passation planifiée'),
-        el('div', { style: { fontSize: '14px', fontWeight: 600, color: '#1e3a8a', marginTop: '2px' } }, [
-          el('code', { style: { background: 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' } }, modePlanifieCode),
-          ' — ',
-          modePlanifieLabel
-        ]),
-        el('div', { style: { fontSize: '11px', color: '#6b7280', marginTop: '4px', fontStyle: 'italic' } },
-          'Simple information : mode retenu lors de la planification.')
-      ])
-    ]) : null,
+    // Feuille de route DÉROGATIONS (#156) — Carte « Mode de passation » : la
+    // LIASSE fait foi. L'outil rappelle le mode planifié (PPM) et celui imposé
+    // par le barème, puis demande à l'agent de CONFIRMER le mode planifié ; s'il
+    // ne confirme pas, il sélectionne le mode adéquat. Le mode effectif pilote
+    // tout l'écran (cascade via applyMode → updateContextualSections), et toute
+    // dérogation (écart planif↔liasse OU effectif↔barème) est collectée dans la
+    // zone dérogation unifiée ci-dessous.
+    buildModeCard(),
+
+    // Derogation alert (shown dynamically)
 
     // Modif #80 — La carte « Mode de passation » (avec son dropdown de
     // sélection) a été retirée : le mode n'est plus modifiable à la
@@ -237,7 +303,8 @@ export async function renderProcedurePV(params) {
               justif: derogationJustif,
               comment: derogationComment,
               sourceType: derogationSourceType,
-              sourceBailleur: derogationSourceBailleur
+              sourceBailleur: derogationSourceBailleur,
+              modePlanifie: modePlanifieCode
             }, { issue: 'INFRUCTUEUX' });
           }),
           createButton('btn btn-primary', 'Enregistrer & Continuer', async () => {
@@ -245,7 +312,8 @@ export async function renderProcedurePV(params) {
               justif: derogationJustif,
               comment: derogationComment,
               sourceType: derogationSourceType,
-              sourceBailleur: derogationSourceBailleur
+              sourceBailleur: derogationSourceBailleur,
+              modePlanifie: modePlanifieCode
             });
           })
         ])
@@ -295,9 +363,14 @@ export async function renderProcedurePV(params) {
     container.innerHTML = '';
     if (!mode) return;
 
-    const isDerog = !suggestedCodes.includes(mode);
+    // Modif #156 — Zone de dérogation UNIFIÉE : deux écarts possibles, couverts
+    // par la même zone. (1) Écart effectif↔barème (mode hors barème) ;
+    // (2) Écart planif↔liasse (mode effectif ≠ mode planifié au PPM).
+    const isDerogBareme = !suggestedCodes.includes(mode);
+    const isEcartPlanif = !!(modePlanifieCode && mode !== modePlanifieCode);
+    const isDerog = isDerogBareme || isEcartPlanif;
 
-    // Cas conforme : pas de dérogation requise. Encart de confirmation simple.
+    // Cas conforme : ni écart barème ni écart planif↔liasse. Encart de confirmation.
     if (!isDerog) {
       const conforme = el('div', {
         style: {
@@ -309,12 +382,18 @@ export async function renderProcedurePV(params) {
         el('span', { style: { fontSize: '18px' } }, '✓'),
         el('div', { style: { flex: 1 } }, [
           el('div', { style: { fontWeight: 600, fontSize: '14px' } },
-            'Mode conforme au barème — aucune action supplémentaire requise')
+            'Mode conforme au barème et au planifié — aucune justification requise')
         ])
       ]);
       container.appendChild(conforme);
       return;
     }
+
+    // Message d'intro adapté au(x) écart(s) détecté(s).
+    const motifs = [];
+    if (isEcartPlanif) motifs.push('le mode retenu (liasse) diffère du mode planifié au PPM');
+    if (isDerogBareme) motifs.push('le mode retenu ne figure pas dans les modes admissibles selon le barème');
+    const introText = `Une dérogation est requise : ${motifs.join(' ; ')}. Indiquez la source, le motif, puis joignez les pièces justificatives.`;
 
     // Cas dérogation : on demande la source justifiant la dérogation.
     // Modif #96 — « Source de la dérogation » = liste sélectionnable (État +
@@ -330,8 +409,7 @@ export async function renderProcedurePV(params) {
         el('h3', { className: 'card-title', style: { color: '#92400e' } }, '⚠️ Dérogation au barème — justification requise')
       ]),
       el('div', { className: 'card-body' }, [
-        el('p', { style: { margin: '0 0 12px', fontSize: '13px', color: '#374151' } },
-          'Le mode de passation planifié ne figure pas dans la liste des modes admissibles selon le barème (Code MP CI). Une dérogation est donc requise : indiquez la source, puis joignez la pièce justificative.'),
+        el('p', { style: { margin: '0 0 12px', fontSize: '13px', color: '#374151' } }, introText),
 
         el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } }, [
 
@@ -1399,7 +1477,11 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   // Marché+ multi-lot : lotsState est déjà un Array via onChange du widget.
   // Pas de validation bloquante ici (les champs sont optionnels par design).
 
-  const isDerogation = !suggestedCodes.includes(selectedMode);
+  // Modif #156 — dérogation UNIFIÉE : écart effectif↔barème OU écart planif↔liasse.
+  const _modePlanifie = derogationState.modePlanifie || selectedMode;
+  const _ecartBareme = !suggestedCodes.includes(selectedMode);
+  const _ecartPlanifLiasse = !!(_modePlanifie && selectedMode !== _modePlanifie);
+  const isDerogation = _ecartBareme || _ecartPlanifLiasse;
 
   // Modif #79 (4.f + 4.g) — Gestion de la dérogation :
   //   · si dérogation : on enregistre les infos saisies (demandeur, source,
@@ -1631,9 +1713,17 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     delete contractualisationWarnings.derogationPieceManquante;
   }
 
+  // Modif #156 — Mode effectif porté par la procédure + traçabilité de l'écart.
+  procedureData.modePassationEffectif = selectedMode;
+  procedureData.modeConfirmePlanifie = !_ecartPlanifLiasse; // confirmé si effectif == planifié
+
   // Update operation
   const updateData = {
+    // Le mode effectif est miroité sur l'opération (pilote les écrans aval).
     modePassation: selectedMode,
+    // Modif #156 — fige le mode planifié (PPM) au 1ᵉʳ passage s'il manque, pour
+    // conserver la référence et tracer l'écart sur la durée.
+    modePassationPlanifie: operation.modePassationPlanifie || _modePlanifie,
     procDerogation: isDerogation ? {
       isDerogation: true,
       docId: derogationJustif,
@@ -1644,6 +1734,10 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
         bailleur: derogationSourceType === 'BAILLEUR' ? derogationSourceBailleur : null
       } : null,
       pieceManquante: derogationPieceManquante,
+      // Modif #156 — type(s) d'écart, pour le rapport d'erreur (Phase B).
+      ecart: { bareme: _ecartBareme, planifLiasse: _ecartPlanifLiasse },
+      modePlanifie: _modePlanifie,
+      modeEffectif: selectedMode,
       validatedAt: new Date().toISOString(),
       sourceEtape: 'PROC'
     } : null,
