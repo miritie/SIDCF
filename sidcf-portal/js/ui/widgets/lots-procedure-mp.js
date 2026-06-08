@@ -284,6 +284,30 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     gridPv.appendChild(mkPv('PV de jugement', 'jugement', 'PV_JUG'));
     card.appendChild(gridPv);
 
+    // Modif #152 (V3) — cases de disponibilité de pièces PAR LOT (ex. PSC :
+    // « Bon de commande et/ou devis disponible », « Formulaire de sélection
+    // disponible »). Pilotées par options.lotChecks = [{ key, label }].
+    if (Array.isArray(options.lotChecks) && options.lotChecks.length) {
+      const checksHeader = document.createElement('div');
+      checksHeader.style.cssText = 'font-size:12px;font-weight:600;color:#6b7280;margin:12px 0 6px';
+      checksHeader.textContent = '✅ Disponibilité des pièces (liasse du dossier imputé)';
+      card.appendChild(checksHeader);
+      options.lotChecks.forEach(({ key, label }) => {
+        const wrap = document.createElement('label');
+        wrap.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;font-size:13px';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = `lot-check-${key}`;
+        cb.checked = lot[key] === true;
+        cb.addEventListener('change', () => { updateLot(idx, (l) => { l[key] = cb.checked; }); });
+        wrap.appendChild(cb);
+        const span = document.createElement('span');
+        span.textContent = label;
+        wrap.appendChild(span);
+        card.appendChild(wrap);
+      });
+    }
+
     return card;
   };
 

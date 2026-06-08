@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Contractualisation : PSC — nom dossier (DC/TDR), disponibilités par lot, « Formulaire de sélection » (ECR02A)
+
+> **Modif #152 (V3 de la refonte CONTRACTUALISATION).** PSC : (1) carte « Organisation du marché » — ajout du champ **« Nom dossier appel à concurrence »** (sélection **Demande de cotation / Termes de référence (TDR)**, stocké dans `typeDossierAppel`), à côté du **N°** (existant) et de l'**Allotissement** (existant) ; (2) **par lot** (widget lots) — deux cases de disponibilité : **« Bon de commande et/ou devis disponible »** et **« Formulaire de sélection disponible »**, **bloquantes au passage de phase** (chaque lot doit avoir les deux) ; (3) **renommage** « Note de sélection » → **« Formulaire de sélection »** (en-tête + libellé d'upload). Le PV d'ouverture reste transverse (#150).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : option `lotChecks: [{key,label}]` → rend des cases de disponibilité **par lot** (section « Disponibilité des pièces »), lues/écrites dans `lot[key]` (persistées dans le JSONB `lots`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : `lotChecks` PSC passé à `mountLots` ; select `proc-nom-dossier` (DC/TDR) dans la carte Organisation ; renommages « Formulaire de sélection » ; `handleSave` PSC — blocage par lot (les deux cases) + écriture `typeDossierAppel`.
+
+### Impact / Anti-régression
+
+- **DB** : aucune nouvelle colonne — `typeDossierAppel` existe déjà ; les cases vivent dans le JSONB `lots`.
+- **Note round-trip** : le Worker applique `camelToSnake`/`snakeToCamel` **récursivement** sur les JSONB → en base, les clés imbriquées sont en snake (`bc_devis_disponible`), restituées en camel au retour (round-trip symétrique vérifié).
+- **Vérifié bout en bout** (Chrome headless + API Worker) : UI PSC (select DC/TDR, 2 cases/lot, « Formulaire de sélection », plus de « Note de sélection », PV transverse) ; blocage par lot si cases non cochées ; save avec cases → **« ✅ Procédure enregistrée »**, **relecture via l'API Worker** : `typeDossierAppel=TDR`, `bcDevisDisponible=true`, `formulaireSelectionDisponible=true` ; **seed restauré** ; **0 erreur console**.
+
+### Déploiement
+
+- Aucune migration. Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-08 — Contractualisation : PSD — cases « EXISTANT » bloquantes, retrait des uploads et du N° BC + fix getByField/migration 032 (ECR02A)
 
 > **Modif #151 (V2 de la refonte CONTRACTUALISATION).** Zone PSD « 📋 Validation du devis / facture proforma » : (1) **Fournisseur = attributaire**, en **sélection assistée** (datalist des entreprises) ; (2) **dates conservées** (date devis/facture proforma — désormais requise ; date émission BC) ; (3) **cases « EXISTANT dans la liasse »** pour le devis/facture proforma ET le bon de commande — la pièce est dans le dossier imputé, on coche simplement sa présence — **bloquantes au passage de phase** ; (4) **retraits** : upload devis, upload BC, **N° bon de commande** ; (5) « Contractualisation avec/sans CF » conservée, **sans PV d'ouverture** quel que soit le choix (déjà le cas pour PSD). La référence devis devient facultative.

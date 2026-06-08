@@ -533,6 +533,14 @@ export async function renderProcedurePV(params) {
       let allotissement = procedureData?.allotissement
         || ((initialLots && initialLots.length > 1) ? 'MULTIPLES' : 'UNIQUE');
 
+      // Modif #152 (V3) — cases de disponibilité PAR LOT pour la PSC :
+      // bon de commande / devis et formulaire de sélection (ex « note de
+      // sélection »). Bloquantes au passage de phase (cf. handleSave).
+      const lotChecks = mode === 'PSC' ? [
+        { key: 'bcDevisDisponible', label: 'Bon de commande et/ou devis disponible' },
+        { key: 'formulaireSelectionDisponible', label: 'Formulaire de sélection disponible' }
+      ] : [];
+
       // (Re)monte le widget lots selon le mode d'allotissement courant.
       const mountLots = (allot) => {
         allotissement = allot;
@@ -541,7 +549,7 @@ export async function renderProcedurePV(params) {
         root.innerHTML = '';
         const widget = renderLotsProcedureMP(
           initialLots || [],
-          { defaultLibelle: operation.objet || '', allotissement: allot },
+          { defaultLibelle: operation.objet || '', allotissement: allot, lotChecks },
           (updated) => { lotsState = updated; }
         );
         root.appendChild(widget);
@@ -557,13 +565,28 @@ export async function renderProcedurePV(params) {
         el('div', { className: 'card-body' }, [
           el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
             el('div', { className: 'form-field' }, [
-              el('label', { className: 'form-label' }, 'N° du dossier d\'appel'),
+              // Modif #152 (V3) — « Num dossier appel à concurrence » (existait déjà).
+              el('label', { className: 'form-label' }, 'N° du dossier d\'appel à concurrence'),
               el('input', {
                 type: 'text', className: 'form-input', id: 'proc-num-dossier',
                 placeholder: 'Ex: DAO-2024-007',
                 value: procedureData?.numeroDossierAppel || ''
               })
             ]),
+            // Modif #152 (V3) — PSC : « Nom dossier appel à concurrence » (sélection
+            // Demande de cotation / Termes de référence), stocké dans typeDossierAppel.
+            mode === 'PSC' ? el('div', { className: 'form-field' }, [
+              el('label', { className: 'form-label' }, 'Nom dossier appel à concurrence'),
+              (() => {
+                const sel = el('select', { className: 'form-input', id: 'proc-nom-dossier' }, [
+                  el('option', { value: '' }, '-- Sélectionner --'),
+                  el('option', { value: 'DC' }, 'Demande de cotation'),
+                  el('option', { value: 'TDR' }, 'Termes de référence (TDR)')
+                ]);
+                sel.value = procedureData?.typeDossierAppel || '';
+                return sel;
+              })()
+            ]) : null,
             el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Allotissement'),
               el('select', {
@@ -1128,9 +1151,9 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           ])
         ]),
 
-        // Note de sélection
+        // Formulaire de sélection (ex « Note de sélection » — Modif #152 V3 : renommage maquette)
         el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
-          el('strong', {}, '📄 Note de sélection'),
+          el('strong', {}, '📄 Formulaire de sélection'),
           el('button', {
             type: 'button',
             className: 'btn btn-sm btn-secondary',
@@ -1163,9 +1186,9 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             ])
           ]),
 
-          // Note de sélection
+          // Formulaire de sélection (PDF) — ex « Note de sélection »
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Note de sélection (PDF)'),
+            el('label', { className: 'form-label' }, 'Formulaire de sélection (PDF)'),
             el('input', {
               type: 'file',
               className: 'form-input',
@@ -1440,6 +1463,18 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       return;
     }
 
+    // Modif #152 (V3) — disponibilité des pièces PAR LOT (bloquant au passage de
+    // phase) : pour chaque lot, le bon de commande/devis ET le formulaire de
+    // sélection doivent être marqués disponibles.
+    const pscLots = Array.isArray(lotsState) ? lotsState : [];
+    const lotsIncomplets = pscLots
+      .map((l, i) => ({ tag: l.libelle ? `LOT ${l.numero || i + 1} (${l.libelle})` : `LOT ${l.numero || i + 1}`, ok: l.bcDevisDisponible === true && l.formulaireSelectionDisponible === true }))
+      .filter(x => !x.ok);
+    if (lotsIncomplets.length) {
+      alert(`⚠️ Avant de passer à l'étape suivante, marquez la disponibilité (bon de commande/devis ET formulaire de sélection) pour :\n\n• ${lotsIncomplets.map(x => x.tag).join('\n• ')}`);
+      return;
+    }
+
     // Modif #79 (4.k + 4.l) — champs « Nombre de devis reçus » et « Tableau
     // comparatif » retirés de l'UI. On préserve les valeurs existantes en base
     // (existingProc) via le merge ci-dessous pour ne pas perdre l'historique.
@@ -1449,7 +1484,9 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       dateComparaison: document.getElementById('proc-date-comparaison')?.value || null,
       fournisseurRetenu: fournisseurRetenu,
       motifSelection: document.getElementById('proc-motif-selection')?.value || 'MOINS_DISANT',
-      noteSelection: document.getElementById('proc-note-selection')?.files?.[0] ? 'NOTE_SEL_' + Date.now() + '.pdf' : null
+      noteSelection: document.getElementById('proc-note-selection')?.files?.[0] ? 'NOTE_SEL_' + Date.now() + '.pdf' : null,
+      // Modif #152 (V3) — « Nom dossier appel à concurrence » (DC / TDR).
+      typeDossierAppel: document.getElementById('proc-nom-dossier')?.value || null
     };
   }
   // PSL, PSO, AOO, PI - Full procedure with COJO/COPE
