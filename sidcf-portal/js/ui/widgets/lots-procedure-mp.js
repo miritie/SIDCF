@@ -275,7 +275,9 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       }
       return w;
     };
-    gridPv.appendChild(mkPv('PV d\'ouverture', 'ouverture', 'PV_OUV'));
+    // Modif #150 — Le PV d'ouverture n'est plus par lot : il est transverse
+    // (valable pour tous les lots d'un même processus) et géré au niveau
+    // procédure dans ecr02a. Il est donc retiré d'ici.
     gridPv.appendChild(mkPv('PV d\'analyse technique', 'analyseTechnique', 'PV_ANATECH'));
     gridPv.appendChild(mkPv('PV d\'analyse financière', 'analyseFinanciere', 'PV_ANAFIN'));
     gridPv.appendChild(mkPv('PV analyse tech & fin (combiné)', 'analyseTechFin', 'PV_ANATECHFIN'));

@@ -12,6 +12,7 @@
 
 import { el } from '../../lib/dom.js';
 import router from '../../router.js';
+import { formatLotLabel } from '../../lib/lot-data.js';
 
 /**
  * @param {Object} cfg
@@ -49,7 +50,8 @@ export function renderLotSelector(cfg) {
           lots.map(lot => el('option', {
             value: lot.id,
             selected: lot.id === currentLotId
-          }, `Lot ${lot.numero} — ${lot.libelle || lot.objet || '(sans libellé)'}`))
+          // Modif #150 — préfixe « LOT n : xxx » (convention client).
+          }, formatLotLabel(lot)))
         )
       ])
     ])

@@ -589,10 +589,40 @@ export async function renderProcedurePV(params) {
       ]);
       lotsContainer.appendChild(card);
 
+      // Modif #150 — PV d'ouverture TRANSVERSE : valable pour tous les lots d'un
+      // même processus (y compris PSC avec participation CF). Il sort donc du
+      // per-lot et se gère ici, au niveau procédure. Repli legacy : ancien PV
+      // d'ouverture stocké sur le 1er lot (lots[0].pv.ouverture) ou procedure.pv.
+      const pvOuvLegacy = procedureData?.pvOuverture
+        || (procedureData?.lots && procedureData.lots[0]?.pv?.ouverture)
+        || procedureData?.pv?.ouverture
+        || null;
+      const pvCard = el('div', {
+        className: 'card',
+        id: 'pv-ouverture-transverse-container',
+        style: { marginBottom: '24px' }
+      }, [
+        el('div', { className: 'card-header' }, [
+          el('h3', { className: 'card-title' }, '📄 PV d\'ouverture (transverse — tous les lots)')
+        ]),
+        el('div', { className: 'card-body' }, [
+          el('p', { style: { margin: '0 0 10px', fontSize: '12px', color: '#6b7280' } },
+            'Un seul PV d\'ouverture pour l\'ensemble des lots du processus.'),
+          el('div', { className: 'form-field' }, [
+            el('label', { className: 'form-label' }, 'Document PV d\'ouverture (PDF)'),
+            el('input', { type: 'file', className: 'form-input', id: 'proc-pv-ouverture', accept: '.pdf,.doc,.docx' }),
+            pvOuvLegacy ? el('small', { className: 'text-success' }, `✓ ${pvOuvLegacy}`) : null
+          ])
+        ])
+      ]);
+      lotsContainer.appendChild(pvCard);
+
       // Pose la valeur du select via .value (évite le bug el()/selected) puis monte.
       const allotSelect = document.getElementById('proc-allotissement');
       if (allotSelect) allotSelect.value = allotissement;
       mountLots(allotissement);
+      // Le PV transverse suit la visibilité « sans CF » (PSC : seulement si CF impliqué).
+      applySansCFVisibility();
     } else {
       lotsContainer.innerHTML = '';
       lotsState = [];
@@ -739,7 +769,9 @@ function _sansCFField(existingProc) {
 function applySansCFVisibility() {
   const cb = document.getElementById('proc-sans-cf');
   const sansCF = !!(cb && cb.checked);
-  ['soumissionnaires-container', 'lots-container', 'reserve-cf-container'].forEach(idc => {
+  // Modif #150 — le PV d'ouverture (transverse) suit aussi « sans CF » : pour
+  // une PSC sans participation du CF, il n'y a pas de PV d'ouverture à charger.
+  ['soumissionnaires-container', 'lots-container', 'reserve-cf-container', 'pv-ouverture-transverse-container'].forEach(idc => {
     const node = document.getElementById(idc);
     if (node) node.style.display = sansCF ? 'none' : '';
   });
@@ -1446,6 +1478,10 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     if (!categorie) warnings.push('Catégorie');
 
     const lots = Array.isArray(lotsState) ? lotsState : [];
+    // Modif #150 — PV d'ouverture transverse : un seul attendu pour tous les lots.
+    const pvOuvTransverse = document.getElementById('proc-pv-ouverture')?.files?.[0]
+      || existingProc?.pvOuverture || existingProc?.lots?.[0]?.pv?.ouverture || existingProc?.pv?.ouverture;
+    if (!pvOuvTransverse) warnings.push('PV d\'ouverture (transverse) manquant');
     if (lots.length === 0) {
       warnings.push('Aucun lot défini (au moins 1 lot attendu)');
     } else {
@@ -1454,8 +1490,7 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
         if (!lot.libelle) warnings.push(`${tag} : libellé manquant`);
         if (!lot.dates?.ouverture) warnings.push(`${tag} : date d'ouverture manquante`);
         if (!lot.dates?.jugement) warnings.push(`${tag} : date de jugement manquante`);
-        const hasAnyPvOuv = lot.pv?.ouverture;
-        if (!hasAnyPvOuv) warnings.push(`${tag} : PV d'ouverture manquant`);
+        // Modif #150 — le PV d'ouverture est désormais transverse (vérifié hors boucle).
         const hasAnyPvJug = lot.pv?.jugement;
         if (!hasAnyPvJug) warnings.push(`${tag} : PV de jugement manquant`);
         // Chronologie
@@ -1539,6 +1574,14 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
 
   procedureData.soumissionnaires = soumissionnaires;
   procedureData.lots = lots;
+  // Modif #150 — PV d'ouverture transverse (un seul pour tous les lots).
+  // Préservé s'il n'est pas ré-uploadé. Repli legacy : lots[0].pv.ouverture.
+  if (document.getElementById('proc-pv-ouverture')) {
+    const pvFile = document.getElementById('proc-pv-ouverture')?.files?.[0];
+    procedureData.pvOuverture = pvFile
+      ? 'PV_OUV_' + Date.now() + '.pdf'
+      : (existingProc?.pvOuverture || existingProc?.lots?.[0]?.pv?.ouverture || existingProc?.pv?.ouverture || null);
+  }
   // Modif #105 — C-7/C-8 : N° dossier d'appel + allotissement (non-PSD).
   procedureData.numeroDossierAppel = document.getElementById('proc-num-dossier')?.value?.trim() || null;
   procedureData.allotissement = document.getElementById('proc-allotissement')?.value || 'UNIQUE';

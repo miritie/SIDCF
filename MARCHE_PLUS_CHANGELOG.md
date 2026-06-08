@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Contractualisation : PV d'ouverture transverse (conditionnel CF en PSC) + préfixe « LOT n : » (ECR02A)
+
+> **Modif #150** — Première vague de la refonte CONTRACTUALISATION (CR client). Deux points : (1) **PV d'ouverture transverse** — « le PV d'ouverture est valable pour tous les lots d'un même processus, quel que soit le processus y compris PSC avec participation CF » : le PV d'ouverture sort du per-lot et passe au **niveau procédure** (un seul upload). Pour **PSC**, il n'apparaît **que si le CF est impliqué** (masqué quand « sans CF » est coché). Pour **PSD**, aucun PV (pas de bloc lots). (2) **Préfixe « LOT n : xxx »** sur tous les libellés de lot (sélecteurs aval, convention client).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/lot-data.js` : nouveau helper `formatLotLabel(lot, {allotissement})` → « LOT n : libellé » (libellé seul si lot unique ou `numero` absent — repli gracieux).
+- `sidcf-portal/js/ui/widgets/lot-selector.js` : options du sélecteur de lot via `formatLotLabel` (remplace « Lot n — … », évite « Lot undefined » sur données héritées).
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : retrait du PV d'ouverture du bloc PV **par lot** (désormais transverse).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - Carte « 📄 PV d'ouverture (transverse) » sous les lots (`#pv-ouverture-transverse-container`, input `#proc-pv-ouverture`) ; repli legacy lecture `pvOuverture` → `lots[0].pv.ouverture` → `pv.ouverture`.
+  - `applySansCFVisibility()` masque aussi le PV transverse (effet PSC sans CF).
+  - Sauvegarde `procedureData.pvOuverture` (préservé si non ré-uploadé) ; warnings : PV d'ouverture vérifié une seule fois (transverse) au lieu de par lot.
+
+### Impact / Anti-régression
+
+- **DB** : `pvOuverture` ajouté à `MP_PROCEDURE` (champ libre, pas de migration) ; les anciens PV par lot restent lisibles via le repli.
+- **Vérifié** (Chrome headless, données réelles) : AOO multi-lots → PV transverse présent/visible, plus aucun PV d'ouverture par lot ; PSC → PV visible par défaut, masqué après « sans CF » ; PSD → aucune carte PV ; `formatLotLabel` → « LOT 1 : … / LOT 2 : … » quand numéro présent, libellé seul sinon ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucun déploiement Worker ni migration requis.
+
+---
+
 ## 2026-06-07 — Import PPM : unité administrative pré-remplie + alerte de champ manquant explicite (ECR01A)
 
 > **Modif #149** — Retour utilisateur après #148 : en testant la simulation avec le modèle de référence, l'écran bloquait sur « Veuillez remplir tous les champs obligatoires » — le champ **Unité administrative** était vide et l'alerte ne désignait pas le champ en cause. Deux corrections : (1) **Unité administrative pré-remplie** avec l'institution de l'app-config (« Direction du Contrôle Financier ») — en simulation, il ne reste qu'à choisir le fichier (champ toujours modifiable) ; (2) l'alerte liste désormais **précisément le(s) champ(s) manquant(s)** et y ramène le focus.

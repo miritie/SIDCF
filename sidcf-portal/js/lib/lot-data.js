@@ -82,3 +82,20 @@ export function resolveCurrentLotId(lots, params = {}) {
   if (params.lotId && lots.some(l => l.id === params.lotId)) return params.lotId;
   return lots[0]?.id || null;
 }
+
+/**
+ * Modif #150 — Libellé d'affichage d'un lot, préfixé « LOT n : xxx »
+ * (convention client, CR contractualisation). En allotissement unique
+ * (ou sans numéro), on garde le libellé seul.
+ *
+ * @param {Object|null} lot
+ * @param {Object} [opts]
+ * @param {string} [opts.allotissement] - 'UNIQUE' | 'MULTIPLES'
+ * @returns {string}
+ */
+export function formatLotLabel(lot, opts = {}) {
+  if (!lot) return '';
+  const lib = lot.libelle || lot.objet || '(sans libellé)';
+  if (opts.allotissement === 'UNIQUE' || !lot.numero) return lib;
+  return `LOT ${lot.numero} : ${lib}`;
+}
