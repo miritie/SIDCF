@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Reconduction attributaire : entrepriseId transporté → comptes bancaires sélectionnables à l'Enregistrement (ECR02A→ECR03A)
+
+> **Modif #155 (complément de #153).** La reconduction de l'attributaire (#153) ne transportait que `{raisonSociale, ncc}` — elle ne couvrait donc pas la fin de l'exigence : *« …pour avoir les informations sur mandataire au besoin et aussi les comptes bancaires à éventuellement sélectionner »*. Désormais l'**`entrepriseId`** est capturé à la désignation (contractualisation) et reconduit ; à l'Enregistrement, l'entreprise reconduite est **enrichie de sa fiche maître** (comptes / compte legacy + coordonnées) et le **sélecteur de comptes du titulaire (#137) se peuple automatiquement** au montage (sans écraser une attribution déjà saisie).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : entreprises passées au widget avec `entrepriseId` (`e.id`).
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : map `idByRs` ; l'attributaire de lot stocke `entrepriseId` (entreprise unique et membres de groupement).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : reconduction enrichie via `dataService.get(MP_ENTREPRISE, entrepriseId)` (comptes + coordonnées) ; `renderAttributaireSection` peuple `#attr-compte-select` / `#attr-mandataire-compte-select` au montage si un attributaire est désigné et qu'aucune banque n'est encore saisie (garde anti-écrasement).
+
+### Impact / Anti-régression
+
+- **DB** : aucune nouvelle colonne (`entrepriseId` vit dans le JSONB `lots`).
+- **Vérifié bout en bout** (Chrome headless + API Worker) : attributaire `SOGEFIM BTP` reconduit en ECR03A → **sélecteur de comptes peuplé** (« Société Générale… — CI93 SGCI 0123… »), N° de compte appliqué automatiquement ; seed restauré ; **0 erreur console**. Le garde « banque vide » préserve les attributions déjà enregistrées (pas d'écrasement).
+
+### Déploiement
+
+- Aucune migration. Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-08 — Contractualisation : commission figée par mode — PSL/PSO → COPE, AOO (et dérivés) → COJO (ECR02A)
 
 > **Modif #154 (V5 de la refonte CONTRACTUALISATION).** Le « Type de commission » est désormais **imposé par le mode de passation** : **PSL/PSO → COPE** systématiquement, **AOO et tous ses dérivés** (AOO_PREQUALIF, AOO_2ETAPES, AOO_CONCOURS, via `resolveBaseMode`) **→ COJO** systématiquement. Le select est alors **pré-sélectionné et verrouillé** (disabled), avec un libellé d'aide explicite. Les autres modes (PI…) restent **libres**.

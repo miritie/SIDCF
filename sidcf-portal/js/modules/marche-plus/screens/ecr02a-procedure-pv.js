@@ -547,7 +547,10 @@ export async function renderProcedurePV(params) {
       // à l'Enregistrement. Liste d'entreprises chargée pour la sélection assistée.
       let _entreprisesForLots = [];
       dataService.query(ENTITIES.MP_ENTREPRISE).then(list => {
-        _entreprisesForLots = (list || []).map(e => ({ raisonSociale: e.raisonSociale, ncc: e.ncc }));
+        // Modif #155 — on transporte l'entrepriseId pour que l'attributaire
+        // reconduit à l'Enregistrement puisse charger la fiche maître (comptes
+        // bancaires à éventuellement sélectionner, #137).
+        _entreprisesForLots = (list || []).map(e => ({ raisonSociale: e.raisonSociale, ncc: e.ncc, entrepriseId: e.id }));
         // Re-monte une fois la liste arrivée pour alimenter la datalist.
         if (document.getElementById('lots-widget-root')) mountLots(allotissement);
       }).catch(() => {});

@@ -407,9 +407,24 @@ export async function renderAttribution(params) {
       const procLot = lots.find(l => l.id === currentLotId) || (currentLotId ? null : lots[0]);
       const dejaSaisi = existingAttribution?.attributaire?.entreprises?.length > 0;
       if (!dejaSaisi && procLot?.attributaire?.entreprises?.length > 0) {
+        // Modif #155 — enrichir chaque entreprise reconduite avec sa fiche
+        // maître (entrepriseId → comptes bancaires, coordonnées) pour que le
+        // sélecteur de comptes (#137) se relie automatiquement. On préserve les
+        // valeurs de désignation (raisonSociale/ncc) en cas de divergence.
+        const enriched = [];
+        for (const e of procLot.attributaire.entreprises) {
+          let full = { ...e };
+          if (e.entrepriseId) {
+            try {
+              const master = await dataService.get(ENTITIES.MP_ENTREPRISE, e.entrepriseId);
+              if (master) full = { ...master, ...e, entrepriseId: e.entrepriseId };
+            } catch (_e) { /* fiche maître indisponible : on garde l'identité reconduite */ }
+          }
+          enriched.push(full);
+        }
         existingAttribution.attributaire = {
           singleOrGroup: procLot.attributaire.singleOrGroup || 'SIMPLE',
-          entreprises: procLot.attributaire.entreprises.map(e => ({ ...e }))
+          entreprises: enriched
         };
       }
     }
@@ -678,6 +693,22 @@ function renderAttributaireSection(attributaire, registries) {
     : [];
   _coTitulairesState.length = 0;
   initialCoTitulaires.forEach(c => _coTitulairesState.push(c));
+
+  // Modif #155 — Au montage, si un attributaire est déjà désigné (reconduit de
+  // la contractualisation ou édition) et qu'aucune banque n'est encore saisie,
+  // on peuple le sélecteur de comptes du titulaire à partir de sa fiche maître
+  // (comptes / compte legacy). Le garde « banque vide » évite d'écraser une
+  // attribution déjà enregistrée.
+  const _hasCompteData = (ent) => !!(ent && ((Array.isArray(ent.comptes) && ent.comptes.length) || ent.compte?.numero || ent.banque?.code || ent.banque?.libelle));
+  setTimeout(() => {
+    if (singleOrGroup === 'SIMPLE' && _hasCompteData(entrepriseSimple)) {
+      const b = document.getElementById('attr-banque');
+      if (b && !b.value) _populateComptesSelect('attr', entrepriseSimple);
+    } else if (singleOrGroup === 'GROUPEMENT' && _hasCompteData(mandataire)) {
+      const b = document.getElementById('attr-mandataire-banque');
+      if (b && !b.value) _populateComptesSelect('attr-mandataire', mandataire);
+    }
+  }, 220);
 
   return el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [

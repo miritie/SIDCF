@@ -323,7 +323,13 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
   // ---- Modif #153 (V4) : sous-bloc Attribution par lot --------------------
   const entreprisesOpt = Array.isArray(options.entreprises) ? options.entreprises : [];
   const nccByRs = {};
-  entreprisesOpt.forEach(e => { if (e.raisonSociale) nccByRs[e.raisonSociale] = e.ncc || ''; });
+  const idByRs = {}; // Modif #155 — rs → entrepriseId (pour reconduire les comptes)
+  entreprisesOpt.forEach(e => {
+    if (e.raisonSociale) {
+      nccByRs[e.raisonSociale] = e.ncc || '';
+      if (e.entrepriseId) idByRs[e.raisonSociale] = e.entrepriseId;
+    }
+  });
 
   function makeEntrepriseInput(value, onPick, sanctionHost) {
     const wrap = document.createElement('div');
@@ -336,7 +342,7 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     input.value = value?.raisonSociale || '';
     const runSanction = () => {
       const rs = input.value.trim();
-      if (onPick) onPick({ raisonSociale: rs, ncc: nccByRs[rs] || value?.ncc || '' });
+      if (onPick) onPick({ raisonSociale: rs, ncc: nccByRs[rs] || value?.ncc || '', entrepriseId: idByRs[rs] || value?.entrepriseId || null });
       if (sanctionHost && typeof options.checkSanction === 'function' && rs) {
         Promise.resolve(options.checkSanction(rs)).then(sanction => {
           sanctionHost.innerHTML = '';
@@ -405,7 +411,7 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       const persist = () => {
         // Reconstruit lot.attributaire à partir des inputs courants
         const inputs = [...attribZone.querySelectorAll('.lot-attr-entreprise')];
-        const entreprises = inputs.map(i => ({ raisonSociale: i.value.trim(), ncc: nccByRs[i.value.trim()] || '' })).filter(e => e.raisonSociale);
+        const entreprises = inputs.map(i => { const rs = i.value.trim(); return { raisonSociale: rs, ncc: nccByRs[rs] || '', entrepriseId: idByRs[rs] || null }; }).filter(e => e.raisonSociale);
         updateLot(idx, (l) => {
           l.statut = 'ATTRIBUE';
           l.attributaire = { singleOrGroup, entreprises };
