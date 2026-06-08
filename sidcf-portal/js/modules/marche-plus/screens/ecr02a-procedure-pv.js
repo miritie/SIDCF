@@ -541,6 +541,16 @@ export async function renderProcedurePV(params) {
         { key: 'formulaireSelectionDisponible', label: 'Formulaire de sélection disponible' }
       ] : [];
 
+      // Modif #153 (V4) — attribution PAR LOT (tous modes à lots) : ATTRIBUÉ /
+      // INFRUCTUEUX + attributaire (entreprise unique ou groupement) reconduit
+      // à l'Enregistrement. Liste d'entreprises chargée pour la sélection assistée.
+      let _entreprisesForLots = [];
+      dataService.query(ENTITIES.MP_ENTREPRISE).then(list => {
+        _entreprisesForLots = (list || []).map(e => ({ raisonSociale: e.raisonSociale, ncc: e.ncc }));
+        // Re-monte une fois la liste arrivée pour alimenter la datalist.
+        if (document.getElementById('lots-widget-root')) mountLots(allotissement);
+      }).catch(() => {});
+
       // (Re)monte le widget lots selon le mode d'allotissement courant.
       const mountLots = (allot) => {
         allotissement = allot;
@@ -549,7 +559,12 @@ export async function renderProcedurePV(params) {
         root.innerHTML = '';
         const widget = renderLotsProcedureMP(
           initialLots || [],
-          { defaultLibelle: operation.objet || '', allotissement: allot, lotChecks },
+          {
+            defaultLibelle: operation.objet || '', allotissement: allot, lotChecks,
+            lotAttribution: true,
+            entreprises: _entreprisesForLots,
+            checkSanction: (rs) => checkSanction({ raisonSociale: rs })
+          },
           (updated) => { lotsState = updated; }
         );
         root.appendChild(widget);
@@ -1546,12 +1561,40 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
         if (dAnaT && dJug && new Date(dJug) < new Date(dAnaT)) {
           warnings.push(`${tag} : date de jugement antérieure à l'analyse technique`);
         }
+        // Modif #153 (V4) — issue du lot + attributaire (non bloquant ; sanction
+        // bloquante traitée séparément ci-dessous).
+        if (lot.statut === 'INFRUCTUEUX') {
+          if (!lot.motifInfructueux) warnings.push(`${tag} : motif d'infructuosité manquant`);
+        } else {
+          const ents = lot.attributaire?.entreprises || [];
+          if (!ents.length || !ents[0]?.raisonSociale) warnings.push(`${tag} : attributaire non désigné`);
+        }
       });
     }
     if (warnings.length > 0) {
       window.__mpProcedureWarnings = warnings;
     } else {
       delete window.__mpProcedureWarnings;
+    }
+  }
+
+  // Modif #153 (V4) — Sanction sur un attributaire de lot = REJET bloquant
+  // (cohérent avec PSD/PSC ; couvre tous les modes à lots). On contrôle chaque
+  // entreprise désignée (entreprise unique ou membres de groupement) des lots
+  // marqués ATTRIBUÉ.
+  {
+    const lotsToCheck = Array.isArray(lotsState) ? lotsState : [];
+    for (const lot of lotsToCheck) {
+      if (lot.statut === 'INFRUCTUEUX') continue;
+      const ents = lot.attributaire?.entreprises || [];
+      for (const e of ents) {
+        if (!e?.raisonSociale) continue;
+        const sanction = await checkSanction({ raisonSociale: e.raisonSociale });
+        if (sanction) {
+          alert(`🚫 REJET\n\nLot ${lot.numero || ''} — l'entreprise « ${e.raisonSociale} » fait l'objet d'une sanction (${sanction.typeSanction || 'sanction enregistrée'}).\n\nMotif : ${sanction.motif || '(non précisé)'}\n\nVeuillez choisir une autre entreprise ou faire lever la sanction.`);
+          return;
+        }
+      }
     }
   }
 

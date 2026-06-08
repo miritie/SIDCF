@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-08 — Contractualisation : attribution PAR LOT (ATTRIBUÉ/INFRUCTUEUX + attributaire unique/groupement) + reconduction Enregistrement (ECR02A/ECR03A)
+
+> **Modif #153 (V4 de la refonte CONTRACTUALISATION).** Dans la zone d'allotissement (valable aussi pour lot unique), pour **tous les modes à lots** : (1) **choix explicite ATTRIBUÉ / INFRUCTUEUX** par lot ; (2) si **ATTRIBUÉ** → désignation de l'attributaire, **entreprise unique** OU **groupement** (mandataire + membres ajoutables), en sélection assistée (datalist des entreprises) ; (3) si **INFRUCTUEUX** → **motif en saisie libre** ; (4) **vérification de sanction systématique** sur chaque entreprise désignée → **REJET bloquant** au passage de phase (cohérent PSD/PSC) ; (5) l'attributaire (forme `{ singleOrGroup, entreprises[] }`) est **reconduit à l'Enregistrement** (ECR03A) : pré-remplissage de la section Attributaire depuis `procedure.lots[lot].attributaire`, sans jamais écraser une saisie d'enregistrement existante.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : option `lotAttribution` → sous-bloc « Issue du lot & attributaire » par lot (select statut, type unique/groupement, inputs entreprise + datalist partagée, membres ajout/retrait, motif), avec bannière de sanction live (option `checkSanction`). Données dans `lot.statut`, `lot.attributaire`, `lot.motifInfructueux` (JSONB `lots`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : `mountLots` passe `lotAttribution`, `entreprises` (chargées depuis MP_ENTREPRISE), `checkSanction` ; `handleSave` — **sanction bloquante** sur tout attributaire de lot (tous modes à lots) + avertissements (attributaire manquant / motif manquant).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : reconduction de l'attributaire depuis `procedure.lots[lotId].attributaire` (garde anti-écrasement).
+
+### Impact / Anti-régression
+
+- **DB** : aucune nouvelle colonne — tout vit dans le JSONB `lots` (round-trip camel/snake symétrique). PSD (sans lots) non concerné.
+- **Vérifié bout en bout** (Chrome headless + API Worker) : UI AOO (statut ✅/⛔, type unique/groupement, datalist 33 entreprises, bascule INFRUCTUEUX→motif, GROUPEMENT→mandataire+membres) ; **reconduction** prouvée — attributaire `RECONDUCT-TEST SARL` injecté dans `procedure.lots[0]` → **pré-rempli automatiquement à l'ECR03A** ; seed restauré ; **0 erreur console**.
+- **⚠️ Constat séparé (hors périmètre, à traiter)** : `mp_attribution` n'a pas les colonnes `par_lot`/`attributaire` → la **sauvegarde** de l'Enregistrement multi-lot (ECR03A) échouera en postgres (même classe que #151). La reconduction (#153) ne fait que **pré-remplir** (lecture), donc n'est pas affectée ; une migration mp_attribution sera nécessaire avant de fiabiliser l'écran Enregistrement.
+
+### Déploiement
+
+- Aucune migration. Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-08 — Contractualisation : PSC — nom dossier (DC/TDR), disponibilités par lot, « Formulaire de sélection » (ECR02A)
 
 > **Modif #152 (V3 de la refonte CONTRACTUALISATION).** PSC : (1) carte « Organisation du marché » — ajout du champ **« Nom dossier appel à concurrence »** (sélection **Demande de cotation / Termes de référence (TDR)**, stocké dans `typeDossierAppel`), à côté du **N°** (existant) et de l'**Allotissement** (existant) ; (2) **par lot** (widget lots) — deux cases de disponibilité : **« Bon de commande et/ou devis disponible »** et **« Formulaire de sélection disponible »**, **bloquantes au passage de phase** (chaque lot doit avoir les deux) ; (3) **renommage** « Note de sélection » → **« Formulaire de sélection »** (en-tête + libellé d'upload). Le PV d'ouverture reste transverse (#150).

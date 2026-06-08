@@ -396,7 +396,23 @@ export async function renderAttribution(params) {
 
     // Charger attribution existante (si elle existe déjà), scopée au lot courant
     const rawAttribution = attribution;
-    const existingAttribution = getLotData(rawAttribution, currentLotId);
+    const existingAttribution = { ...getLotData(rawAttribution, currentLotId) };
+
+    // Modif #153 (V4) — Reconduction de l'attributaire désigné en
+    // contractualisation (procedure.lots[lot].attributaire, forme
+    // { singleOrGroup, entreprises[] }). On ne pré-remplit que si l'attribution
+    // de ce lot n'a pas encore son propre attributaire (ne jamais écraser une
+    // saisie d'enregistrement existante).
+    {
+      const procLot = lots.find(l => l.id === currentLotId) || (currentLotId ? null : lots[0]);
+      const dejaSaisi = existingAttribution?.attributaire?.entreprises?.length > 0;
+      if (!dejaSaisi && procLot?.attributaire?.entreprises?.length > 0) {
+        existingAttribution.attributaire = {
+          singleOrGroup: procLot.attributaire.singleOrGroup || 'SIMPLE',
+          entreprises: procLot.attributaire.entreprises.map(e => ({ ...e }))
+        };
+      }
+    }
 
     // Initialiser l'état
     cleRepartitionList = [];

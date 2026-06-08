@@ -308,11 +308,194 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
       });
     }
 
+    // Modif #153 (V4) — Attribution PAR LOT (tous modes, y compris lot unique) :
+    // choix explicite ATTRIBUÉ / INFRUCTUEUX. Si ATTRIBUÉ → désignation de
+    // l'attributaire (entreprise unique OU groupement mandataire + membres),
+    // forme { singleOrGroup, entreprises:[…] } reconduite telle quelle à
+    // l'Enregistrement (ecr03a). Si INFRUCTUEUX → motif en saisie libre.
+    if (options.lotAttribution) {
+      card.appendChild(renderLotAttribution(lot, idx));
+    }
+
     return card;
   };
 
+  // ---- Modif #153 (V4) : sous-bloc Attribution par lot --------------------
+  const entreprisesOpt = Array.isArray(options.entreprises) ? options.entreprises : [];
+  const nccByRs = {};
+  entreprisesOpt.forEach(e => { if (e.raisonSociale) nccByRs[e.raisonSociale] = e.ncc || ''; });
+
+  function makeEntrepriseInput(value, onPick, sanctionHost) {
+    const wrap = document.createElement('div');
+    wrap.className = 'form-field';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-input lot-attr-entreprise';
+    input.setAttribute('list', 'lot-entreprises-datalist');
+    input.placeholder = 'Rechercher / saisir une entreprise…';
+    input.value = value?.raisonSociale || '';
+    const runSanction = () => {
+      const rs = input.value.trim();
+      if (onPick) onPick({ raisonSociale: rs, ncc: nccByRs[rs] || value?.ncc || '' });
+      if (sanctionHost && typeof options.checkSanction === 'function' && rs) {
+        Promise.resolve(options.checkSanction(rs)).then(sanction => {
+          sanctionHost.innerHTML = '';
+          if (sanction) {
+            const b = document.createElement('div');
+            b.style.cssText = 'margin-top:4px;padding:6px 8px;border-radius:4px;background:#f8d7da;color:#842029;font-size:12px;font-weight:600';
+            b.textContent = `🚫 Entreprise sanctionnée — ${sanction.typeSanction || 'sanction'} : ${sanction.motif || 'non précisé'}`;
+            sanctionHost.appendChild(b);
+          }
+        }).catch(() => {});
+      } else if (sanctionHost) { sanctionHost.innerHTML = ''; }
+    };
+    input.addEventListener('input', runSanction);
+    setTimeout(runSanction, 0); // vérifie l'état initial
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  function renderLotAttribution(lot, idx) {
+    const box = document.createElement('div');
+    box.style.cssText = 'margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:10px';
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:12px;font-weight:600;color:#6b7280;margin-bottom:6px';
+    header.textContent = '🏆 Issue du lot & attributaire';
+    box.appendChild(header);
+
+    const attr = lot.attributaire || {};
+    let statut = lot.statut || 'ATTRIBUE';
+    let singleOrGroup = attr.singleOrGroup || 'SIMPLE';
+
+    // Statut ATTRIBUE / INFRUCTUEUX
+    const statutSel = document.createElement('select');
+    statutSel.className = 'form-input lot-attr-statut';
+    statutSel.style.maxWidth = '260px';
+    [['ATTRIBUE', '✅ Attribué'], ['INFRUCTUEUX', '⛔ Infructueux']].forEach(([v, l]) => {
+      const o = document.createElement('option'); o.value = v; o.textContent = l; if (v === statut) o.selected = true; statutSel.appendChild(o);
+    });
+    box.appendChild(statutSel);
+
+    const attribZone = document.createElement('div');
+    attribZone.style.marginTop = '10px';
+    const infructZone = document.createElement('div');
+    infructZone.style.marginTop = '10px';
+    box.appendChild(attribZone);
+    box.appendChild(infructZone);
+
+    // ----- Zone ATTRIBUÉ -----
+    const buildAttribZone = () => {
+      attribZone.innerHTML = '';
+      // Type : entreprise unique / groupement
+      const typeWrap = document.createElement('div');
+      typeWrap.className = 'form-field';
+      const typeLabel = document.createElement('label'); typeLabel.className = 'form-label'; typeLabel.textContent = 'Type d\'attributaire';
+      typeWrap.appendChild(typeLabel);
+      const typeSel = document.createElement('select');
+      typeSel.className = 'form-input lot-attr-type'; typeSel.style.maxWidth = '260px';
+      [['SIMPLE', 'Entreprise unique'], ['GROUPEMENT', 'Groupement']].forEach(([v, l]) => {
+        const o = document.createElement('option'); o.value = v; o.textContent = l; if (v === singleOrGroup) o.selected = true; typeSel.appendChild(o);
+      });
+      typeWrap.appendChild(typeSel);
+      attribZone.appendChild(typeWrap);
+
+      const detail = document.createElement('div');
+      attribZone.appendChild(detail);
+
+      const persist = () => {
+        // Reconstruit lot.attributaire à partir des inputs courants
+        const inputs = [...attribZone.querySelectorAll('.lot-attr-entreprise')];
+        const entreprises = inputs.map(i => ({ raisonSociale: i.value.trim(), ncc: nccByRs[i.value.trim()] || '' })).filter(e => e.raisonSociale);
+        updateLot(idx, (l) => {
+          l.statut = 'ATTRIBUE';
+          l.attributaire = { singleOrGroup, entreprises };
+          l.motifInfructueux = null;
+        });
+      };
+
+      const buildDetail = () => {
+        detail.innerHTML = '';
+        if (singleOrGroup === 'SIMPLE') {
+          const sh = document.createElement('div');
+          const ent = (attr.entreprises && attr.entreprises[0]) || {};
+          detail.appendChild(makeEntrepriseInput(ent, () => persist(), sh));
+          detail.appendChild(sh);
+        } else {
+          // Mandataire + membres
+          const mandLabel = document.createElement('div'); mandLabel.style.cssText = 'font-size:12px;font-weight:600;margin:4px 0'; mandLabel.textContent = 'Mandataire';
+          detail.appendChild(mandLabel);
+          const shM = document.createElement('div');
+          const mand = (attr.entreprises && attr.entreprises[0]) || {};
+          detail.appendChild(makeEntrepriseInput(mand, () => persist(), shM));
+          detail.appendChild(shM);
+          const memLabel = document.createElement('div'); memLabel.style.cssText = 'font-size:12px;font-weight:600;margin:8px 0 4px'; memLabel.textContent = 'Membres du groupement';
+          detail.appendChild(memLabel);
+          const membersHost = document.createElement('div');
+          detail.appendChild(membersHost);
+          const addMember = (val) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin-bottom:6px';
+            const sh = document.createElement('div'); sh.style.flex = '1';
+            const inWrap = makeEntrepriseInput(val, () => persist(), sh);
+            inWrap.style.flex = '1';
+            const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn btn-sm btn-secondary'; rm.textContent = '✕';
+            rm.addEventListener('click', () => { row.remove(); persist(); });
+            const col = document.createElement('div'); col.style.flex = '1'; col.appendChild(inWrap); col.appendChild(sh);
+            row.appendChild(col); row.appendChild(rm);
+            membersHost.appendChild(row);
+          };
+          const existingMembers = (attr.entreprises || []).slice(1);
+          existingMembers.forEach(m => addMember(m));
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button'; addBtn.className = 'btn btn-sm btn-accent'; addBtn.textContent = '+ Ajouter un membre';
+          addBtn.style.marginTop = '4px';
+          addBtn.addEventListener('click', () => { addMember({}); });
+          detail.appendChild(addBtn);
+        }
+      };
+      buildDetail();
+      typeSel.addEventListener('change', () => { singleOrGroup = typeSel.value; buildDetail(); persist(); });
+    };
+
+    // ----- Zone INFRUCTUEUX -----
+    const buildInfructZone = () => {
+      infructZone.innerHTML = '';
+      const wrap = document.createElement('div'); wrap.className = 'form-field';
+      const l = document.createElement('label'); l.className = 'form-label'; l.textContent = 'Motif de l\'infructuosité';
+      wrap.appendChild(l);
+      const ta = document.createElement('textarea');
+      ta.className = 'form-input lot-attr-motif'; ta.rows = 2; ta.placeholder = 'Saisie libre (ex. aucune offre conforme, montants hors enveloppe…)';
+      ta.value = lot.motifInfructueux || '';
+      ta.addEventListener('input', () => { updateLot(idx, (x) => { x.statut = 'INFRUCTUEUX'; x.motifInfructueux = ta.value; x.attributaire = null; }); });
+      wrap.appendChild(ta);
+      infructZone.appendChild(wrap);
+    };
+
+    const applyStatut = () => {
+      if (statut === 'ATTRIBUE') { attribZone.style.display = ''; infructZone.style.display = 'none'; buildAttribZone(); }
+      else { attribZone.style.display = 'none'; infructZone.style.display = ''; buildInfructZone(); }
+    };
+    statutSel.addEventListener('change', () => {
+      statut = statutSel.value;
+      updateLot(idx, (l) => { l.statut = statut; });
+      applyStatut();
+    });
+    applyStatut();
+
+    return box;
+  }
+
   const render = () => {
     container.innerHTML = '';
+
+    // Modif #153 — datalist partagée des entreprises (pour l'attribution par lot).
+    if (options.lotAttribution && entreprisesOpt.length) {
+      const dl = document.createElement('datalist');
+      dl.id = 'lot-entreprises-datalist';
+      entreprisesOpt.slice().sort((a, b) => (a.raisonSociale || '').localeCompare(b.raisonSociale || ''))
+        .forEach(e => { if (e.raisonSociale) { const o = document.createElement('option'); o.value = e.raisonSociale; dl.appendChild(o); } });
+      container.appendChild(dl);
+    }
 
     // Top bar : nombre de lots + ajouter
     const topBar = document.createElement('div');
