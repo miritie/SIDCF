@@ -1043,8 +1043,11 @@ function renderApprobationOrigineSection(existingAttr) {
   const ff = (label, input) => el('div', { className: 'form-field' }, [el('label', { className: 'form-label' }, label), input]);
 
   const visaFields = el('div', { id: 'appr-visa-fields', style: { display: origine === 'VISE_CF' ? 'block' : 'none', marginTop: '12px' } }, [
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+    // Modif #163 — ajout du « N° de l'acte d'approbation » côté visé CF (il
+    // manquait ; la branche « Approuvé autre que CF » en avait déjà un).
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
       ff('N° du visa CF', el('input', { type: 'text', className: 'form-input', id: 'appr-visa-num', value: a.visaNum || '', placeholder: 'N° du visa' })),
+      ff('N° de l\'acte d\'approbation', el('input', { type: 'text', className: 'form-input', id: 'appr-visa-acte-num', value: a.visaActeNum || '', placeholder: 'N° / réf. de l\'acte' })),
       ff('Date du visa CF', el('input', { type: 'date', className: 'form-input', id: 'appr-visa-date', value: a.visaDate || '' }))
     ])
   ]);
@@ -2692,6 +2695,8 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     const approbation = {
       origine: document.querySelector('input[name="appr-origine"]:checked')?.value || 'VISE_CF',
       visaNum: document.getElementById('appr-visa-num')?.value?.trim() || null,
+      // Modif #163 — N° de l'acte d'approbation côté visé CF.
+      visaActeNum: document.getElementById('appr-visa-acte-num')?.value?.trim() || null,
       visaDate: document.getElementById('appr-visa-date')?.value || null,
       organe: document.getElementById('appr-organe')?.value || null,
       acteNum: document.getElementById('appr-acte-num')?.value?.trim() || null,

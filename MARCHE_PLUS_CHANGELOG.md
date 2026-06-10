@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-10 — Approbation (Enregistrement) : ajout du « N° de l'acte d'approbation » côté visé CF (ECR03A)
+
+> **Modif #163** — Retour client sur le bloc « 🏛️ Origine de l'approbation » : la branche **« Marché/Contrat visé CF »** n'avait que *N° du visa CF* + *Date du visa CF*, **sans numéro d'acte** — alors que la branche « Approuvé autre que CF » disposait déjà d'un *N° de l'acte d'approbation*. Ajout du champ **« N° de l'acte d'approbation »** à la branche visé CF (le reste est inchangé).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : champ `#appr-visa-acte-num` ajouté à `appr-visa-fields` (grille passée à 3 colonnes : N° visa / N° acte / Date) ; persistance `approbation.visaActeNum` dans le save.
+
+### Impact / Anti-régression
+
+- Aucune migration spécifique (le champ vit dans le JSONB `approbation` de l'attribution). **Vérifié** (Chrome headless) : champ « N° de l'acte d'approbation » présent côté visé CF, N° visa + Date conservés, **0 erreur console**.
+- ⚠️ Rappel : la **sauvegarde** de l'écran Enregistrement (ECR03A) reste à fiabiliser en postgres (migration `mp_attribution` manquante — colonnes `par_lot`/`attribution`…, cf. constat #153). Le champ #163 sera persisté une fois cette migration faite.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`).
+
+---
+
 ## 2026-06-10 — Type de commission : retrait du commentaire « COJO Admin Centrale / COPE projets… » (ECR02A)
 
 > **Modif #162** — Retour client : le texte d'aide sous « Type de commission » (« COJO pour Admin Centrale, COPE pour projets/collectivités ») est **incorrect** — **COJO et COPE existent dans toutes les administrations**. Le commentaire est **retiré**. Pour les modes où la commission est imposée (#154 : PSL/PSO→COPE, AOO→COJO), le libellé « Commission imposée par le mode de passation : … » est conservé.
