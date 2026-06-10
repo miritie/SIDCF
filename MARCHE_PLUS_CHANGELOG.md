@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-10 — Type de commission : retrait du commentaire « COJO Admin Centrale / COPE projets… » (ECR02A)
+
+> **Modif #162** — Retour client : le texte d'aide sous « Type de commission » (« COJO pour Admin Centrale, COPE pour projets/collectivités ») est **incorrect** — **COJO et COPE existent dans toutes les administrations**. Le commentaire est **retiré**. Pour les modes où la commission est imposée (#154 : PSL/PSO→COPE, AOO→COJO), le libellé « Commission imposée par le mode de passation : … » est conservé.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : `hint` par défaut vidé ; le `<small>` n'est rendu que s'il y a un texte (cas « commission imposée »).
+
+### Impact / Anti-régression
+
+- Cosmétique uniquement, aucune logique modifiée. **Vérifié** (Chrome headless) : PI (mode libre) → plus aucun commentaire ; AOO → « Commission imposée… (COJO) » conservé ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-08 — PSD : montant attribué remonté dans la zone validation + retrait du bloc « Attribution » doublon (ECR02A)
 
 > **Modif #161** — Retour client : pour la **PSD** (et ENTENTE_DIRECTE / GRE), « **Fournisseur (attributaire)** » (zone « Validation du devis / facture proforma ») et le bloc séparé « **Attribution de la contractualisation** » (Attributaire / NCC / Montant) sont **la même chose présentée deux fois** → risque d'incohérence. Correction : le **bloc séparé est retiré** pour ces modes, et le **« Montant attribué (XOF) » est remonté dans la zone validation** (le fournisseur EST l'attributaire). Le bloc séparé **reste** pour CONVENTION / RECONDUCTION qui s'appuient dessus pour saisir l'attributaire.

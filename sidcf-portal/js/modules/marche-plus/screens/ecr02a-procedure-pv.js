@@ -1392,7 +1392,11 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           ]);
           // Valeur initiale : commission figée si applicable, sinon valeur existante.
           sel.value = forced || existingProc.commission || '';
-          let hint = 'COJO pour Admin Centrale, COPE pour projets/collectivités';
+          // Modif #162 — commentaire « COJO Admin Centrale / COPE projets… »
+          // retiré (incorrect : COJO et COPE existent dans toutes les
+          // administrations). Seule l'info « commission imposée » subsiste quand
+          // le mode la verrouille (#154).
+          let hint = '';
           if (forced) {
             sel.disabled = true;
             const label = (registries.TYPE_COMMISSION || []).find(c => c.code === forced)?.label || forced;
@@ -1401,7 +1405,7 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           return el('div', { className: 'form-field' }, [
             el('label', { className: 'form-label' }, ['Type de commission', el('span', { className: 'required' }, '*')]),
             sel,
-            el('small', { className: 'text-muted' }, hint)
+            hint ? el('small', { className: 'text-muted' }, hint) : null
           ]);
         })(),
 
