@@ -13,6 +13,33 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-10 — Gré à gré / Entente directe : alerte correcte + attributaire persisté et reconduit (ECR02A/ECR03A)
+
+> **Modif #167** — Analyse + corrections sur le **gré à gré**. Constats : (a) le gré à gré est bien un mode de passation = **`ENTENTE_DIRECTE`** (« Gré à gré / Entente directe, exceptionnel », famille DÉROGATOIRE) ; **`GRE`** est un **code legacy** des données seed, synonyme. (b) Ce mode réutilise le formulaire PSD et affichait à tort **« Procédure simplifiée »** (qui ne concerne que la PSD). (c) **Bug** : la branche de sauvegarde n'incluait pas `GRE` → le « Fournisseur (attributaire) » n'était **pas persisté** pour le gré à gré, donc rien ne remontait à l'enregistrement. (d) Pour les modes **sans lots** (PSD / gré à gré), l'attributaire (le fournisseur) **n'était pas reconduit** à l'enregistrement.
+
+### Corrections
+
+- **Alerte mode-aware** (`renderProcedureDetailsForm`) : gré à gré → « Gré à gré / Entente directe (exceptionnel) — attribution directe au fournisseur, repris à l'enregistrement » ; PSD → « Procédure simplifiée… ». *(Le texte est purement informatif : il n'influence pas les statistiques, qui comptent par code `modePassation`.)*
+- **Sauvegarde** (`handleSave`) : `GRE` ajouté à la branche PSD/ENTENTE_DIRECTE → le fournisseur=attributaire + montant sont persistés dans `procedure.attribution`.
+- **Reconduction** (`ecr03a-attribution.js`) : pour les modes sans lots, l'attributaire est reconduit depuis `procedure.attribution.raisonSociale` (entreprise unique, enrichie de la fiche maître) — l'attributaire du gré à gré/PSD réapparaît à l'enregistrement.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` (alerte + branche de save `GRE`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` (reconduction no-lot depuis `procedure.attribution`).
+
+### Impact / Anti-régression
+
+- Aucune migration (`attribution` JSONB existe). `GRE` est traité comme `ENTENTE_DIRECTE` dans le parcours de contractualisation (déjà le cas pour le formulaire). Les lot-modes (reconduction par lot) inchangés (le repli no-lot ne s'active que sans attributaire de lot).
+- **Vérifié bout en bout** (Chrome headless + Neon) : op GRE → alerte « Gré à gré / Entente directe », **plus de « Procédure simplifiée »**, fournisseur=attributaire + montant ; save → persistance `attribution = { raison_sociale, montant_attribue: 5 000 000 }` ; **ECR03A pré-rempli** avec l'attributaire (« RT167 Gré-à-gré SARL ») ; seed restauré ; **0 erreur console**.
+- ℹ️ Note legacy : les opérations seed portant le code `GRE` conservent ce code (pas de migration de données ici) ; une normalisation `GRE → ENTENTE_DIRECTE` côté données reste possible ultérieurement si souhaité.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-10 — Lots : « PV d'analyse » → « Rapport d'analyse » (tous les modes) (widget lots)
 
 > **Modif #166** — Retour client (à corriger pour tous les modes de passation) : les documents d'analyse sont des **rapports d'analyse**, pas des **PV**. Renommage dans le bloc « Procès-verbaux » par lot : **PV d'analyse technique / financière / tech & fin (combiné) → Rapport d'analyse …**. Le **PV de jugement** reste un PV (c'est bien un procès-verbal). En-tête de section adapté.

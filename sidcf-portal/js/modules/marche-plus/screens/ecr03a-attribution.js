@@ -426,6 +426,19 @@ export async function renderAttribution(params) {
           singleOrGroup: procLot.attributaire.singleOrGroup || 'SIMPLE',
           entreprises: enriched
         };
+      } else if (!dejaSaisi && !(procLot?.attributaire?.entreprises?.length > 0) && procedure?.attribution?.raisonSociale) {
+        // Modif #167 — Modes SANS lots (PSD / gré à gré / entente directe) :
+        // l'attributaire est le « Fournisseur (attributaire) » saisi à la
+        // contractualisation (procedure.attribution = { raisonSociale, ncc,
+        // montantAttribue }). On le reconduit ici en entreprise unique pour que
+        // l'agent retrouve l'attributaire à l'enregistrement.
+        let full = { raisonSociale: procedure.attribution.raisonSociale, ncc: procedure.attribution.ncc || '' };
+        try {
+          const list = await dataService.query(ENTITIES.MP_ENTREPRISE);
+          const master = (list || []).find(e => e.raisonSociale === procedure.attribution.raisonSociale);
+          if (master) full = { ...master, raisonSociale: master.raisonSociale, ncc: master.ncc || procedure.attribution.ncc || '', entrepriseId: master.id };
+        } catch (_e) { /* base entreprises indisponible : on garde l'identité reconduite */ }
+        existingAttribution.attributaire = { singleOrGroup: 'SIMPLE', entreprises: [full] };
       }
     }
 

@@ -1108,6 +1108,13 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
   // techniques et noms de champs en base restent inchangés (proc-ref-devis,
   // refDevis, docDevis, …) pour préserver les données existantes.
   if (mode === 'PSD' || mode === 'ENTENTE_DIRECTE' || mode === 'GRE') {
+    // Modif #167 — Le gré à gré / entente directe (ENTENTE_DIRECTE, alias legacy
+    // GRE) est un mode DÉROGATOIRE — pas une « procédure simplifiée < 10M »
+    // (qui est la PSD). Le texte d'alerte est donc adapté au mode (l'intitulé
+    // « Procédure simplifiée » induisait en erreur). N.B. : ce texte est
+    // purement informatif — il n'influence pas les statistiques (qui comptent
+    // par code de mode `modePassation`).
+    const isGreAGre = mode === 'ENTENTE_DIRECTE' || mode === 'GRE';
     return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
         el('h3', { className: 'card-title' }, '📋 Validation du devis / facture proforma')
@@ -1116,8 +1123,10 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
         el('div', { className: 'alert alert-info', style: { marginBottom: '16px' } }, [
           el('div', { className: 'alert-icon' }, 'ℹ️'),
           el('div', { className: 'alert-content' }, [
-            el('div', { className: 'alert-title' }, 'Procédure simplifiée'),
-            el('div', { className: 'alert-message' }, 'Pour les marchés < 10M XOF, une simple validation du devis / facture proforma suffit. Pas de commission ni de PV requis.')
+            el('div', { className: 'alert-title' }, isGreAGre ? 'Gré à gré / Entente directe (exceptionnel)' : 'Procédure simplifiée'),
+            el('div', { className: 'alert-message' }, isGreAGre
+              ? 'Mode dérogatoire : attribution directe au fournisseur retenu. Le fournisseur saisi ci-dessous est l\'attributaire et sera repris à l\'étape d\'enregistrement du marché.'
+              : 'Pour les marchés < 10M XOF, une simple validation du devis / facture proforma suffit. Pas de commission ni de PV requis.')
           ])
         ]),
 
@@ -1540,8 +1549,12 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
     modePassation: selectedMode
   };
 
-  // PSD / ENTENTE_DIRECTE - Simplified procedure
-  if (selectedMode === 'PSD' || selectedMode === 'ENTENTE_DIRECTE') {
+  // PSD / ENTENTE_DIRECTE / GRE (gré à gré) — formulaire « devis / proforma ».
+  // Modif #167 — `GRE` (alias legacy d'ENTENTE_DIRECTE) était absent de cette
+  // branche : le fournisseur=attributaire n'était donc PAS sauvegardé pour le
+  // gré à gré. Corrigé pour que l'attributaire soit persisté et reconduit à
+  // l'enregistrement (cohérent avec le formulaire qui inclut déjà GRE).
+  if (selectedMode === 'PSD' || selectedMode === 'ENTENTE_DIRECTE' || selectedMode === 'GRE') {
     const fournisseur = document.getElementById('proc-fournisseur')?.value?.trim();
     // Modif #151 (V2) — la référence devis n'est plus obligatoire (renseignement).
     const refDevis = document.getElementById('proc-ref-devis')?.value?.trim();
