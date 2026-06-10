@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-10 — Contractualisation : « Rapport d'évaluation », retrait du « Motif de sélection », dossier CFN = « Demande de consultation de fournisseurs » (ECR02A)
+
+> **Modif #165** — Trois retours client sur la contractualisation : (1) **« Formulaire de sélection » → « Rapport d'évaluation »** (en-tête PSC, libellé d'upload, et case de disponibilité par lot) ; (2) **suppression du champ « Motif de sélection »** (PSC) — la suppression avait été demandée pour tous les modes ; (3) **CFN** : le dossier d'appel à la concurrence est une **« Demande de consultation de fournisseurs »** (et non un DAO) → le champ « Nom dossier appel à concurrence » est désormais affiché pour CFN avec cette valeur imposée ; le placeholder du N° de dossier devient neutre (« Ex: réf. dossier 2024-007 ») au lieu de « Ex: DAO-2024-007 ».
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` :
+  - Renommages « Rapport d'évaluation » (en-tête, label PDF `proc-note-selection`, case par lot `formulaireSelectionDisponible` — clé inchangée — et message de blocage par lot).
+  - Suppression du `<select> #proc-motif-selection` (UI) et de `motifSelection` dans le save PSC.
+  - Carte Organisation : « Nom dossier appel à concurrence » étendu à **CFN** (option unique « Demande de consultation de fournisseurs », valeur imposée `DCF`) ; placeholder du N° neutralisé.
+
+### Impact / Anti-régression
+
+- Aucune migration (`typeDossierAppel` existe ; la clé per-lot `formulaireSelectionDisponible` est conservée — seul le libellé change). `motifSelection` n'est plus écrit (les valeurs existantes restent en base, simplement non affichées).
+- **Vérifié** (Chrome headless) : PSC → « Rapport d'évaluation » présent, **plus de « Formulaire de sélection » ni « Motif de sélection »**, Nom dossier = DC/TDR ; bascule mode → **CFN** → Nom dossier = « Demande de consultation de fournisseurs » ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-10 — Frise workflow : retrait de l'étape « Approbation » (fusionnée dans l'Enregistrement) (fiche de vie)
 
 > **Modif #164** — Retour client : l'**étape « Approbation » à part entière n'existe plus** dans le workflow (fusionnée dans l'Enregistrement, #131/#132), mais elle apparaissait encore dans le **timeline (frise)** en haut de la fiche **et** dans les boutons « SUIVI DU PROCESSUS ». Elle est **retirée** des deux (la phase `VISA_CF` n'est plus listée). La **cohérence d'état existante est préservée** : pour un marché visé/en exécution, l'Enregistrement passe « terminé » et l'Exécution « en cours » sans étape Approbation intermédiaire (logique « VISE → Exécution quand VISA_CF absente », déjà présente dans `steps-mp.js`).

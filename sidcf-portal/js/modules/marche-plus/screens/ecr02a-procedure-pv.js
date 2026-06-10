@@ -610,7 +610,7 @@ export async function renderProcedurePV(params) {
       // sélection »). Bloquantes au passage de phase (cf. handleSave).
       const lotChecks = mode === 'PSC' ? [
         { key: 'bcDevisDisponible', label: 'Bon de commande et/ou devis disponible' },
-        { key: 'formulaireSelectionDisponible', label: 'Formulaire de sélection disponible' }
+        { key: 'formulaireSelectionDisponible', label: 'Rapport d\'évaluation disponible' }
       ] : [];
 
       // Modif #153 (V4) — attribution PAR LOT (tous modes à lots) : ATTRIBUÉ /
@@ -659,21 +659,28 @@ export async function renderProcedurePV(params) {
               el('label', { className: 'form-label' }, 'N° du dossier d\'appel à concurrence'),
               el('input', {
                 type: 'text', className: 'form-input', id: 'proc-num-dossier',
-                placeholder: 'Ex: DAO-2024-007',
+                // Modif #165 — placeholder neutre (le type du dossier est porté par
+                // le champ « Nom dossier » ; « DAO » n'est pas valable pour CFN, etc.).
+                placeholder: 'Ex: réf. dossier 2024-007',
                 value: procedureData?.numeroDossierAppel || ''
               })
             ]),
-            // Modif #152 (V3) — PSC : « Nom dossier appel à concurrence » (sélection
-            // Demande de cotation / Termes de référence), stocké dans typeDossierAppel.
-            mode === 'PSC' ? el('div', { className: 'form-field' }, [
+            // Modif #152 (V3) / #165 — « Nom dossier appel à concurrence ».
+            //  · PSC → Demande de cotation / Termes de référence (TDR)
+            //  · CFN → Demande de consultation de fournisseurs (et non DAO)
+            (mode === 'PSC' || mode === 'CFN') ? el('div', { className: 'form-field' }, [
               el('label', { className: 'form-label' }, 'Nom dossier appel à concurrence'),
               (() => {
-                const sel = el('select', { className: 'form-input', id: 'proc-nom-dossier' }, [
-                  el('option', { value: '' }, '-- Sélectionner --'),
-                  el('option', { value: 'DC' }, 'Demande de cotation'),
-                  el('option', { value: 'TDR' }, 'Termes de référence (TDR)')
-                ]);
-                sel.value = procedureData?.typeDossierAppel || '';
+                const options = mode === 'CFN'
+                  ? [el('option', { value: 'DCF' }, 'Demande de consultation de fournisseurs')]
+                  : [
+                      el('option', { value: '' }, '-- Sélectionner --'),
+                      el('option', { value: 'DC' }, 'Demande de cotation'),
+                      el('option', { value: 'TDR' }, 'Termes de référence (TDR)')
+                    ];
+                const sel = el('select', { className: 'form-input', id: 'proc-nom-dossier' }, options);
+                // CFN : valeur imposée DCF (seule option) ; PSC : valeur existante.
+                sel.value = mode === 'CFN' ? 'DCF' : (procedureData?.typeDossierAppel || '');
                 return sel;
               })()
             ]) : null,
@@ -1264,9 +1271,10 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
           ])
         ]),
 
-        // Formulaire de sélection (ex « Note de sélection » — Modif #152 V3 : renommage maquette)
+        // Rapport d'évaluation (ex « Note de sélection » #109 → « Formulaire de
+        // sélection » #152 → « Rapport d'évaluation » #165).
         el('div', { style: { marginTop: '24px', marginBottom: '8px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
-          el('strong', {}, '📄 Formulaire de sélection'),
+          el('strong', {}, '📄 Rapport d\'évaluation'),
           el('button', {
             type: 'button',
             className: 'btn btn-sm btn-secondary',
@@ -1289,19 +1297,12 @@ function renderProcedureDetailsForm(procedure, operation, registries, mode) {
             el('div', { id: 'proc-sanction-banner' })
           ]),
 
-          // Motif de sélection
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Motif de sélection'),
-            el('select', { className: 'form-input', id: 'proc-motif-selection' }, [
-              el('option', { value: 'MOINS_DISANT', selected: existingProc.motifSelection === 'MOINS_DISANT' }, 'Moins-disant'),
-              el('option', { value: 'MIEUX_DISANT', selected: existingProc.motifSelection === 'MIEUX_DISANT' }, 'Mieux-disant'),
-              el('option', { value: 'UNIQUE_REPONSE', selected: existingProc.motifSelection === 'UNIQUE_REPONSE' }, 'Unique réponse conforme')
-            ])
-          ]),
+          // Modif #165 — « Motif de sélection » supprimé (demande de suppression
+          // pour tous les modes).
 
-          // Formulaire de sélection (PDF) — ex « Note de sélection »
+          // Rapport d'évaluation (PDF) — ex « Note de sélection » / « Formulaire de sélection »
           el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Formulaire de sélection (PDF)'),
+            el('label', { className: 'form-label' }, 'Rapport d\'évaluation (PDF)'),
             el('input', {
               type: 'file',
               className: 'form-input',
@@ -1616,7 +1617,7 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       .map((l, i) => ({ tag: l.libelle ? `LOT ${l.numero || i + 1} (${l.libelle})` : `LOT ${l.numero || i + 1}`, ok: l.bcDevisDisponible === true && l.formulaireSelectionDisponible === true }))
       .filter(x => !x.ok);
     if (lotsIncomplets.length) {
-      alert(`⚠️ Avant de passer à l'étape suivante, marquez la disponibilité (bon de commande/devis ET formulaire de sélection) pour :\n\n• ${lotsIncomplets.map(x => x.tag).join('\n• ')}`);
+      alert(`⚠️ Avant de passer à l'étape suivante, marquez la disponibilité (bon de commande/devis ET rapport d'évaluation) pour :\n\n• ${lotsIncomplets.map(x => x.tag).join('\n• ')}`);
       return;
     }
 
@@ -1628,9 +1629,10 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
       nbFournisseursConsultes: nbFournisseurs,
       dateComparaison: document.getElementById('proc-date-comparaison')?.value || null,
       fournisseurRetenu: fournisseurRetenu,
-      motifSelection: document.getElementById('proc-motif-selection')?.value || 'MOINS_DISANT',
-      noteSelection: document.getElementById('proc-note-selection')?.files?.[0] ? 'NOTE_SEL_' + Date.now() + '.pdf' : null,
-      // Modif #152 (V3) — « Nom dossier appel à concurrence » (DC / TDR).
+      // Modif #165 — « Motif de sélection » supprimé (tous modes).
+      // Modif #165 — « Rapport d'évaluation » (ex note/formulaire de sélection).
+      noteSelection: document.getElementById('proc-note-selection')?.files?.[0] ? 'RAPPORT_EVAL_' + Date.now() + '.pdf' : null,
+      // Modif #152 (V3) / #165 — « Nom dossier appel à concurrence » (PSC : DC/TDR ; CFN : DCF).
       typeDossierAppel: document.getElementById('proc-nom-dossier')?.value || null
     };
   }
