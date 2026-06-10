@@ -49,7 +49,6 @@ const DEFAULT_PHASE_CONFIG = {
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Contractualisation', sous_titre: 'Validation DGMP & Commission COJO', icon: '📝', color: 'orange', order: 2 },
     { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Attributaire & garanties', icon: '✅', color: 'green', order: 3 },
-    { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Avenants', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & Clôture', icon: '🏁', color: 'gray', order: 6 }
   ],
@@ -57,7 +56,6 @@ const DEFAULT_PHASE_CONFIG = {
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Contractualisation', sous_titre: 'Validation DGMP & Commission COJO', icon: '📝', color: 'orange', order: 2 },
     { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Attributaire & garanties', icon: '✅', color: 'green', order: 3 },
-    { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Avenants', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & Clôture', icon: '🏁', color: 'gray', order: 6 }
   ],
@@ -65,7 +63,6 @@ const DEFAULT_PHASE_CONFIG = {
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Contractualisation', sous_titre: 'DAO validé DGMP & Commission COJO', icon: '📝', color: 'orange', order: 2 },
     { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Attributaire & garanties', icon: '✅', color: 'green', order: 3 },
-    { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'OS & Suivi', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réceptions & Clôture', icon: '🏁', color: 'gray', order: 6 }
   ],
@@ -73,7 +70,6 @@ const DEFAULT_PHASE_CONFIG = {
     { code: 'PLANIF', titre: 'Planification', sous_titre: 'Inscription au PPM', icon: '📋', color: 'blue', order: 1 },
     { code: 'PROCEDURE', titre: 'Contractualisation', sous_titre: 'AMI/DP & Sélection technique', icon: '📝', color: 'orange', order: 2 },
     { code: 'ATTRIBUTION', titre: 'Enregistrement de marché', sous_titre: 'Contrat de prestation', icon: '✅', color: 'green', order: 3 },
-    { code: 'VISA_CF', titre: 'Approbation', sous_titre: 'Organe approbateur', icon: '🔍', color: 'yellow', order: 4 },
     { code: 'EXECUTION', titre: 'Exécution', sous_titre: 'Ordre de service & Suivi', icon: '⚙️', color: 'purple', order: 5 },
     { code: 'CLOTURE', titre: 'Clôture', sous_titre: 'Réception des livrables', icon: '🏁', color: 'gray', order: 6 }
   ]
@@ -107,24 +103,23 @@ async function fetchPhasesFromAPI(modePassation) {
     }
     const phases = await response.json();
 
-    // Mapper les noms de colonnes API vers le format attendu
-    // Marché+ : si l'API renvoie le code VISA_CF avec un libellé hérité (« Engagement »,
-    // « Visa CF »…), on force « Approbation » côté UI Marché+.
-    return phases.map(p => {
-      const isApprobation = p.phaseCode === 'VISA_CF';
+    // Modif #164 — L'étape « Approbation » (VISA_CF) n'existe plus comme étape
+    // distincte du workflow (fusionnée dans l'Enregistrement, #131/#132) : on la
+    // retire de la frise et des boutons de suivi, quoi que renvoie l'API. La
+    // cohérence d'état est déjà assurée (VISE → Exécution quand VISA_CF est
+    // absente, cf. steps-mp.js / getStepStatus).
+    return phases.filter(p => p.phaseCode !== 'VISA_CF').map(p => {
       // Modif #92 — CR 6.c : l'étape ATTRIBUTION s'affiche « Enregistrement de
-      // marché » quel que soit le libellé stocké en base (même logique que
-      // VISA_CF → « Approbation »).
+      // marché » quel que soit le libellé stocké en base.
       const isEnregistrement = p.phaseCode === 'ATTRIBUTION';
       // Modif #95 — la phase PROCEDURE s'affiche « Contractualisation » quel que
       // soit le libellé stocké en base (cohérence avec le bandeau/titre/badge).
       const isContractualisation = p.phaseCode === 'PROCEDURE';
       return {
         code: p.phaseCode,
-        titre: isApprobation ? 'Approbation'
-             : (isEnregistrement ? 'Enregistrement de marché'
+        titre: (isEnregistrement ? 'Enregistrement de marché'
              : (isContractualisation ? 'Contractualisation' : p.titre)),
-        sous_titre: isApprobation ? 'Organe approbateur' : (isEnregistrement ? 'Attributaire & garanties' : p.sousTitre),
+        sous_titre: (isEnregistrement ? 'Attributaire & garanties' : p.sousTitre),
         icon: p.icon,
         color: p.color,
         order: p.phaseOrder,

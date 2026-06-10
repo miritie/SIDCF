@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-10 — Frise workflow : retrait de l'étape « Approbation » (fusionnée dans l'Enregistrement) (fiche de vie)
+
+> **Modif #164** — Retour client : l'**étape « Approbation » à part entière n'existe plus** dans le workflow (fusionnée dans l'Enregistrement, #131/#132), mais elle apparaissait encore dans le **timeline (frise)** en haut de la fiche **et** dans les boutons « SUIVI DU PROCESSUS ». Elle est **retirée** des deux (la phase `VISA_CF` n'est plus listée). La **cohérence d'état existante est préservée** : pour un marché visé/en exécution, l'Enregistrement passe « terminé » et l'Exécution « en cours » sans étape Approbation intermédiaire (logique « VISE → Exécution quand VISA_CF absente », déjà présente dans `steps-mp.js`).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/phase-helper-mp.js` : phase `VISA_CF` (« Approbation ») retirée de `DEFAULT_PHASE_CONFIG` (PSL/PSO/AOO/PI) et filtrée dans `fetchPhasesFromAPI` (chemin API).
+- `sidcf-portal/js/ui/widgets/steps-mp.js` : entrée `VISA_CF` retirée du fallback `LIFECYCLE_STEPS`. La frise (`renderStepsAsync`) et les boutons de suivi (`renderPhaseNavButtons`) consomment la même liste filtrée.
+
+### Impact / Anti-régression
+
+- La route `/mp/visa-cf` reste mappée vers l'écran d'enregistrement (anciens liens). L'écran/section de détail « Approbation » (données du visa CF) reste accessible dans le corps de la fiche (affichage des données existantes) — seule l'**étape du workflow** est retirée.
+- **Vérifié bout en bout** (Chrome headless, marché AOO en exécution) : frise = Planification → Contractualisation → Enregistrement (done) → Exécution (current) → Clôture (todo), **plus d'Approbation** ; boutons SUIVI sans Approbation ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-10 — Approbation (Enregistrement) : ajout du « N° de l'acte d'approbation » côté visé CF (ECR03A)
 
 > **Modif #163** — Retour client sur le bloc « 🏛️ Origine de l'approbation » : la branche **« Marché/Contrat visé CF »** n'avait que *N° du visa CF* + *Date du visa CF*, **sans numéro d'acte** — alors que la branche « Approuvé autre que CF » disposait déjà d'un *N° de l'acte d'approbation*. Ajout du champ **« N° de l'acte d'approbation »** à la branche visé CF (le reste est inchangé).

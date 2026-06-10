@@ -35,13 +35,9 @@ export const LIFECYCLE_STEPS = [
     route: '/mp/attribution',
     description: 'Attributaire & garanties'
   },
-  {
-    code: 'VISA_CF',
-    label: 'Visa CF',
-    icon: '🔍',
-    route: '/mp/visa-cf',
-    description: 'Contrôle financier'
-  },
+  // Modif #164 — étape « Visa CF / Approbation » retirée de la frise (fusionnée
+  // dans l'Enregistrement, #131/#132). La route /mp/visa-cf reste mappée vers
+  // l'écran d'enregistrement pour les anciens liens.
   {
     code: 'EXECUTION',
     label: 'Exécution',
