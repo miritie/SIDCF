@@ -291,7 +291,9 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     pvHeader.style.fontWeight = '600';
     pvHeader.style.color = '#6b7280';
     pvHeader.style.margin = '8px 0 6px';
-    pvHeader.textContent = '📄 Procès-verbaux (le PV combiné est une alternative aux PV technique + financier séparés)';
+    // Modif #166 — « PV d'analyse » → « Rapport d'analyse » (tous modes). Le PV
+    // de jugement reste un PV. En-tête adapté.
+    pvHeader.textContent = '📄 Rapports d\'analyse & PV de jugement (le rapport combiné est une alternative aux rapports technique + financier séparés)';
     card.appendChild(pvHeader);
 
     const gridPv = document.createElement('div');
@@ -327,9 +329,9 @@ export function renderLotsProcedureMP(lots = [], options = {}, onChange = null) 
     // Modif #150 — Le PV d'ouverture n'est plus par lot : il est transverse
     // (valable pour tous les lots d'un même processus) et géré au niveau
     // procédure dans ecr02a. Il est donc retiré d'ici.
-    gridPv.appendChild(mkPv('PV d\'analyse technique', 'analyseTechnique', 'PV_ANATECH'));
-    gridPv.appendChild(mkPv('PV d\'analyse financière', 'analyseFinanciere', 'PV_ANAFIN'));
-    gridPv.appendChild(mkPv('PV analyse tech & fin (combiné)', 'analyseTechFin', 'PV_ANATECHFIN'));
+    gridPv.appendChild(mkPv('Rapport d\'analyse technique', 'analyseTechnique', 'RAPPORT_ANATECH'));
+    gridPv.appendChild(mkPv('Rapport d\'analyse financière', 'analyseFinanciere', 'RAPPORT_ANAFIN'));
+    gridPv.appendChild(mkPv('Rapport d\'analyse tech & fin (combiné)', 'analyseTechFin', 'RAPPORT_ANATECHFIN'));
     gridPv.appendChild(mkPv('PV de jugement', 'jugement', 'PV_JUG'));
     card.appendChild(gridPv);
 

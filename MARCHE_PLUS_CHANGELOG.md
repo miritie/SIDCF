@@ -13,6 +13,25 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-10 — Lots : « PV d'analyse » → « Rapport d'analyse » (tous les modes) (widget lots)
+
+> **Modif #166** — Retour client (à corriger pour tous les modes de passation) : les documents d'analyse sont des **rapports d'analyse**, pas des **PV**. Renommage dans le bloc « Procès-verbaux » par lot : **PV d'analyse technique / financière / tech & fin (combiné) → Rapport d'analyse …**. Le **PV de jugement** reste un PV (c'est bien un procès-verbal). En-tête de section adapté.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/lots-procedure-mp.js` : libellés des 3 documents d'analyse renommés en « Rapport d'analyse … » ; en-tête « 📄 Rapports d'analyse & PV de jugement … » ; préfixe de nom de fichier généré aligné (`RAPPORT_ANATECH…`). Clés de données inchangées (`analyseTechnique` / `analyseFinanciere` / `analyseTechFin`).
+
+### Impact / Anti-régression
+
+- Aucune migration ; renommage d'affichage uniquement (les documents déjà chargés conservent leur nom). S'applique à **tous les modes** (widget lots partagé).
+- **Vérifié** (Chrome headless, AOO multi-lots) : « Rapport d'analyse technique/financière/combiné » présents, **plus de « PV d'analyse »**, « PV de jugement » conservé ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-10 — Contractualisation : « Rapport d'évaluation », retrait du « Motif de sélection », dossier CFN = « Demande de consultation de fournisseurs » (ECR02A)
 
 > **Modif #165** — Trois retours client sur la contractualisation : (1) **« Formulaire de sélection » → « Rapport d'évaluation »** (en-tête PSC, libellé d'upload, et case de disponibilité par lot) ; (2) **suppression du champ « Motif de sélection »** (PSC) — la suppression avait été demandée pour tous les modes ; (3) **CFN** : le dossier d'appel à la concurrence est une **« Demande de consultation de fournisseurs »** (et non un DAO) → le champ « Nom dossier appel à concurrence » est désormais affiché pour CFN avec cette valeur imposée ; le placeholder du N° de dossier devient neutre (« Ex: réf. dossier 2024-007 ») au lieu de « Ex: DAO-2024-007 ».
