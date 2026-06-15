@@ -62,7 +62,7 @@ function metaDecision(code) {
  * @param {Array}  opts.avenants      pour calculer le montant global (base + variations)
  * @param {Function} [opts.onSaved]   callback async (decomptesArray) => void
  */
-export function renderOpMandatManager({ operation, decomptes = [], attribution, avenants = [], onSaved } = {}) {
+export function renderOpMandatManager({ operation, decomptes = [], attribution, avenants = [], avanceActive = false, onSaved } = {}) {
   let items = [...decomptes];
 
   // Calculer le montant global du marché : montant attribué (TTC si disponible) + somme des
@@ -337,10 +337,14 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
 
   function openEditorModal(existing) {
     const isEdit = !!existing;
+    // Modif #174 (obs. EHOUMAN) — quand une avance de démarrage est prévue, le tout
+    // premier décompte est « DÉCOMPTE 00 » (restitution de l'avance). On pré-remplit
+    // le numéro pour le premier décompte créé.
+    const defaultNumero = (!isEdit && items.length === 0 && avanceActive) ? 'DÉCOMPTE 00' : '';
     const draft = isEdit ? { ...existing } : {
       id: null,
       operationId: operation.id,
-      numero: '',
+      numero: defaultNumero,
       typeOP: 'OP',
       numeroOP: '',
       numeroMandat: '', // Modif #134 (X-1) — N° de mandat de paiement (anti-doublon facture)
@@ -385,7 +389,11 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     const grid1 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' } });
     grid1.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, ['Numéro de décompte', el('span', { className: 'required' }, '*')]),
-      el('input', { type: 'text', className: 'form-input', id: 'dec-numero', value: draft.numero || '', placeholder: 'Ex : DEC-2026-001' })
+      el('input', { type: 'text', className: 'form-input', id: 'dec-numero', value: draft.numero || '', placeholder: 'Ex : DEC-2026-001' }),
+      defaultNumero
+        ? el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
+            'Avance de démarrage prévue → le 1ᵉʳ décompte est « DÉCOMPTE 00 ».')
+        : null
     ]));
     grid1.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, 'Type d\'OP'),

@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Exécution : table des décomptes + « Décompte 00 » si avance + contrôle livrables↔décomptes (ECR04A)
+
+> **Modif #174** — Observations EHOUMAN (14/06/2026), points 3/6/11.
+> - **#11 Table des décomptes** : le gestionnaire OP/Mandats (`renderOpMandatManager`, entité `MP_DECOMPTE`, déjà présent sur la fiche marché) est désormais **monté à l'étape exécution** (ECR04A), là où EHOUMAN ne le voyait pas. CRUD complet (ajout/édition/suppression, cumuls, taux d'exécution).
+> - **#3 « DÉCOMPTE 00 »** : quand une avance de démarrage est prévue, le **premier** décompte est pré-numéroté « DÉCOMPTE 00 » (option `avanceActive` du widget).
+> - **#6 Contrôle livrables ↔ décomptes** : encart de cohérence (nb livrables du marché · nb décomptes · taux d'exécution cumulé + invite à vérifier la correspondance).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` — chargement `MP_DECOMPTE`, calcul `avanceActive`/`livrablesMarche`, nouvelle section `renderDecomptesSection()` (encart de contrôle + montage du widget), **toujours affichée à l'exécution** (le widget gère son état vide, comme la fiche marché).
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` — option `avanceActive` ; pré-remplissage « DÉCOMPTE 00 » du 1ᵉʳ décompte + indice dans le modal.
+
+### Impact / Anti-régression
+
+- **Aucune migration** : la table `mp_decompte` **existe déjà** (clonée de `decompte` par la migration 014, routée par le Worker `ENTITY_TABLE_MAP['MP_DECOMPTE']`). Le widget persiste via `dataService.add/update/delete(MP_DECOMPTE)` comme sur la fiche marché.
+- L'option `avanceActive` a une **valeur par défaut `false`** → l'autre montage du widget (fiche marché `ecr01c`) est **inchangé**.
+- Le contrôle livrables↔décomptes est une **aide visuelle non bloquante** (un rapprochement automatique fin nécessiterait un lien `livrable` sur le décompte — évolution future).
+- **Vérifié** : `node --check` (2 fichiers).
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Garanties : bloc complété (offre/soumission, retenue, « Autres ») + exclusion PI (ECR03A)
 
 > **Modif #173** — Observations EHOUMAN (14/06/2026), points 9/10 : aligner le bloc « Garanties et Cautionnement » sur la liste métier. Complète la correction des taux (#170).

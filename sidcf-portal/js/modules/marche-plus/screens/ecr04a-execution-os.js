@@ -15,6 +15,7 @@ import { renderPageHeaderMP } from '../../../ui/widgets/page-header-mp.js';
 import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.js';
 import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { isPrestationIntellectuelle, resolveBaseMode } from '../../../lib/procedure-context.js';
+import { renderOpMandatManager } from '../../../ui/widgets/op-mandat-manager-mp.js';
 
 function createButton(className, text, onClick) {
   const btn = el('button', { className }, text);
@@ -86,6 +87,13 @@ export async function renderExecutionOS(params) {
 
   // Attribution scopée au lot pour les calculs/affichage
   const attributionForLot = getLotData(attribution, currentLotId);
+
+  // Modif #174 (obs. EHOUMAN) — table des décomptes du marché à l'étape exécution.
+  const mpDecomptes = await dataService.query(ENTITIES.MP_DECOMPTE, { operationId: idOperation }).catch(() => []);
+  // Avance de démarrage prévue ? (pilote le « DÉCOMPTE 00 » du 1ᵉʳ décompte)
+  const avanceActive = !!(attributionForLot?.avanceDemarrage?.actif || attribution?.avanceDemarrage?.actif);
+  // Livrables du marché (pour le contrôle de cohérence livrables ↔ décomptes)
+  const livrablesMarche = Array.isArray(operation?.livrables) ? operation.livrables : [];
 
   // Vérifier si l'OS de démarrage existe déjà (pour ce lot)
   // Le premier OS créé est considéré comme l'OS de démarrage
@@ -455,6 +463,14 @@ export async function renderExecutionOS(params) {
     ])
   ]);
 
+  // Modif #174 (obs. EHOUMAN) — Table des décomptes du marché + contrôle de
+  // cohérence livrables ↔ décomptes (toujours présente à l'étape exécution ;
+  // le widget gère son propre état vide, comme sur la fiche marché).
+  page.appendChild(renderDecomptesSection({
+    operation, attribution: attributionForLot, avenants: avenantsForLot,
+    mpDecomptes, avanceActive, livrablesMarche, idOperation
+  }));
+
   // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
   page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries, lots: [] }));
 
@@ -466,6 +482,65 @@ export async function renderExecutionOS(params) {
   if (!hasOSDemarrage) {
     setupBureauListeners();
   }
+}
+
+/**
+ * Modif #174 (obs. EHOUMAN) — Section « Décomptes du marché » à l'étape exécution.
+ * Monte le gestionnaire OP/Mandats (MP_DECOMPTE) + un contrôle de cohérence entre
+ * les livrables enregistrés au marché et l'avancement constaté dans les décomptes.
+ */
+function renderDecomptesSection({ operation, attribution, avenants, mpDecomptes, avanceActive, livrablesMarche, idOperation }) {
+  const nbLivrables = (livrablesMarche || []).length;
+  const nbDecomptes = (mpDecomptes || []).length;
+  // Dernier taux d'exécution cumulé connu (max sur les décomptes).
+  const dernierTaux = (mpDecomptes || []).reduce((m, d) => Math.max(m, Number(d.tauxExecution) || 0), 0);
+
+  // Contrôle de cohérence livrables ↔ décomptes (#6) : aide visuelle, non bloquante.
+  const controle = el('div', {
+    style: {
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px',
+      padding: '12px', marginBottom: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px'
+    }
+  }, [
+    el('div', {}, [
+      el('div', { className: 'text-small text-muted' }, 'Livrables au marché'),
+      el('div', { style: { fontWeight: 700, fontSize: '18px' } }, String(nbLivrables))
+    ]),
+    el('div', {}, [
+      el('div', { className: 'text-small text-muted' }, 'Décomptes enregistrés'),
+      el('div', { style: { fontWeight: 700, fontSize: '18px' } }, String(nbDecomptes))
+    ]),
+    el('div', {}, [
+      el('div', { className: 'text-small text-muted' }, 'Taux d\'exécution cumulé'),
+      el('div', { style: { fontWeight: 700, fontSize: '18px' } }, `${dernierTaux.toFixed(2)} %`)
+    ]),
+    el('div', { style: { gridColumn: '1 / -1' } }, [
+      el('div', { className: 'text-small', style: { color: '#475569' } },
+        '🔎 Contrôle de cohérence : vérifiez que les livrables payés dans les décomptes correspondent ' +
+        'aux livrables enregistrés au marché/contrat.' +
+        (avanceActive ? ' Avance de démarrage prévue → le 1ᵉʳ décompte est « DÉCOMPTE 00 ».' : ''))
+    ])
+  ]);
+
+  const host = el('div', { id: 'mp-decomptes-host' });
+
+  // Le widget gère son propre rendu/CRUD ; on le monte après insertion DOM.
+  setTimeout(() => {
+    const target = document.getElementById('mp-decomptes-host');
+    if (!target) return;
+    target.innerHTML = '';
+    target.appendChild(renderOpMandatManager({
+      operation, decomptes: mpDecomptes, attribution, avenants, avanceActive
+    }));
+  }, 0);
+
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, `🧾 Décomptes du marché (${nbDecomptes})`),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'OP / Mandats · cumul · reste à payer · taux d\'exécution')
+    ]),
+    el('div', { className: 'card-body' }, [controle, host])
+  ]);
 }
 
 /**
