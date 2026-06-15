@@ -702,6 +702,9 @@ function renderAttributaireSection(attributaire, registries) {
     ? existingEntreprises[0]
     : {};
   const cbMandataire = mandataire.coordonneesBancaires || {};
+  // Modif #172 (obs. EHOUMAN 14/06) — dénomination propre du groupement (distincte
+  // du mandataire). Stockée sur l'attributaire (attributaire.nomGroupement).
+  const nomGroupement = attributaire.nomGroupement || '';
   // Co-titulaires (membres du groupement autres que le mandataire) — uniquement pour CONJOINT
   // Stockés dans le state module-level pour persistance entre re-renders
   const initialCoTitulaires = (singleOrGroup === 'GROUPEMENT' && existingEntreprises.length > 1)
@@ -819,19 +822,24 @@ function renderAttributaireSection(attributaire, registries) {
         id: 'attr-groupement',
         style: { display: singleOrGroup === 'GROUPEMENT' ? 'block' : 'none' }
       }, [
-        // Modif #63 — Bandeau dynamique selon le type de groupement (CONJOINT vs SOLIDAIRE)
-        // Le contenu est rechargé par updateGroupTypeBanner() à chaque changement du dropdown
-        el('div', { id: 'attr-group-type-banner', style: { marginBottom: '16px' } }),
-
+        // Modif #172 (obs. EHOUMAN) — l'IDENTITÉ du titulaire (nom du groupement +
+        // mandataire) est renseignée AVANT le type de groupement et ses accessoires.
+        // 1) Dénomination du groupement
         el('div', { className: 'form-field', style: { marginBottom: '16px' } }, [
-          el('label', { className: 'form-label' }, 'Type de groupement'),
-          el('select', { className: 'form-input', id: 'attr-group-type' }, [
-            el('option', { value: 'CONJOINT', selected: (mandataire?.groupType || 'CONJOINT') === 'CONJOINT' }, 'Groupement conjoint'),
-            el('option', { value: 'SOLIDAIRE', selected: mandataire?.groupType === 'SOLIDAIRE' }, 'Groupement solidaire')
-          ])
+          el('label', { className: 'form-label' }, [
+            'Nom du groupement ',
+            el('span', { className: 'required' }, '*')
+          ]),
+          el('input', {
+            type: 'text',
+            className: 'form-input',
+            id: 'attr-group-nom',
+            value: nomGroupement,
+            placeholder: 'Dénomination du groupement (ex : Groupement ENTREPRISE A / ENTREPRISE B)'
+          })
         ]),
 
-        // Modif #43.b + #69 — Picker entreprise + sélection rapide (fallback garanti)
+        // 2) Mandataire du groupement (identité) — Modif #43.b + #69 picker + sélection rapide
         el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } }, [
           el('label', { className: 'form-label', style: { margin: 0 } }, [
             'Mandataire du groupement ',
@@ -879,6 +887,20 @@ function renderAttributaireSection(attributaire, registries) {
 
         // Coordonnées bancaires du mandataire (Marché+ — modif #18) — éditables, pré-remplies à l'autofill.
         renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
+
+        // 3) Type de groupement et ses accessoires (APRÈS l'identité — obs. EHOUMAN)
+        // Modif #63 — Bandeau dynamique selon le type (CONJOINT vs SOLIDAIRE),
+        // rechargé par updateGroupTypeBanner() à chaque changement du dropdown.
+        el('div', { style: { borderTop: '1px dashed #d1d5db', paddingTop: '16px', marginTop: '16px' } }, [
+          el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+            el('label', { className: 'form-label' }, 'Type de groupement'),
+            el('select', { className: 'form-input', id: 'attr-group-type' }, [
+              el('option', { value: 'CONJOINT', selected: (mandataire?.groupType || 'CONJOINT') === 'CONJOINT' }, 'Groupement conjoint'),
+              el('option', { value: 'SOLIDAIRE', selected: mandataire?.groupType === 'SOLIDAIRE' }, 'Groupement solidaire')
+            ])
+          ]),
+          el('div', { id: 'attr-group-type-banner' })
+        ]),
 
         // Co-titulaires du groupement (Marché+ modif #20) — visible uniquement pour CONJOINT
         // En "solidaire", paiement unique au mandataire, donc pas besoin de coordonnées séparées.
@@ -2663,6 +2685,8 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       attributaireData = {
         singleOrGroup: 'GROUPEMENT',
         groupType,
+        // Modif #172 (obs. EHOUMAN) — dénomination du groupement.
+        nomGroupement: document.getElementById('attr-group-nom')?.value?.trim() || null,
         entrepriseId,            // entrepriseId du mandataire
         groupementId: null,
         entreprises: [ent, ...cotitulaires]

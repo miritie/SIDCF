@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Attributaire groupement : nom du groupement + identité avant le type (ECR03A)
+
+> **Modif #172** — Observations EHOUMAN (14/06/2026), points 1/2.
+> - **Nom du groupement** : nouveau champ de dénomination du groupement (on n'avait que le mandataire). Persisté dans `attributaire.nomGroupement`.
+> - **Ordre du formulaire** : l'**identité** du titulaire (nom du groupement + mandataire + coordonnées) est désormais saisie **avant** le « Type de groupement » et ses accessoires (bandeau + co-titulaires), conformément à la demande.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — `renderAttributaireSection()` : ajout du champ `attr-group-nom`, réorganisation de la section groupement (nom → mandataire → type) ; `handleSave()` persiste `nomGroupement`.
+
+### Impact / Anti-régression
+
+- Le select `attr-group-type` et le bandeau `attr-group-type-banner` sont câblés par `id` (listener + `updateGroupTypeBanner`) → la réorganisation DOM ne casse pas la logique (vérifié). Co-titulaires inchangés.
+- `nomGroupement` ajouté au JSONB `attributaire` (sous-clé) → **pas de migration** (round-trip Worker camel↔snake symétrique, comme `groupType`).
+- **Vérifié** : `node --check`.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Nettoyage obs. EHOUMAN : approbation sans numéros + clé sans « Nature Éco. » (ECR03A + widget clé)
 
 > **Modif #171** — Observations EHOUMAN (14/06/2026), points 4/5/7.
