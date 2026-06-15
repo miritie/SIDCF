@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Nettoyage obs. EHOUMAN : approbation sans numéros + clé sans « Nature Éco. » (ECR03A + widget clé)
+
+> **Modif #171** — Observations EHOUMAN (14/06/2026), points 4/5/7.
+> - **Approbation (ECR03A)** : un marché visé CF n'a **pas** de « N° de visa CF » ni de « N° d'acte d'approbation » (l'approbation est consignée sur une page du marché). Suppression de ces deux champs des deux branches (« visé CF » → ne reste que **Date du visa CF** ; « approuvé autre que CF » → **Autorité approbatrice + Date de l'acte**). Annule la régression introduite en #163.
+> - **Clé de répartition** : suppression de la colonne et du champ **« Nature Éco. »** (connue depuis la naissance du marché). Greffé sur #169.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — `renderApprobationOrigineSection()` (retrait `appr-visa-num`, `appr-visa-acte-num`, `appr-acte-num`) + bloc `approbation` de `handleSave()` (retrait `visaNum`, `visaActeNum`, `acteNum`).
+- `sidcf-portal/js/ui/widgets/cle-repartition-manager-mp.js` — retrait du champ de formulaire et de la colonne `Nature Éco.` ; `nbCols` ajusté (8/7 → 7/6) ; `natureEco` préservé en donnée (valeur existante conservée à l'édition).
+
+### Impact / Anti-régression
+
+- **Suppressions de champs UI uniquement** ; aucune migration. Les données historiques (`visaNum`, `acteNum`, `natureEco`) ne sont plus écrites mais ne provoquent aucune erreur de lecture (vérifié : aucune autre référence dans `js/`).
+- `natureEco` conservé dans le modèle (préservé à l'édition d'une ligne existante) → pas de perte de données ni de crash `getElementById(...).value`.
+- **Vérifié** : `node --check` (2 fichiers), aucune référence orpheline (`ligne-nature-eco`, `natureEcoLabel`, `visaNum`, `acteNum`).
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Garanties : correction des taux légaux et de l'infobulle « avance » (conformité Ordonnance 2019-679)
 
 > **Modif #170** — Observation EHOUMAN (14/06/2026) : *« ce qui est dit dans la petite fenêtre est totalement FAUX // À REVOIR Art. 96 et 97 »*. Vérification faite sur le **texte officiel** (Ordonnance n°2019-679 du 24/07/2019 — la numérotation citée par EHOUMAN ; le décret 2009-259 numérotait ces garanties 112-117). Trois sources internes se contredisaient (le validateur runtime, les infobulles, la config) ; elles sont désormais **toutes alignées sur la loi**.

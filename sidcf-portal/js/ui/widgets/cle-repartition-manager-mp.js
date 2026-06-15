@@ -302,16 +302,8 @@ export function renderCleRepartitionManager(
           ])
         ]),
 
-        // Nature économique
-        el('div', { className: 'form-field' }, [
-          el('label', { className: 'form-label' }, ['Nature économique', el('span', { className: 'required' }, '*')]),
-          el('select', { className: 'form-input', id: 'ligne-nature-eco', required: true }, [
-            el('option', { value: '' }, '-- Sélectionner --'),
-            ...(registries.NATURE_ECO || []).map(n =>
-              el('option', { value: n.code, selected: n.code === formData.natureEco }, n.label)
-            )
-          ])
-        ]),
+        // Modif #171 (obs. EHOUMAN 14/06) — « Nature économique » retirée de la clé :
+        // elle est connue depuis la naissance du marché (pas re-saisie ici).
 
         // Base de calcul — exclusive HT ou TTC
         el('div', { className: 'form-field' }, [
@@ -393,7 +385,8 @@ export function renderCleRepartitionManager(
         annee: parseInt(document.getElementById('ligne-annee').value),
         bailleur: document.getElementById('ligne-bailleur').value,
         typeFinancement: document.getElementById('ligne-type-financement').value,
-        natureEco: document.getElementById('ligne-nature-eco').value,
+        // Modif #171 — champ retiré de l'UI ; on préserve la valeur existante (édition).
+        natureEco: formData.natureEco || '',
         baseCalc: document.getElementById('ligne-base-calc').value,
         etatSupporteTVA: false,
         isTVAEtat: false,
@@ -512,7 +505,7 @@ export function renderCleRepartitionManager(
       .map((ligne, index) => ({ ligne, index }))
       .sort((a, b) => String(a.ligne.bailleur || '').localeCompare(String(b.ligne.bailleur || '')) || (a.ligne.typeFinancement || '').localeCompare(b.ligne.typeFinancement || ''));
 
-    const nbCols = showAnnee ? 8 : 7;
+    const nbCols = showAnnee ? 7 : 6;
 
     // Tableau des lignes — Modif #169 (#3) : vocabulaire aligné sur l'Excel client.
     const table = el('table', { className: 'table', style: { width: '100%', marginBottom: '16px' } }, [
@@ -522,7 +515,6 @@ export function renderCleRepartitionManager(
             showAnnee ? el('th', {}, 'Année') : null,
             el('th', {}, 'Source de financement'),
             el('th', {}, 'Type de financement'),
-            el('th', {}, 'Nature Éco.'),
             el('th', {}, 'Base'),
             el('th', { style: { textAlign: 'right' } }, 'Montant (XOF)'),
             el('th', { style: { textAlign: 'right' } }, 'Part contractuel (taux %)'),
@@ -540,7 +532,6 @@ export function renderCleRepartitionManager(
           : displayList.map(({ ligne, index }, pos) => {
               const bailleurLabel = (registries.BAILLEUR || []).find(b => b.code === ligne.bailleur)?.label || ligne.bailleur;
               const typeFinLabel = (registries.TYPE_FINANCEMENT || []).find(t => t.code === ligne.typeFinancement)?.label || ligne.typeFinancement;
-              const natureEcoLabel = (registries.NATURE_ECO || []).find(n => n.code === ligne.natureEco)?.label || ligne.natureEco;
               const baseCalcLabel = (registries.BASE_CALCUL_CLE || []).find(b => b.code === ligne.baseCalc)?.label || ligne.baseCalc;
 
               const rowStyle = ligne.isTVAEtat ? { backgroundColor: '#fff3cd' } : {};
@@ -559,7 +550,6 @@ export function renderCleRepartitionManager(
                       ligne.isTVAEtat ? el('span', { className: 'badge badge-warning', style: { marginLeft: '4px' } }, 'TVA État') : null
                     ])),
                 el('td', {}, el('span', { className: 'text-small' }, typeFinLabel)),
-                el('td', {}, el('span', { className: 'text-small' }, natureEcoLabel)),
                 el('td', {}, el('span', { className: 'badge badge-secondary' }, baseCalcLabel)),
                 el('td', { style: { textAlign: 'right', fontWeight: 'bold' } }, ligne.montant.toLocaleString('fr-FR', { minimumFractionDigits: 2 })),
                 el('td', { style: { textAlign: 'right', fontWeight: 'bold' } }, `${ligne.pourcentage.toFixed(2)}%`),

@@ -1058,21 +1058,21 @@ function renderApprobationOrigineSection(existingAttr) {
 
   const ff = (label, input) => el('div', { className: 'form-field' }, [el('label', { className: 'form-label' }, label), input]);
 
+  // Modif #171 (obs. EHOUMAN 14/06) — un marché visé CF n'a PAS de « N° de visa CF »
+  // ni de « N° d'acte d'approbation » : l'approbation est consignée sur une page du
+  // marché. On ne garde que la DATE du visa (le n° du contrat est saisi par ailleurs).
   const visaFields = el('div', { id: 'appr-visa-fields', style: { display: origine === 'VISE_CF' ? 'block' : 'none', marginTop: '12px' } }, [
-    // Modif #163 — ajout du « N° de l'acte d'approbation » côté visé CF (il
-    // manquait ; la branche « Approuvé autre que CF » en avait déjà un).
     el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' } }, [
-      ff('N° du visa CF', el('input', { type: 'text', className: 'form-input', id: 'appr-visa-num', value: a.visaNum || '', placeholder: 'N° du visa' })),
-      ff('N° de l\'acte d\'approbation', el('input', { type: 'text', className: 'form-input', id: 'appr-visa-acte-num', value: a.visaActeNum || '', placeholder: 'N° / réf. de l\'acte' })),
       ff('Date du visa CF', el('input', { type: 'date', className: 'form-input', id: 'appr-visa-date', value: a.visaDate || '' }))
     ])
   ]);
 
+  // Modif #171 — branche « Approuvé autre que CF » : autorité + date de l'acte
+  // (le n° d'acte est retiré pour la même raison — approbation consignée au marché).
   const organeSelect = el('select', { className: 'form-input', id: 'appr-organe' }, [el('option', { value: '' }, '-- Chargement... --')]);
   const autreFields = el('div', { id: 'appr-autre-fields', style: { display: origine === 'AUTRE' ? 'block' : 'none', marginTop: '12px' } }, [
-    ff('Autorité approbatrice', organeSelect),
-    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '12px' } }, [
-      ff('N° de l\'acte d\'approbation', el('input', { type: 'text', className: 'form-input', id: 'appr-acte-num', value: a.acteNum || '', placeholder: 'N° / réf. de l\'acte' })),
+    el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' } }, [
+      ff('Autorité approbatrice', organeSelect),
       ff('Date de l\'acte', el('input', { type: 'date', className: 'form-input', id: 'appr-acte-date', value: a.acteDate || '' }))
     ])
   ]);
@@ -2723,14 +2723,12 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
     const ordonnancement = computeOrdonnancementFromCle(cleRepartitionList);
 
     // Modif #130 (E-1/E-9) — origine de l'approbation (visa CF / autre que CF).
+    // Modif #171 (obs. EHOUMAN) — suppression des « N° de visa CF » et « N° d'acte
+    // d'approbation » : pas de numéro (approbation consignée sur une page du marché).
     const approbation = {
       origine: document.querySelector('input[name="appr-origine"]:checked')?.value || 'VISE_CF',
-      visaNum: document.getElementById('appr-visa-num')?.value?.trim() || null,
-      // Modif #163 — N° de l'acte d'approbation côté visé CF.
-      visaActeNum: document.getElementById('appr-visa-acte-num')?.value?.trim() || null,
       visaDate: document.getElementById('appr-visa-date')?.value || null,
       organe: document.getElementById('appr-organe')?.value || null,
-      acteNum: document.getElementById('appr-acte-num')?.value?.trim() || null,
       acteDate: document.getElementById('appr-acte-date')?.value || null
     };
 
