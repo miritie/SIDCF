@@ -13,6 +13,39 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Garanties : correction des taux légaux et de l'infobulle « avance » (conformité Ordonnance 2019-679)
+
+> **Modif #170** — Observation EHOUMAN (14/06/2026) : *« ce qui est dit dans la petite fenêtre est totalement FAUX // À REVOIR Art. 96 et 97 »*. Vérification faite sur le **texte officiel** (Ordonnance n°2019-679 du 24/07/2019 — la numérotation citée par EHOUMAN ; le décret 2009-259 numérotait ces garanties 112-117). Trois sources internes se contredisaient (le validateur runtime, les infobulles, la config) ; elles sont désormais **toutes alignées sur la loi**.
+>
+> **Réponse à l'ambiguïté « avance 15 %–30 % »** : ce n'est **pas** le taux de la garantie, c'est le **montant de l'avance** elle-même — avance forfaitaire ≤ 15 % du montant initial (**Art. 129**), cumul forfaitaire + facultative ≤ 30 % (**Art. 131**). La **garantie de restitution d'avance**, elle, couvre **100 %** du montant de l'avance (**Art. 100**). L'ancienne infobulle « 10 %–15 %, Art. 100 » mélangeait les deux.
+>
+> **Taux corrigés (vérifiés verbatim sur le texte officiel) :**
+> | Garantie | Avant (faux) | Après (Ordonnance 2019-679) |
+> |---|---|---|
+> | Garantie d'offre / soumission | absente | **1 % – 1,5 %** du prévisionnel (Art. 95.2) |
+> | Garantie de bonne exécution | 5 % – 10 % | **3 % – 5 %** (Art. 97.3) — *sauf PI (97.1)* |
+> | Retenue de garantie | 10 % fixe | **3 % – 5 %** de chaque paiement (Art. 98) — *sauf PI* |
+> | Avance de démarrage | 10 % – 15 % | **≤ 15 % forfaitaire (129) · ≤ 30 % cumulé (131)** |
+> | Garantie de restitution d'avance | confondue | **100 %** de l'avance (Art. 100) |
+
+### Fichiers touchés
+
+- `sidcf-portal/js/lib/mp-garanties-rules.js` — validateur runtime (badges/warnings) : `REGLES` corrigées ; ajout des types `soumission`, `retenue`, `restitutionAvance` ; gestion d'un cas « plafond seul » (l'avance n'a **pas** de minimum légal → plus de faux warning entre 16 et 30 %) et d'un `contrainteLabel`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — infobulles `GARANTIE_FORMULES` (avance + bonne exécution) réécrites ; libellé « Garantie d'avance de démarrage » ; règles métier + référence légale du wireSpec mises à jour.
+- `sidcf-portal/js/config/rules-config.json` — bloc `garanties` : ajout `garantie_offre` (1–1,5 %), `garantie_avance` (≤15/≤30 + note restitution 100 %), `retenue_garantie` (3–5 %), descriptions article par article. Clés consommées par `ecr04c-garanties.js` / l'admin **préservées**.
+
+### Impact / Anti-régression
+
+- **Correction de conformité légale**, pas de changement de schéma : aucune migration. `garanties` reste un JSONB inchangé.
+- `ecr04c-garanties.js` lit `taux_min`/`taux` avec valeurs par défaut → robuste ; le pré-remplissage « avance » passe de 10 % à **15 %** (max forfaitaire), retenue de 10 % à **5 %**.
+- **Vérifié** : `node --check` (2 fichiers), JSON valide, et **simulation exhaustive de `validateTaux`** (soumission 1,2 % OK / 2 % KO ; bonne exéc. 4 % OK / 8 % KO ; retenue 4 % OK / 10 % KO ; avance 10/15/28 % OK / 35 % KO ; restitution 100 % OK) ; aucune chaîne erronée résiduelle.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Clé de répartition : alignements cosmétiques sur l'Excel client + colonne Année masquable (widget clé / ECR03A)
 
 > **Modif #169** — Suite à l'analyse de l'Excel client (« CLE DE REPARTITION ET ORDONNANCEMENT CP ANNEE », 11/06/2026) : ajustements **cosmétiques** (le modèle de fond était déjà conforme — état préservé via le tag `cle-repartition-v1-2026-06-15`). (1) **Scénarios guidés** : panneau repliable « 💡 Scénarios types de répartition » reprenant les 4 cas canoniques (État TVA/HT/TTC ↔ Bailleur HT/TTC) + boutons de mise en place rapide (TVA État, ligne base HT, ligne base TTC). (2) **Regroupement par bailleur** : les lignes sont triées par source (DON + EMPRUNT d'un même bailleur affichés ensemble) et la source n'est nommée qu'une fois par groupe (« ↳ (même source) »). (3) **Vocabulaire** aligné : « Bailleur » → **« Source de financement »**, « Type Financement » → **« Type de financement »**, « Pourcentage (%) » → **« Part contractuel (taux %) »**. (4) **Ordonnancement pluriannuel explicite** : libellés **« CP Année courante / +1 »** dans le récap (#141). **Nouveau** : colonne **Année visible mais masquable** (toggle « Afficher l'année ») + libellé relatif **« Année courante / +1 »** dans le tableau.

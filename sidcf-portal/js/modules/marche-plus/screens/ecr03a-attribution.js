@@ -37,21 +37,24 @@ import { renderNextPhaseButton } from '../../../ui/widgets/next-phase-button-mp.
 import { renderDifficultesGatedBloc } from '../../../ui/widgets/difficultes-manager-mp.js';
 import { getAllOrganes } from '../../../lib/mp-organes-approbation.js';
 
-// Modif #37 — Formules et règles légales associées aux garanties contractuelles
+// Modif #37 — Formules et règles légales associées aux garanties contractuelles.
+// Taux vérifiés sur le texte officiel (Ordonnance 2019-679 — Code MP CI) suite aux
+// observations EHOUMAN du 14/06/2026 : l'ancienne infobulle « avance 10 %–15 %, Art. 100 »
+// confondait le MONTANT de l'avance et le TAUX de la garantie de restitution — corrigée.
 const GARANTIE_FORMULES = {
   avance: {
-    titre: 'Garantie d\'avance (Art. 100 Code MP CI)',
-    formule: 'taux × montantMarché(baseCalc) / 100',
-    regle: 'Plage légale : 10 % – 15 % du montant du marché. La garantie couvre le remboursement de l\'avance forfaitaire de démarrage (max 15 % du marché — RG011).',
-    exemple: 'Marché 100 M HT, avance 15 % ⇒ garantie 15 M XOF',
-    reference: 'Art. 100 Code MP CI · RG011 du SDF'
+    titre: 'Avance de démarrage & garantie de restitution (Art. 129-131 & 100 Code MP CI)',
+    formule: 'garantie de restitution = 100 % du montant de l\'avance versée',
+    regle: 'L\'avance forfaitaire de démarrage ne peut dépasser 15 % du montant initial du marché (Art. 129) ; le cumul des avances forfaitaire + facultative est plafonné à 30 % (Art. 131). La garantie de restitution d\'avance couvre la TOTALITÉ (100 %) du montant de l\'avance versée (Art. 100) — à ne pas confondre avec le montant de l\'avance.',
+    exemple: 'Marché 100 M HT, avance forfaitaire 15 % (= 15 M) ⇒ garantie de restitution = 15 M XOF (100 % de l\'avance)',
+    reference: 'Art. 129, 131 & 100 — Ordonnance 2019-679'
   },
   bonneExec: {
     titre: 'Garantie de bonne exécution (Art. 97.3 Code MP CI)',
     formule: 'taux × montantMarché(baseCalc) / 100',
-    regle: 'Plage légale : 3 % – 5 % du montant du marché (corrigée modif #25.1 — auparavant 5 %–10 %, non conforme).',
+    regle: 'Plage légale : 3 % – 5 % du montant initial du marché (± avenants), Art. 97.3. Ne s\'applique pas aux marchés de prestations intellectuelles (Art. 97.1).',
     exemple: 'Marché 200 M HT, BE 5 % ⇒ garantie 10 M XOF',
-    reference: 'Art. 97.3 Code MP CI · RG010 du SDF'
+    reference: 'Art. 97.3 — Ordonnance 2019-679'
   },
   cautionnement: {
     titre: 'Cautionnement',
@@ -1469,7 +1472,7 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
   // Garantie d'avance (si non cachée)
   if (!isFieldHidden('garantieAvance', modePassation, 'attribution')) {
     garantiesVisibles.push(
-      renderGarantieItem('avance', 'Garantie d\'avance' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire, montantsTotaux, 'avance')
+      renderGarantieItem('avance', 'Garantie d\'avance de démarrage' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire, montantsTotaux, 'avance')
     );
   }
 
@@ -1514,11 +1517,12 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
       regle_autres: 'Pour les autres modes : champs présents mais optionnels.'
     },
     reglesMetier: [
-      'Garantie d\'avance : 10 %–15 % du montant marché (RG011). Couvre l\'avance forfaitaire (max 15 %, Art. 100 Code MP CI).',
-      'Garantie de bonne exécution : 3 %–5 % (corrigée modif #25.1, Art. 97.3 Code MP CI).',
+      'Avance de démarrage : ≤ 15 % du montant initial (forfaitaire, Art. 129) · ≤ 30 % en cumul forfaitaire + facultative (Art. 131). La garantie de restitution couvre 100 % de l\'avance (Art. 100).',
+      'Garantie de bonne exécution : 3 %–5 % du montant du marché (Art. 97.3) — ne concerne pas les prestations intellectuelles (Art. 97.1).',
+      'Garantie d\'offre / soumission : 1 %–1,5 % du montant prévisionnel (Art. 95.2). Retenue de garantie : 3 %–5 % de chaque paiement (Art. 98) — sauf PI.',
       'Cautionnement : pas de plage légale standard — défini au cas par cas dans le CCAP du marché.',
       'Les valeurs cochées ici sont une déclaration d\'INTENTION. L\'enregistrement effectif des actes bancaires se fait en ECR04C-Garanties APRÈS le visa CF.',
-      'Voir lib/mp-garanties-rules.js → validateTaux() pour la validation des plages.'
+      'Voir lib/mp-garanties-rules.js → validateTaux() pour la validation des plages (taux vérifiés Ordonnance 2019-679).'
     ],
     formule: 'garantie.montant = montantMarche(baseCalc) × taux / 100',
     exemple: 'Marché 100 M HT · garantie d\'avance 15 % → 15 M XOF (acte bancaire enregistré post-visa CF)',
@@ -1527,7 +1531,7 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
       'Pour chaque garantie cochée : saisie du taux ou du montant (widget DUAL), base HT/TTC, dates d\'émission/échéance, document justificatif'
     ],
     acteurs: 'DCF (saisie déclarative à l\'attribution) · DCF (enregistrement effectif post-visa via ECR04C) · CF (validation)',
-    reference: 'Code MP CI Art. 97, 98, 100 · RG010, RG011 du SDF · CCAP du marché',
+    reference: 'Ordonnance 2019-679 (Code MP CI) — Art. 95.2, 97.3, 98, 100, 129-131 · CCAP du marché',
     dynamic: (ctx) => {
       const mode = ctx.modePassation;
       // Modif #139 — sous-types PI_*/AOO_* rattachés à leur famille.

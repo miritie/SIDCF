@@ -210,23 +210,31 @@
     }
   },
   "garanties": {
-    "description": "Taux et règles de garanties bancaires",
-    "garantie_avance": {
-      "taux_min": 10,
-      "taux_max": 15,
+    "description": "Taux et règles de garanties bancaires (Ordonnance 2019-679 — Code MP CI ; taux vérifiés sur le texte officiel, observations EHOUMAN 14/06/2026)",
+    "garantie_offre": {
+      "taux_min": 1,
+      "taux_max": 1.5,
       "unit": "%",
-      "description": "Garantie de restitution d'avance"
+      "description": "Garantie d'offre ou de soumission (Art. 95.2 : entre 1 % et 1,5 % du montant prévisionnel)"
+    },
+    "garantie_avance": {
+      "taux_min": 15,
+      "taux_max": 30,
+      "unit": "%",
+      "description": "Avance de démarrage : ≤ 15 % forfaitaire (Art. 129), ≤ 30 % en cumul forfaitaire + facultative (Art. 131). La garantie de restitution d'avance couvre 100 % du montant de l'avance (Art. 100)."
     },
     "garantie_bonne_execution": {
       "taux_min": 3,
       "taux_max": 5,
       "unit": "%",
-      "description": "Garantie de bonne exécution (Art. 97.3 Code MP CI : entre 3 % et 5 % du montant du marché)"
+      "description": "Garantie de bonne exécution (Art. 97.3 Code MP CI : entre 3 % et 5 % du montant du marché — ne concerne pas les prestations intellectuelles, Art. 97.1)"
     },
     "retenue_garantie": {
-      "taux": 10,
+      "taux": 5,
+      "taux_min": 3,
+      "taux_max": 5,
       "unit": "%",
-      "description": "Retenue de garantie sur décomptes"
+      "description": "Retenue de garantie sur décomptes (Art. 98 : entre 3 % et 5 % de chaque paiement — sauf prestations intellectuelles)"
     },
     "durees": {
       "garantie_avance": {
