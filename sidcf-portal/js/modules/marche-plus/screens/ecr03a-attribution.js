@@ -2442,11 +2442,25 @@ function renderOrdonnancementRecap() {
     return;
   }
 
+  // Modif #169 (#4) — approche « CP Année courante / +1 » du client : libellé
+  // relatif à l'année en cours, en plus de l'année absolue.
+  const _curYear = new Date().getFullYear();
+  const _relYear = (annee) => {
+    const y = parseInt(annee, 10);
+    if (!y) return '';
+    if (y === _curYear) return 'CP Année courante';
+    const d = y - _curYear;
+    return d > 0 ? `CP Année courante +${d}` : `CP Année courante ${d}`;
+  };
+
   let tT = 0, tD = 0, tE = 0;
   const tbody = el('tbody', {}, rows.map(r => {
     tT += r.tresor; tD += r.dons; tE += r.emprunts;
     return el('tr', {}, [
-      el('td', {}, String(r.annee || '—')),
+      el('td', {}, [
+        el('span', {}, String(r.annee || '—')),
+        r.annee ? el('span', { style: { display: 'block', fontSize: '10px', color: '#6b7280' } }, _relYear(r.annee)) : null
+      ]),
       el('td', { style: { textAlign: 'right' } }, formatMoney(r.tresor)),
       el('td', { style: { textAlign: 'right' } }, formatMoney(r.dons)),
       el('td', { style: { textAlign: 'right' } }, formatMoney(r.emprunts)),

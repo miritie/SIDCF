@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Clé de répartition : alignements cosmétiques sur l'Excel client + colonne Année masquable (widget clé / ECR03A)
+
+> **Modif #169** — Suite à l'analyse de l'Excel client (« CLE DE REPARTITION ET ORDONNANCEMENT CP ANNEE », 11/06/2026) : ajustements **cosmétiques** (le modèle de fond était déjà conforme — état préservé via le tag `cle-repartition-v1-2026-06-15`). (1) **Scénarios guidés** : panneau repliable « 💡 Scénarios types de répartition » reprenant les 4 cas canoniques (État TVA/HT/TTC ↔ Bailleur HT/TTC) + boutons de mise en place rapide (TVA État, ligne base HT, ligne base TTC). (2) **Regroupement par bailleur** : les lignes sont triées par source (DON + EMPRUNT d'un même bailleur affichés ensemble) et la source n'est nommée qu'une fois par groupe (« ↳ (même source) »). (3) **Vocabulaire** aligné : « Bailleur » → **« Source de financement »**, « Type Financement » → **« Type de financement »**, « Pourcentage (%) » → **« Part contractuel (taux %) »**. (4) **Ordonnancement pluriannuel explicite** : libellés **« CP Année courante / +1 »** dans le récap (#141). **Nouveau** : colonne **Année visible mais masquable** (toggle « Afficher l'année ») + libellé relatif **« Année courante / +1 »** dans le tableau.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/cle-repartition-manager-mp.js` : toggle Année (`showAnnee`), helper `relYearLabel`, panneau scénarios, en-têtes renommés, tri/regroupement par bailleur (display-only, index d'origine préservé).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` : récap ordonnancement → libellé relatif « CP Année courante / +1 ».
+
+### Impact / Anti-régression
+
+- **Strictement cosmétique / UX** : aucune modification du modèle de données ni de la persistance (lignes inchangées : `annee`, `bailleur`, `typeFinancement`, `baseCalc`, `montant`, `pourcentage`). Le tri par bailleur est **display-only** (l'index d'origine est conservé pour l'édition/suppression). **Aucune migration.**
+- **Préservation** : l'état antérieur du tableau est conservé précisément (dossier `Documentation/preservation/cle-repartition-2026-06-15/` + tag git `cle-repartition-v1-2026-06-15`) pour y revenir au besoin.
+- **Vérifié** (Chrome headless, widget en isolation) : en-têtes alignés, panneau scénarios + toggle Année présents, regroupement « (même source) », libellé « Année courante », masquage de la colonne Année fonctionnel ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Contractualisation : bloc « Barème applicable » compacté (ECR02A)
 
 > **Modif #168** — Retour client : le bloc « Barème applicable » prenait trop de place (chaque champ sur sa propre ligne, liste à puces, carte enveloppante + paddings). Compacté : champs **en ligne** (« Barème applicable — ADMIN_CENTRALE · 22.0M XOF »), procédures admissibles **séparées par « · »** au lieu d'une liste à puces, et **suppression de la carte enveloppante** (« 💡 Procédures admissibles (selon règles) ») redondante avec le titre de l'alerte. Toutes les informations sont conservées.

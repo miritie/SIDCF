@@ -61,6 +61,20 @@ export function renderCleRepartitionManager(
   });
   let etatSupporteTVA = currentCle.some(ligne => ligne.isTVAEtat === true);
 
+  // Modif #169 — colonne « Année » affichée par défaut mais masquable (toggle).
+  let showAnnee = true;
+
+  // Modif #169 — approche « Année courante / +1 » du client : libellé relatif à
+  // l'année en cours, en plus de l'année absolue.
+  const currentYear = new Date().getFullYear();
+  function relYearLabel(annee) {
+    const y = parseInt(annee, 10);
+    if (!y) return '';
+    if (y === currentYear) return 'Année courante';
+    const d = y - currentYear;
+    return d > 0 ? `Année courante +${d}` : `Année courante ${d}`;
+  }
+
   // Fonction pour notifier le parent
   function notifyChange() {
     if (onChange) {
@@ -433,9 +447,9 @@ export function renderCleRepartitionManager(
   function render() {
     container.innerHTML = '';
 
-    // Header avec checkbox TVA État
-    const header = el('div', { className: 'cle-repartition-header', style: { marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
-      el('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } }, [
+    // Header avec checkbox TVA État + toggle Année + ajout
+    const header = el('div', { className: 'cle-repartition-header', style: { marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' } }, [
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' } }, [
         el('label', { className: 'form-label', style: { margin: 0, display: 'flex', alignItems: 'center', gap: '8px' } }, [
           el('input', {
             type: 'checkbox',
@@ -453,7 +467,11 @@ export function renderCleRepartitionManager(
           }),
           el('span', {}, 'État supporte la TVA (18%)')
         ]),
-        el('small', { className: 'text-muted' }, 'Ajoute automatiquement une ligne TVA État = 18% du TTC')
+        // Modif #169 — toggle « Afficher l'année » (colonne masquable).
+        el('label', { className: 'form-label', style: { margin: 0, display: 'flex', alignItems: 'center', gap: '8px' } }, [
+          (() => { const cb = el('input', { type: 'checkbox', id: 'cle-show-annee', onchange: (e) => { showAnnee = e.target.checked; render(); } }); cb.checked = showAnnee; return cb; })(),
+          el('span', {}, 'Afficher l\'année')
+        ])
       ]),
 
       el('button', {
@@ -463,41 +481,83 @@ export function renderCleRepartitionManager(
       }, '➕ Ajouter une ligne')
     ]);
 
-    // Tableau des lignes
+    // Modif #169 — Scénarios types de répartition (aide guidée, repliable). Reprend
+    // les 4 cas canoniques de l'Excel client (État TVA/HT/TTC ↔ Bailleur HT/TTC).
+    const scenarios = el('details', { style: { marginBottom: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px 12px', background: '#f9fafb' } }, [
+      el('summary', { style: { cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#374151' } }, '💡 Scénarios types de répartition (aide)'),
+      el('div', { style: { marginTop: '8px', fontSize: '12px', color: '#4b5563', lineHeight: '1.6' } }, [
+        el('ol', { style: { margin: 0, paddingLeft: '18px' } }, [
+          el('li', {}, 'État : 100 % TVA (18 %) — Bailleur : 100 % HT'),
+          el('li', {}, 'État : 18 % TVA + xx % HT — Bailleur : yy % HT (mixte)'),
+          el('li', {}, 'État : 0 % — Bailleur : 100 % TTC'),
+          el('li', {}, 'État : 100 % TTC — Bailleur : 0 % (entièrement État)')
+        ]),
+        el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' } }, [
+          el('span', { className: 'text-muted', style: { alignSelf: 'center' } }, 'Mise en place rapide :'),
+          // Pour la part TVA État : cocher la case dédiée (ajoute la ligne 18% TTC).
+          (() => { const b = el('button', { type: 'button', className: 'btn btn-sm btn-secondary' }, '+ TVA État (18 %)'); b.onclick = () => { if (!etatSupporteTVA) { etatSupporteTVA = true; addTVAEtatLine(); render(); } }; return b; })(),
+          // Ligne bailleur base HT (cas 1/2) — l'agent choisit le bailleur.
+          (() => { const b = el('button', { type: 'button', className: 'btn btn-sm btn-secondary' }, '+ Ligne bailleur (base HT)'); b.onclick = () => openLineForm({ annee: currentYear, bailleur: '', typeFinancement: '', natureEco: '', baseCalc: 'HT', etatSupporteTVA: false, montant: 0, pourcentage: 0, saisieMode: 'POURCENTAGE' }, 'add'); return b; })(),
+          // Ligne base TTC (cas 3 bailleur / cas 4 État).
+          (() => { const b = el('button', { type: 'button', className: 'btn btn-sm btn-secondary' }, '+ Ligne (base TTC)'); b.onclick = () => openLineForm({ annee: currentYear, bailleur: '', typeFinancement: '', natureEco: '', baseCalc: 'TTC', etatSupporteTVA: false, montant: 0, pourcentage: 0, saisieMode: 'POURCENTAGE' }, 'add'); return b; })()
+        ])
+      ])
+    ]);
+
+    // Modif #169 (#2) — regroupement par bailleur : on trie les lignes par
+    // source (DON + EMPRUNT d'un même bailleur affichés ensemble) tout en
+    // conservant l'index d'origine pour l'édition/suppression. Le nom du bailleur
+    // n'est affiché qu'une fois par groupe.
+    const displayList = currentCle
+      .map((ligne, index) => ({ ligne, index }))
+      .sort((a, b) => String(a.ligne.bailleur || '').localeCompare(String(b.ligne.bailleur || '')) || (a.ligne.typeFinancement || '').localeCompare(b.ligne.typeFinancement || ''));
+
+    const nbCols = showAnnee ? 8 : 7;
+
+    // Tableau des lignes — Modif #169 (#3) : vocabulaire aligné sur l'Excel client.
     const table = el('table', { className: 'table', style: { width: '100%', marginBottom: '16px' } }, [
       el('thead', {}, [
-        el('tr', {}, [
-          el('th', {}, 'Année'),
-          el('th', {}, 'Bailleur'),
-          el('th', {}, 'Type Financement'),
-          el('th', {}, 'Nature Éco.'),
-          el('th', {}, 'Base'),
-          el('th', { style: { textAlign: 'right' } }, 'Montant (XOF)'),
-          el('th', { style: { textAlign: 'right' } }, 'Pourcentage (%)'),
-          el('th', { style: { textAlign: 'center' } }, 'Actions')
-        ])
+        el('tr', {},
+          [
+            showAnnee ? el('th', {}, 'Année') : null,
+            el('th', {}, 'Source de financement'),
+            el('th', {}, 'Type de financement'),
+            el('th', {}, 'Nature Éco.'),
+            el('th', {}, 'Base'),
+            el('th', { style: { textAlign: 'right' } }, 'Montant (XOF)'),
+            el('th', { style: { textAlign: 'right' } }, 'Part contractuel (taux %)'),
+            el('th', { style: { textAlign: 'center' } }, 'Actions')
+          ].filter(Boolean)
+        )
       ]),
       el('tbody', {},
         currentCle.length === 0
           ? [el('tr', {}, [
-              el('td', { colspan: 8, style: { textAlign: 'center', padding: '24px' } },
+              el('td', { colspan: nbCols, style: { textAlign: 'center', padding: '24px' } },
                 el('span', { className: 'text-muted' }, '📊 Aucune ligne de répartition définie')
               )
             ])]
-          : currentCle.map((ligne, index) => {
+          : displayList.map(({ ligne, index }, pos) => {
               const bailleurLabel = (registries.BAILLEUR || []).find(b => b.code === ligne.bailleur)?.label || ligne.bailleur;
               const typeFinLabel = (registries.TYPE_FINANCEMENT || []).find(t => t.code === ligne.typeFinancement)?.label || ligne.typeFinancement;
               const natureEcoLabel = (registries.NATURE_ECO || []).find(n => n.code === ligne.natureEco)?.label || ligne.natureEco;
               const baseCalcLabel = (registries.BASE_CALCUL_CLE || []).find(b => b.code === ligne.baseCalc)?.label || ligne.baseCalc;
 
               const rowStyle = ligne.isTVAEtat ? { backgroundColor: '#fff3cd' } : {};
+              // Afficher la source une seule fois par groupe (#2).
+              const memeBailleurQuePrecedent = pos > 0 && displayList[pos - 1].ligne.bailleur === ligne.bailleur && !ligne.isTVAEtat && !displayList[pos - 1].ligne.isTVAEtat;
 
               return el('tr', { style: rowStyle }, [
-                el('td', {}, ligne.annee.toString()),
-                el('td', {}, [
-                  el('span', { className: 'badge badge-info' }, bailleurLabel),
-                  ligne.isTVAEtat ? el('span', { className: 'badge badge-warning', style: { marginLeft: '4px' } }, 'TVA État') : null
-                ]),
+                showAnnee ? el('td', {}, el('span', { className: 'text-small' }, [
+                  String(ligne.annee || ''),
+                  el('span', { className: 'text-muted', style: { display: 'block', fontSize: '10px' } }, relYearLabel(ligne.annee))
+                ])) : null,
+                el('td', {}, memeBailleurQuePrecedent
+                  ? el('span', { className: 'text-muted', style: { fontSize: '11px', paddingLeft: '8px' } }, '↳ (même source)')
+                  : el('span', {}, [
+                      el('span', { className: 'badge badge-info' }, bailleurLabel),
+                      ligne.isTVAEtat ? el('span', { className: 'badge badge-warning', style: { marginLeft: '4px' } }, 'TVA État') : null
+                    ])),
                 el('td', {}, el('span', { className: 'text-small' }, typeFinLabel)),
                 el('td', {}, el('span', { className: 'text-small' }, natureEcoLabel)),
                 el('td', {}, el('span', { className: 'badge badge-secondary' }, baseCalcLabel)),
@@ -519,7 +579,7 @@ export function renderCleRepartitionManager(
                         }, '🗑️')
                       ])
                 ])
-              ]);
+              ].filter(Boolean));
             })
       )
     ]);
@@ -588,6 +648,7 @@ export function renderCleRepartitionManager(
     ]);
 
     container.appendChild(header);
+    container.appendChild(scenarios);
     container.appendChild(table);
     container.appendChild(summary);
   }
