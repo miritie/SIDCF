@@ -13,6 +13,31 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Garanties : bloc complété (offre/soumission, retenue, « Autres ») + exclusion PI (ECR03A)
+
+> **Modif #173** — Observations EHOUMAN (14/06/2026), points 9/10 : aligner le bloc « Garanties et Cautionnement » sur la liste métier. Complète la correction des taux (#170).
+> - **Garantie d'offre / soumission** (1 %–1,5 %, Art. 95.2) — nouvelle ligne.
+> - **Retenue de garantie** (3 %–5 %, Art. 98) — nouvelle ligne, **exclue pour les PI** (comme la bonne exécution).
+> - **Autre garantie** — ligne libre (libellé + montant) pour enregistrer une garantie hors barème (selon CCAP).
+> - Ordre : soumission → avance de démarrage → bonne exécution → retenue → cautionnement → autre.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — `renderGarantiesSection()` (ajout soumission/retenue/autre + helper `sep()` + exclusion PII partagée bonne exéc./retenue) ; nouvelle fonction `renderAutreGarantieItem()` ; init des widgets `soumission`/`retenue` ; `handleSave()` collecte `garantieSoumission`, `retenueGarantie`, `autreGarantie`.
+
+### Impact / Anti-régression
+
+- Nouvelles sous-clés du JSONB `garanties` → **pas de migration** (round-trip Worker camel↔snake symétrique). Les clés existantes (`garantieAvance`, `garantieBonneExec`, `cautionnement`) sont **inchangées** → la fiche marché (`ecr01c`) et `ecr04c` continuent de fonctionner.
+- L'exclusion PI réutilise `isFieldHidden('garantieBonneExecution', …)` (bonne exéc. + retenue masquées ensemble) → cohérent avec le comportement existant.
+- Les badges/plages légales proviennent de `mp-garanties-rules.js` corrigé (#170) — soumission 1–1,5 %, retenue 3–5 %.
+- **Vérifié** : `node --check`.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Attributaire groupement : nom du groupement + identité avant le type (ECR03A)
 
 > **Modif #172** — Observations EHOUMAN (14/06/2026), points 1/2.

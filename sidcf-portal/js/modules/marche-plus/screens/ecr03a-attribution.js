@@ -586,7 +586,7 @@ export async function renderAttribution(params) {
 
     // Marché+ : instancier les widgets montant/% pour les 3 garanties
     setTimeout(() => {
-      ['avance', 'bonne-exec', 'cautionnement'].forEach(id => initGarantieWidget(id));
+      ['soumission', 'avance', 'bonne-exec', 'retenue', 'cautionnement'].forEach(id => initGarantieWidget(id));
     }, 120);
 
     // Marché+ modif #20 : initialiser la liste des co-titulaires (groupement conjoint)
@@ -1481,40 +1481,68 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
     dateEmission: null, dateEcheance: null, docRef: null,
     ...(g || {})
   });
+  const garantieSoumission = fillDefaults(garanties.garantieSoumission, 'POURCENTAGE');
   const garantieAvance = fillDefaults(garanties.garantieAvance, 'POURCENTAGE');
   const garantieBonneExec = fillDefaults(garanties.garantieBonneExec, 'POURCENTAGE');
+  const retenueGarantie = fillDefaults(garanties.retenueGarantie, 'POURCENTAGE');
   const cautionnement = fillDefaults(garanties.cautionnement, 'MONTANT');
+  // Modif #173 (obs. EHOUMAN) — « Autres » : garantie libre saisie par l'agent.
+  const autreGarantie = {
+    existe: false, libelle: '', montant: 0, baseCalc: 'HT',
+    dateEmission: null, dateEcheance: null,
+    ...(garanties.autreGarantie || {})
+  };
 
   // Vérifier si les garanties sont obligatoires (AOO)
   const avanceObligatoire = isFieldRequired('garantieAvance', modePassation, 'attribution');
   const bonneExecObligatoire = isFieldRequired('garantieBonneExecution', modePassation, 'attribution');
+  // L'exclusion PI s'applique à la bonne exécution ET à la retenue de garantie (Art. 97.1).
+  const showBonneExecRetenue = !isFieldHidden('garantieBonneExecution', modePassation, 'attribution');
+  const showAvanceSoumission = !isFieldHidden('garantieAvance', modePassation, 'attribution');
 
   const garantiesVisibles = [];
+  const sep = () => { if (garantiesVisibles.length > 0) garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } })); };
 
-  // Garantie d'avance (si non cachée)
-  if (!isFieldHidden('garantieAvance', modePassation, 'attribution')) {
+  // Modif #173 — Garantie d'offre / soumission (1 %–1,5 %, Art. 95.2)
+  if (showAvanceSoumission) {
+    garantiesVisibles.push(
+      renderGarantieItem('soumission', 'Garantie d\'offre / soumission', garantieSoumission, false, montantsTotaux, 'soumission')
+    );
+  }
+
+  // Garantie d'avance de démarrage (si non cachée)
+  if (showAvanceSoumission) {
+    sep();
     garantiesVisibles.push(
       renderGarantieItem('avance', 'Garantie d\'avance de démarrage' + (avanceObligatoire ? ' *' : ''), garantieAvance, avanceObligatoire, montantsTotaux, 'avance')
     );
   }
 
-  // Garantie de bonne exécution (si non cachée)
-  if (!isFieldHidden('garantieBonneExecution', modePassation, 'attribution')) {
-    if (garantiesVisibles.length > 0) {
-      garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
-    }
+  // Garantie de bonne exécution (sauf PI)
+  if (showBonneExecRetenue) {
+    sep();
     garantiesVisibles.push(
       renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire, montantsTotaux, 'bonneExec')
     );
   }
 
-  // Cautionnement (toujours optionnel)
-  if (garantiesVisibles.length > 0) {
-    garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } }));
+  // Modif #173 — Retenue de garantie (3 %–5 %, Art. 98 — sauf PI)
+  if (showBonneExecRetenue) {
+    sep();
+    garantiesVisibles.push(
+      renderGarantieItem('retenue', 'Retenue de garantie', retenueGarantie, false, montantsTotaux, 'retenue')
+    );
   }
+
+  // Cautionnement (toujours optionnel)
+  sep();
   garantiesVisibles.push(
     renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false, montantsTotaux, 'cautionnement')
   );
+
+  // Modif #173 — Autre garantie (saisie libre par l'agent)
+  sep();
+  garantiesVisibles.push(renderAutreGarantieItem(autreGarantie, montantsTotaux));
 
   const garantiesCard = el('div', { className: 'card' }, [
     el('div', { className: 'card-header' }, [
@@ -2202,6 +2230,52 @@ function renderGarantieItem(id, label, garantie, required = false, montantsTotau
 }
 
 /**
+ * Modif #173 (obs. EHOUMAN) — « Autre garantie » : ligne libre permettant à l'agent
+ * d'enregistrer une garantie qui se présente, hors barème légal (selon CCAP).
+ */
+function renderAutreGarantieItem(garantie, _montantsTotaux = { ht: 0, ttc: 0 }) {
+  const isChecked = garantie.existe === true;
+  return el('div', { style: { marginBottom: '16px' } }, [
+    el('div', { style: { marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } }, [
+      el('label', { className: 'form-label', style: { display: 'flex', alignItems: 'center', gap: '8px', margin: 0 } }, [
+        el('input', {
+          type: 'checkbox',
+          id: 'garantie-autre-existe',
+          checked: isChecked,
+          onchange: (e) => {
+            const d = document.getElementById('garantie-autre-details');
+            if (d) d.style.display = e.target.checked ? 'grid' : 'none';
+          }
+        }),
+        el('span', { style: { fontWeight: 'bold' } }, 'Autre garantie')
+      ]),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'Saisie libre — selon CCAP')
+    ]),
+    el('div', {
+      id: 'garantie-autre-details',
+      style: { display: isChecked ? 'grid' : 'none', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', paddingLeft: '24px' }
+    }, [
+      el('div', { className: 'form-field', style: { gridColumn: 'span 2' } }, [
+        el('label', { className: 'form-label' }, 'Libellé de la garantie'),
+        el('input', { type: 'text', className: 'form-input', id: 'garantie-autre-libelle', value: garantie.libelle || '', placeholder: 'Ex : garantie spéciale prévue au CCAP…' })
+      ]),
+      el('div', { className: 'form-field', style: { gridColumn: 'span 2' } }, [
+        el('label', { className: 'form-label' }, 'Montant (XOF)'),
+        el('input', { type: 'number', className: 'form-input', id: 'garantie-autre-montant', value: String(garantie.montant || 0), min: '0', step: '1' })
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Date émission'),
+        el('input', { type: 'date', className: 'form-input', id: 'garantie-autre-emission', value: garantie.dateEmission || '' })
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Date échéance'),
+        el('input', { type: 'date', className: 'form-input', id: 'garantie-autre-echeance', value: garantie.dateEcheance || '' })
+      ])
+    ])
+  ]);
+}
+
+/**
  * Section Réserves CF
  */
 // Modif #64 — Liste indicative des types de réserves standards du CF.
@@ -2720,10 +2794,26 @@ async function handleSave(idOperation, operation, rawAttribution = null, lotId =
       const dateEcheance = document.getElementById(`garantie-${id}-echeance`)?.value || null;
       return { existe: true, montant, baseCalc, saisieMode, dateEmission, dateEcheance };
     };
+    // Modif #173 (obs. EHOUMAN) — collecte de la garantie « Autre » (saisie libre).
+    const collectAutreGarantie = () => {
+      const existe = document.getElementById('garantie-autre-existe')?.checked === true;
+      if (!existe) return { existe: false, libelle: '', montant: 0 };
+      return {
+        existe: true,
+        libelle: document.getElementById('garantie-autre-libelle')?.value?.trim() || '',
+        montant: parseFloat(document.getElementById('garantie-autre-montant')?.value) || 0,
+        baseCalc: 'HT',
+        dateEmission: document.getElementById('garantie-autre-emission')?.value || null,
+        dateEcheance: document.getElementById('garantie-autre-echeance')?.value || null
+      };
+    };
     const garantiesData = {
+      garantieSoumission: collectGarantie('soumission'),
       garantieAvance: collectGarantie('avance'),
       garantieBonneExec: collectGarantie('bonne-exec'),
-      cautionnement: collectGarantie('cautionnement')
+      retenueGarantie: collectGarantie('retenue'),
+      cautionnement: collectGarantie('cautionnement'),
+      autreGarantie: collectAutreGarantie()
     };
 
     // Chercher si une attribution existe déjà pour cette opération
