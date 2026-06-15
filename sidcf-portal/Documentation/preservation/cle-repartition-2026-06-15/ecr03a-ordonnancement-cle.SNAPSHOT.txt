@@ -1,0 +1,78 @@
+2361	function renderCleRepartitionSection(montantHT, montantTTC, livrables, registries) {
+2362	  return el('div', { className: 'card' }, [
+2363	    el('div', { className: 'card-header' }, [
+2364	      el('h3', { className: 'card-title' }, '📊 Clé de Répartition Multi-Bailleurs')
+2365	    ]),
+2366	    el('div', { className: 'card-body', id: 'cle-repartition-container' })
+2367	  ]);
+2368	}
+
+2395	function renderOrdonnancementSection() {
+2396	  return el('div', { className: 'card' }, [
+2397	    el('div', { className: 'card-header' }, [
+2398	      el('h3', { className: 'card-title' }, '🗓️ Ordonnancement prévu (CP par année)'),
+2399	      el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+2400	        'Récapitulatif de la clé de répartition, ventilé par année et par source de financement. Non saisissable : reflète automatiquement la clé.')
+2401	    ]),
+2402	    el('div', { className: 'card-body', id: 'ord-container' })
+2403	  ]);
+2404	}
+
+2413	function computeOrdonnancementFromCle(cleList) {
+2414	  const byYear = new Map();
+2415	  (Array.isArray(cleList) ? cleList : []).forEach(ligne => {
+2416	    const annee = parseInt(ligne.annee, 10) || null;
+2417	    const montant = Number(ligne.montant) || 0;
+2418	    if (!annee && !montant) return;
+2419	    if (!byYear.has(annee)) byYear.set(annee, { annee, tresor: 0, dons: 0, emprunts: 0 });
+2420	    const row = byYear.get(annee);
+2421	    const type = (ligne.typeFinancement || '').toUpperCase();
+2422	    if (type === 'DON') row.dons += montant;
+2423	    else if (type === 'EMPRUNT') row.emprunts += montant;
+2424	    else row.tresor += montant; // ETAT (et défaut) → Trésor (CI)
+2425	  });
+2426	  return [...byYear.values()].sort((a, b) => (a.annee || 0) - (b.annee || 0));
+2427	}
+
+2433	function renderOrdonnancementRecap() {
+2434	  const container = document.getElementById('ord-container');
+2435	  if (!container) return;
+2436	  container.innerHTML = '';
+2437	
+2438	  const rows = computeOrdonnancementFromCle(cleRepartitionList);
+2439	  if (!rows.length) {
+2440	    container.appendChild(el('p', { style: { margin: 0, fontSize: '13px', color: '#6b7280' } },
+2441	      'Renseignez la clé de répartition ci-dessus : l\'ordonnancement prévu s\'en déduira automatiquement.'));
+2442	    return;
+2443	  }
+2444	
+2445	  let tT = 0, tD = 0, tE = 0;
+2446	  const tbody = el('tbody', {}, rows.map(r => {
+2447	    tT += r.tresor; tD += r.dons; tE += r.emprunts;
+2448	    return el('tr', {}, [
+2449	      el('td', {}, String(r.annee || '—')),
+2450	      el('td', { style: { textAlign: 'right' } }, formatMoney(r.tresor)),
+2451	      el('td', { style: { textAlign: 'right' } }, formatMoney(r.dons)),
+2452	      el('td', { style: { textAlign: 'right' } }, formatMoney(r.emprunts)),
+2453	      el('td', { style: { textAlign: 'right', fontWeight: 600 } }, formatMoney(r.tresor + r.dons + r.emprunts))
+2454	    ]);
+2455	  }));
+2456	
+2457	  container.appendChild(el('table', { className: 'table', id: 'ord-table', style: { width: '100%', fontSize: '13px' } }, [
+2458	    el('thead', {}, el('tr', {}, [
+2459	      el('th', {}, 'Année (CP)'),
+2460	      el('th', { style: { textAlign: 'right' } }, 'Trésor (CI)'),
+2461	      el('th', { style: { textAlign: 'right' } }, 'Dons'),
+2462	      el('th', { style: { textAlign: 'right' } }, 'Emprunts'),
+2463	      el('th', { style: { textAlign: 'right' } }, 'Total')
+2464	    ])),
+2465	    tbody,
+2466	    el('tfoot', {}, el('tr', { style: { fontWeight: 600, borderTop: '2px solid #e5e7eb' } }, [
+2467	      el('td', {}, 'Total'),
+2468	      el('td', { style: { textAlign: 'right' } }, formatMoney(tT)),
+2469	      el('td', { style: { textAlign: 'right' } }, formatMoney(tD)),
+2470	      el('td', { style: { textAlign: 'right' } }, formatMoney(tE)),
+2471	      el('td', { style: { textAlign: 'right' } }, formatMoney(tT + tD + tE))
+2472	    ]))
+2473	  ]));
+2474	}
