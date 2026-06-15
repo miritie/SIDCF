@@ -13,6 +13,24 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-15 — Contractualisation : bloc « Barème applicable » compacté (ECR02A)
+
+> **Modif #168** — Retour client : le bloc « Barème applicable » prenait trop de place (chaque champ sur sa propre ligne, liste à puces, carte enveloppante + paddings). Compacté : champs **en ligne** (« Barème applicable — ADMIN_CENTRALE · 22.0M XOF »), procédures admissibles **séparées par « · »** au lieu d'une liste à puces, et **suppression de la carte enveloppante** (« 💡 Procédures admissibles (selon règles) ») redondante avec le titre de l'alerte. Toutes les informations sont conservées.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` : l'alerte « Barème applicable » devient un encart compact autonome (plus de `<p>` séparés ni de `<ul>`, paddings réduits).
+
+### Impact / Anti-régression
+
+- Affichage uniquement. **Vérifié** (Chrome headless, PSC) : « Barème applicable » + institution + montant (22.0M) + procédures admissibles (PSC …) présents ; **hauteur du bloc ≈ 60 px** (au lieu de ~250 px) ; en-tête de carte redondant retiré ; **0 erreur console**.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-10 — Gré à gré / Entente directe : alerte correcte + attributaire persisté et reconduit (ECR02A/ECR03A)
 
 > **Modif #167** — Analyse + corrections sur le **gré à gré**. Constats : (a) le gré à gré est bien un mode de passation = **`ENTENTE_DIRECTE`** (« Gré à gré / Entente directe, exceptionnel », famille DÉROGATOIRE) ; **`GRE`** est un **code legacy** des données seed, synonyme. (b) Ce mode réutilise le formulaire PSD et affichait à tort **« Procédure simplifiée »** (qui ne concerne que la PSD). (c) **Bug** : la branche de sauvegarde n'incluait pas `GRE` → le « Fournisseur (attributaire) » n'était **pas persisté** pour le gré à gré, donc rien ne remontait à l'enregistrement. (d) Pour les modes **sans lots** (PSD / gré à gré), l'attributaire (le fournisseur) **n'était pas reconduit** à l'enregistrement.

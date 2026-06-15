@@ -206,38 +206,34 @@ export async function renderProcedurePV(params) {
       titre: 'Contractualisation & mode de passation'
     }),
 
-    // Suggested procedures alert
-    el('div', { className: 'card', style: { marginBottom: '24px' } }, [
-      el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, '💡 Procédures admissibles (selon règles)')
-      ]),
-      el('div', { className: 'card-body' }, [
-        suggestedProcedures.length > 0
-          ? el('div', { className: 'alert alert-info' }, [
-              el('div', { className: 'alert-icon' }, 'ℹ️'),
-              el('div', { className: 'alert-content' }, [
-                el('div', { className: 'alert-title' }, 'Barème applicable'),
-                el('div', { className: 'alert-message' }, [
-                  el('p', {}, `Type institution: ${operation.typeInstitution || 'ADMIN_CENTRALE'}`),
-                  el('p', {}, `Montant: ${(operation.montantPrevisionnel / 1000000).toFixed(1)}M XOF`),
-                  el('p', { style: { fontWeight: '600', marginTop: '8px' } }, 'Procédures admissibles:'),
-                  el('ul', { style: { marginTop: '8px', paddingLeft: '20px' } },
-                    suggestedProcedures.map(p =>
-                      el('li', {}, `${p.mode} (${registries.MODE_PASSATION.find(m => m.code === p.mode)?.label || p.mode})`)
-                    )
-                  )
-                ])
-              ])
+    // Suggested procedures alert — Modif #168 : version COMPACTE (le bloc
+    // « Barème applicable » était trop espacé). Champs en ligne + procédures
+    // admissibles listées en virgules, sans paddings excessifs.
+    suggestedProcedures.length > 0
+      ? el('div', {
+          className: 'alert alert-info',
+          style: { marginBottom: '16px', padding: '10px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }
+        }, [
+          el('div', { className: 'alert-icon' }, 'ℹ️'),
+          el('div', { className: 'alert-content', style: { fontSize: '13px', lineHeight: '1.4' } }, [
+            el('div', { style: { fontWeight: 600 } }, [
+              'Barème applicable',
+              el('span', { style: { fontWeight: 400, color: '#374151' } },
+                ` — ${operation.typeInstitution || 'ADMIN_CENTRALE'} · ${(operation.montantPrevisionnel / 1000000).toFixed(1)}M XOF`)
+            ]),
+            el('div', { style: { marginTop: '2px' } }, [
+              el('span', { style: { color: '#6b7280' } }, 'Procédures admissibles : '),
+              suggestedProcedures.map(p => `${p.mode} (${registries.MODE_PASSATION.find(m => m.code === p.mode)?.label || p.mode})`).join(' · ')
             ])
-          : el('div', { className: 'alert alert-warning' }, [
-              el('div', { className: 'alert-icon' }, '⚠️'),
-              el('div', { className: 'alert-content' }, [
-                el('div', { className: 'alert-title' }, 'Aucune règle trouvée'),
-                el('div', { className: 'alert-message' }, 'Vérifiez la configuration des barèmes dans rules-config.json')
-              ])
-            ])
-      ])
-    ]),
+          ])
+        ])
+      : el('div', { className: 'alert alert-warning', style: { marginBottom: '16px', padding: '10px 14px' } }, [
+          el('div', { className: 'alert-icon' }, '⚠️'),
+          el('div', { className: 'alert-content', style: { fontSize: '13px' } }, [
+            el('strong', {}, 'Aucune règle trouvée'),
+            ' — vérifiez la configuration des barèmes dans rules-config.json'
+          ])
+        ]),
 
     // Feuille de route DÉROGATIONS (#156) — Carte « Mode de passation » : la
     // LIASSE fait foi. L'outil rappelle le mode planifié (PPM) et celui imposé
