@@ -13,6 +13,51 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-17 — Fiche marché : alignement des libellés/contenu sur les écrans actuels (ECR01C)
+
+> **Modif #176** — Remarque client R4 : la fiche marché doit refléter les écrans à jour.
+> - **Garanties** : ordre aligné (bonne exécution en 1er), libellé « Garantie d'avance de démarrage », ajout des lignes **soumission**, **retenue** et **« Autres garanties »** (libellé libre).
+> - **Clé de répartition** : vocabulaire #169 — en-têtes « Source de financement », « Type de financement », « Part contractuel (taux %) ».
+> - **Attributaire groupement** : affichage du **Nom du groupement** (#172) + libellé « Mandataire (raison sociale) ».
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` — `renderGarantiesAttribution()` (ordre + nouvelles garanties), `renderCleRepartitionTable()` (en-têtes), bloc info attributaire (nom du groupement).
+
+### Impact / Anti-régression
+
+- **Affichage uniquement** (lecture), aucune écriture, aucune migration. Les garanties non déclarées sont filtrées (`.existe`), les lignes conditionnelles (nom du groupement) n'apparaissent que pour un groupement.
+- **Vérifié headless** (Chrome CDP) : libellés clé présents dans le DOM, garanties alignées, 0 erreur console. Le champ « Bailleur » de la chaîne budgétaire et le pivot pluriannualité (concepts distincts) sont conservés.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
+## 2026-06-17 — Retours client : libellé avenant, ordre groupement (type→banque), ordre garanties (ECR03A/04A/04B)
+
+> **Modif #175** — 3 remarques client :
+> - **R1** — libellé « Total avenants » → **« Montant total avenant »** (écrans Exécution ECR04A + Avenants ECR04B).
+> - **R2** — groupement : le **Type de groupement est choisi AVANT les comptes bancaires** (le nombre de comptes en dépend : SOLIDAIRE = 1 compte mandataire ; CONJOINT = mandataire + 1 compte par co-titulaire). Affine #172 (le type passe entre l'identité du mandataire et la section bancaire).
+> - **R3** — garanties : **commencer par la garantie de bonne exécution**, puis avance / soumission / retenue / cautionnement ; la ligne libre devient **« Autres garanties »**.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — réordonnancement du bloc groupement (type avant banque) et du bloc garanties (bonne exéc. en 1er) ; renommage « Autre garantie » → « Autres garanties ».
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` + `ecr04b-avenants.js` — libellé « Montant total avenant ».
+
+### Impact / Anti-régression
+
+- Réorganisations DOM **par `id`** (select type, comptes, widgets garanties câblés par id) → aucune logique cassée. Aucune nouvelle donnée, aucune migration.
+- **Vérifié headless** (Chrome CDP, op réelles) : Type avant comptes ✅, Bonne exécution avant avance ✅, « Autres garanties » ✅, « Montant total avenant » ✅ — 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-15 — Exécution : table des décomptes + « Décompte 00 » si avance + contrôle livrables↔décomptes (ECR04A)
 
 > **Modif #174** — Observations EHOUMAN (14/06/2026), points 3/6/11.

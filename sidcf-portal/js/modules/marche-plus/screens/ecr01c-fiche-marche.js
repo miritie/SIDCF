@@ -1377,7 +1377,11 @@ function renderAttributionContent(fullData, currentLotId, registries) {
       }, '🏢 Fiche entreprise liée') : null
     ]),
     renderInfoGrid([
-      { label: 'Raison sociale', value: (firstEntreprise?.raisonSociale || attributaire.raisonSociale) || '-' },
+      // Modif #176 (R4 client) — afficher le « Nom du groupement » (#172) en tête pour un groupement.
+      ...(attributaire.singleOrGroup === 'GROUPEMENT'
+        ? [{ label: 'Nom du groupement', value: attributaire.nomGroupement || '-' }]
+        : []),
+      { label: attributaire.singleOrGroup === 'GROUPEMENT' ? 'Mandataire (raison sociale)' : 'Raison sociale', value: (firstEntreprise?.raisonSociale || attributaire.raisonSociale) || '-' },
       { label: 'NCC', value: (firstEntreprise?.ncc || attributaire.ncc) || '-' },
       { label: 'Adresse', value: (firstEntreprise?.adresse || attributaire.adresse) || '-' },
       { label: 'Téléphone', value: (firstEntreprise?.telephone || attributaire.telephone) || '-' },
@@ -1462,11 +1466,21 @@ function renderSousTraitantsAttribution(sousTraitants) {
 }
 
 function renderGarantiesAttribution(garanties) {
+  // Modif #176 (R4 client) — alignement avec ECR03A : bonne exécution en 1er,
+  // libellés à jour (#170/#173) + garanties soumission / retenue / autres.
   const items = [
-    { code: 'avance', label: "Garantie d'avance", data: garanties.garantieAvance },
     { code: 'be', label: 'Garantie de bonne exécution', data: garanties.garantieBonneExec },
+    { code: 'avance', label: "Garantie d'avance de démarrage", data: garanties.garantieAvance },
+    { code: 'soumission', label: "Garantie d'offre / soumission", data: garanties.garantieSoumission },
+    { code: 'retenue', label: 'Retenue de garantie', data: garanties.retenueGarantie },
     { code: 'caut', label: 'Cautionnement', data: garanties.cautionnement }
   ].filter(g => g.data && g.data.existe);
+
+  // « Autres garanties » (saisie libre — libellé + montant)
+  if (garanties.autreGarantie && garanties.autreGarantie.existe) {
+    const ag = garanties.autreGarantie;
+    items.push({ code: 'autre', label: 'Autres garanties' + (ag.libelle ? ` — ${ag.libelle}` : ''), data: ag });
+  }
 
   if (items.length === 0) {
     return el('p', { className: 'text-muted', style: { fontStyle: 'italic', fontSize: '13px' } }, 'Aucune garantie contractuelle déclarée');
@@ -1514,11 +1528,11 @@ function renderCleRepartitionTable(lignes, registries) {
   return el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
     el('thead', {}, [el('tr', {}, [
       el('th', {}, 'Année'),
-      el('th', {}, 'Bailleur'),
-      el('th', {}, 'Type fin.'),
+      el('th', {}, 'Source de financement'),
+      el('th', {}, 'Type de financement'),
       el('th', {}, 'Base'),
       el('th', { style: { textAlign: 'right' } }, 'Montant'),
-      el('th', { style: { textAlign: 'right' } }, '%')
+      el('th', { style: { textAlign: 'right' } }, 'Part contractuel (taux %)')
     ])]),
     el('tbody', {}, lignes.map(l => {
       const bailleurLib = registries.BAILLEUR?.find(b => b.code === l.bailleur)?.label || l.bailleur;
