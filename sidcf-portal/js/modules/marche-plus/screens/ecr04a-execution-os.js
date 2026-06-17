@@ -390,7 +390,7 @@ export async function renderExecutionOS(params) {
                     el('div', { style: { fontWeight: '600', fontSize: '14px' } }, money(montantInitial))
                   ]),
                   el('div', { style: { textAlign: 'center', padding: '12px', background: 'var(--color-gray-100)', borderRadius: '8px' } }, [
-                    el('div', { className: 'text-small text-muted' }, 'Total avenants'),
+                    el('div', { className: 'text-small text-muted' }, 'Montant total avenant'),
                     el('div', { style: { fontWeight: '600', fontSize: '14px', color: totalAvenants >= 0 ? 'var(--color-success)' : 'var(--color-error)' } },
                       `${totalAvenants >= 0 ? '+' : ''}${money(totalAvenants)}`)
                   ]),

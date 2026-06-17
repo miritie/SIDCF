@@ -103,7 +103,7 @@ export async function renderAvenants(params) {
     // KPIs
     kpiGrid([
       { label: 'Montant du marché de base', value: montantInitial, options: { format: 'money' } },
-      { label: 'Total avenants', value: totalAvenants, options: { format: 'money' } },
+      { label: 'Montant total avenant', value: totalAvenants, options: { format: 'money' } },
       { label: 'Montant total du marché', value: montantActuel, options: { format: 'money' } },
       { label: 'Cumul (%)', value: pourcentage.toFixed(1) + '%' }
     ]),

@@ -885,12 +885,10 @@ function renderAttributaireSection(attributaire, registries) {
         el('input', { type: 'hidden', id: 'attr-mandataire-telephone', value: mandataire.telephone || '' }),
         el('input', { type: 'hidden', id: 'attr-mandataire-email', value: mandataire.email || '' }),
 
-        // Coordonnées bancaires du mandataire (Marché+ — modif #18) — éditables, pré-remplies à l'autofill.
-        renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
-
-        // 3) Type de groupement et ses accessoires (APRÈS l'identité — obs. EHOUMAN)
-        // Modif #63 — Bandeau dynamique selon le type (CONJOINT vs SOLIDAIRE),
-        // rechargé par updateGroupTypeBanner() à chaque changement du dropdown.
+        // 3) Type de groupement — Modif #175 (R2 client) : choisi AVANT les comptes
+        // bancaires, car le nombre de comptes en dépend (SOLIDAIRE = 1 compte au
+        // mandataire ; CONJOINT = mandataire + 1 compte par co-titulaire).
+        // Modif #63 — Bandeau dynamique selon le type, rechargé par updateGroupTypeBanner().
         el('div', { style: { borderTop: '1px dashed #d1d5db', paddingTop: '16px', marginTop: '16px' } }, [
           el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
             el('label', { className: 'form-label' }, 'Type de groupement'),
@@ -901,6 +899,9 @@ function renderAttributaireSection(attributaire, registries) {
           ]),
           el('div', { id: 'attr-group-type-banner' })
         ]),
+
+        // 4) Coordonnées bancaires du mandataire (APRÈS le type — modif #18) — éditables, pré-remplies à l'autofill.
+        renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
 
         // Co-titulaires du groupement (Marché+ modif #20) — visible uniquement pour CONJOINT
         // En "solidaire", paiement unique au mandataire, donc pas besoin de coordonnées séparées.
@@ -1503,14 +1504,14 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
   const garantiesVisibles = [];
   const sep = () => { if (garantiesVisibles.length > 0) garantiesVisibles.push(el('hr', { style: { margin: '16px 0', borderColor: '#dee2e6' } })); };
 
-  // Modif #173 — Garantie d'offre / soumission (1 %–1,5 %, Art. 95.2)
-  if (showAvanceSoumission) {
+  // Modif #175 (R3 client) — commencer par la GARANTIE DE BONNE EXÉCUTION (sauf PI).
+  if (showBonneExecRetenue) {
     garantiesVisibles.push(
-      renderGarantieItem('soumission', 'Garantie d\'offre / soumission', garantieSoumission, false, montantsTotaux, 'soumission')
+      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire, montantsTotaux, 'bonneExec')
     );
   }
 
-  // Garantie d'avance de démarrage (si non cachée)
+  // Garantie d'avance de démarrage
   if (showAvanceSoumission) {
     sep();
     garantiesVisibles.push(
@@ -1518,15 +1519,15 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
     );
   }
 
-  // Garantie de bonne exécution (sauf PI)
-  if (showBonneExecRetenue) {
+  // Garantie d'offre / soumission (1 %–1,5 %, Art. 95.2)
+  if (showAvanceSoumission) {
     sep();
     garantiesVisibles.push(
-      renderGarantieItem('bonne-exec', 'Garantie de bonne exécution' + (bonneExecObligatoire ? ' *' : ''), garantieBonneExec, bonneExecObligatoire, montantsTotaux, 'bonneExec')
+      renderGarantieItem('soumission', 'Garantie d\'offre / soumission', garantieSoumission, false, montantsTotaux, 'soumission')
     );
   }
 
-  // Modif #173 — Retenue de garantie (3 %–5 %, Art. 98 — sauf PI)
+  // Retenue de garantie (3 %–5 %, Art. 98 — sauf PI)
   if (showBonneExecRetenue) {
     sep();
     garantiesVisibles.push(
@@ -1540,7 +1541,7 @@ function renderGarantiesSection(garanties, modePassation, montantsTotaux = { ht:
     renderGarantieItem('cautionnement', 'Cautionnement', cautionnement, false, montantsTotaux, 'cautionnement')
   );
 
-  // Modif #173 — Autre garantie (saisie libre par l'agent)
+  // Modif #175 (R3 client) — « Autres garanties » (saisie libre par l'agent)
   sep();
   garantiesVisibles.push(renderAutreGarantieItem(autreGarantie, montantsTotaux));
 
@@ -2247,7 +2248,7 @@ function renderAutreGarantieItem(garantie, _montantsTotaux = { ht: 0, ttc: 0 }) 
             if (d) d.style.display = e.target.checked ? 'grid' : 'none';
           }
         }),
-        el('span', { style: { fontWeight: 'bold' } }, 'Autre garantie')
+        el('span', { style: { fontWeight: 'bold' } }, 'Autres garanties')
       ]),
       el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'Saisie libre — selon CCAP')
     ]),
