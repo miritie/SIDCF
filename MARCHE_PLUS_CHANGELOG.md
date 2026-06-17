@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-17 — Groupement : type juste après la dénomination + satisfaction sans superlatifs (ECR03A/ECR05)
+
+> **Modif #177** — 2 remarques client (captures) :
+> - **Type de groupement remonté** juste **après la dénomination** (avant le mandataire et les comptes bancaires), car il conditionne le nombre de comptes (SOLIDAIRE = 1 compte unique au mandataire ; CONJOINT = un compte par entreprise). Nouvel ordre : *Nom du groupement → Type → Mandataire → Compte(s) → Co-titulaires*. (Affine #175 qui l'avait placé seulement avant la banque.)
+> - **Satisfaction des bénéficiaires (clôture)** : retrait des **superlatifs** « Très satisfait » et « Très insatisfait ». Échelle conservée : Satisfait / Neutre / Insatisfait.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — bloc « Type de groupement » déplacé après le champ « Nom du groupement » (un seul `attr-group-type` dans le DOM).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05-cloture.js` — options de `cloture-satisfaction` réduites (retrait `TRES_SATISFAIT` / `TRES_INSATISFAIT`).
+
+### Impact / Anti-régression
+
+- Câblage du select et du bandeau par `id` (listener + `updateGroupTypeBanner`) → réorganisation DOM sans casse. Aucune donnée nouvelle, aucune migration.
+- Valeurs `TRES_*` éventuellement déjà enregistrées : non proposées à la saisie, mais lisibles si présentes (aucune perte). Échelle d'affichage inchangée côté lecture.
+- **Vérifié headless** (Chrome CDP, op réelles) : ordre *Nom < Type < Mandataire < Comptes* ✅, un seul select type ✅, options satisfaction = [Satisfait, Neutre, Insatisfait] ✅ — 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-17 — Fiche marché : alignement des libellés/contenu sur les écrans actuels (ECR01C)
 
 > **Modif #176** — Remarque client R4 : la fiche marché doit refléter les écrans à jour.

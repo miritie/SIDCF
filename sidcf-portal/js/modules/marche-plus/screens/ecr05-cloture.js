@@ -264,11 +264,10 @@ export async function renderCloture(params) {
                 id: 'cloture-satisfaction'
               }, [
                 el('option', { value: '' }, '-- Sélectionner --'),
-                el('option', { value: 'TRES_SATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'TRES_SATISFAIT' }, 'Très satisfait'),
+                // Modif #177 (R client) — pas de superlatifs : retrait de « Très satisfait » et « Très insatisfait ».
                 el('option', { value: 'SATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'SATISFAIT' }, 'Satisfait'),
                 el('option', { value: 'NEUTRE', selected: cloture?.satisfactionBeneficiaires === 'NEUTRE' }, 'Neutre'),
-                el('option', { value: 'INSATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'INSATISFAIT' }, 'Insatisfait'),
-                el('option', { value: 'TRES_INSATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'TRES_INSATISFAIT' }, 'Très insatisfait')
+                el('option', { value: 'INSATISFAIT', selected: cloture?.satisfactionBeneficiaires === 'INSATISFAIT' }, 'Insatisfait')
               ])
             ]),
             el('div', { className: 'form-field', style: { marginTop: '12px' } }, [

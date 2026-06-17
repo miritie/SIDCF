@@ -839,7 +839,20 @@ function renderAttributaireSection(attributaire, registries) {
           })
         ]),
 
-        // 2) Mandataire du groupement (identité) — Modif #43.b + #69 picker + sélection rapide
+        // 2) Type de groupement — Modif #177 (R client) : juste après la dénomination,
+        // car il conditionne le nombre de comptes bancaires (SOLIDAIRE = 1 compte au
+        // mandataire ; CONJOINT = mandataire + 1 compte par co-titulaire).
+        // Modif #63 — Bandeau dynamique rechargé par updateGroupTypeBanner().
+        el('div', { className: 'form-field', style: { marginBottom: '8px' } }, [
+          el('label', { className: 'form-label' }, 'Type de groupement'),
+          el('select', { className: 'form-input', id: 'attr-group-type' }, [
+            el('option', { value: 'CONJOINT', selected: (mandataire?.groupType || 'CONJOINT') === 'CONJOINT' }, 'Groupement conjoint'),
+            el('option', { value: 'SOLIDAIRE', selected: mandataire?.groupType === 'SOLIDAIRE' }, 'Groupement solidaire')
+          ])
+        ]),
+        el('div', { id: 'attr-group-type-banner', style: { marginBottom: '16px' } }),
+
+        // 3) Mandataire du groupement (identité) — Modif #43.b + #69 picker + sélection rapide
         el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } }, [
           el('label', { className: 'form-label', style: { margin: 0 } }, [
             'Mandataire du groupement ',
@@ -885,22 +898,9 @@ function renderAttributaireSection(attributaire, registries) {
         el('input', { type: 'hidden', id: 'attr-mandataire-telephone', value: mandataire.telephone || '' }),
         el('input', { type: 'hidden', id: 'attr-mandataire-email', value: mandataire.email || '' }),
 
-        // 3) Type de groupement — Modif #175 (R2 client) : choisi AVANT les comptes
-        // bancaires, car le nombre de comptes en dépend (SOLIDAIRE = 1 compte au
-        // mandataire ; CONJOINT = mandataire + 1 compte par co-titulaire).
-        // Modif #63 — Bandeau dynamique selon le type, rechargé par updateGroupTypeBanner().
-        el('div', { style: { borderTop: '1px dashed #d1d5db', paddingTop: '16px', marginTop: '16px' } }, [
-          el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
-            el('label', { className: 'form-label' }, 'Type de groupement'),
-            el('select', { className: 'form-input', id: 'attr-group-type' }, [
-              el('option', { value: 'CONJOINT', selected: (mandataire?.groupType || 'CONJOINT') === 'CONJOINT' }, 'Groupement conjoint'),
-              el('option', { value: 'SOLIDAIRE', selected: mandataire?.groupType === 'SOLIDAIRE' }, 'Groupement solidaire')
-            ])
-          ]),
-          el('div', { id: 'attr-group-type-banner' })
-        ]),
-
-        // 4) Coordonnées bancaires du mandataire (APRÈS le type — modif #18) — éditables, pré-remplies à l'autofill.
+        // 4) Coordonnées bancaires du mandataire (APRÈS le type — modif #18) — éditables,
+        // pré-remplies à l'autofill. Le type étant choisi plus haut, l'agent sait s'il
+        // saisit un compte unique (solidaire) ou un compte par membre (conjoint, ci-dessous).
         renderCoordonneesBancairesSection('attr-mandataire', cbMandataire),
 
         // Co-titulaires du groupement (Marché+ modif #20) — visible uniquement pour CONJOINT
