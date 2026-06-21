@@ -402,8 +402,10 @@ function renderGarantieRow(garantie, rulesConfig) {
   return el('tr', {}, [
     el('td', { style: { fontWeight: '500' } }, typeObj?.label || garantie.type),
     el('td', {}, garantie.baseCalc || 'TTC'),
-    el('td', {}, `${(garantie.taux ?? 0).toFixed(2)}%`),
-    el('td', {}, `${(garantie.montant / 1000000).toFixed(2)}M`),
+    // Modif #178 — Postgres renvoie les numériques en chaîne ; « ?? 0 » ne rattrape
+    // que null/undefined → on coerce en Number pour éviter un crash de toFixed.
+    el('td', {}, `${(Number(garantie.taux) || 0).toFixed(2)}%`),
+    el('td', {}, `${((Number(garantie.montant) || 0) / 1000000).toFixed(2)}M`),
     el('td', {}, garantie.dateEmission ? new Date(garantie.dateEmission).toLocaleDateString() : '-'),
     el('td', {}, garantie.dateEcheance ? new Date(garantie.dateEcheance).toLocaleDateString() : '-'),
     el('td', {}, renderEtatBadge(garantie.etat)),

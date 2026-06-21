@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-18 — Garanties (mainlevée) : accès depuis l'exécution + correction du crash d'affichage (ECR04A/ECR04C)
+
+> **Modif #178** — Le client ne trouvait pas où lever les garanties. Deux causes, corrigées :
+> - **Aucun accès** à l'écran Garanties depuis l'**Exécution** (il n'était atteignable que depuis la fiche marché, en cliquant une ligne de garantie). → Ajout d'un bouton **« 🛡️ Garanties / Mainlevées »** dans la barre d'actions de l'exécution (route `/mp/garanties`).
+> - **L'écran Garanties plantait** (page « non accessible / 404 ») dès qu'une garantie réelle existait : `TypeError: (garantie.taux ?? 0).toFixed is not a function`. Postgres renvoie les numériques en **chaîne** ; `?? 0` ne rattrape que `null/undefined`, donc `"10".toFixed()` échouait → l'écran ne s'affichait pas (et la mainlevée était inatteignable). → Coercition `Number(...)` sur `taux` et `montant`.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` — bouton « 🛡️ Garanties / Mainlevées » vers `/mp/garanties`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04c-garanties.js` — `renderGarantieRow()` : `(Number(garantie.taux)||0).toFixed()` et `(Number(garantie.montant)||0)/1e6`.
+
+### Impact / Anti-régression
+
+- **Correction de bug bloquant** : sans ça, aucune garantie enregistrée ne s'affichait et **aucune mainlevée n'était possible**. Aucune donnée modifiée, aucune migration.
+- Rappel du mécanisme : la mainlevée se fait ligne par ligne sur ECR04C (bouton « Mainlevée » → état `LEVEE` + date) ; la clôture définitive (ECR05) reste bloquée tant que toutes les garanties ne sont pas levées (Art. 116 Code MP CI).
+- **Vérifié headless** (Chrome CDP, op réelle 005 = 2 garanties ACTIVE) : bouton présent sur l'exécution ✅, écran Garanties = 2 lignes + 2 boutons « Mainlevée » ✅, plus de page d'erreur, 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-17 — Groupement : type juste après la dénomination + satisfaction sans superlatifs (ECR03A/ECR05)
 
 > **Modif #177** — 2 remarques client (captures) :

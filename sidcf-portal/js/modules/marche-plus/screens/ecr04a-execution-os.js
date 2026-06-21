@@ -453,6 +453,8 @@ export async function renderExecutionOS(params) {
               ? `Travaux démarrés le ${formatDate(osDemarrage.dateEmission)} • ${avenantsForLot?.length || 0} avenant(s)`
               : 'Travaux non démarrés'),
           el('div', { style: { display: 'flex', gap: '8px' } }, [
+            // Modif #178 — accès direct à l'écran Garanties (mainlevées) depuis l'exécution.
+            createButton('btn btn-secondary', '🛡️ Garanties / Mainlevées', () => router.navigate('/mp/garanties', { idOperation, lotId: currentLotId })),
             hasOSDemarrage
               ? createButton('btn btn-secondary', 'Avenants & Résiliation', () => router.navigate('/mp/avenants', { idOperation, lotId: currentLotId }))
               : null,
