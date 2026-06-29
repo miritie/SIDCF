@@ -737,24 +737,45 @@ export async function renderProcedurePV(params) {
         || (procedureData?.lots && procedureData.lots[0]?.pv?.ouverture)
         || procedureData?.pvOuverture
         || null;
-      const pvCard = el('div', {
-        className: 'card',
-        id: 'pv-ouverture-transverse-container',
-        style: { marginBottom: '24px' }
-      }, [
-        el('div', { className: 'card-header' }, [
-          el('h3', { className: 'card-title' }, '📄 PV d\'ouverture (transverse — tous les lots)')
-        ]),
-        el('div', { className: 'card-body' }, [
-          el('p', { style: { margin: '0 0 10px', fontSize: '12px', color: '#6b7280' } },
-            'Un seul PV d\'ouverture pour l\'ensemble des lots du processus.'),
-          el('div', { className: 'form-field' }, [
-            el('label', { className: 'form-label' }, 'Document PV d\'ouverture (PDF)'),
-            el('input', { type: 'file', className: 'form-input', id: 'proc-pv-ouverture', accept: '.pdf,.doc,.docx' }),
-            pvOuvLegacy ? el('small', { className: 'text-success' }, `✓ ${pvOuvLegacy}`) : null
+      // Note 3 — Phase 2 : en REPRISE (itération > 1), la commission siège à nouveau
+      // mais SANS nouveau PV d'ouverture (l'ouverture a déjà eu lieu, le périmètre /
+      // soumissionnaires ne change pas). On masque l'upload (le PV existant est conservé
+      // automatiquement à la sauvegarde via le fallback sur existingProc.pv.ouverture).
+      const enReprise = (procedureData?.iterationCourante || 1) > 1;
+      const pvCard = enReprise
+        ? el('div', { className: 'card', id: 'pv-ouverture-transverse-container', style: { marginBottom: '24px' } }, [
+            el('div', { className: 'card-header' }, [
+              el('h3', { className: 'card-title' }, '📄 PV d\'ouverture — déjà effectué')
+            ]),
+            el('div', { className: 'card-body' }, [
+              el('div', { className: 'alert alert-info', style: { margin: 0 } }, [
+                el('div', { className: 'alert-icon' }, 'ℹ️'),
+                el('div', { className: 'alert-content', style: { fontSize: '13px' } }, [
+                  el('strong', {}, `Itération n°${procedureData.iterationCourante} — reprise après objection. `),
+                  'L\'ouverture a déjà été faite à la 1ʳᵉ itération et le périmètre (soumissionnaires) ne change pas : pas de nouveau PV d\'ouverture.',
+                  pvOuvLegacy ? el('div', { style: { marginTop: '4px' } }, el('small', { className: 'text-success' }, `✓ PV d'ouverture conservé : ${pvOuvLegacy}`)) : null
+                ])
+              ])
+            ])
           ])
-        ])
-      ]);
+        : el('div', {
+            className: 'card',
+            id: 'pv-ouverture-transverse-container',
+            style: { marginBottom: '24px' }
+          }, [
+            el('div', { className: 'card-header' }, [
+              el('h3', { className: 'card-title' }, '📄 PV d\'ouverture (transverse — tous les lots)')
+            ]),
+            el('div', { className: 'card-body' }, [
+              el('p', { style: { margin: '0 0 10px', fontSize: '12px', color: '#6b7280' } },
+                'Un seul PV d\'ouverture pour l\'ensemble des lots du processus.'),
+              el('div', { className: 'form-field' }, [
+                el('label', { className: 'form-label' }, 'Document PV d\'ouverture (PDF)'),
+                el('input', { type: 'file', className: 'form-input', id: 'proc-pv-ouverture', accept: '.pdf,.doc,.docx' }),
+                pvOuvLegacy ? el('small', { className: 'text-success' }, `✓ ${pvOuvLegacy}`) : null
+              ])
+            ])
+          ]);
       lotsContainer.appendChild(pvCard);
 
       const card = el('div', { className: 'card', style: { marginBottom: '24px' } }, [
@@ -2040,9 +2061,53 @@ function renderObjectionBloc({ idOperation, procedure, registries }) {
     }
   });
 
+  // Note 3 — Phase 2 : « Remettre en cause » = archive l'itération courante (procédure
+  // + attribution + PV) dans iterations[] SANS RIEN ÉCRASER, incrémente le compteur, et
+  // rouvre la contractualisation pour une nouvelle itération (objection levée pour la suite).
+  async function remettreEnCause() {
+    if (!procedure || !procedure.id) { alert('⚠️ Aucune procédure enregistrée à remettre en cause.'); return; }
+    if (!confirm('Confirmer la remise en cause ?\n\nL\'itération courante sera ARCHIVÉE (aucune perte de données), puis la procédure sera reprise depuis la contractualisation (itération suivante). Le PV d\'ouverture ne sera pas redemandé.')) return;
+    try {
+      const attrs = await dataService.query(ENTITIES.MP_ATTRIBUTION, { operationId: idOperation }).catch(() => []);
+      const attribution = (Array.isArray(attrs) && attrs[0]) ? attrs[0] : null;
+      const numero = procedure.iterationCourante || 1;
+      const iterations = Array.isArray(procedure.iterations) ? [...procedure.iterations] : [];
+      // Snapshot sans réinjecter iterations (évite l'imbrication récursive).
+      const { iterations: _it, ...procSnapshot } = procedure;
+      iterations.push({
+        numero,
+        dateRemiseEnCause: new Date().toISOString(),
+        objection: procedure.objection || obj || null,
+        snapshotProcedure: procSnapshot,
+        snapshotAttribution: attribution
+      });
+      await dataService.update(ENTITIES.MP_PROCEDURE, procedure.id, {
+        iterations,
+        iterationCourante: numero + 1,
+        objection: { active: false }
+      });
+      alert(`✅ Procédure remise en cause.\n\nItération n°${numero} archivée (conservée). Reprise en itération n°${numero + 1} : reprenez la saisie de la contractualisation — l'ouverture et le périmètre sont conservés.`);
+      location.reload();
+    } catch (e) {
+      alert('❌ Erreur lors de la remise en cause.');
+    }
+  }
+
+  const iterBadge = (procedure && procedure.iterationCourante > 1)
+    ? el('span', { className: 'badge badge-info', style: { marginLeft: '8px', fontSize: '11px' } }, `Itération n°${procedure.iterationCourante}`)
+    : null;
+
+  const remiseBtn = obj.active
+    ? (() => {
+        const b = el('button', { type: 'button', className: 'btn btn-warning' }, '⚖️ Remettre en cause la procédure (nouvelle itération)');
+        b.addEventListener('click', () => remettreEnCause());
+        return b;
+      })()
+    : el('span', {});
+
   return el('div', { className: 'card', style: { marginBottom: '24px', borderColor: '#fca5a5' } }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, '🚩 Objection à la procédure'),
+      el('h3', { className: 'card-title' }, ['🚩 Objection à la procédure', iterBadge]),
       el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
         'Distincte de l\'Avis de Non-Objection (ANO). Objection extraordinaire (organe saisi pour irrégularité) pouvant remettre en cause la procédure, à tout moment avant l\'OS de démarrage.')
     ]),
@@ -2053,7 +2118,7 @@ function renderObjectionBloc({ idOperation, procedure, registries }) {
         el('div', { style: { display: 'flex', gap: '24px' } }, [radio(false, 'Non'), radio(true, 'Oui')])
       ]),
       details,
-      el('div', { style: { marginTop: '12px', textAlign: 'right' } }, [saveBtn])
+      el('div', { style: { marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' } }, [remiseBtn, saveBtn])
     ])
   ]);
 }

@@ -1244,6 +1244,53 @@ function renderLivrablesTable(livrables, registries) {
 // Section 2 — Contractualisation
 // ============================================
 
+/**
+ * Note 3 — Phase 2 : vue MANAGER « Historique des itérations & objections ».
+ * Affiche l'objection en cours (le cas échéant) et la liste des itérations
+ * archivées (remises en cause). Retourne null si rien à montrer (l'utilisateur
+ * lambda ne voit donc rien de spécial ; le manager voit l'historique complet).
+ */
+function renderIterationsObjectionsManager(procedure, registries) {
+  const iterations = Array.isArray(procedure?.iterations) ? procedure.iterations : [];
+  const obj = procedure?.objection || {};
+  if (iterations.length === 0 && !obj.active) return null;
+  const organes = registries.ORGANE_OBJECTION || [];
+  const organeLabel = (code) => organes.find(o => o.code === code)?.label || code || '—';
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+  return el('div', { className: 'card', style: { marginBottom: '16px', borderColor: '#fca5a5' } }, [
+    el('div', { className: 'card-header', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '🗂️ Historique des itérations & objections'),
+      el('span', { className: 'badge badge-info' }, `Itération courante n°${procedure.iterationCourante || 1}`)
+    ]),
+    el('div', { className: 'card-body' }, [
+      obj.active ? el('div', {
+        style: { marginBottom: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b' }
+      }, [
+        el('strong', {}, '🚩 Objection en cours — '),
+        `Organe : ${organeLabel(obj.organe)} · ${fmt(obj.date)}`,
+        obj.motif ? el('div', { className: 'text-small', style: { marginTop: '2px' } }, obj.motif) : null
+      ]) : null,
+      iterations.length > 0
+        ? el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
+            el('thead', {}, [el('tr', {}, [
+              el('th', {}, 'Itération'),
+              el('th', {}, 'Remise en cause le'),
+              el('th', {}, 'Organe saisi'),
+              el('th', {}, 'Motif de l\'objection')
+            ])]),
+            el('tbody', {}, iterations.map(it => el('tr', {}, [
+              el('td', { style: { fontWeight: 600 } }, `n°${it.numero}`),
+              el('td', {}, fmt(it.dateRemiseEnCause)),
+              el('td', {}, organeLabel(it.objection?.organe)),
+              el('td', { className: 'text-small' }, it.objection?.motif || '—')
+            ])))
+          ])
+        : el('p', { className: 'text-muted text-small', style: { margin: 0 } }, 'Aucune itération archivée pour l\'instant.')
+    ])
+  ]);
+}
+
 function renderContractualisationContent(procedure, currentLotId, lots, registries, operation) {
   if (!procedure) {
     return el('p', { className: 'text-muted', style: { fontStyle: 'italic' } }, 'Phase de contractualisation non encore renseignée.');
@@ -1265,6 +1312,8 @@ function renderContractualisationContent(procedure, currentLotId, lots, registri
   const derog = operation?.procDerogation;
 
   return el('div', {}, [
+    // Note 3 — Phase 2 : vue MANAGER de l'historique des itérations & objections.
+    renderIterationsObjectionsManager(procedure, registries),
     // Bandeau warning si pièce dérogative manquante
     pieceManquante ? el('div', {
       style: {

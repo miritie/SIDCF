@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Objection à la procédure (Phase 2) : remise en cause / itérations sans perte + vue manager (ECR02A/ECR01C)
+
+> **Note 3 réunion — Phase 2.** Une procédure (contractualisation/attribution déjà saisies) peut être **remise en cause** par une objection. On **ne perd rien** : l'itération courante est **archivée**, puis la procédure est **reprise depuis la contractualisation** (itération suivante). L'utilisateur refait la saisie ; le **manager** voit toutes les itérations + objections.
+> - **Action « Remettre en cause »** (dans le bloc Objection, quand une objection est active) : archive la procédure + attribution + PV courants dans `procedure.iterations[]` **sans rien écraser**, incrémente `iteration_courante`, lève l'objection pour la nouvelle itération.
+> - **Reprise** : à l'itération > 1, la commission siège à nouveau **sans nouveau PV d'ouverture** (l'ouverture a déjà eu lieu, le périmètre/soumissionnaires ne change pas) — l'input PV est masqué et le **PV existant est conservé** automatiquement à la sauvegarde. Badge « Itération n°N ».
+> - **Vue manager** (fiche marché) : « Historique des itérations & objections » (objection en cours + itérations archivées : organe, date, motif).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` — `renderObjectionBloc()` : `remettreEnCause()` (archivage + incrément), bouton + badge itération ; bloc PV d'ouverture conditionnel (skip si `iterationCourante > 1`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01c-fiche-marche.js` — `renderIterationsObjectionsManager()` (vue manager), prependu à la contractualisation.
+
+### Impact / Anti-régression
+
+- **Strictement additif et gaté** : pour toute procédure existante (`iteration_courante = 1`), **rien ne change** (PV d'ouverture normal, pas de bouton remise sauf objection active, vue manager masquée s'il n'y a ni objection ni itération).
+- **Aucune perte** : la remise en cause **archive** avant tout (snapshot dans `iterations[]`), n'écrase pas les données de l'itération précédente. Skip PV d'ouverture **réutilise** le PV existant (fallback de `handleSave` déjà en place). Aucune nouvelle migration (colonnes posées en #182).
+- **Vérifié headless** (Chrome CDP, état post-remise simulé puis reverté) : badge itération n°2, PV « déjà effectué » + input masqué, vue manager avec itération archivée (ANRMP) — 0 erreur console ; round-trips `iterations`/`iteration_courante` confirmés.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Migration 034 déjà exécutée (#182).
+
+---
+
 ## 2026-06-29 — Objection à la procédure (Phase 1) : bloc de déclaration distinct de l'ANO (ECR02A)
 
 > **Note 3 réunion — Phase 1.** Nouvelle notion d'**Objection à la procédure**, à **distinguer de l'Avis de Non-Objection (ANO)** (étape ordinaire du workflow, `MP_ANO`, inchangée). L'objection est **extraordinaire** : sur instruction d'une **autorité** (organe saisi pour irrégularité), elle peut **remettre en cause** la procédure à tout moment **avant l'OS de démarrage**.
