@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Correction #180 : le financement bailleur ne bascule PAS en NON APPLICABLE (ECR02A)
+
+> **Modif #181** — Précision client sur #180 : l'intervention d'un bailleur (financement EMPRUNT/DON) **n'implique pas** la procédure bailleur, donc **ne doit pas** basculer en « NON APPLICABLE ». On **conserve l'état actuel** : ces lignes gardent le **barème national** (« Procédure Nationale Admissible »). **« NON APPLICABLE » est désormais réservé au seul type RNE.**
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` — `baremeNonApplicable = (typeAdmin === 'RNE')` ; suppression de la dérivation `surProcedureBailleur` (EMPRUNT/DON).
+
+### Impact / Anti-régression
+
+- Restaure le comportement antérieur du barème pour **toutes** les opérations financées (le reste de #180 — affichage Ligne/Dotation AE-CP, libellé « Procédure Nationale Admissible », RNE → NON APPLICABLE — est conservé).
+- Le vrai cas « procédure bailleur » → NON APPLICABLE nécessitera un **marqueur explicite « procédure suivie »** au PPM (non disponible aujourd'hui) — à traiter ultérieurement si besoin.
+- **Vérifié headless** : op EMPRUNT (55555) = « Procédure Nationale Admissible » (plus de NON APPLICABLE) ; op État (099) inchangée ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-29 — Contractualisation : barème par type d'administration + Procédure Nationale Admissible / NON APPLICABLE (ECR02A)
 
 > **Note 2 réunion** — La carte « Barème applicable » est précisée :

@@ -98,17 +98,17 @@ export async function renderProcedurePV(params) {
     return Array.from(set);
   })();
 
-  // Note 2 (réunion) — Barème par type d'administration.
-  // Le barème ÉTAT (national) sort la « Procédure Nationale Admissible », SAUF :
-  //  - type RNE (Représentation Nationale à l'Extérieur), ou
-  //  - ligne suivie sur procédure BAILLEUR (financement bailleur d'après le PPM :
-  //    typeFinancement EMPRUNT/DON) → dans ces cas, NON APPLICABLE.
-  // (Collectivité conserve son barème — pas NON APPLICABLE.)
+  // Note 2 (réunion, corrigée #181) — Barème par type d'administration.
+  // Le barème ÉTAT (national) sort la « Procédure Nationale Admissible ». NON
+  // APPLICABLE UNIQUEMENT pour le type RNE (Représentation Nationale à l'Extérieur).
+  // ⚠️ L'intervention d'un bailleur (financement EMPRUNT/DON) NE bascule PAS en
+  // NON APPLICABLE : ces lignes conservent le barème national (un financement
+  // bailleur n'implique pas systématiquement la procédure bailleur). Le vrai cas
+  // « procédure bailleur » nécessiterait un marqueur explicite au PPM — à venir.
+  // (Collectivité conserve aussi son barème.)
   const typeAdmin = operation.typeInstitution || 'ADMIN_CENTRALE';
-  const finType = String(operation.typeFinancement || operation.chaineBudgetaire?.typeFinancement || 'ETAT').toUpperCase();
-  const surProcedureBailleur = finType === 'EMPRUNT' || finType === 'DON';
-  const baremeNonApplicable = typeAdmin === 'RNE' || surProcedureBailleur;
-  const motifNonApplicable = typeAdmin === 'RNE' ? '(RNE)' : '(procédure bailleur)';
+  const baremeNonApplicable = typeAdmin === 'RNE';
+  const motifNonApplicable = '(RNE)';
 
   // Dotation portée par la LIGNE BUDGÉTAIRE (AE / CP) — lue sur l'entité liée.
   let _budgetLine = null;
