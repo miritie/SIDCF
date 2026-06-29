@@ -237,6 +237,28 @@ export async function renderCloture(params) {
                 el('div', { className: 'alert-message' }, `${garanties.filter(g => !g.mainleveeDate).length} garantie(s) doivent être levées avant clôture définitive.`)
               ])
             ])
+          : null,
+
+        // Doc clôture 24/06 (décision A) — enregistrer les OUI/NON + rappel vers la
+        // mainlevée détaillée (date/doc) en ECR04C pour préciser au besoin.
+        garanties.length > 0
+          ? el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '12px' } }, [
+              createButton('btn btn-sm btn-secondary', '🛡️ Préciser (date/doc) en écran Garanties', () => router.navigate('/mp/garanties', { idOperation })),
+              createButton('btn btn-primary', '💾 Enregistrer les mainlevées (OUI/NON)', async () => {
+                try {
+                  for (const g of garanties) {
+                    const val = document.getElementById(`garantie-levee-${g.id}`)?.value;
+                    if (val === 'OUI' && !g.mainleveeDate) {
+                      await dataService.update(ENTITIES.MP_GARANTIE, g.id, { etat: 'LEVEE', mainleveeDate: new Date().toISOString() });
+                    } else if (val === 'NON' && g.mainleveeDate) {
+                      await dataService.update(ENTITIES.MP_GARANTIE, g.id, { etat: 'ACTIVE', mainleveeDate: null });
+                    }
+                  }
+                  alert('✅ Statut des mainlevées enregistré.');
+                  router.navigate('/mp/cloture', { idOperation });
+                } catch (e) { alert('❌ Erreur lors de l\'enregistrement des mainlevées.'); }
+              })
+            ])
           : null
       ])
     ]),
@@ -462,12 +484,23 @@ function renderGarantieCheckbox(garantie) {
   }, [
     el('div', {}, [
       el('div', { style: { fontWeight: '500', fontSize: '14px' } }, typeLabels[garantie.type] || garantie.type),
-      el('div', { className: 'text-small text-muted' }, `${(garantie.montant / 1000000).toFixed(2)}M XOF`)
+      el('div', { className: 'text-small text-muted' }, `${((Number(garantie.montant) || 0) / 1000000).toFixed(2)}M XOF`)
     ]),
-    el('div', {}, [
+    // Doc clôture 24/06 (décision A) — OUI/NON éditable « la garantie est-elle levée ? ».
+    // Pilote mainleveeDate (cohérent avec la mainlevée détaillée d'ECR04C, qui reste
+    // disponible pour préciser date/doc au besoin).
+    el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+      el('span', { className: 'text-small text-muted' }, 'Levée ?'),
+      (() => {
+        const sel = el('select', { className: 'form-input', id: `garantie-levee-${garantie.id}`, style: { padding: '4px', fontSize: '13px' } }, [
+          (() => { const o = el('option', { value: 'NON' }, 'NON'); if (!garantie.mainleveeDate) o.selected = true; return o; })(),
+          (() => { const o = el('option', { value: 'OUI' }, 'OUI'); if (garantie.mainleveeDate) o.selected = true; return o; })()
+        ]);
+        return sel;
+      })(),
       garantie.mainleveeDate
-        ? el('span', { style: { color: 'var(--color-success)', fontWeight: '500' } }, `✓ Levée le ${new Date(garantie.mainleveeDate).toLocaleDateString()}`)
-        : el('span', { style: { color: 'var(--color-warning)', fontWeight: '500' } }, '⏳ En attente')
+        ? el('span', { className: 'text-small text-muted' }, `(le ${new Date(garantie.mainleveeDate).toLocaleDateString()})`)
+        : null
     ])
   ]);
 }

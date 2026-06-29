@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Clôture : garanties « levée OUI/NON » éditable par garantie (Lot 1, décision A) (ECR05)
+
+> **Doc clôture 24/06 — décision client A.** À la clôture, chaque garantie de l'enregistrement réapparaît avec un **OUI/NON** « levée ? » **éditable** (au lieu du simple statut en lecture seule). « Le meilleur des deux mondes » : le OUI/NON suffit pour chaque garantie, et on peut **préciser** (date/document) via la mainlevée détaillée d'**ECR04C** (mécanisme #178 inchangé).
+> - OUI → marque la garantie levée (`etat='LEVEE'`, `mainleveeDate` = aujourd'hui). NON → la repasse en attente (`etat='ACTIVE'`, `mainleveeDate=null`).
+> - Bouton « Enregistrer les mainlevées (OUI/NON) » + rappel « Préciser (date/doc) en écran Garanties ».
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05-cloture.js` — `renderGarantieCheckbox()` : ajout du select OUI/NON (`garantie-levee-<id>`, propriété `.selected`) ; carte « Mainlevées des Garanties » : bouton d'enregistrement (boucle `dataService.update(MP_GARANTIE)`) + lien ECR04C.
+
+### Impact / Anti-régression
+
+- **Pilote le même champ `mainleveeDate`** que la mainlevée détaillée (#178) → cohérent, pas de doublon de données ; ECR04C reste la voie « précise » (date + doc). Aucune migration.
+- **Vérifié headless** (op à 2 garanties ACTIVE) : 2 selects OUI/NON (NON par défaut), boutons « Enregistrer » + « Préciser » ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Fiche de clôture : synthèse imprimable centrée Contrôleur Financier (Lot 3, doc 24/06) (ECR05B)
 
 > **Doc clôture 24/06 — Lot 3.** Nouvelle **Fiche de clôture** : une **page unique imprimable** qui ne retient que l'information pertinente pour le **CF** (≠ fiche marché ECR01C, exhaustive). Lecture seule, générée à partir des données existantes.
