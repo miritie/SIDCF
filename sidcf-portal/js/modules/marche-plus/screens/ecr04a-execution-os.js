@@ -473,6 +473,11 @@ export async function renderExecutionOS(params) {
     mpDecomptes, avanceActive, livrablesMarche, idOperation
   }));
 
+  // Note 5 (réunion) — Phase 1 : suivi d'exécution PAR LIVRABLE (statut, %, réalisé).
+  if (Array.isArray(operation?.livrables) && operation.livrables.length > 0) {
+    page.appendChild(renderLivrablesSuiviSection({ operation, idOperation, registries }));
+  }
+
   // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
   page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries, lots: [] }));
 
@@ -542,6 +547,78 @@ function renderDecomptesSection({ operation, attribution, avenants, mpDecomptes,
       el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'OP / Mandats · cumul · reste à payer · taux d\'exécution')
     ]),
     el('div', { className: 'card-body' }, [controle, host])
+  ]);
+}
+
+/**
+ * Note 5 (réunion) — Phase 1 : suivi d'exécution par livrable du marché.
+ * Pour chaque livrable (operation.livrables) : statut (Non démarré / Démarré /
+ * En cours / Finalisé), % d'avancement, quantité réalisée. Persisté inline sur
+ * operation.livrables (JSONB — pas de migration). La dimension temporelle suit la
+ * planification du marché (échéancier/ordonnancement) — pas de découpage inventé.
+ */
+function renderLivrablesSuiviSection({ operation, idOperation, registries }) {
+  const livrables = Array.isArray(operation?.livrables) ? operation.livrables : [];
+  const statuts = registries.STATUT_LIVRABLE || [
+    { code: 'NON_DEMARRE', label: 'Non démarré' }, { code: 'DEMARRE', label: 'Démarré' },
+    { code: 'EN_COURS', label: 'En cours' }, { code: 'TERMINE', label: 'Finalisé' }
+  ];
+  const typeLabel = (code) => (registries.TYPE_LIVRABLE || []).find(t => t.code === code)?.label || code || '';
+
+  const rows = livrables.map((l, i) => {
+    const curStatut = l.statut || 'NON_DEMARRE';
+    // NB : on pose la PROPRIÉTÉ .selected (et pas l'attribut), car `selected="false"`
+    // reste un attribut présent → l'option serait considérée sélectionnée.
+    const statutSel = el('select', { className: 'form-input', id: `liv-${i}-statut`, style: { fontSize: '12px', padding: '4px' } },
+      statuts.map(s => { const o = el('option', { value: s.code }, s.label); if (s.code === curStatut) o.selected = true; return o; }));
+    const pctInput = el('input', { type: 'number', className: 'form-input', id: `liv-${i}-pct`, min: 0, max: 100, step: 1, value: String(l.pourcentageExecution || 0), style: { width: '80px', padding: '4px' } });
+    const qReal = el('input', { type: 'number', className: 'form-input', id: `liv-${i}-qreal`, min: 0, step: 1, value: String(l.quantiteRealisee || 0), style: { width: '90px', padding: '4px' } });
+    return el('tr', {}, [
+      el('td', { style: { fontWeight: 500 } }, l.libelle || typeLabel(l.type) || `Livrable ${i + 1}`),
+      el('td', { className: 'text-small text-muted' }, typeLabel(l.type)),
+      el('td', { style: { textAlign: 'center' } }, String(l.quantite != null ? l.quantite : (l.quantitePrevue != null ? l.quantitePrevue : 1))),
+      el('td', {}, statutSel),
+      el('td', { style: { textAlign: 'center' } }, pctInput),
+      el('td', { style: { textAlign: 'center' } }, qReal)
+    ]);
+  });
+
+  const saveBtn = createButton('btn btn-primary', '💾 Enregistrer le suivi', async () => {
+    const updated = livrables.map((l, i) => ({
+      ...l,
+      statut: document.getElementById(`liv-${i}-statut`)?.value || l.statut || 'NON_DEMARRE',
+      pourcentageExecution: Math.min(100, Math.max(0, parseInt(document.getElementById(`liv-${i}-pct`)?.value, 10) || 0)),
+      quantiteRealisee: Math.max(0, parseFloat(document.getElementById(`liv-${i}-qreal`)?.value) || 0)
+    }));
+    try {
+      await dataService.update(ENTITIES.MP_OPERATION, idOperation, { livrables: updated });
+      alert('✅ Suivi des livrables enregistré.');
+    } catch (e) {
+      alert('❌ Erreur lors de l\'enregistrement du suivi des livrables.');
+    }
+  });
+
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, `📦 Suivi des livrables (${livrables.length})`),
+      el('span', { style: { fontSize: '11px', color: '#6b7280' } }, 'Démarré · % d\'évolution · finalisation — conforme à la planification du marché')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { overflowX: 'auto' } }, [
+        el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', {}, 'Livrable'),
+            el('th', {}, 'Type'),
+            el('th', { style: { textAlign: 'center' } }, 'Qté prévue'),
+            el('th', {}, 'Statut'),
+            el('th', { style: { textAlign: 'center' } }, '% avancement'),
+            el('th', { style: { textAlign: 'center' } }, 'Qté réalisée')
+          ])]),
+          el('tbody', {}, rows)
+        ])
+      ]),
+      el('div', { style: { marginTop: '12px', textAlign: 'right' } }, [saveBtn])
+    ])
   ]);
 }
 

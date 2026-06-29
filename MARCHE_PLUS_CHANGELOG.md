@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Livrables prévisionnel/réalisé (Phase 1) : suivi d'exécution par livrable (ECR04A)
+
+> **Note 5 réunion — Phase 1.** Notion de livrable **prévisionnel** (défini à la planification) vs **réalisé**. À l'**exécution**, suivi **par livrable** : statut (Non démarré / Démarré / En cours / Terminé), **% d'avancement**, **quantité réalisée**. La dimension temporelle suit la **planification du marché** (échéancier/ordonnancement) — pas de découpage inventé.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` — `renderLivrablesSuiviSection()` : tableau de suivi par livrable (statut/%/qté réalisée), persisté **inline sur `operation.livrables`** (JSONB — pas de migration).
+- `sidcf-portal/js/config/registries.json` — registre `MOTIF_LIVRABLE_NON_REALISE` (pour la Phase 2 : justif CF). Réutilise `STATUT_LIVRABLE` **existant** (doublon évité).
+
+### Impact / Anti-régression
+
+- **Additif et gaté** : la section n'apparaît que si l'opération a des livrables ; sinon, écran exécution inchangé. **Aucune migration** (sous-clés ajoutées aux objets de `operation.livrables`).
+- Corrigé au passage un piège DOM : `el('option', { selected:false })` produit `selected="false"` (attribut présent = sélectionné) → on pose désormais la **propriété** `.selected` uniquement sur l'option courante (pré-remplissage correct).
+- **Vérifié headless** (Chrome CDP, livrable temporaire sur op EN_EXEC, reverté) : section présente, statut pré-rempli (EN_COURS) et modifiable, % pré-rempli, **persistance round-trip** des champs (statut/%/réalisé) confirmée ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Garantie d'avance ≥ montant de l'avance de démarrage : contrôle (ECR03A)
 
 > **Note 4 réunion** — Ajout d'un **contrôle** : le montant de la **garantie d'avance de démarrage** doit être **au moins égal** au montant de l'**avance de démarrage** (la garantie de restitution couvre 100 % de l'avance, Art. 100). **Alerte non bloquante.**
