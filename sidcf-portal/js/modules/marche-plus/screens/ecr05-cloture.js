@@ -323,6 +323,11 @@ export async function renderCloture(params) {
     ])
   ]);
 
+  // Note 5 (réunion) — Phase 2 : bilan livrables prévisionnel/réalisé + justif CF des écarts.
+  if (Array.isArray(operation?.livrables) && operation.livrables.length > 0) {
+    page.appendChild(renderLivrablesBilanSection({ operation, idOperation, registries: dataService.getAllRegistries() }));
+  }
+
   // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
   page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries: dataService.getAllRegistries(), lots: [] }));
 
@@ -366,6 +371,115 @@ function renderGarantieCheckbox(garantie) {
  * Marché+ multi-lot : si lotId est fourni, les champs métier vont sous
  * `entity.parLot[lotId]` plutôt qu'à la racine (back-compat single-lot).
  */
+/**
+ * Note 5 (réunion) — Phase 2 : bilan « prévisionnel vs réalisé » des livrables à la
+ * clôture + justifications du CF pour tout livrable non (totalement) délivré.
+ * Persisté inline sur operation.livrables (justificationCF). NON bloquant — c'est
+ * une note du CF qui documente/explique les écarts.
+ */
+function renderLivrablesBilanSection({ operation, idOperation, registries }) {
+  const livrables = Array.isArray(operation?.livrables) ? operation.livrables : [];
+  const statuts = registries.STATUT_LIVRABLE || [];
+  const motifs = registries.MOTIF_LIVRABLE_NON_REALISE || [
+    { code: 'ENTREPRISE_DEFAILLANTE', label: 'Entreprise défaillante' },
+    { code: 'DENONCIATION_MO', label: "Dénonciation du maître d'ouvrage" },
+    { code: 'INDISPONIBILITE_RESSOURCES', label: 'Indisponibilité de ressources' },
+    { code: 'AUTRE', label: 'Autre (préciser)' }
+  ];
+  const statutLabel = (c) => statuts.find(s => s.code === c)?.label || c || '—';
+  const qtePrev = (l) => Number(l.quantite != null ? l.quantite : (l.quantitePrevue != null ? l.quantitePrevue : 0));
+  const qteReal = (l) => Number(l.quantiteRealisee || 0);
+  const isIncomplet = (l) => (l.statut && l.statut !== 'TERMINE') || (qtePrev(l) > 0 && qteReal(l) < qtePrev(l)) || (Number(l.pourcentageExecution || 0) < 100);
+
+  const rows = livrables.map(l => {
+    const inc = isIncomplet(l);
+    return el('tr', { style: inc ? { background: '#fef2f2' } : {} }, [
+      el('td', { style: { fontWeight: 500 } }, l.libelle || 'Livrable'),
+      el('td', { style: { textAlign: 'center' } }, String(qtePrev(l))),
+      el('td', { style: { textAlign: 'center' } }, String(qteReal(l))),
+      el('td', { style: { textAlign: 'center' } }, `${Number(l.pourcentageExecution || 0)} %`),
+      el('td', {}, statutLabel(l.statut)),
+      el('td', {}, inc
+        ? el('span', { className: 'badge badge-red', style: { fontSize: '11px' } }, '⚠️ Écart')
+        : el('span', { className: 'badge badge-green', style: { fontSize: '11px' } }, '✓ Conforme'))
+    ]);
+  });
+
+  const justifBlocks = livrables.map((l, i) => {
+    if (!isIncomplet(l)) return null;
+    const j = l.justificationCF || {};
+    let docRef = j.docRef || null;
+    const motifSel = el('select', { className: 'form-input', id: `bilan-${i}-motif` }, [
+      el('option', { value: '' }, '-- Motif de l\'écart --'),
+      ...motifs.map(m => { const o = el('option', { value: m.code }, m.label); if (m.code === j.motif) o.selected = true; return o; })
+    ]);
+    const commentInput = el('textarea', { className: 'form-input', id: `bilan-${i}-comment`, rows: 2, placeholder: 'Note du CF expliquant l\'écart…' }, j.commentaire || '');
+    const fileInput = el('input', { type: 'file', className: 'form-input', id: `bilan-${i}-doc`, accept: '.pdf,.doc,.docx' });
+    const fileHint = el('small', { className: 'text-muted' }, docRef ? `✓ ${docRef}` : 'Document justificatif (optionnel).');
+    fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) { docRef = f.name; fileHint.textContent = `✓ ${f.name}`; } });
+    return el('div', { style: { marginBottom: '12px', padding: '10px 12px', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '6px' } }, [
+      el('div', { style: { fontWeight: 600, marginBottom: '6px' } }, `📦 ${l.libelle || 'Livrable'} — écart à justifier`),
+      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } }, [
+        el('div', { className: 'form-field' }, [el('label', { className: 'form-label' }, 'Motif'), motifSel]),
+        el('div', { className: 'form-field' }, [el('label', { className: 'form-label' }, 'Document (CF)'), fileInput, fileHint])
+      ]),
+      el('div', { className: 'form-field', style: { marginTop: '6px' } }, [el('label', { className: 'form-label' }, 'Note du CF'), commentInput])
+    ]);
+  }).filter(Boolean);
+
+  const saveBtn = el('button', { type: 'button', className: 'btn btn-primary' }, '💾 Enregistrer le bilan & justifications');
+  saveBtn.addEventListener('click', async () => {
+    const updated = livrables.map((l, i) => {
+      if (!isIncomplet(l)) return l;
+      const fileEl = document.getElementById(`bilan-${i}-doc`);
+      const docRef = (fileEl && fileEl.files && fileEl.files[0]) ? fileEl.files[0].name : (l.justificationCF?.docRef || null);
+      return {
+        ...l,
+        justificationCF: {
+          motif: document.getElementById(`bilan-${i}-motif`)?.value || null,
+          commentaire: (document.getElementById(`bilan-${i}-comment`)?.value || '').trim(),
+          docRef
+        }
+      };
+    });
+    try {
+      await dataService.update(ENTITIES.MP_OPERATION, idOperation, { livrables: updated });
+      alert('✅ Bilan des livrables et justifications du CF enregistrés.');
+    } catch (e) { alert('❌ Erreur lors de l\'enregistrement.'); }
+  });
+
+  const nbEcarts = livrables.filter(isIncomplet).length;
+
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+      el('h3', { className: 'card-title', style: { margin: 0 } }, '📦 Livrables — prévisionnel vs réalisé'),
+      el('span', { className: nbEcarts ? 'badge badge-red' : 'badge badge-green' }, nbEcarts ? `${nbEcarts} écart(s)` : 'Tous conformes')
+    ]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { overflowX: 'auto', marginBottom: justifBlocks.length ? '16px' : '0' } }, [
+        el('table', { className: 'table', style: { width: '100%', fontSize: '13px' } }, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', {}, 'Livrable'),
+            el('th', { style: { textAlign: 'center' } }, 'Qté prévue'),
+            el('th', { style: { textAlign: 'center' } }, 'Qté réalisée'),
+            el('th', { style: { textAlign: 'center' } }, '% avancement'),
+            el('th', {}, 'Statut'),
+            el('th', {}, 'État')
+          ])]),
+          el('tbody', {}, rows)
+        ])
+      ]),
+      justifBlocks.length
+        ? el('div', {}, [
+            el('div', { style: { fontWeight: 600, margin: '4px 0 8px', color: '#9a3412' } }, '⚠️ Justifications du CF (livrables non totalement délivrés)'),
+            ...justifBlocks
+          ])
+        : null,
+      el('div', { style: { marginTop: '12px', textAlign: 'right' } }, [saveBtn])
+    ])
+  ]);
+}
+
 async function handleSave(idOperation, definitive, lotId = null, rawCloture = null) {
   const dateRP = document.getElementById('cloture-date-rp')?.value;
   const reservesRP = document.getElementById('cloture-reserves-rp')?.value;

@@ -13,6 +13,26 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Livrables prévisionnel/réalisé (Phase 2) : bilan à la clôture + justifications CF (ECR05)
+
+> **Note 5 réunion — Phase 2.** À la **clôture**, mise en évidence du **prévisionnel vs réalisé** par livrable (qté prévue / réalisée / % / statut, écart signalé). Si un livrable n'est **pas totalement délivré** (ou pas du tout), saisie d'une **justification du CF** : **motif** (entreprise défaillante, dénonciation du maître d'ouvrage, indisponibilité de ressources, Autre) + **note du CF** + document. **Non bloquant** (documentaire — la note du CF explique les écarts).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05-cloture.js` — `renderLivrablesBilanSection()` : tableau prévu/réalisé (écart = statut ≠ Terminé, ou réalisé < prévu, ou % < 100) + bloc justification CF **par livrable en écart** (motif `MOTIF_LIVRABLE_NON_REALISE`, note, doc). Persisté inline sur `operation.livrables[i].justificationCF`.
+
+### Impact / Anti-régression
+
+- **Additif et gaté** : section visible seulement si l'opération a des livrables ; les blocs de justif n'apparaissent que pour les livrables en écart. **Non bloquant** : la clôture n'est pas empêchée. **Aucune migration** (sous-clés sur `operation.livrables`).
+- Sélecteurs de motif via la **propriété `.selected`** (évite le piège `selected="false"`).
+- **Vérifié headless** (Chrome CDP, op avec 1 livrable en écart + 1 conforme, reverté) : bilan + badge « 1 écart », justif CF (motif « défaillante ») uniquement sur l'incomplet, rien sur le conforme ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Livrables prévisionnel/réalisé (Phase 1) : suivi d'exécution par livrable (ECR04A)
 
 > **Note 5 réunion — Phase 1.** Notion de livrable **prévisionnel** (défini à la planification) vs **réalisé**. À l'**exécution**, suivi **par livrable** : statut (Non démarré / Démarré / En cours / Terminé), **% d'avancement**, **quantité réalisée**. La dimension temporelle suit la **planification du marché** (échéancier/ordonnancement) — pas de découpage inventé.
