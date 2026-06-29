@@ -98,6 +98,28 @@ export async function renderProcedurePV(params) {
     return Array.from(set);
   })();
 
+  // Note 2 (réunion) — Barème par type d'administration.
+  // Le barème ÉTAT (national) sort la « Procédure Nationale Admissible », SAUF :
+  //  - type RNE (Représentation Nationale à l'Extérieur), ou
+  //  - ligne suivie sur procédure BAILLEUR (financement bailleur d'après le PPM :
+  //    typeFinancement EMPRUNT/DON) → dans ces cas, NON APPLICABLE.
+  // (Collectivité conserve son barème — pas NON APPLICABLE.)
+  const typeAdmin = operation.typeInstitution || 'ADMIN_CENTRALE';
+  const finType = String(operation.typeFinancement || operation.chaineBudgetaire?.typeFinancement || 'ETAT').toUpperCase();
+  const surProcedureBailleur = finType === 'EMPRUNT' || finType === 'DON';
+  const baremeNonApplicable = typeAdmin === 'RNE' || surProcedureBailleur;
+  const motifNonApplicable = typeAdmin === 'RNE' ? '(RNE)' : '(procédure bailleur)';
+
+  // Dotation portée par la LIGNE BUDGÉTAIRE (AE / CP) — lue sur l'entité liée.
+  let _budgetLine = null;
+  if (operation.budgetLineId) {
+    _budgetLine = await dataService.get(ENTITIES.MP_BUDGET_LINE, operation.budgetLineId).catch(() => null);
+  }
+  const ligneBudgetaireLabel = operation.chaineBudgetaire?.ligneBudgetaire || _budgetLine?.ligneLib || _budgetLine?.ligneCode || '—';
+  const dotationAE = Number(_budgetLine?.AE) || 0;
+  const dotationCP = Number(_budgetLine?.CP) || 0;
+  const fmtXOF = (n) => `${Number(n || 0).toLocaleString('fr-FR')} F CFA`;
+
   // State for form
   // Modif #156 — La LIASSE fait foi : le mode redevient confirmable / sélectionnable
   // à la contractualisation. Le mode EFFECTIF (déjà choisi sur la procédure, sinon
@@ -209,31 +231,37 @@ export async function renderProcedurePV(params) {
     // Suggested procedures alert — Modif #168 : version COMPACTE (le bloc
     // « Barème applicable » était trop espacé). Champs en ligne + procédures
     // admissibles listées en virgules, sans paddings excessifs.
-    suggestedProcedures.length > 0
-      ? el('div', {
-          className: 'alert alert-info',
-          style: { marginBottom: '16px', padding: '10px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }
-        }, [
-          el('div', { className: 'alert-icon' }, 'ℹ️'),
-          el('div', { className: 'alert-content', style: { fontSize: '13px', lineHeight: '1.4' } }, [
-            el('div', { style: { fontWeight: 600 } }, [
-              'Barème applicable',
-              el('span', { style: { fontWeight: 400, color: '#374151' } },
-                ` — ${operation.typeInstitution || 'ADMIN_CENTRALE'} · ${(operation.montantPrevisionnel / 1000000).toFixed(1)}M XOF`)
-            ]),
-            el('div', { style: { marginTop: '2px' } }, [
-              el('span', { style: { color: '#6b7280' } }, 'Procédures admissibles : '),
-              suggestedProcedures.map(p => `${p.mode} (${registries.MODE_PASSATION.find(m => m.code === p.mode)?.label || p.mode})`).join(' · ')
-            ])
-          ])
-        ])
-      : el('div', { className: 'alert alert-warning', style: { marginBottom: '16px', padding: '10px 14px' } }, [
-          el('div', { className: 'alert-icon' }, '⚠️'),
-          el('div', { className: 'alert-content', style: { fontSize: '13px' } }, [
-            el('strong', {}, 'Aucune règle trouvée'),
-            ' — vérifiez la configuration des barèmes dans rules-config.json'
-          ])
+    // Note 2 — Carte « Barème applicable » : données de base (type d'admin, ligne
+    // budgétaire, dotation AE/CP) + Procédure Nationale Admissible ou NON APPLICABLE.
+    el('div', {
+      className: `alert ${baremeNonApplicable ? 'alert-warning' : (suggestedProcedures.length > 0 ? 'alert-info' : 'alert-warning')}`,
+      style: { marginBottom: '16px', padding: '10px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }
+    }, [
+      el('div', { className: 'alert-icon' }, baremeNonApplicable ? '🚫' : (suggestedProcedures.length > 0 ? 'ℹ️' : '⚠️')),
+      el('div', { className: 'alert-content', style: { fontSize: '13px', lineHeight: '1.5' } }, [
+        el('div', { style: { fontWeight: 600 } }, [
+          'Barème applicable',
+          el('span', { style: { fontWeight: 400, color: '#374151' } },
+            ` — ${typeAdmin} · ${((operation.montantPrevisionnel || 0) / 1000000).toFixed(1)}M XOF`)
         ]),
+        // Données de base : ligne budgétaire + dotation (AE / CP), lues sur la ligne.
+        el('div', { style: { marginTop: '2px', color: '#374151' } }, [
+          el('span', { style: { color: '#6b7280' } }, 'Ligne budgétaire : '),
+          ligneBudgetaireLabel,
+          el('span', { style: { color: '#6b7280' } }, ' · Dotation : '),
+          `AE ${fmtXOF(dotationAE)} / CP ${fmtXOF(dotationCP)}`
+        ]),
+        // Procédure Nationale Admissible (ex-« Procédures admissibles ») ou NON APPLICABLE.
+        el('div', { style: { marginTop: '2px' } }, [
+          el('span', { style: { color: '#6b7280' } }, 'Procédure Nationale Admissible : '),
+          baremeNonApplicable
+            ? el('strong', { style: { color: '#b45309' } }, `NON APPLICABLE ${motifNonApplicable}`)
+            : (suggestedProcedures.length > 0
+                ? suggestedProcedures.map(p => `${p.mode} (${registries.MODE_PASSATION.find(m => m.code === p.mode)?.label || p.mode})`).join(' · ')
+                : el('em', { style: { color: '#b45309' } }, 'aucune règle trouvée — vérifiez la configuration des barèmes dans rules-config.json'))
+        ])
+      ])
+    ]),
 
     // Feuille de route DÉROGATIONS (#156) — Carte « Mode de passation » : la
     // LIASSE fait foi. L'outil rappelle le mode planifié (PPM) et celui imposé
@@ -355,7 +383,9 @@ export async function renderProcedurePV(params) {
     // Modif #156 — Zone de dérogation UNIFIÉE : deux écarts possibles, couverts
     // par la même zone. (1) Écart effectif↔barème (mode hors barème) ;
     // (2) Écart planif↔liasse (mode effectif ≠ mode planifié au PPM).
-    const isDerogBareme = !suggestedCodes.includes(mode);
+    // Note 2 — si le barème national est NON APPLICABLE (RNE / procédure bailleur),
+    // l'agent choisit librement le mode : pas d'écart-au-barème (dérogation national).
+    const isDerogBareme = !baremeNonApplicable && !suggestedCodes.includes(mode);
     const isEcartPlanif = !!(modePlanifieCode && mode !== modePlanifieCode);
     const isDerog = isDerogBareme || isEcartPlanif;
 

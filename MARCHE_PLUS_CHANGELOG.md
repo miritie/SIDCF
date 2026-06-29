@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Contractualisation : barème par type d'administration + Procédure Nationale Admissible / NON APPLICABLE (ECR02A)
+
+> **Note 2 réunion** — La carte « Barème applicable » est précisée :
+> - **Données de base** enrichies : type d'administration **+ Ligne Budgétaire + Dotation actuelle (AE / CP)** — lues sur l'entité Ligne Budgétaire (via `budgetLineId`), **aucun champ à saisir**.
+> - **Mode de passation** : le barème **ÉTAT (national)** sort la **« Procédure Nationale Admissible »** (ex-« Procédures admissibles ») — **sauf** pour **RNE** (Représentation Nationale à l'Extérieur) et les lignes **suivies sur procédure bailleur** (financement EMPRUNT/DON d'après le PPM) → **« NON APPLICABLE »**. La **Collectivité conserve** son barème.
+> - Quand **NON APPLICABLE** : l'agent choisit librement le mode, et l'**alerte d'écart au barème (dérogation national) est désactivée** (l'écart planifié↔liasse reste actif).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/registries.json` — ajout du type `RNE` à `TYPE_INSTITUTION` (`baremeNational: false`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` — calcul `baremeNonApplicable` (RNE ou financement bailleur) + lecture de la dotation (AE/CP) sur `MP_BUDGET_LINE` ; réécriture de la carte Barème (Ligne/Dotation + Procédure Nationale Admissible / NON APPLICABLE) ; `isDerogBareme` neutralisé si NON APPLICABLE.
+
+### Impact / Anti-régression
+
+- **Lecture seule** (affichage + dérivation), aucune écriture, **aucune migration**. La liste des types et les barèmes existants ne changent pas (ajout RNE uniquement).
+- ⚠️ **Bascule visible attendue** : les opérations financées **EMPRUNT/DON** affichent désormais « NON APPLICABLE » au lieu d'une liste de procédures (comportement voulu par la note). Nuance non couverte par les données actuelles : un projet **cofinancé suivi sur procédure État** n'a pas de marqueur distinct du financement → il est traité comme bailleur ; à affiner ultérieurement si un champ « procédure suivie » est ajouté au PPM.
+- **Vérifié headless** (Chrome CDP, op réelles) : cas État (099) = Procédure Nationale Admissible + Ligne/Dotation AE/CP ; cas bailleur (EMPRUNT) = NON APPLICABLE (procédure bailleur) ; ancien libellé retiré ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-29 — Chargement PPM : délai de régularisation paramétrable + blocage à échéance (ECR01A-Import)
 
 > **Note 1 réunion** — Au chargement du PPM, les alertes (soutenabilité, hors-barème, champ manquant) sont **non bloquantes** : chaque ligne en alerte dispose d'un **délai pour apprécier et régulariser**, **paramétrable** (défaut **3 mois**). **À toutes les alertes.** Passé le délai sans régularisation, la ligne est **bloquée pour la contractualisation** (décision validée en réunion).

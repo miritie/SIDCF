@@ -3,7 +3,8 @@
     { "code": "ADMIN_CENTRALE", "label": "Administration Centrale" },
     { "code": "SOCIETE_ETAT", "label": "Société d'État" },
     { "code": "PROJET", "label": "Projet" },
-    { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" }
+    { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" },
+    { "code": "RNE", "label": "Représentation Nationale à l'Extérieur (RNE)", "baremeNational": false }
   ],
   "_TYPE_MARCHE_DOC": "Typologie DCF (Modif #76, séance du 26 mai 2026) : 3 familles A/B/C × 16 types. Annotations EHOUMAN : ne pas afficher le sigle CREM ; conserver MOD/AMO. La famille C regroupe des sous-types des marchés de services (famille A).",
   "TYPE_MARCHE_FAMILLES": [
