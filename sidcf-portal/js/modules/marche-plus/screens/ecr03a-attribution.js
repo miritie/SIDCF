@@ -1068,6 +1068,17 @@ function updateAvancesDisplay() {
       alertEl.style.display = 'none';
     }
   }
+
+  // Note 4 — re-contrôler la garantie d'avance ≥ montant de l'avance quand le %
+  // d'avance change (le contrôle réagit aussi au montant de la garantie côté widget).
+  const avApi = _garantieWidgetApis['avance'];
+  if (avApi) {
+    const bc = document.getElementById('garantie-avance-base-calc')?.value === 'TTC' ? 'TTC' : 'HT';
+    const totG = bc === 'TTC'
+      ? (parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0)
+      : (parseFloat(document.getElementById('attr-montant-ht')?.value) || 0);
+    updateGarantieWarning('avance', avApi.getMontant(), totG, 'avance');
+  }
 }
 
 /**
@@ -2097,6 +2108,25 @@ function updateGarantieWarning(id, montant, total, regleType) {
       }
     }, `✓ ${v.message}`);
     warnHost.appendChild(banner);
+  }
+
+  // Note 4 (réunion) — Contrôle : la garantie d'avance de démarrage doit être AU
+  // MOINS ÉGALE au montant de l'avance de démarrage (la garantie de restitution
+  // couvre 100 % de l'avance, Art. 100). Alerte non bloquante.
+  if (regleType === 'avance' && document.getElementById('attr-avance-demarrage')?.checked === true) {
+    const baseTTC = parseFloat(document.getElementById('attr-montant-ttc')?.value) || 0;
+    const pf = Math.max(0, parseFloat(document.getElementById('attr-avance-forfait-pct')?.value) || 0);
+    const pa = Math.max(0, parseFloat(document.getElementById('attr-avance-facult-pct')?.value) || 0);
+    const montantAvance = baseTTC * (pf + pa) / 100;
+    if (montantAvance > 0 && montant < montantAvance) {
+      warnHost.appendChild(el('div', {
+        style: {
+          marginTop: '4px', padding: '6px 10px',
+          background: '#fef2f2', border: '1px solid #fca5a5', borderLeft: '3px solid #dc2626',
+          borderRadius: '4px', fontSize: '12px', color: '#991b1b', fontWeight: 600
+        }
+      }, `⚠️ Garantie d'avance insuffisante : elle doit être au moins égale au montant de l'avance de démarrage (≈ ${formatMoney(montantAvance)}).`));
+    }
   }
 }
 

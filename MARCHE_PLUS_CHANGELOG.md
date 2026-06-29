@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Garantie d'avance ≥ montant de l'avance de démarrage : contrôle (ECR03A)
+
+> **Note 4 réunion** — Ajout d'un **contrôle** : le montant de la **garantie d'avance de démarrage** doit être **au moins égal** au montant de l'**avance de démarrage** (la garantie de restitution couvre 100 % de l'avance, Art. 100). **Alerte non bloquante.**
+> - Avance de démarrage = `(forfaitaire % + facultative %) × montant marché TTC`.
+> - Si la garantie d'avance saisie < ce montant → bandeau rouge « Garantie d'avance insuffisante : elle doit être au moins égale au montant de l'avance de démarrage (≈ …) ».
+> - Réactif des deux côtés : se met à jour quand on change le montant de la garantie **ou** les % d'avance.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr03a-attribution.js` — `updateGarantieWarning()` : contrôle ajouté pour `regleType === 'avance'` (compare la garantie au montant de l'avance) ; `updateAvancesDisplay()` : re-déclenche le contrôle quand le % d'avance change.
+
+### Impact / Anti-régression
+
+- **Alerte non bloquante** (n'empêche pas l'enregistrement), cohérente avec les contrôles de taux existants. Aucune nouvelle donnée, **aucune migration**.
+- Ne s'active que si l'avance de démarrage est cochée ; sinon, comportement inchangé.
+- **Vérifié headless** (Chrome CDP) : garantie 10M < avance 15M → alerte ; 20M ≥ 15M → pas d'alerte ; 15M (= borne) → pas d'alerte — 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Objection à la procédure (Phase 2) : remise en cause / itérations sans perte + vue manager (ECR02A/ECR01C)
 
 > **Note 3 réunion — Phase 2.** Une procédure (contractualisation/attribution déjà saisies) peut être **remise en cause** par une objection. On **ne perd rien** : l'itération courante est **archivée**, puis la procédure est **reprise depuis la contractualisation** (itération suivante). L'utilisateur refait la saisie ; le **manager** voit toutes les itérations + objections.
