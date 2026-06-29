@@ -351,6 +351,17 @@ export async function renderCloture(params) {
   }));
   page.appendChild(renderDelaiCard({ dureeContractuelle, dureeUnite, osDate, finDate }));
 
+  // Doc clôture 24/06 (Lot 3) — accès à la Fiche de clôture (synthèse CF imprimable).
+  page.appendChild(el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-body', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' } }, [
+      el('div', {}, [
+        el('div', { style: { fontWeight: 600 } }, '📄 Fiche de clôture'),
+        el('div', { className: 'text-small text-muted' }, 'Synthèse imprimable centrée sur le Contrôleur Financier (montants, paiement, délai, livrables, garanties).')
+      ]),
+      createButton('btn btn-primary', '📄 Ouvrir la fiche de clôture', () => router.navigate('/mp/fiche-cloture', { idOperation }))
+    ])
+  ]));
+
   // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
   page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries: dataService.getAllRegistries(), lots: [] }));
 

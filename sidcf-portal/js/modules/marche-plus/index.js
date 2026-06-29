@@ -18,6 +18,7 @@ import renderAvenants from './screens/ecr04b-avenants.js';
 import renderAvenantCreate from './screens/ecr04b-avenant-create.js';
 import renderGaranties from './screens/ecr04c-garanties.js';
 import renderCloture from './screens/ecr05-cloture.js';
+import renderFicheCloture from './screens/ecr05b-fiche-cloture.js';
 import renderDashboardCF from './screens/ecr06-dashboard-cf.js';
 import logger from '../../lib/logger.js';
 
@@ -55,6 +56,7 @@ export function registerMarchePlusRoutes() {
 
   // Cloture
   router.register('/mp/cloture', renderCloture);
+  router.register('/mp/fiche-cloture', renderFicheCloture);
 
   // Dashboard
   router.register('/mp/dashboard', renderDashboardCF);

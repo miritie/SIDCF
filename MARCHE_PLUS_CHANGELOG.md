@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Fiche de clôture : synthèse imprimable centrée Contrôleur Financier (Lot 3, doc 24/06) (ECR05B)
+
+> **Doc clôture 24/06 — Lot 3.** Nouvelle **Fiche de clôture** : une **page unique imprimable** qui ne retient que l'information pertinente pour le **CF** (≠ fiche marché ECR01C, exhaustive). Lecture seule, générée à partir des données existantes.
+> - Blocs : **identification** (n° approuvé, objet, attributaire/groupement, mode, autorité) · **montants** (base + avenants + total) · **⭐ situation de paiement** (cumul décomptes, écart, soldé/non, observation CF) · **⭐ délai** (contractuel vs réel, dans/hors délai) · **livrables** prévu/réalisé + justif · **garanties** levées OUI/NON · **réceptions** · **appréciation** (satisfaction + synthèse CF) · **annexes** (catalogue images — à venir).
+> - Bouton **🖨️ Imprimer** (`window.print()` + styles `@media print` masquant la navigation).
+
+### Fichiers touchés
+
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05b-fiche-cloture.js` — **nouvel écran** `renderFicheCloture` (route `/mp/fiche-cloture`).
+- `sidcf-portal/js/modules/marche-plus/index.js` — enregistrement de la route.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05-cloture.js` — bouton « Ouvrir la fiche de clôture ».
+
+### Impact / Anti-régression
+
+- **Lecture seule** : aucune saisie, aucune persistance, **aucune migration**. Réutilise exactement les calculs de la clôture (situation paiement, délai). N'altère aucun écran existant (nouvelle route + 1 bouton).
+- **Vérifié headless** (Chrome CDP) : tous les blocs s'affichent (identification, montants, paiement, délai, livrables, garanties, réceptions) + bouton Imprimer ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Clôture : situation de paiement (écart) + délai contractuel/réel (Lot 1, doc 24/06) (ECR05)
 
 > **Doc clôture 24/06 — Lot 1.** Deux synthèses ajoutées à la clôture, pour le CF :
