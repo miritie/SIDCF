@@ -514,11 +514,11 @@ function renderDecomptesSection({ operation, attribution, avenants, mpDecomptes,
       el('div', { style: { fontWeight: 700, fontSize: '18px' } }, String(nbLivrables))
     ]),
     el('div', {}, [
-      el('div', { className: 'text-small text-muted' }, 'Décomptes enregistrés'),
+      el('div', { className: 'text-small text-muted' }, 'Nombre de décomptes enregistrés'),
       el('div', { style: { fontWeight: 700, fontSize: '18px' } }, String(nbDecomptes))
     ]),
     el('div', {}, [
-      el('div', { className: 'text-small text-muted' }, 'Taux d\'exécution cumulé'),
+      el('div', { className: 'text-small text-muted' }, 'Taux d\'exécution financier cumulé'),
       el('div', { style: { fontWeight: 700, fontSize: '18px' } }, `${dernierTaux.toFixed(2)} %`)
     ]),
     el('div', { style: { gridColumn: '1 / -1' } }, [
@@ -783,12 +783,12 @@ function renderAttributionSummary(attribution) {
 
   return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
     el('div', { className: 'card-header' }, [
-      el('h3', { className: 'card-title' }, 'Marché visé')
+      el('h3', { className: 'card-title' }, 'Marché approuvé')
     ]),
     el('div', { className: 'card-body' }, [
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' } }, [
         renderField('Attributaire', attributaireDisplay),
-        renderField('Montant TTC', montantFormatted),
+        renderField('Montant TTC (marché de base)', montantFormatted),
         renderField('Délai d\'exécution', delaiFormatted)
       ])
     ])

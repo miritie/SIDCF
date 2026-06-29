@@ -6,7 +6,7 @@
  *   - Cumul OP visé / Mandat
  *   - Cumul payé
  *   - Reste à payer
- *   - Taux d'exécution financier (Cumul OP / Montant global du marché)
+ *   - Taux d'exécution financier (Cumul OP / Montant total du marché)
  *   - Ratio de soutenabilité (si planification pluriannuelle disponible)
  *
  * Source : entité MP_DECOMPTE existante (champs numero, typeOP, montant,
@@ -56,16 +56,16 @@ function metaDecision(code) {
 
 /**
  * @param {Object} opts
- * @param {Object} opts.operation     l'opération courante (pour montant global, etat)
+ * @param {Object} opts.operation     l'opération courante (pour montant total, etat)
  * @param {Array}  opts.decomptes     liste initiale des MP_DECOMPTE
- * @param {Object} opts.attribution   pour récupérer le montant global HT/TTC du marché
- * @param {Array}  opts.avenants      pour calculer le montant global (base + variations)
+ * @param {Object} opts.attribution   pour récupérer le montant total HT/TTC du marché
+ * @param {Array}  opts.avenants      pour calculer le montant total (base + variations)
  * @param {Function} [opts.onSaved]   callback async (decomptesArray) => void
  */
 export function renderOpMandatManager({ operation, decomptes = [], attribution, avenants = [], avanceActive = false, onSaved } = {}) {
   let items = [...decomptes];
 
-  // Calculer le montant global du marché : montant attribué (TTC si disponible) + somme des
+  // Calculer le montant total du marché : montant attribué (TTC si disponible) + somme des
   // variations d'avenants. Si pas d'attribution encore, fallback sur montantPrevisionnel.
   function getMontantGlobal() {
     const baseTTC = Number(attribution?.montants?.ttc) || Number(operation?.montantPrevisionnel) || 0;
@@ -152,14 +152,14 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     return el('div', {
       style: { display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }
     }, [
-      card('Montant global du marché', money(montantGlobal),
+      card('Montant total du marché', money(montantGlobal),
         avenants?.length > 0 ? `base + ${avenants.length} avenant${avenants.length > 1 ? 's' : ''}` : 'base seule',
         '#0f5132',
         {
-          titre: 'Montant global du marché',
+          titre: 'Montant total du marché',
           formule: 'montant attribué TTC + Σ variationMontant (avenants)',
           regle: 'Base de référence pour le taux d\'exécution. Inclut tous les avenants financiers (FINAN et MIXTE), pas les avenants de délai pur.',
-          exemple: 'Attribution 100 M + avenant +20 M + avenant délai (sans montant) ⇒ Montant global = 120 M XOF'
+          exemple: 'Attribution 100 M + avenant +20 M + avenant délai (sans montant) ⇒ Montant total = 120 M XOF'
         }),
       card('Cumul OP / Mandat visé', money(cumulVise),
         `${items.filter(d => d.etat === 'VISE' || d.etat === 'PAYE').length} pièce(s)`,
@@ -183,18 +183,18 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
         '#92400e',
         {
           titre: 'Reste à payer',
-          formule: 'max(0, Montant global − Cumul OP visé)',
+          formule: 'max(0, Montant total − Cumul OP visé)',
           regle: 'Indique le potentiel restant de paiement sur le marché. Ne peut pas être négatif (en cas de sur-visa, plafonné à 0).',
           reference: 'Doc DCF 5c'
         }),
       card('Taux d\'exécution financier', `${tauxExec.toFixed(1)}%`,
-        montantGlobal > 0 ? `${money(cumulVise)} / ${money(montantGlobal)}` : 'montant global indéterminé',
+        montantGlobal > 0 ? `${money(cumulVise)} / ${money(montantGlobal)}` : 'montant total indéterminé',
         tauxColor,
         {
           titre: 'Taux d\'exécution financier',
-          formule: 'Cumul OP visé / Montant global × 100',
+          formule: 'Cumul OP visé / Montant total × 100',
           regle: 'Pourcentage d\'avancement financier. Code couleur : vert ≥90 % · bleu ≥50 % · orange ≥25 % · gris sinon.',
-          exemple: 'Montant global 120 M, cumul visé 60 M ⇒ 60/120 = 50 % (bleu)',
+          exemple: 'Montant total 120 M, cumul visé 60 M ⇒ 60/120 = 50 % (bleu)',
           reference: 'Doc DCF 5d'
         })
     ]);
@@ -315,7 +315,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.netTTC)),
             el('td', { colspan: 4 }, '')
           ]),
-          // Modif #48 — Ligne de synthèse %CUMULS (pourcentages relatifs au montant global)
+          // Modif #48 — Ligne de synthèse %CUMULS (pourcentages relatifs au montant total)
           el('tr', { style: { background: '#fef2f2' } }, [
             el('td', { style: { color: '#b91c1c', fontWeight: 700 }, colspan: 5 }, '%CUMULS'),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.acompteHTVA)),
@@ -329,7 +329,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
         ])
       ]),
       el('p', { style: { marginTop: '8px', fontSize: '11px', color: '#6b7280', fontStyle: 'italic' } },
-        `Les pourcentages %CUMULS sont calculés sur le montant global du marché (${money(montantGlobalRef)}).`)
+        `Les pourcentages %CUMULS sont calculés sur le montant total du marché (${money(montantGlobalRef)}).`)
     ]);
   }
 
@@ -473,7 +473,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     ]));
     content.appendChild(grid3);
     content.appendChild(el('small', { className: 'text-muted', style: { fontSize: '11px' } },
-      'Taux d\'exécution calculé automatiquement à l\'enregistrement : Net TTC de cette ligne / montant global × 100.'));
+      'Taux d\'exécution calculé automatiquement à l\'enregistrement : Net TTC de cette ligne / montant total × 100.'));
 
     // Recompute Net HTVA et Net TTC dès qu'un des inputs financiers change
     function recompute() {
@@ -545,7 +545,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
             payload.createdAt = new Date().toISOString();
           }
 
-          // Taux d'exécution de la ligne (Net TTC ligne / Montant global × 100)
+          // Taux d'exécution de la ligne (Net TTC ligne / Montant total × 100)
           const montantGlobal = getMontantGlobal();
           payload.tauxExecution = montantGlobal > 0
             ? parseFloat(((netTTC / montantGlobal) * 100).toFixed(2))

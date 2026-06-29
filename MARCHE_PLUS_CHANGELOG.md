@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Clôture/Décomptes : renommages & précisions de libellés (Lot 1.1, doc 24/06) (ECR04A + widget OP/Mandat)
+
+> **Doc clôture 24/06 — Lot 1, item 1.** Précisions de vocabulaire demandées par les acteurs Marché :
+> - « Montant **global** du marché » → « Montant **total** du marché » (le « global » prêterait à confusion : Études + Travaux + Suivi). [widget OP/Mandat]
+> - « Marché **visé** » → « Marché **approuvé** » ; « Montant TTC » → « Montant TTC **(marché de base)** ». [ECR04A]
+> - « Taux d'exécution cumulé » → « Taux d'exécution **financier** cumulé » ; « Décomptes enregistrés » → « **Nombre de** décomptes enregistrés ». [ECR04A, section décomptes]
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` — libellés/infobulles « Montant global » → « Montant total » (variable interne `montantGlobal` inchangée).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr04a-execution-os.js` — carte « Marché approuvé » + précisions des libellés de la section décomptes.
+
+### Impact / Anti-régression
+
+- **Affichage uniquement** (libellés/infobulles). Aucune logique, aucune donnée, aucune migration. `node --check` OK.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Livrables prévisionnel/réalisé (Phase 2) : bilan à la clôture + justifications CF (ECR05)
 
 > **Note 5 réunion — Phase 2.** À la **clôture**, mise en évidence du **prévisionnel vs réalisé** par livrable (qté prévue / réalisée / % / statut, écart signalé). Si un livrable n'est **pas totalement délivré** (ou pas du tout), saisie d'une **justification du CF** : **motif** (entreprise défaillante, dénonciation du maître d'ouvrage, indisponibilité de ressources, Autre) + **note du CF** + document. **Non bloquant** (documentaire — la note du CF explique les écarts).
