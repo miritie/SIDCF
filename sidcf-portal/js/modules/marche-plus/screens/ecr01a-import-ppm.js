@@ -134,7 +134,16 @@ const SIM_ROWS = [
 
 /** Construit le résultat simulé : lignes + alertes (récap, soutenabilité, rapport). */
 function buildSimulation(file, unite, exercice) {
-  const rows = SIM_ROWS.map((r, i) => ({ ...r, num: i + 1, alertes: [] }));
+  // Note 1 (réunion) — Délai de régularisation PARAMÉTRABLE (rules-config, défaut 3 mois).
+  // S'applique à TOUTES les alertes. Dans le délai : non bloquant (« à régulariser »).
+  // Délai dépassé sans régularisation : la ligne est BLOQUÉE pour la contractualisation.
+  const delaiMois = Number(dataService.getRulesConfig()?.delais_types?.DELAI_REGULARISATION_PPM?.value) || 3;
+  const today = new Date();
+  const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; };
+  // Ancienneté simulée (mois écoulés depuis l'inscription) par ligne — illustre les 2 états.
+  const ANCIENNETE = { 2: 5, 5: 4, 7: 1, 8: 2 };
+
+  const rows = SIM_ROWS.map((r, i) => ({ ...r, num: i + 1, alertes: [], moisAnciennete: ANCIENNETE[i] ?? 1 }));
   const alertes = [];
 
   for (const r of rows) {
@@ -151,7 +160,18 @@ function buildSimulation(file, unite, exercice) {
     if (!r.natureEco) {
       r.alertes.push({ type: 'CHAMP_MANQUANT', gravite: 'MINEURE', detail: 'Nature économique absente — à compléter avant contractualisation' });
     }
-    for (const a of r.alertes) alertes.push({ num: r.num, objet: r.objet, ...a });
+
+    // Statut de régularisation (dès qu'il y a au moins une alerte).
+    r.dateInscription = addMonths(today, -r.moisAnciennete);
+    r.echeance = addMonths(r.dateInscription, delaiMois);
+    r.joursEcheance = Math.round((r.echeance - today) / 86400000);
+    if (r.alertes.length === 0) r.delaiStatut = 'OK';
+    else if (r.joursEcheance >= 0) r.delaiStatut = 'A_REGULARISER';
+    else r.delaiStatut = 'BLOQUEE';
+
+    for (const a of r.alertes) {
+      alertes.push({ num: r.num, objet: r.objet, delaiStatut: r.delaiStatut, echeance: r.echeance, joursEcheance: r.joursEcheance, ...a });
+    }
   }
 
   const parMode = {};
@@ -164,11 +184,20 @@ function buildSimulation(file, unite, exercice) {
 
   return {
     fichier: { nom: file.name, taille: file.size },
-    unite, exercice,
+    unite, exercice, delaiMois,
     rows, alertes, parMode, parType,
     montantTotal: rows.reduce((s, r) => s + r.montant, 0),
-    ecarts: rows.filter(r => r.alertes.some(a => a.type === 'SOUTENABILITE'))
+    ecarts: rows.filter(r => r.alertes.some(a => a.type === 'SOUTENABILITE')),
+    bloquees: rows.filter(r => r.delaiStatut === 'BLOQUEE'),
+    aRegulariser: rows.filter(r => r.delaiStatut === 'A_REGULARISER')
   };
+}
+
+/** Libellé court du statut de régularisation d'une ligne. */
+function statutRegularisationLabel(r) {
+  if (r.delaiStatut === 'BLOQUEE') return `⛔ Bloquée — délai dépassé de ${Math.abs(r.joursEcheance)} j`;
+  if (r.delaiStatut === 'A_REGULARISER') return `🟠 À régulariser sous ${r.joursEcheance} j`;
+  return '';
 }
 
 /* ------------------------------------------------------------------ */
@@ -176,9 +205,14 @@ function buildSimulation(file, unite, exercice) {
 /* ------------------------------------------------------------------ */
 
 function downloadErrorReport(sim) {
-  const headers = ['Ligne', 'Objet du marché', 'Type d\'alerte', 'Gravité', 'Détail'];
+  const headers = ['Ligne', 'Objet du marché', 'Type d\'alerte', 'Gravité', 'Détail', 'Échéance de régularisation', 'Statut'];
   const labels = { SOUTENABILITE: 'Écart de soutenabilité budgétaire', HORS_BAREME: 'Mode de passation hors barème', CHAMP_MANQUANT: 'Champ requis manquant' };
-  const rows = sim.alertes.map(a => [a.num, a.objet, labels[a.type] || a.type, a.gravite, a.detail]);
+  const statutLabel = { BLOQUEE: 'BLOQUÉE (délai dépassé)', A_REGULARISER: 'À régulariser (dans le délai)' };
+  const rows = sim.alertes.map(a => [
+    a.num, a.objet, labels[a.type] || a.type, a.gravite, a.detail,
+    a.echeance ? new Date(a.echeance).toLocaleDateString('fr-FR') : '-',
+    statutLabel[a.delaiStatut] || a.delaiStatut || '-'
+  ]);
   const csv = [headers, ...rows]
     .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';'))
     .join('\n');
@@ -358,8 +392,9 @@ export async function renderImportPPM() {
       el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', marginBottom: '16px' } }, [
         kpi('📄', sim.rows.length, 'Lignes chargées', 'var(--color-primary)'),
         kpi('💰', money(sim.montantTotal, 'F CFA'), 'Montant total prévisionnel', 'var(--color-success)'),
-        kpi('🧮', Object.keys(sim.parMode).length, 'Modes de passation distincts', '#0d6efd'),
-        kpi('⚠️', nbAlertes, `Alerte(s) — non bloquant`, nbAlertes ? '#dc3545' : 'var(--color-gray-500)')
+        kpi('⚠️', nbAlertes, `Alerte(s) — non bloquant`, nbAlertes ? '#dc3545' : 'var(--color-gray-500)'),
+        // Note 1 — lignes dont le délai de régularisation est dépassé (bloquées pour la contractualisation).
+        kpi('⛔', sim.bloquees.length, `Bloquée(s) — délai ${sim.delaiMois} mois dépassé`, sim.bloquees.length ? '#b91c1c' : 'var(--color-gray-500)')
       ]),
 
       el('div', { className: 'card', style: { marginBottom: '16px' } }, [
@@ -424,9 +459,13 @@ export async function renderImportPPM() {
               el('th', { style: { width: '10%' } }, 'Alertes')
             ])),
             el('tbody', {}, sim.rows.map(r => {
-              const enEcart = r.alertes.some(a => a.type === 'SOUTENABILITE');
               const enAlerte = r.alertes.length > 0;
-              return el('tr', { style: enEcart ? { background: '#fdf2f2', borderLeft: '3px solid #dc3545' } : {} }, [
+              const bloquee = r.delaiStatut === 'BLOQUEE';
+              // Fond rouge marqué pour une ligne bloquée, rose pour une alerte en cours.
+              const rowStyle = bloquee
+                ? { background: '#fde8e8', borderLeft: '3px solid #b91c1c' }
+                : (enAlerte ? { background: '#fff7ed', borderLeft: '3px solid #f59e0b' } : {});
+              return el('tr', { style: rowStyle }, [
                 el('td', { className: 'text-small', title: r.activite }, r.activite),
                 el('td', { title: r.objet }, r.objet.length > 55 ? r.objet.slice(0, 55) + '…' : r.objet),
                 el('td', { className: 'text-small' }, r.typeMarche),
@@ -434,11 +473,15 @@ export async function renderImportPPM() {
                 el('td', { className: 'text-small', title: r.mode }, r.mode.split(' — ')[0]),
                 el('td', { style: { textAlign: 'right', fontWeight: 600 } }, moneyM(r.montant)),
                 el('td', {}, enAlerte
-                  ? el('span', {
-                      className: `badge badge-${enEcart ? 'red' : 'orange'}`,
-                      title: r.alertes.map(a => a.detail).join(' · '),
-                      style: { fontSize: '11px' }
-                    }, `⚠️ ${r.alertes.length}`)
+                  ? el('div', {}, [
+                      el('span', {
+                        className: `badge badge-${bloquee ? 'red' : 'orange'}`,
+                        title: r.alertes.map(a => a.detail).join(' · '),
+                        style: { fontSize: '11px' }
+                      }, `⚠️ ${r.alertes.length}`),
+                      el('div', { style: { fontSize: '10px', marginTop: '3px', fontWeight: 700, color: bloquee ? '#b91c1c' : '#b45309' } },
+                        statutRegularisationLabel(r))
+                    ])
                   : el('span', { className: 'badge badge-green', style: { fontSize: '11px' } }, '✓'))
               ]);
             }))
@@ -451,12 +494,18 @@ export async function renderImportPPM() {
         el('div', { className: 'card-header' }, el('h3', { className: 'card-title' }, `📑 Rapport d'erreurs — non bloquant (${nbAlertes})`)),
         el('div', { className: 'card-body' }, [
           el('p', { style: { margin: '0 0 10px', fontSize: '13px', color: '#6b7280' } },
-            'Les alertes ci-dessous n\'empêchent pas l\'import : elles signalent les points à régulariser. Le rapport peut être téléchargé et transmis à l\'unité concernée.'),
+            `Les alertes ci-dessous n'empêchent pas le chargement : chaque ligne dispose de ${sim.delaiMois} mois pour être appréciée et régularisée. ` +
+            'Passé ce délai sans régularisation, la ligne est bloquée pour la contractualisation. Le rapport peut être téléchargé et transmis à l\'unité concernée.'),
           nbAlertes ? el('ul', { style: { margin: '0 0 12px', paddingLeft: '20px', fontSize: '13px' } },
-            sim.alertes.map(a => el('li', { style: { marginBottom: '4px' } }, [
+            sim.alertes.map(a => el('li', { style: { marginBottom: '6px' } }, [
               el('strong', {}, `Ligne ${a.num} — `),
               el('span', { className: `badge badge-${a.gravite === 'MAJEURE' ? 'red' : 'orange'}`, style: { fontSize: '10px', marginRight: '6px' } }, a.gravite),
-              el('span', {}, a.detail)
+              el('span', {}, a.detail),
+              el('span', {
+                style: { display: 'block', fontSize: '11px', fontWeight: 700, marginTop: '2px', color: a.delaiStatut === 'BLOQUEE' ? '#b91c1c' : '#b45309' }
+              }, a.delaiStatut === 'BLOQUEE'
+                ? `⛔ Délai dépassé (échéance ${new Date(a.echeance).toLocaleDateString('fr-FR')}) — ligne bloquée pour la contractualisation tant qu'elle n'est pas régularisée`
+                : `🟠 À régulariser avant le ${new Date(a.echeance).toLocaleDateString('fr-FR')} (${a.joursEcheance} j restants)`)
             ]))) : el('p', { style: { margin: '0 0 12px', fontSize: '13px' } }, 'Aucune anomalie détectée.'),
           el('button', {
             type: 'button',

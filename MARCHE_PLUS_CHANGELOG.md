@@ -13,6 +13,36 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Chargement PPM : délai de régularisation paramétrable + blocage à échéance (ECR01A-Import)
+
+> **Note 1 réunion** — Au chargement du PPM, les alertes (soutenabilité, hors-barème, champ manquant) sont **non bloquantes** : chaque ligne en alerte dispose d'un **délai pour apprécier et régulariser**, **paramétrable** (défaut **3 mois**). **À toutes les alertes.** Passé le délai sans régularisation, la ligne est **bloquée pour la contractualisation** (décision validée en réunion).
+
+### Détail
+
+- **Paramètre** `delais_types.DELAI_REGULARISATION_PPM` (valeur 3, unité « mois ») dans `rules-config.json` → modifiable sans toucher au code.
+- **Deux états** par ligne en alerte, calculés depuis la date d'inscription :
+  - dans le délai → 🟠 « À régulariser sous N j » (non bloquant, la ligne avance) ;
+  - délai dépassé → ⛔ « Bloquée — délai dépassé » (fond rouge, exclue de la contractualisation tant que non régularisée).
+- KPI « Bloquée(s) — délai N mois dépassé », statut par ligne dans l'aperçu, échéance + statut dans le rapport d'erreurs (liste + export CSV : 2 colonnes ajoutées).
+- Pour la démo (écran = simulation, données `SIM_ROWS`), une ancienneté simulée par ligne illustre les 2 états.
+
+### Fichiers touchés
+
+- `sidcf-portal/js/config/rules-config.json` — paramètre `DELAI_REGULARISATION_PPM`.
+- `sidcf-portal/js/modules/marche-plus/screens/ecr01a-import-ppm.js` — `buildSimulation()` (calcul du statut/échéance, lecture du paramètre), aperçu des lignes, rapport d'erreurs, export CSV, KPI.
+
+### Impact / Anti-régression
+
+- **Non intrusif** : l'écran d'import est une **simulation** (aucune persistance, aucune opération créée) → le blocage s'exprime dans la simulation, **sans toucher** au parcours réel de contractualisation, **sans migration**.
+- `dataService.getRulesConfig()` lu avec valeur par défaut (3) → robuste si le paramètre est absent.
+- **Vérifié headless** (Chrome CDP, upload réel d'un CSV) : KPI bloquées = 2, statuts « Bloquée — délai dépassé » et « À régulariser sous N j » affichés, délai (3 mois) lu depuis la config, 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy sur push `main`). Aucune migration.
+
+---
+
 ## 2026-06-18 — Garanties (mainlevée) : accès depuis l'exécution + correction du crash d'affichage (ECR04A/ECR04C)
 
 > **Modif #178** — Le client ne trouvait pas où lever les garanties. Deux causes, corrigées :

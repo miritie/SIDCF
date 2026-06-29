@@ -177,6 +177,11 @@
       "value": 365,
       "unit": "jours",
       "description": "Délai entre réception provisoire et définitive"
+    },
+    "DELAI_REGULARISATION_PPM": {
+      "value": 3,
+      "unit": "mois",
+      "description": "Délai pour apprécier et régulariser une ligne PPM en alerte au chargement. Au-delà, la ligne est bloquée pour la contractualisation tant qu'elle n'est pas régularisée. Paramétrable."
     }
   },
   "ano": {
