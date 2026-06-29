@@ -337,14 +337,16 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
 
   function openEditorModal(existing) {
     const isEdit = !!existing;
-    // Modif #174 (obs. EHOUMAN) — quand une avance de démarrage est prévue, le tout
-    // premier décompte est « DÉCOMPTE 00 » (restitution de l'avance). On pré-remplit
-    // le numéro pour le premier décompte créé.
-    const defaultNumero = (!isEdit && items.length === 0 && avanceActive) ? 'DÉCOMPTE 00' : '';
+    // Doc clôture 24/06 (décision 2) — numéro de décompte AUTO-GÉNÉRÉ (non saisi par
+    // l'agent), entiers croissants : avec avance de démarrage, le 1er est « 00 »
+    // (restitution de l'avance) puis 01, 02… ; sans avance, 01, 02, 03…
+    const autoNumero = isEdit
+      ? (existing.numero || '')
+      : String(avanceActive ? items.length : items.length + 1).padStart(2, '0');
     const draft = isEdit ? { ...existing } : {
       id: null,
       operationId: operation.id,
-      numero: defaultNumero,
+      numero: autoNumero,
       typeOP: 'OP',
       numeroOP: '',
       numeroMandat: '', // Modif #134 (X-1) — N° de mandat de paiement (anti-doublon facture)
@@ -388,12 +390,12 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
     content.appendChild(el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' } }, '📋 Identification'));
     const grid1 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' } });
     grid1.appendChild(el('div', {}, [
-      el('label', { className: 'form-label' }, ['Numéro de décompte', el('span', { className: 'required' }, '*')]),
-      el('input', { type: 'text', className: 'form-input', id: 'dec-numero', value: draft.numero || '', placeholder: 'Ex : DEC-2026-001' }),
-      defaultNumero
-        ? el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
-            'Avance de démarrage prévue → le 1ᵉʳ décompte est « DÉCOMPTE 00 ».')
-        : null
+      el('label', { className: 'form-label' }, 'Numéro de décompte (auto)'),
+      el('input', { type: 'text', className: 'form-input', id: 'dec-numero', value: draft.numero || '', readonly: true, style: { background: '#f3f4f6', fontWeight: 700, fontFamily: 'monospace' } }),
+      el('small', { className: 'text-muted', style: { display: 'block', marginTop: '4px' } },
+        (!isEdit && avanceActive && items.length === 0)
+          ? 'Avance de démarrage prévue → ce 1ᵉʳ décompte est « 00 » (restitution de l\'avance).'
+          : 'Numéro auto-généré (entiers croissants) — non saisi par l\'agent.')
     ]));
     grid1.appendChild(el('div', {}, [
       el('label', { className: 'form-label' }, 'Type d\'OP'),

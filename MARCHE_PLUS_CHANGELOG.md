@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Décomptes : numéro auto-généré, non saisi par l'agent (Lot 2, décision 2) (widget OP/Mandat)
+
+> **Doc clôture 24/06 — décision client 2.** Le numéro de décompte est désormais **auto-généré** (entiers croissants), **non saisi** par l'agent — fini le format `DEC-2026-001`. Avec **avance de démarrage**, le 1ᵉʳ décompte est **« 00 »** (restitution de l'avance), puis 01, 02… ; **sans avance**, 01, 02, 03…
+> - Le champ « Numéro de décompte (auto) » est en **lecture seule** (pré-rempli, fond grisé, monospace).
+> - (Le numéro généré n'affecte ni le libellé ni l'ajustement de la rémunération — confirmé par le client.)
+
+### Fichiers touchés
+
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` — `openEditorModal()` : numéro auto (`avanceActive ? items.length : items.length+1`, paddé sur 2 chiffres ; en édition, numéro conservé) ; champ `dec-numero` passé en `readonly`.
+
+### Impact / Anti-régression
+
+- Revient volontairement sur le format `DEC-2026-001` (#174/#177) — **décision client validée**. En édition d'un décompte existant, son numéro est **conservé** (pas de re-génération). Aucune migration.
+- **Vérifié headless** (modal d'ajout) : numéro auto « 01 » (op sans avance), champ en lecture seule, label « (auto) », plus de placeholder ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). Aucune migration.
+
+---
+
 ## 2026-06-29 — Clôture : garanties « levée OUI/NON » éditable par garantie (Lot 1, décision A) (ECR05)
 
 > **Doc clôture 24/06 — décision client A.** À la clôture, chaque garantie de l'enregistrement réapparaît avec un **OUI/NON** « levée ? » **éditable** (au lieu du simple statut en lecture seule). « Le meilleur des deux mondes » : le OUI/NON suffit pour chaque garantie, et on peut **préciser** (date/document) via la mainlevée détaillée d'**ECR04C** (mécanisme #178 inchangé).
