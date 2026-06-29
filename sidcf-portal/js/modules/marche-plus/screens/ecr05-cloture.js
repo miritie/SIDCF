@@ -113,6 +113,21 @@ export async function renderCloture(params) {
     ? garantiesRaw.filter(g => !g.lotId || g.lotId === currentLotId)
     : garantiesRaw;
 
+  // Doc clôture 24/06 (Lot 1) — Situation de paiement (écart) + délai (calculés).
+  const mpDecomptes = await dataService.query(ENTITIES.MP_DECOMPTE, { operationId: idOperation }).catch(() => []);
+  const attributionForCloture = getLotData(fullData.attribution, currentLotId);
+  const avenantsForCloture = (fullData.avenants || []).filter(av => !currentLotId || !av.lotId || av.lotId === currentLotId);
+  const montantBaseTTC = Number(attributionForCloture?.montants?.ttc) || Number(attributionForCloture?.montants?.attribue) || Number(attributionForCloture?.montantAttribue) || 0;
+  const totalAvenants = avenantsForCloture.reduce((s, a) => s + (Number(a.variationMontant) || 0), 0);
+  const montantTotalMarche = montantBaseTTC + totalAvenants;
+  const cumulDecomptes = (mpDecomptes || []).filter(d => d.etat === 'VISE' || d.etat === 'PAYE').reduce((s, d) => s + (Number(d.netTTC) || 0), 0);
+  const ecartPaiement = montantTotalMarche - cumulDecomptes;
+  // Délai contractuel vs réel
+  const dureeContractuelle = Number(attributionForCloture?.dates?.delaiExecution) || 0;
+  const dureeUnite = attributionForCloture?.dates?.delaiUnite || 'JOURS';
+  const osDate = (fullData.ordresService && fullData.ordresService[0]) ? fullData.ordresService[0].dateEmission : null;
+  const finDate = cloture?.receptionDef?.date || cloture?.receptionProv?.date || null;
+
   const page = el('div', { className: 'page' }, [
     renderSteps(fullData, idOperation),
 
@@ -328,12 +343,91 @@ export async function renderCloture(params) {
     page.appendChild(renderLivrablesBilanSection({ operation, idOperation, registries: dataService.getAllRegistries() }));
   }
 
+  // Doc clôture 24/06 (Lot 1) — Situation de paiement (écart) + Délai (contractuel vs réel).
+  page.appendChild(renderSituationPaiementCard({
+    montantTotalMarche, cumulDecomptes, ecartPaiement,
+    nbDecomptesVises: (mpDecomptes || []).filter(d => d.etat === 'VISE' || d.etat === 'PAYE').length,
+    observation: cloture?.observationPaiement || ''
+  }));
+  page.appendChild(renderDelaiCard({ dureeContractuelle, dureeUnite, osDate, finDate }));
+
   // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
   page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries: dataService.getAllRegistries(), lots: [] }));
 
   // Modif #69 — Bouton démo « Passer à l'étape suivante »
   page.appendChild(renderNextPhaseButton({ idOperation, operation }));
   mount('#app', page);
+}
+
+/**
+ * Doc clôture 24/06 (Lot 1) — Situation de paiement : croise le montant total du
+ * marché et le cumul des décomptes visés, sort l'écart + un commentaire (soldé ou
+ * non). Les valeurs et le commentaire sont persistés avec la clôture (handleSave).
+ */
+function renderSituationPaiementCard({ montantTotalMarche, cumulDecomptes, ecartPaiement, nbDecomptesVises, observation }) {
+  const fmt = (n) => `${Number(n || 0).toLocaleString('fr-FR')} XOF`;
+  const solde = Math.abs(Number(ecartPaiement) || 0) < 1;
+  const ecartColor = solde ? '#16a34a' : '#b45309';
+  const kpi = (label, value, color) => el('div', { style: { textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: '8px' } }, [
+    el('div', { className: 'text-small text-muted' }, label),
+    el('div', { style: { fontWeight: 700, fontSize: '15px', color: color || 'inherit' } }, value)
+  ]);
+  return el('div', { className: 'card', style: { marginBottom: '24px' } }, [
+    el('div', { className: 'card-header' }, [el('h3', { className: 'card-title' }, '💳 Situation de paiement à la clôture')]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' } }, [
+        kpi('Montant total du marché', fmt(montantTotalMarche)),
+        kpi(`Cumul décomptes visés (${nbDecomptesVises})`, fmt(cumulDecomptes)),
+        kpi('Écart', fmt(ecartPaiement), ecartColor),
+        kpi('Statut', solde ? '✓ Soldé' : '⚠️ Non soldé', ecartColor)
+      ]),
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Observation (situation de paiement — soldé ou non)'),
+        el('textarea', { className: 'form-input', id: 'cloture-observation-paiement', rows: 2, placeholder: 'Commentaire du CF sur la situation de paiement…' }, observation || '')
+      ]),
+      el('input', { type: 'hidden', id: 'cloture-montant-total', value: String(montantTotalMarche) }),
+      el('input', { type: 'hidden', id: 'cloture-cumul-decomptes', value: String(cumulDecomptes) }),
+      el('input', { type: 'hidden', id: 'cloture-ecart', value: String(ecartPaiement) })
+    ])
+  ]);
+}
+
+/**
+ * Doc clôture 24/06 (Lot 1) — Délai : croise le délai contractuel et le délai réel
+ * (OS de démarrage → réception), indique « dans le délai / hors délai » + alerte
+ * clignotante si dépassement. Calculé (pas de persistance).
+ */
+function renderDelaiCard({ dureeContractuelle, dureeUnite, osDate, finDate }) {
+  const toDays = (v) => (dureeUnite === 'MOIS' ? v * 30 : v);
+  const contractuelJours = toDays(Number(dureeContractuelle) || 0);
+  let reelJours = null;
+  if (osDate && finDate) reelJours = Math.round((new Date(finDate) - new Date(osDate)) / 86400000);
+  const computable = contractuelJours > 0 && reelJours != null;
+  const horsDelai = computable && reelJours > contractuelJours;
+  const fmtDur = (j) => (dureeUnite === 'MOIS' ? `${(j / 30).toFixed(1)} mois` : `${j} jour(s)`);
+  const kpi = (label, value, color) => el('div', { style: { textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: '8px' } }, [
+    el('div', { className: 'text-small text-muted' }, label),
+    el('div', { style: { fontWeight: 700, fontSize: '15px', color: color || 'inherit' } }, value)
+  ]);
+  const statut = !computable
+    ? el('span', { style: { color: '#6b7280' } }, '— (dates incomplètes)')
+    : (horsDelai
+        ? el('span', { style: { color: '#dc2626', fontWeight: 700, animation: 'mp-blink 1s infinite' } }, '⏰ HORS DÉLAI')
+        : el('span', { style: { color: '#16a34a', fontWeight: 700 } }, '✓ Dans le délai'));
+  return el('div', { className: 'card', style: horsDelai ? { marginBottom: '24px', borderColor: '#dc2626' } : { marginBottom: '24px' } }, [
+    el('style', {}, '@keyframes mp-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }'),
+    el('div', { className: 'card-header' }, [el('h3', { className: 'card-title' }, '⏱️ Délai d\'exécution')]),
+    el('div', { className: 'card-body' }, [
+      el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' } }, [
+        kpi('Délai contractuel', contractuelJours > 0 ? fmtDur(contractuelJours) : '— (non renseigné)'),
+        kpi('Délai réel (OS → réception)', reelJours != null ? `${reelJours} jour(s)` : '— (dates manquantes)'),
+        el('div', { style: { textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: '8px' } }, [
+          el('div', { className: 'text-small text-muted' }, 'Statut'),
+          el('div', { style: { fontWeight: 700, fontSize: '15px', marginTop: '2px' } }, [statut])
+        ])
+      ])
+    ])
+  ]);
 }
 
 function renderGarantieCheckbox(garantie) {
@@ -488,6 +582,13 @@ async function handleSave(idOperation, definitive, lotId = null, rawCloture = nu
   const satisfaction = document.getElementById('cloture-satisfaction')?.value || null;
   const satisfactionCommentaires = document.getElementById('cloture-satisfaction-commentaires')?.value || null;
   const synthese = document.getElementById('cloture-synthese')?.value;
+  // Doc clôture 24/06 (Lot 1) — situation de paiement (colonnes top-level mp_cloture).
+  const clotureExtra = {
+    observationPaiement: document.getElementById('cloture-observation-paiement')?.value || null,
+    montantMarcheTotal: parseFloat(document.getElementById('cloture-montant-total')?.value) || 0,
+    montantTotalPaye: parseFloat(document.getElementById('cloture-cumul-decomptes')?.value) || 0,
+    ecartMontant: parseFloat(document.getElementById('cloture-ecart')?.value) || 0
+  };
 
   if (!dateRP) {
     alert('⚠️ La date de réception provisoire est obligatoire');
@@ -540,6 +641,7 @@ async function handleSave(idOperation, definitive, lotId = null, rawCloture = nu
   if (existing) {
     const updateData = {
       ...lotPatch,
+      ...clotureExtra,
       operationId: idOperation,
       updatedAt: new Date().toISOString()
     };
@@ -547,6 +649,7 @@ async function handleSave(idOperation, definitive, lotId = null, rawCloture = nu
   } else {
     const createData = {
       ...lotPatch,
+      ...clotureExtra,
       id: clotureId,
       operationId: idOperation,
       createdAt: new Date().toISOString(),

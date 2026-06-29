@@ -13,6 +13,28 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Clôture : situation de paiement (écart) + délai contractuel/réel (Lot 1, doc 24/06) (ECR05)
+
+> **Doc clôture 24/06 — Lot 1.** Deux synthèses ajoutées à la clôture, pour le CF :
+> - **💳 Situation de paiement** : croise **montant total du marché** (base + avenants) et **cumul des décomptes visés** → **écart** + statut **soldé / non soldé** + **observation** (commentaire CF). Persisté sur `mp_cloture` (colonnes `montant_marche_total`, `montant_total_paye`, `ecart_montant` existantes + nouvelle `observation_paiement`).
+> - **⏱️ Délai d'exécution** : croise **délai contractuel** (durée d'attribution) et **délai réel** (OS de démarrage → réception) → **« dans le délai » / « hors délai »** avec **alerte clignotante** si dépassement. Entièrement calculé (pas de persistance).
+
+### Fichiers touchés
+
+- `postgres/migrations/035_mp_cloture_observation_paiement.sql` — colonne `observation_paiement` sur `mp_cloture`. **Exécutée sur Neon.**
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05-cloture.js` — `renderSituationPaiementCard()` + `renderDelaiCard()` ; persistance via `handleSave` (champs top-level, hors `buildLotPatch` pour viser les colonnes directement).
+
+### Impact / Anti-régression
+
+- **Additif** : 2 cartes en lecture/synthèse + 1 commentaire. Les colonnes d'écart existaient déjà au schéma ; seul `observation_paiement` a été ajouté (migration 035). Le délai est calculé.
+- `node --check` OK ; **vérifié headless** (op clôture : les 2 cartes, KPIs, statut soldé/non et statut délai s'affichent) ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). **Migration 035 exécutée.**
+
+---
+
 ## 2026-06-29 — Clôture/Décomptes : renommages & précisions de libellés (Lot 1.1, doc 24/06) (ECR04A + widget OP/Mandat)
 
 > **Doc clôture 24/06 — Lot 1, item 1.** Précisions de vocabulaire demandées par les acteurs Marché :
