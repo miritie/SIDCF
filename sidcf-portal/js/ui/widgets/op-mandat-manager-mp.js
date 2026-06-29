@@ -255,7 +255,8 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
           el('th', {}, 'État'),
           el('th', {}, 'Bailleur'),
           el('th', {}, 'Décision'),
-          el('th', { style: { textAlign: 'right' } }, 'Taux exéc.'),
+          el('th', { style: { textAlign: 'right' } }, 'Taux fin.'),
+          el('th', { style: { textAlign: 'right' } }, 'Taux phys.'),
           el('th', { style: { textAlign: 'center' } }, 'Actions')
         ])]),
         el('tbody', {}, [
@@ -291,6 +292,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
                 }
               }, decMeta.label)),
               el('td', { style: { textAlign: 'right' } }, `${(Number(d.tauxExecution) || 0).toFixed(2)} %`),
+              el('td', { style: { textAlign: 'right' } }, `${(Number(d.tauxPhysique) || 0).toFixed(2)} %`),
               el('td', { style: { textAlign: 'center' } }, [
                 el('button', {
                   className: 'btn btn-sm btn-secondary',
@@ -313,7 +315,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.penalite)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.netHTVA)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, money(totals.netTTC)),
-            el('td', { colspan: 4 }, '')
+            el('td', { colspan: 5 }, '')
           ]),
           // Modif #48 — Ligne de synthèse %CUMULS (pourcentages relatifs au montant total)
           el('tr', { style: { background: '#fef2f2' } }, [
@@ -324,7 +326,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.penalite)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.netHTVA)),
             el('td', { style: { textAlign: 'right', fontWeight: 700, color: '#b91c1c' } }, pct(totals.netTTC)),
-            el('td', { colspan: 4 }, '')
+            el('td', { colspan: 5 }, '')
           ])
         ])
       ]),
@@ -361,6 +363,7 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
       bailleur: '',
       decision: 'EN_ATTENTE',
       tauxExecution: 0,
+      tauxPhysique: 0,
       documentRef: null
     };
 
@@ -474,8 +477,22 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
       )
     ]));
     content.appendChild(grid3);
+
+    // ── Section 4 : Avancement (taux physique saisi + taux financier calculé) ──────
+    // Doc clôture 24/06 / obs. métier — prendre en charge les taux PHYSIQUES et FINANCIERS.
+    content.appendChild(el('div', { style: { fontSize: '13px', fontWeight: 600, color: '#374151', margin: '8px 0' } }, '📈 Avancement'));
+    const grid4 = el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '6px' } });
+    grid4.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Taux d\'exécution PHYSIQUE (%)'),
+      el('input', { type: 'number', className: 'form-input', id: 'dec-taux-physique', min: '0', max: '100', step: '0.01', value: String(draft.tauxPhysique || 0) })
+    ]));
+    grid4.appendChild(el('div', {}, [
+      el('label', { className: 'form-label' }, 'Taux d\'exécution FINANCIER (%)'),
+      el('input', { type: 'text', className: 'form-input', value: 'calculé automatiquement', readonly: true, style: { background: '#f3f4f6', fontStyle: 'italic' } })
+    ]));
+    content.appendChild(grid4);
     content.appendChild(el('small', { className: 'text-muted', style: { fontSize: '11px' } },
-      'Taux d\'exécution calculé automatiquement à l\'enregistrement : Net TTC de cette ligne / montant total × 100.'));
+      'Taux physique : saisi (avancement réel des prestations). Taux financier : calculé à l\'enregistrement (Net TTC de cette ligne / montant total × 100).'));
 
     // Recompute Net HTVA et Net TTC dès qu'un des inputs financiers change
     function recompute() {
@@ -538,6 +555,8 @@ export function renderOpMandatManager({ operation, decomptes = [], attribution, 
             etat: document.getElementById('dec-etat').value,
             bailleur: document.getElementById('dec-bailleur').value.trim(),
             decision: document.getElementById('dec-decision').value,
+            // Doc clôture 24/06 — taux physique SAISI (le financier est calculé plus bas).
+            tauxPhysique: Math.min(100, Math.max(0, parseFloat(document.getElementById('dec-taux-physique')?.value) || 0)),
             updatedAt: new Date().toISOString()
           };
 

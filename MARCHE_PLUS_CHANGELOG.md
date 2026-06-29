@@ -13,6 +13,29 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Décomptes : taux d'exécution PHYSIQUE saisi + FINANCIER calculé (obs. métier) (widget OP/Mandat)
+
+> **Obs. métier (Exécution).** « Dans la saisie des décomptes, prendre en charge les taux physiques ET les taux financiers. » Le décompte porte désormais **deux taux** :
+> - **Taux financier** = avancement des paiements, **calculé** automatiquement (Net TTC de la ligne / montant total × 100) — existant.
+> - **Taux physique** = avancement réel des prestations, **saisi** par l'agent (nouveau, `dec-taux-physique`).
+> - Le modal expose les deux (physique saisissable, financier en « calculé automatiquement »). La table affiche **« Taux fin. »** et **« Taux phys. »**.
+
+### Fichiers touchés
+
+- `postgres/migrations/036_mp_decompte_taux_physique.sql` — colonne `taux_physique` sur `mp_decompte`. **Exécutée sur Neon.**
+- `sidcf-portal/js/ui/widgets/op-mandat-manager-mp.js` — modal (section « Avancement » : taux physique + rappel financier calculé) ; `tauxPhysique` au draft et à la sauvegarde ; table (en-tête + colonne ; colspans des lignes de synthèse CUMULS/%CUMULS ajustés 4→5).
+
+### Impact / Anti-régression
+
+- **Additif** : le taux financier (calculé) est inchangé ; on ajoute un taux physique saisi. Migration 036 (colonne additive). Round-trip `tauxPhysique` vérifié (PUT/GET).
+- **Vérifié headless** : modal (champ physique + libellés PHYSIQUE/FINANCIER) ; table (en-têtes « Taux fin. » + « Taux phys. », lignes de synthèse alignées) ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). **Migration 036 exécutée.**
+
+---
+
 ## 2026-06-29 — Décomptes : numéro auto-généré, non saisi par l'agent (Lot 2, décision 2) (widget OP/Mandat)
 
 > **Doc clôture 24/06 — décision client 2.** Le numéro de décompte est désormais **auto-généré** (entiers croissants), **non saisi** par l'agent — fini le format `DEC-2026-001`. Avec **avance de démarrage**, le 1ᵉʳ décompte est **« 00 »** (restitution de l'avance), puis 01, 02… ; **sans avance**, 01, 02, 03…
