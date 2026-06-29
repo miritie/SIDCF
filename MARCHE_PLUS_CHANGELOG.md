@@ -13,6 +13,30 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-29 — Objection à la procédure (Phase 1) : bloc de déclaration distinct de l'ANO (ECR02A)
+
+> **Note 3 réunion — Phase 1.** Nouvelle notion d'**Objection à la procédure**, à **distinguer de l'Avis de Non-Objection (ANO)** (étape ordinaire du workflow, `MP_ANO`, inchangée). L'objection est **extraordinaire** : sur instruction d'une **autorité** (organe saisi pour irrégularité), elle peut **remettre en cause** la procédure à tout moment **avant l'OS de démarrage**.
+> - Bloc dans la contractualisation : **OUI / NON** « Objection à la procédure ? » → si OUI : **Organe saisi** (liste), **date**, **motif**, **upload de la décision** + **bandeau de mise en évidence** « Procédure sous objection ».
+> - Vocabulaire ancré dans la doc : « organe », « recours/objection », « suspension → reprise ».
+
+### Fichiers touchés
+
+- `postgres/migrations/034_mp_procedure_objection_iterations.sql` — colonnes `objection` (JSONB), `iterations` (JSONB), `iteration_courante` (INTEGER) sur `mp_procedure`. **Exécutée sur Neon.**
+- `sidcf-portal/js/config/registries.json` — registre `ORGANE_OBJECTION` (ANRMP, DGMP, Tutelle, Juridiction, Autre).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr02a-procedure-pv.js` — `renderObjectionBloc()` auto-portant (persiste `MP_PROCEDURE.objection`), appendu à la page sans toucher au `handleSave` principal.
+
+### Impact / Anti-régression
+
+- Bloc **auto-portant** (sauvegarde dédiée) → **n'altère pas** le flux de contractualisation existant. La colonne `objection` round-trip symétriquement (camel↔snake, vérifié PUT/GET sur le Worker).
+- Les colonnes `iterations` / `iteration_courante` sont posées dès maintenant mais **exploitées en Phase 2** (remise en cause / itérations / vue manager / skip PV d'ouverture).
+- **Vérifié headless** (Chrome CDP) : bloc présent, distinction ANO, OUI révèle les champs, bandeau, organe ANRMP, upload — 0 erreur console ; persistance round-trip confirmée.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). **Migration 034 déjà exécutée sur Neon.**
+
+---
+
 ## 2026-06-29 — Correction #180 : le financement bailleur ne bascule PAS en NON APPLICABLE (ECR02A)
 
 > **Modif #181** — Précision client sur #180 : l'intervention d'un bailleur (financement EMPRUNT/DON) **n'implique pas** la procédure bailleur, donc **ne doit pas** basculer en « NON APPLICABLE ». On **conserve l'état actuel** : ces lignes gardent le **barème national** (« Procédure Nationale Admissible »). **« NON APPLICABLE » est désormais réservé au seul type RNE.**

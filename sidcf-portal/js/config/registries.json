@@ -6,6 +6,14 @@
     { "code": "COLLECTIVITE", "label": "Collectivité Territoriale" },
     { "code": "RNE", "label": "Représentation Nationale à l'Extérieur (RNE)", "baremeNational": false }
   ],
+  "_ORGANE_OBJECTION_DOC": "Note 3 (réunion) — Organe saisi en cas d'OBJECTION À LA PROCÉDURE (extraordinaire, sur instruction d'une autorité). À NE PAS confondre avec l'Avis de Non-Objection (ANO) ordinaire du workflow (MP_ANO).",
+  "ORGANE_OBJECTION": [
+    { "code": "ANRMP", "label": "ANRMP — Autorité Nationale de Régulation des Marchés Publics" },
+    { "code": "DGMP", "label": "DGMP — Direction Générale des Marchés Publics" },
+    { "code": "TUTELLE", "label": "Autorité de tutelle" },
+    { "code": "JURIDICTION", "label": "Juridiction (tribunal)" },
+    { "code": "AUTRE", "label": "Autre" }
+  ],
   "_TYPE_MARCHE_DOC": "Typologie DCF (Modif #76, séance du 26 mai 2026) : 3 familles A/B/C × 16 types. Annotations EHOUMAN : ne pas afficher le sigle CREM ; conserver MOD/AMO. La famille C regroupe des sous-types des marchés de services (famille A).",
   "TYPE_MARCHE_FAMILLES": [
     { "code": "FAMILLE_A", "label": "A. Marchés classiques" },

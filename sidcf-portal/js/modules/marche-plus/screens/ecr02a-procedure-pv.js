@@ -338,6 +338,9 @@ export async function renderProcedurePV(params) {
     ])
   ]);
 
+  // Note 3 (réunion) — Bloc « Objection à la procédure » (OUI/NON + organe + décision).
+  page.appendChild(renderObjectionBloc({ idOperation, procedure, registries }));
+
   // Modif #127 (E-2/E-22) — Bloc difficultés (OUI/NON) présent à cette étape.
   page.appendChild(renderDifficultesGatedBloc({ operationId: idOperation, registries, lots: [] }));
 
@@ -1970,6 +1973,89 @@ async function handleSave(idOperation, selectedMode, suggestedCodes, soumissionn
   } else {
     alert('❌ Erreur lors de la sauvegarde de la procédure');
   }
+}
+
+/**
+ * Note 3 (réunion) — Bloc « Objection à la procédure » (Phase 1).
+ * À DISTINGUER de l'Avis de Non-Objection (ANO, MP_ANO), étape ordinaire du
+ * workflow. Ici : objection EXTRAORDINAIRE, sur instruction d'une autorité
+ * (organe saisi pour irrégularité), pouvant remettre en cause la procédure à
+ * tout moment avant l'OS de démarrage. Auto-portant : persiste sur
+ * MP_PROCEDURE.objection (migration 034), sans toucher au handleSave principal.
+ * La Phase 2 (remise en cause / itérations) s'appuiera sur procedure.objection.
+ */
+function renderObjectionBloc({ idOperation, procedure, registries }) {
+  const obj = (procedure && procedure.objection) || {};
+  const organes = registries.ORGANE_OBJECTION || [];
+  let active = obj.active === true;
+  let decisionDocRef = obj.decisionDocRef || null;
+
+  const banner = el('div', {
+    id: 'objection-banner',
+    style: {
+      display: active ? 'flex' : 'none', gap: '10px', alignItems: 'center',
+      padding: '10px 14px', marginBottom: '12px', borderRadius: '6px',
+      background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', fontWeight: 600
+    }
+  }, ['🚩 Procédure sous objection — elle peut être remise en cause (reprise depuis la contractualisation).']);
+
+  const ff = (label, input) => el('div', { className: 'form-field', style: { marginBottom: '10px' } }, [el('label', { className: 'form-label' }, label), input]);
+
+  const organeSelect = el('select', { className: 'form-input', id: 'objection-organe' }, [
+    el('option', { value: '' }, '-- Sélectionner l\'organe saisi --'),
+    ...organes.map(o => el('option', { value: o.code, selected: o.code === obj.organe }, o.label))
+  ]);
+  const dateInput = el('input', { type: 'date', className: 'form-input', id: 'objection-date', value: obj.date || '' });
+  const motifInput = el('textarea', { className: 'form-input', id: 'objection-motif', rows: 2, placeholder: 'Motif de l\'objection (irrégularité invoquée)…' }, obj.motif || '');
+  const fileInput = el('input', { type: 'file', className: 'form-input', id: 'objection-decision', accept: '.pdf,.doc,.docx' });
+  const fileHint = el('div', { className: 'text-small text-muted', style: { marginTop: '2px' } }, decisionDocRef ? `✓ ${decisionDocRef}` : 'Charger la décision de l\'organe saisi.');
+  fileInput.addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) { decisionDocRef = f.name; fileHint.textContent = `✓ ${f.name}`; } });
+
+  const details = el('div', { id: 'objection-detail', style: { display: active ? 'block' : 'none' } }, [
+    el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } }, [
+      ff('Organe saisi', organeSelect),
+      ff('Date de l\'objection', dateInput)
+    ]),
+    ff('Motif', motifInput),
+    ff('Décision de l\'organe (document)', el('div', {}, [fileInput, fileHint]))
+  ]);
+
+  function toggle(val) { active = val; details.style.display = val ? 'block' : 'none'; banner.style.display = val ? 'flex' : 'none'; }
+  const radio = (val, label) => el('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' } }, [
+    (() => { const r = el('input', { type: 'radio', name: 'objection-active', onchange: (e) => { if (e.target.checked) toggle(val); } }); r.checked = (active === val); return r; })(),
+    label
+  ]);
+
+  const saveBtn = el('button', { type: 'button', className: 'btn btn-primary' }, '💾 Enregistrer l\'objection');
+  saveBtn.addEventListener('click', async () => {
+    if (!procedure || !procedure.id) { alert('⚠️ Enregistrez d\'abord la contractualisation avant de déclarer une objection.'); return; }
+    const payload = active
+      ? { active: true, organe: organeSelect.value || null, date: dateInput.value || null, motif: (motifInput.value || '').trim(), decisionDocRef: decisionDocRef || null }
+      : { active: false };
+    try {
+      await dataService.update(ENTITIES.MP_PROCEDURE, procedure.id, { objection: payload });
+      alert(active ? '✅ Objection enregistrée — la procédure est marquée sous objection.' : '✅ Objection levée.');
+    } catch (e) {
+      alert('❌ Erreur lors de l\'enregistrement de l\'objection.');
+    }
+  });
+
+  return el('div', { className: 'card', style: { marginBottom: '24px', borderColor: '#fca5a5' } }, [
+    el('div', { className: 'card-header' }, [
+      el('h3', { className: 'card-title' }, '🚩 Objection à la procédure'),
+      el('p', { style: { margin: '4px 0 0', fontSize: '12px', color: '#6b7280' } },
+        'Distincte de l\'Avis de Non-Objection (ANO). Objection extraordinaire (organe saisi pour irrégularité) pouvant remettre en cause la procédure, à tout moment avant l\'OS de démarrage.')
+    ]),
+    el('div', { className: 'card-body' }, [
+      banner,
+      el('div', { className: 'form-field' }, [
+        el('label', { className: 'form-label' }, 'Y a-t-il une objection à la procédure ?'),
+        el('div', { style: { display: 'flex', gap: '24px' } }, [radio(false, 'Non'), radio(true, 'Oui')])
+      ]),
+      details,
+      el('div', { style: { marginTop: '12px', textAlign: 'right' } }, [saveBtn])
+    ])
+  ]);
 }
 
 export default renderProcedurePV;
