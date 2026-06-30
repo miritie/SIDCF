@@ -163,13 +163,20 @@ export async function renderFicheCloture(params) {
       field('Réception définitive', fmtDate(cloture?.receptionDef?.date))
     ]),
 
-    // 8/9. Satisfaction + synthèse CF
-    blocCard('📝 Appréciation', [
+    // 8/9. Satisfaction + synthèse + enseignements CF
+    blocCard('📝 Appréciation & enseignements', [
       field('Satisfaction des bénéficiaires', cloture?.satisfactionBeneficiaires || '— (à évaluer)'),
-      el('div', { style: { marginTop: '6px' } }, [
-        el('div', { style: { color: '#6b7280', fontSize: '12px' } }, 'Synthèse finale du CF :'),
-        el('div', { style: { fontStyle: cloture?.syntheseFinale ? 'normal' : 'italic', color: cloture?.syntheseFinale ? '#111827' : '#9ca3af' } }, cloture?.syntheseFinale || 'Non renseignée.')
-      ])
+      (() => {
+        const para = (titre, txt) => el('div', { style: { marginTop: '6px' } }, [
+          el('div', { style: { color: '#6b7280', fontSize: '12px' } }, titre),
+          el('div', { style: { fontStyle: txt ? 'normal' : 'italic', color: txt ? '#111827' : '#9ca3af' } }, txt || 'Non renseigné.')
+        ]);
+        return el('div', {}, [
+          para('Bilan technique et financier :', cloture?.syntheseFinale),
+          para('🎓 Leçons tirées :', cloture?.leconsTirees),
+          para('💡 Recommandations :', cloture?.recommandations)
+        ]);
+      })()
     ]),
 
     // 10. Annexes

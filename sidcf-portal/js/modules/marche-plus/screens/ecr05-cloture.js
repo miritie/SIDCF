@@ -324,17 +324,38 @@ export async function renderCloture(params) {
     // Synthèse finale
     el('div', { className: 'card', style: { marginBottom: '24px' } }, [
       el('div', { className: 'card-header' }, [
-        el('h3', { className: 'card-title' }, '📝 Synthèse Finale')
+        el('h3', { className: 'card-title' }, '📝 Synthèse & enseignements')
       ]),
       el('div', { className: 'card-body' }, [
-        el('div', { className: 'form-field' }, [
+        el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
           el('label', { className: 'form-label' }, 'Bilan technique et financier'),
           el('textarea', {
             className: 'form-input',
             id: 'cloture-synthese',
-            rows: 5,
+            rows: 4,
             value: cloture?.syntheseFinale || '',
             placeholder: 'Bilan final du marché: respect des délais, qualité des prestations, montants payés, etc.'
+          })
+        ]),
+        // Note métier — Enseignement structuré : leçons tirées + recommandations.
+        el('div', { className: 'form-field', style: { marginBottom: '12px' } }, [
+          el('label', { className: 'form-label' }, '🎓 Leçons tirées'),
+          el('textarea', {
+            className: 'form-input',
+            id: 'cloture-lecons',
+            rows: 3,
+            value: cloture?.leconsTirees || '',
+            placeholder: 'Ce que l\'exécution de ce marché a appris (difficultés rencontrées, bonnes pratiques, points d\'attention…).'
+          })
+        ]),
+        el('div', { className: 'form-field' }, [
+          el('label', { className: 'form-label' }, '💡 Recommandations'),
+          el('textarea', {
+            className: 'form-input',
+            id: 'cloture-recommandations',
+            rows: 3,
+            value: cloture?.recommandations || '',
+            placeholder: 'Recommandations pour les marchés similaires à venir.'
           })
         ])
       ])
@@ -626,6 +647,9 @@ async function handleSave(idOperation, definitive, lotId = null, rawCloture = nu
   const satisfaction = document.getElementById('cloture-satisfaction')?.value || null;
   const satisfactionCommentaires = document.getElementById('cloture-satisfaction-commentaires')?.value || null;
   const synthese = document.getElementById('cloture-synthese')?.value;
+  // Note métier — enseignements structurés.
+  const leconsTirees = document.getElementById('cloture-lecons')?.value || '';
+  const recommandations = document.getElementById('cloture-recommandations')?.value || '';
   // Doc clôture 24/06 (Lot 1) — situation de paiement (colonnes top-level mp_cloture).
   const clotureExtra = {
     observationPaiement: document.getElementById('cloture-observation-paiement')?.value || null,
@@ -675,6 +699,8 @@ async function handleSave(idOperation, definitive, lotId = null, rawCloture = nu
     satisfactionCommentaires,
     mainlevees: [], // TODO: track mainlevees
     syntheseFinale: synthese || '',
+    leconsTirees,
+    recommandations,
     closAt: definitive ? new Date().toISOString() : null
   };
 

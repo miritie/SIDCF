@@ -13,6 +13,27 @@ Format :
 
 <!-- Les nouvelles entrées s'ajoutent en haut. -->
 
+## 2026-06-30 — Clôture : enseignements structurés (leçons tirées + recommandations) (ECR05 + fiche)
+
+> **Note métier.** « Enseignement à rajouter (existe déjà en partie). Mieux structurer : **leçons tirées** et **recommandations**. » La carte « Synthèse Finale » devient **« 📝 Synthèse & enseignements »** : le **Bilan technique et financier** existant est **conservé**, et on ajoute **🎓 Leçons tirées** et **💡 Recommandations**.
+
+### Fichiers touchés
+
+- `postgres/migrations/037_mp_cloture_enseignements.sql` — colonnes `lecons_tirees` + `recommandations` sur `mp_cloture`. **Exécutée sur Neon.**
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05-cloture.js` — 2 champs ajoutés à la carte synthèse ; persistés via `handleSave` (`leconsTirees`, `recommandations`).
+- `sidcf-portal/js/modules/marche-plus/screens/ecr05b-fiche-cloture.js` — bloc « Appréciation & enseignements » : bilan + leçons + recommandations.
+
+### Impact / Anti-régression
+
+- **Additif** : le bilan libre existant (`syntheseFinale`) est conservé tel quel ; on ajoute 2 champs structurés. Migration 037 (colonnes additives). Round-trip `leconsTirees`/`recommandations` vérifié (PUT/GET).
+- **Vérifié headless** : 3 champs présents à la clôture (bilan conservé + leçons + recommandations) ; fiche de clôture affiche leçons + recommandations ; 0 erreur console.
+
+### Déploiement
+
+- Front statique (Vercel auto-deploy). **Migration 037 exécutée.**
+
+---
+
 ## 2026-06-29 — Décomptes : taux d'exécution PHYSIQUE saisi + FINANCIER calculé (obs. métier) (widget OP/Mandat)
 
 > **Obs. métier (Exécution).** « Dans la saisie des décomptes, prendre en charge les taux physiques ET les taux financiers. » Le décompte porte désormais **deux taux** :
